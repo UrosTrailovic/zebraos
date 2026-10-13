@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ZebraOS 2.0 | Zebra Tape 2</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="power-screen" class="screen active">
+  <div class="monitor-off"><div class="crt-label">ZEBRA <span>RECORD</span> · CRT 2002</div><div class="crt-glass"><div class="crt-dim">NO SIGNAL_</div></div><button id="power-btn" class="physical-power" aria-label="Allumer l'ordinateur"><span class="power-dot"></span> POWER</button><div class="power-hint">CLICK TO START THE COMPUTER</div></div>
+</div>
+<div id="login-screen" class="screen">
+  <div class="login-header"><div class="zebra-logo">Z<span>///</span></div><div><h1>ZebraOS</h1><small>STUDIO EDITION · VERSION 2.0</small></div></div>
+  <div class="login-main"><p>SELECT A USER TO BEGIN YOUR SESSION</p><div id="login-users" class="login-users"></div></div>
+  <div class="login-footer"><span>ZEBRA RECORD NETWORK — LOCAL MACHINE</span><button id="shutdown-login" class="plain-dark">⏻ Turn off computer</button></div>
+</div>
+<div id="desktop-screen" class="screen">
+  <div id="wallpaper" class="wallpaper wallpaper-visitor"><div class="wallpaper-grain"></div><div class="wallpaper-label">ZEBRA TAPE 2 <span>STUDIO // 2026</span></div></div>
+  <div id="desktop-icons" class="desktop-icons"></div>
+  <div id="windows-area"></div>
+  <div id="start-menu" class="start-menu hidden"><div class="start-side">ZebraOS <b>2.0</b></div><div class="start-options"><button data-start="amp">▣ <span>ZebraAMP</span></button><button data-start="explorer">▤ <span>My Computer</span></button><button data-start="notepad">▧ <span>Notepad</span></button><button data-start="viewer">▧ <span>Image Viewer</span></button><button data-start="settings">⚙ <span>Control Panel</span></button><button data-start="about">ⓘ <span>System Properties</span></button><hr><button id="logout">⇥ <span>Log off</span></button><button id="shutdown-desktop">⏻ <span>Shut down</span></button></div></div>
+  <div class="taskbar"><button id="start-button" class="win-button start-button"><span class="start-z">Z</span> Start</button><div id="task-items"></div><div class="tray"><span class="tray-icon" title="ZebraOS Studio Network">◉</span><span id="clock"></span></div></div>
+</div>
+<input type="file" id="file-wallpaper" accept="image/*" hidden>
+<input type="file" id="file-music" accept="audio/*" multiple hidden>
+<script src="app.js"></script>
+</body>
+</html>
