@@ -54,7 +54,7 @@ jobs:
               pointer($(".zt-b"));
               report.hardDrop=Number($(".zg-stat strong").textContent)>0;
               pointer($(".zt-select"));
-              report.hold=$(".zg-mini").length===2;
+              report.hold=root.querySelectorAll(".zg-mini").length===2;
               $(".zt-play").click();
               report.pause=$(".zg-state").textContent==="PAUSE";
               $(".zt-play").click();
