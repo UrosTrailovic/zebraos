@@ -643,7 +643,7 @@ function player(){
 function openGame(name){
  var apps={
   tetris:[window.ZebraTetris,"Tetris.exe",570,680],
-  snake:[window.ZebraSnake,"Snake.exe",540,650],
+  snake:[window.ZebraSnake,"Snake.exe",790,650],
   paint:[window.ZebraPaint,"ZebraPaint.exe",850,640]
  };
  var entry=apps[name];if(!entry||!entry[0])return;
