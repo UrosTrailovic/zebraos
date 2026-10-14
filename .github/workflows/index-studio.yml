@@ -25,6 +25,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import json
+          from datetime import datetime, timezone
           from pathlib import Path
 
           root = Path("STUDIO")
@@ -40,7 +41,11 @@ jobs:
                   **({} if path.is_dir() else {"size": path.stat().st_size})
               })
 
-          manifest = {"version": 2, "entries": entries}
+          manifest = {
+              "version": 3,
+              "generatedAt": datetime.now(timezone.utc).isoformat(),
+              "entries": entries
+          }
           (root / "manifest.json").write_text(
               json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
               encoding="utf-8"
