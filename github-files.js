@@ -128,6 +128,9 @@ function sizeText(bytes){
  return bytes+" o";
 }
 function preview(item,opts){
+ if(kinds.audio.test(item.name)&&opts&&typeof opts.openAudio==="function"){
+  opts.openAudio(item);return;
+ }
  if(!kinds.image.test(item.name)&&!kinds.audio.test(item.name)&&
     !kinds.video.test(item.name)&&!kinds.text.test(item.name)){
   openExternal(fileLink(item.path));return;
@@ -218,7 +221,7 @@ function mount(host,path,opts){
  reload();
 }
 window.ZebraGitFiles={
- root:ROOT,mount:mount,load:load,list:children,icon:icon,openFile:preview,subscribe:subscribe,
+ root:ROOT,mount:mount,load:load,list:children,icon:icon,openFile:preview,allFiles:function(){return (known||[]).slice();},subscribe:subscribe,
  iconPath:iconPath,hasData:function(){return !!known;}
 };
 }());
