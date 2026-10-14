@@ -180,8 +180,8 @@ async function importFiles(target,files,host,refresh){
 function openRoot(host,opt){
   if(!host)return;
   host.innerHTML="";
-  var win=host.closest(".window");if(win){var t=win.querySelector(".windowtitle");if(t)t.textContent="My Computer — C:\\ROOT";}
-  host.appendChild(E("div","folder-path","MY COMPUTER — STUDIO WORKSTATION"));
+  var win=host.closest(".window");if(win){var t=win.querySelector(".windowtitle");if(t)t.textContent="Poste de travail — C:\\ROOT";}
+  host.appendChild(E("div","folder-path","POSTE DE TRAVAIL — STUDIO ZEBRA RECORD"));
   host.appendChild(E("p","local-disk-hint","Deux espaces : le disque local modifiable ici et le dossier GitHub publié."));
   var list=E("div","folder-list local-drive-root");
   function drive(name,icon,desc,action){
@@ -190,9 +190,9 @@ function openRoot(host,opt){
     button.appendChild(symbol);button.appendChild(E("span","",name));button.appendChild(E("small","github-file-size",desc));
     button.onclick=action;list.appendChild(button);
   }
-  drive("STUDIO LOCAL","computer","Modifiable · cet appareil",function(){mount(host,ROOT,opt);});
-  drive("STUDIO (GITHUB)","network","Public · en lecture seule",function(){opt.github("STUDIO");});
-  drive("RECYCLE BIN","recycle-bin","Fichiers supprimés",function(){mount(host,"trash",opt);});
+  drive("MES BROUILLONS","computer","Privé · cet appareil",function(){mount(host,ROOT,opt);});
+  drive("FICHIERS PUBLIÉS","network","Visibles aux visiteurs",function(){opt.github("STUDIO");});
+  drive("CORBEILLE","recycle-bin","Fichiers supprimés",function(){mount(host,"trash",opt);});
   host.appendChild(list);
 }
 async function mount(host,parent,opt){
@@ -215,7 +215,7 @@ async function mount(host,parent,opt){
     if(!node)break;
     names.unshift(node.name);cursor=node.parent;
   }
-  var title="My Computer — C:\\STUDIO"+(isTrash?"\\RECYCLE BIN":names.length?"\\"+names.join("\\"):"");
+  var title="Poste de travail — C:\\STUDIO"+(isTrash?"\\CORBEILLE":names.length?"\\"+names.join("\\"):"");
   if(win){var span=win.querySelector(".windowtitle");if(span)span.textContent=title;}
   var tools=E("div","local-disk-toolbar");
   function add(label,fn){tools.appendChild(btn(label,"classic-button",fn));}
@@ -241,7 +241,7 @@ async function mount(host,parent,opt){
     if(clipboard)add("▣ Coller",function(){move(parent,host,refresh).catch(function(e){alertError(host,e.message);});});
   }
   host.appendChild(tools);
-  host.appendChild(E("div","folder-path",isTrash?"C:\\RECYCLE BIN":"C:\\STUDIO\\"+names.join("\\")));
+  host.appendChild(E("div","folder-path",isTrash?"C:\\CORBEILLE":"C:\\STUDIO\\"+names.join("\\")));
   host.appendChild(E("p","local-disk-hint",isTrash?"Fichiers supprimés sur cet appareil. Restaure-les ou efface-les définitivement.":"Fichiers réels enregistrés dans ce navigateur. Pas de synchronisation GitHub automatique."));
   var list=E("div","folder-list local-file-list");
   host.appendChild(list);
@@ -311,7 +311,7 @@ async function mount(host,parent,opt){
     drop.ondrop=function(ev){ev.preventDefault();drop.classList.remove("drag-over");importFiles(parent,Array.from(ev.dataTransfer.files||[]),host,refresh);};
     host.appendChild(drop);
   }
-  host.appendChild(E("div","local-disk-status",items.length+" élément(s) • C:\\STUDIO"+(isTrash?"\\RECYCLE BIN":"")));
+  host.appendChild(E("div","local-disk-status",items.length+" élément(s) • C:\\STUDIO"+(isTrash?"\\CORBEILLE":"")));
 }
 window.ZebraLocalFiles={mount:mount,home:openRoot,root:ROOT,
   openNamed:function(host,name,opt){
