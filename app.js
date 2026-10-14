@@ -8,18 +8,7 @@ var wallpaper={visitor:"visitor",zebra:"zebra",admin:"admin",daniel:"daniel"};
 var session=null,opened={},z=20,seq=0,selectedTrack=-1,localTracks=[],tracks=[],adminApproved=false;
 for(var t=1;t<=9;t++)tracks.push(("0"+t).slice(-2)+" - UNTITLED");
 var music=new Audio(),musicLoaded=false;
-var dir={
-"root":[["ZEBRA TAPE 2","folder","tape"],["MAPS","folder","maps"],["STUDIO (GITHUB)","folder","github:STUDIO"],["STUDIO LOCAL","folder","studio"],["RECYCLE BIN","folder","recycle"]],
-"tape":[["AUDIO","folder","audio"],["ARTWORK","folder","art"],["ALBUM_INFO.TXT","txt","album"]],
-"audio":tracks.map(function(n,i){return[n+".MP3","audio",String(i)]}),
-"art":[["COVER.JPG","image","cover"],["POSTER.JPG","image","poster"]],
-"maps":[["SADATE","folder","sadate"]],
-"sadate":[["SCREENSHOTS","folder","screens"],["INSTALL.TXT","txt","install"],["SADATE_MAP.ZIP","download","map"]],
-"screens":[["SADATE_01.JPG","image","shot1"],["SADATE_02.JPG","image","shot2"],["SADATE_03.JPG","image","shot3"],["SADATE_04.JPG","image","shot4"]],
-"studio":[["README.TXT","txt","readme"],["MY_NOTES.TXT","txt","notes"],["ARCHIVE","folder","archive"],["DANIEL.TXT","txt","daniel"]],
-"archive":[["mix_FINAL_17.TXT","txt","mix"],["cover_old_FINAL.JPG","image","old"]],
-"recycle":[["really_final_final.TXT","txt","recycle"]]
-};
+/* Local filesystem replaces the former demo-only filenames. */
 var docs={
 readme:"ZEBRA RECORD // STUDIO COMPUTER\n\nBienvenue sur ZebraOS.\n\nCette machine contient ZEBRA TAPE 2, une map Counter-Strike 1.6, des documents et des archives du studio.\n\nLook around. Do not format C:.\n\nwww.zebratape2.net",
 album:"ZEBRA TAPE 2\nDECEMBER 2026\n\nTRACKLIST TO BE CONFIRMED\n9 TRACKS\n\nwww.zebratape2.net",
