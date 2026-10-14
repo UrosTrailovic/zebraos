@@ -4,37 +4,37 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ZebraOS 2.0 | Zebra Tape 2</title>
-<link rel="stylesheet" href="style.css?v=1.1">
+<link rel="stylesheet" href="style.css?v=1.2">
 </head>
 <body>
 <div id="power-screen" class="screen active">
   <button id="power-btn" class="zboot-power" aria-label="Allumer ZebraOS">
     <span class="zboot-power-symbol" aria-hidden="true">⏻</span>
-    <span class="zboot-power-label">POWER</span>
+    <span class="zboot-power-label">ALLUMER</span>
   </button>
 </div>
 <div id="boot-screen" class="screen" aria-label="Démarrage de ZebraOS">
   <div class="zboot-logo-frame"><img class="zboot-logo"  alt="ZebraOS" /></div>
-  <button id="skip-boot" class="zboot-skip" aria-label="Passer l'animation de démarrage">SKIP INTRO &gt;</button>
+  <button id="skip-boot" class="zboot-skip" aria-label="Passer l'animation de démarrage">PASSER L’INTRO &gt;</button>
 </div>
 <div id="session-boot-screen" class="screen" aria-label="Ouverture de session">
   <div class="zboot-session-content">
     <img class="zboot-session-logo"  alt="ZebraOS" />
-    <span id="zboot-session-label">LOADING SESSION</span>
+    <span id="zboot-session-label">OUVERTURE DE SESSION</span>
   </div>
-  <button id="skip-session-boot" class="zboot-skip" aria-label="Passer l'ouverture de session">SKIP &gt;</button>
+  <button id="skip-session-boot" class="zboot-skip" aria-label="Passer l'ouverture de session" >PASSER &gt;</button>
 </div>
 <div id="login-screen" class="screen">
-  <div class="login-header"><div class="zebra-logo">Z<span>///</span></div><div><h1>ZebraOS</h1><small>STUDIO EDITION · VERSION 2.0</small></div></div>
-  <div class="login-main"><p>SELECT A USER TO BEGIN YOUR SESSION</p><div id="login-users" class="login-users"></div></div>
-  <div class="login-footer"><span>ZEBRA RECORD NETWORK — LOCAL MACHINE</span><button id="shutdown-login" class="plain-dark">⏻ Turn off computer</button></div>
+  <div class="login-header"><div class="zebra-logo">Z<span>///</span></div><div><h1>ZebraOS</h1><small>ÉDITION STUDIO · VERSION 2.0</small></div></div>
+  <div class="login-main"><p>CHOISISSEZ UNE SESSION</p><div id="login-users" class="login-users"></div></div>
+  <div class="login-footer"><span>RÉSEAU ZEBRA RECORD — ORDINATEUR DU STUDIO</span><button id="shutdown-login" class="plain-dark">⏻ Éteindre l’ordinateur</button></div>
 </div>
 <div id="desktop-screen" class="screen">
   <div id="wallpaper" class="wallpaper wallpaper-visitor"><div class="wallpaper-grain"></div><div class="wallpaper-label">ZEBRA TAPE 2 <span>STUDIO // 2026</span></div></div>
   <div id="desktop-icons" class="desktop-icons"></div>
   <div id="windows-area"></div>
-  <div id="start-menu" class="start-menu hidden"><div class="start-side">ZebraOS <b>2.0</b></div><div class="start-options"><button data-start="amp">▣ <span>ZebraAMP</span></button><button data-start="explorer">▤ <span>My Computer</span></button><button data-start="notepad">▧ <span>Notepad</span></button><button data-start="viewer">▧ <span>Image Viewer</span></button><button data-start="settings">⚙ <span>Control Panel</span></button><button data-start="about">ⓘ <span>System Properties</span></button><hr><button id="logout">⇥ <span>Log off</span></button><button id="shutdown-desktop">⏻ <span>Shut down</span></button></div></div>
-  <div class="taskbar"><button id="start-button" class="win-button start-button"><span class="start-z">Z</span> Start</button><div id="task-items"></div><div class="tray"><span class="tray-icon" title="ZebraOS Studio Network">◉</span><span id="clock"></span></div></div>
+  <div id="start-menu" class="start-menu hidden"><div class="start-side">ZebraOS <b>2.0</b></div><div class="start-options"><button data-start="amp">▣ <span>ZebraAMP</span></button><button data-start="explorer">▤ <span>Poste de travail</span></button><button data-start="notepad">▧ <span>Bloc-notes</span></button><button data-start="viewer">▧ <span>Visionneuse d’images</span></button><button data-start="settings">⚙ <span>Panneau de configuration</span></button><button data-start="about">ⓘ <span>Propriétés du système</span></button><hr><button id="logout">⇥ <span>Fermer la session</span></button><button id="shutdown-desktop">⏻ <span>Éteindre</span></button></div></div>
+  <div class="taskbar"><button id="start-button" class="win-button start-button"><span class="start-z">Z</span> Démarrer</button><div id="task-items"></div><div class="tray"><span class="tray-icon" title="Réseau du studio ZebraOS">◉</span><span id="clock"></span></div></div>
 </div>
 <input type="file" id="file-wallpaper" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp" hidden>
 <input type="file" id="file-music" accept="audio/*" multiple hidden>
@@ -42,8 +42,8 @@
 <script src="assets/icons-pack.js?v=0.6"></script>
 <script src="assets/boot-assets-v07.js?v=0.7"></script>
 <script src="wallpaper.js?v=0.9"></script>
-<script src="github-files.js?v=1.1"></script>
+<script src="github-files.js?v=1.2"></script>
 <script src="filesystem.js?v=1.0"></script>
-<script src="app.js?v=1.1"></script>
+<script src="app.js?v=1.2"></script>
 </body>
 </html>
