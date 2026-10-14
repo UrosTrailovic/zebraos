@@ -218,7 +218,7 @@ function mount(host,path,opts){
  reload();
 }
 window.ZebraGitFiles={
- root:ROOT,mount:mount,load:load,list:children,icon:icon,subscribe:subscribe,
+ root:ROOT,mount:mount,load:load,list:children,icon:icon,openFile:preview,subscribe:subscribe,
  iconPath:iconPath,hasData:function(){return !!known;}
 };
 }());
