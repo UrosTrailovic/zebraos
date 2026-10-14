@@ -52,3 +52,27 @@ Merci à Kenney pour les assets CC0. Aucune ressource audio Windows/Microsoft n'
 - Sources audio supplémentaires : **Kenney — UI Audio**, `mouseclick1.ogg` et `mouserelease1.ogg`, licence CC0 : https://kenney.nl/assets/ui-audio
 
 Le fichier `sfx.js` contient les deux sons en OGG intégrés, sans serveur ou CDN tiers.
+
+
+## Fonds d’écran (v0.8)
+
+Dans **Control Panel → Personnaliser votre arrière-plan**, chaque session sélectionne son propre fond d’écran et le mode d’affichage : Remplir, Ajuster, Étirer, Vignette, Centrer ou Étendre.
+
+- **Parcourir les photos** accepte PNG, JPG, WEBP et BMP (30 Mo maximum). Les GIF sont convertis en image fixe.
+- Les imports sont redimensionnés à 1920 pixels maximum, puis gardés localement dans IndexedDB.
+- Les images récentes sont partagées entre les sessions **du même navigateur**, mais chaque session conserve son propre fond.
+- Le choix du fond et son mode sont sauvegardés dans localStorage.
+- Supprimer une image de la galerie la supprime de cet appareil et rétablit le fond d'origine des sessions qui l'utilisaient.
+- Aucune image importée n’est envoyée sur GitHub. Elles ne sont pas synchronisées entre appareils.
+- « Étendre » correspond ici à « Remplir » puisqu’il n’y a qu’un seul écran virtuel.
+
+Tests : importer une image dans Visitor ; choisir Vignette, Ajuster et Remplir ; changer de session ; revenir ; recharger le navigateur.
+
+## Idées de la prochaine phase
+
+- **Paintbrush** : outil de dessin style Windows 95 avec import/export d’images et effets simples.
+- **System Settings** : date, heure, format, fuseau horaire simulé et horloge plus complète.
+- **File explorer** : dossier du dépôt synchronisé en lecture pour afficher automatiquement les fichiers publics.
+- **Desktop** : redimensionnement des fenêtres sur ordinateur, anti-sélection accidentelle du texte.
+- **Login** : refonte du sélecteur de session.
+- **ZebraAMP** : égaliseur et fonctions audio supplémentaires.
