@@ -842,3 +842,10 @@
  .zp-size input{width:65px}
  .zp-menu .zp-button{font-size:11px;padding:5px 6px}
 }
+
+/* Icônes des nouvelles applications ZebraOS */
+.zapp-icon{display:inline-grid;place-items:center;line-height:1;font-family:Tahoma,Arial,sans-serif;font-weight:900;
+ border:2px outset #dfe4e1;box-sizing:border-box;text-shadow:1px 1px 0 #fff7;image-rendering:pixelated}
+.zapp-tetris{color:#213a7d;background:linear-gradient(135deg,#dbdcd7,#91a6d6)}
+.zapp-snake{color:#245a2e;background:linear-gradient(135deg,#d7e4b8,#83b66e)}
+.zapp-paint{color:#612e2e;background:linear-gradient(135deg,#eee0a8,#d8c4ca)}
