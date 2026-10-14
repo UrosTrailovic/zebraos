@@ -110,6 +110,12 @@ function playMechanicalClick(name){
 
 /* Custom ZebraOS desktop sprite: user-supplied 128px PNGs, optimised for small UI sizes. */
 function osIcon(name,size){
+  if(name==="tetris"||name==="snake"||name==="paint"){
+    var retro=el("span","zapp-icon zapp-"+name,name==="tetris"?"▦":name==="snake"?"▥":"✎");
+    retro.style.width=size+"px";retro.style.height=size+"px";
+    retro.style.fontSize=Math.round(size*.63)+"px";
+    retro.setAttribute("aria-hidden","true");return retro;
+  }
   var pack=window.ZebraIconPack, i=pack&&pack.names?pack.names.indexOf(name):-1;
   var node=el("span","os-icon-graphic");
   node.setAttribute("aria-hidden","true");
@@ -139,6 +145,7 @@ function fileIcon(f){
 }
 function windowIcon(id){
   if(id==="amp")return "zebraamp";
+  if(id==="tetris"||id==="snake"||id==="paint")return id;
   if(id==="explorer")return "computer";
   if(id==="settings")return "control-panel";
   if(id==="manager")return "computer";
@@ -148,7 +155,7 @@ function windowIcon(id){
   return "txt";
 }
 function decorateSystemMenus(){
-  var mappings={amp:"zebraamp",explorer:"computer",notepad:"txt",viewer:"jpg",settings:"control-panel",about:"zebraos"};
+  var mappings={amp:"zebraamp",explorer:"computer",notepad:"txt",viewer:"jpg",settings:"control-panel",about:"zebraos",tetris:"tetris",snake:"snake",paint:"paint"};
   document.querySelectorAll("#start-menu [data-start]").forEach(function(b){
     Array.prototype.slice.call(b.childNodes).forEach(function(n){if(n.nodeType===3)n.remove()});
     b.insertBefore(osIcon(mappings[b.dataset.start]||"folder",20),b.firstChild);
@@ -321,7 +328,10 @@ function desk(){
  var apps=[
   ["Poste de travail","computer","explorer:root"],
   ["ZebraAMP.exe","zebraamp","amp"],
-  ["Panneau de configuration","control-panel","settings"]
+  ["Panneau de configuration","control-panel","settings"],
+  ["Tetris.exe","tetris","tetris"],
+  ["Snake.exe","snake","snake"],
+  ["ZebraPaint.exe","paint","paint"]
  ];
  if(session==="admin"){
   apps.push(["Corbeille","recycle-bin","explorer:recycle"]);
@@ -363,7 +373,7 @@ function desk(){
   window.ZebraGitFiles.load().then(function(){renderUserFiles();});
  }
 }
-function closeAll(){Object.keys(opened).forEach(function(k){opened[k].w.remove()});opened={};$("task-items").innerHTML="";$("start-menu").classList.add("hidden")}
+function closeAll(){Object.keys(opened).forEach(function(k){var body=opened[k].w.querySelector(".window-body");if(body&&body._zebraDispose)body._zebraDispose();opened[k].w.remove()});opened={};$("task-items").innerHTML="";$("start-menu").classList.add("hidden")}
 function task(){var r=$("task-items");r.innerHTML="";Object.keys(opened).forEach(function(k){var p=opened[k],b=el("button","win-button",p.title);b.onclick=function(){if(p.w.classList.contains("minimized")){p.w.classList.remove("minimized");focus(k);sfx("restore")}else{p.w.classList.add("minimized");sfx("minimize")}};r.appendChild(b)})}
 function focus(id){if(opened[id]){opened[id].w.style.zIndex=++z;Object.keys(opened).forEach(function(k){opened[k].w.classList.toggle("focused",k===id)})}}
 /* Old-school wireframe animation: the outline travels first, the actual window snaps in after it. */
@@ -520,7 +530,7 @@ function windowBox(id,title,width,height){
  setTimeout(function(){if(document.body.contains(w))sfx("open");},125);
  w.querySelector("[data-min]").onclick=function(){sfx("minimize");w.classList.add("minimized");};
  w.querySelector("[data-max]").onclick=function(){sfx("restore");maximizeWindow(w);focus(id);};
- w.querySelector("[data-close]").onclick=function(){sfx("close");w.remove();delete opened[id];task();};
+ w.querySelector("[data-close]").onclick=function(){sfx("close");var body=w.querySelector(".window-body");if(body&&body._zebraDispose)body._zebraDispose();w.remove();delete opened[id];task();};
  w.onpointerdown=function(){focus(id);};
  var bar=w.querySelector(".titlebar"),drag=null;
  bar.ondblclick=function(e){
@@ -630,7 +640,13 @@ function player(){
  window.ZebraAMPConfig={windowBox:windowBox};
  window.ZebraAMP.open();
 }
-function open(code){$("start-menu").classList.add("hidden");if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="datetime")dateTime();else if(code==="welcome")welcome();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
+function openGame(name){
+ var apps={tetris:[window.ZebraTetris,"Tetris.exe",490,690],snake:[window.ZebraSnake,"Snake.exe",490,655],paint:[window.ZebraPaint,"ZebraPaint.exe",850,640]};
+ var entry=apps[name];if(!entry||!entry[0])return;
+ var root=windowBox(name,entry[1],Math.min(entry[2],window.innerWidth-16),Math.min(entry[3],window.innerHeight-50));
+ entry[0].mount(root);
+}
+function open(code){$("start-menu").classList.add("hidden");if(code==="tetris"||code==="snake"||code==="paint")openGame(code);else if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="datetime")dateTime();else if(code==="welcome")welcome();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
 decorateSystemMenus();
 $("power-btn").onclick=powerOn;$("skip-boot").onclick=finishBoot;$("skip-session-boot").onclick=finishSessionBoot;$("restart-login").onclick=restartLogin;$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
 $("start-button").onclick=function(e){e.stopPropagation();$("start-menu").classList.toggle("hidden")};document.querySelectorAll("[data-start]").forEach(function(b){b.onclick=function(){open(b.dataset.start)}});document.addEventListener("pointerdown",function(e){if(!e.target.closest("#start-menu")&&!e.target.closest("#start-button"))$("start-menu").classList.add("hidden")});
