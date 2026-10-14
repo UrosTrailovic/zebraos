@@ -28,3 +28,16 @@ Sur PC : **double-cliquer** les icônes. Sur téléphone : **toucher** une icôn
 ## Statut
 
 Prototype P0-A / P0-B + aperçu P0-C / P0-D. Avant publication, effectuer tests PC/mobile, finaliser les assets et séparer `app.js` en modules (voir `CAHIER_DES_CHARGES.md`).
+
+## Son système (v0.3)
+
+Les bruitages de ZebraOS proviennent de **Kenney — Interface Sounds (2020)**, sous licence **Creative Commons CC0 1.0** : https://kenney.nl/assets/interface-sounds
+
+Les neuf fichiers OGG sélectionnés sont embarqués dans `sfx.js` pour fonctionner sans CDN ni compte externe. Sons prévus : clic, sélection, ouverture, fermeture, réduction, restauration, confirmation, erreur et interrupteur.
+
+- Ouvrir une session, un dossier, ZebraAMP, puis réduire/restaurer/fermer une fenêtre pour tester.
+- Panneau de configuration → **Sound Properties** : activer/désactiver les sons ou lancer un test.
+- Les sons démarrent seulement après une action de l'utilisateur, conformément aux restrictions habituelles d'autoplay des navigateurs.
+- La musique de Zebra Tape 2 est séparée des bruitages. Aucun master inédit n'est publié ici.
+
+Merci à Kenney pour les assets CC0. Aucune ressource audio Windows/Microsoft n'a été copiée.
