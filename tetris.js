@@ -23,9 +23,12 @@ function mount(root){
  root.innerHTML="";
  let active=true,paused=true,over=false,lines=0,score=0,level=1,records=best(),held=null,holdUsed=false;
  let grid,upcoming=[],bag=[],current=null,clock=null,observer=null;
- let wrap=make("div","zg zg-tetris");
+ let wrap=make("div","zg zg-tetris zg-retro");
  let bar=make("div","zg-topline");
- bar.appendChild(make("strong","","ZEBRA TETRIS"));
+ let logo=make("img","zt-logo");
+ logo.alt="Zebra Tetris";
+ logo.src="";
+ bar.appendChild(logo);
  let status=make("span","zg-state","PRÊT");
  bar.appendChild(status);wrap.appendChild(bar);
  let main=make("div","zg-game-layout");
@@ -33,8 +36,10 @@ function mount(root){
  canvas.width=W*BLOCK;canvas.height=H*BLOCK;canvas.setAttribute("aria-label","Plateau Tetris");
  stage.appendChild(canvas);
  let overlay=make("div","zg-overlay");
- overlay.appendChild(make("strong","","TETRIS"));
- overlay.appendChild(make("span","","Appuie sur Jouer pour commencer"));
+ let overlayArt=make("img","zt-overlay-art");
+ overlayArt.alt="";
+ overlay.appendChild(overlayArt);
+ overlay.appendChild(make("span","zt-overlay-caption","Appuie sur Jouer pour commencer"));
  stage.appendChild(overlay);main.appendChild(stage);
  let right=make("div","zg-side");
  function stat(title){let box=make("div","zg-stat");box.appendChild(make("small","",title));let count=make("strong","","0");box.appendChild(count);right.appendChild(box);return count;}
@@ -43,16 +48,29 @@ function mount(root){
  let next=make("canvas","zg-mini");next.width=96;next.height=96;nextBox.appendChild(next);right.appendChild(nextBox);
  let holdBox=make("div","zg-preview-wrap");holdBox.appendChild(make("small","","RÉSERVE (C)"));
  let hold=make("canvas","zg-mini");hold.width=96;hold.height=96;holdBox.appendChild(hold);right.appendChild(holdBox);
- main.appendChild(right);wrap.appendChild(main);
- let controls=make("div","zg-buttons");
- const start=btn("▶ Jouer",()=>{if(over||!current){reset();return;}paused=!paused;updateStatus();});
- const restart=btn("↻ Recommencer",()=>reset());
- controls.append(start,restart);wrap.appendChild(controls);
+ main.insertBefore(right,stage);wrap.appendChild(main);
+ let controls=make("div","zg-buttons zt-buttons");
+ const start=btn("JOUER",()=>{if(over||!current){reset();return;}paused=!paused;updateStatus();});
+ start.classList.add("zt-image-button","zt-play");
+ const restart=btn("RECOMMENCER",()=>reset());
+ restart.classList.add("zt-image-button","zt-restart");
+ const menu=btn("MENU",()=>{if(!menuOpen){menuOpen=true;paused=true;}else menuOpen=false;updateStatus();});
+ menu.classList.add("zt-image-button","zt-menu");
+ let menuOpen=false;
+ controls.append(start,restart,menu);wrap.appendChild(controls);
  let pad=make("div","zg-control-pad");
  [["◀",()=>move(-1,0)],["⟳",rotate],["▶",()=>move(1,0)],["▼",()=>soft()],["⤓",hardDrop],["Réserve",holdPiece]].forEach(([label,action])=>pad.appendChild(btn(label,action)));
  wrap.appendChild(pad);
  wrap.appendChild(make("div","zg-help","← → déplacer · ↑ tourner · ↓ descendre · Espace poser · C réserve · P pause"));
  root.appendChild(wrap);
+ // Les textures viennent de la planche fournie par l'auteur. Aucun asset généré à l'exécution.
+ let atlasReady=false;
+ if(window.ZebraTetrisArtwork){
+  window.ZebraTetrisArtwork.apply({
+   wrap:wrap,logo:logo,overlay:overlayArt,start:start,restart:restart,menu:menu,
+   onReady:function(){atlasReady=true;render();updateStatus();}
+  });
+ }
  let ctx=canvas.getContext("2d"),nextCtx=next.getContext("2d"),holdCtx=hold.getContext("2d");
  function blank(){return Array.from({length:H},()=>Array(W).fill(0));}
  function nextIndex(){if(!bag.length)bag=randBag();return bag.pop();}
@@ -114,28 +132,41 @@ function mount(root){
   holdUsed=true;render();updateStatus();
  }
  function updateStatus(){
-  status.textContent=over?"PARTIE TERMINÉE":paused?"PAUSE":"EN COURS";
-  start.textContent=over?"▶ Rejouer":paused?"▶ Jouer":"Ⅱ Pause";
+  status.textContent=over?"FIN DE PARTIE":menuOpen?"MENU":paused?"PAUSE":"EN COURS";
+  start.setAttribute("aria-label",paused?"Jouer":"Pause");
+  start.title=paused?"Jouer":"Pause";
+  start.classList.toggle("zt-paused-button",!paused);
+  start.textContent=paused?"JOUER":"PAUSE";
   overlay.style.display=paused?"flex":"none";
-  overlay.firstChild.textContent=over?"PERDU":(!current?"TETRIS":"PAUSE");
-  overlay.children[1].textContent=over?"Appuie sur Recommencer":"Appuie sur Jouer pour continuer";
+  overlay.dataset.state=over?"gameover":menuOpen?"menu":"pause";
+  overlayArt.style.display=menuOpen?"none":"block";
+  overlay.lastChild.textContent=over?"Recommencer pour rejouer":
+    menuOpen?"P : pause · C : réserve · Espace : poser":
+    (!current?"Appuie sur Jouer pour commencer":"Appuie sur Jouer pour continuer");
+  if(window.ZebraTetrisArtwork&&atlasReady)
+   window.ZebraTetrisArtwork.setState(overlayArt,start,over?"gameover":menuOpen?"menu":"pause",!paused);
  }
  function rect(context,x,y,size,val,alpha){
   if(!val)return;
-  context.globalAlpha=alpha===undefined?1:alpha;context.fillStyle=COLORS[val];context.fillRect(x+1,y+1,size-2,size-2);
-  context.fillStyle="rgba(255,255,255,.36)";context.fillRect(x+2,y+2,size-4,3);
-  context.fillStyle="rgba(0,0,0,.3)";context.fillRect(x+size-4,y+4,3,size-6);
+  let col=COLORS[val], x0=Math.round(x),y0=Math.round(y),n=Math.round(size);
+  context.globalAlpha=alpha===undefined?1:alpha;
+  context.fillStyle="#060606";context.fillRect(x0,y0,n,n);
+  context.fillStyle=col;context.fillRect(x0+2,y0+2,n-4,n-4);
+  context.fillStyle="rgba(255,255,255,.48)";context.fillRect(x0+2,y0+2,n-4,3);
+  context.fillStyle="rgba(255,255,255,.26)";context.fillRect(x0+2,y0+3,3,n-7);
+  context.fillStyle="rgba(0,0,0,.34)";context.fillRect(x0+2,y0+n-5,n-4,3);
+  context.fillStyle="rgba(0,0,0,.29)";context.fillRect(x0+n-5,y0+3,3,n-7);
   context.globalAlpha=1;
  }
  function preview(context,index){
-  context.fillStyle="#111419";context.fillRect(0,0,96,96);
+  context.fillStyle="#050505";context.fillRect(0,0,96,96);
   if(index===null||index===undefined)return;
   let mat=piece(index),size=20,x=Math.floor((96-mat[0].length*size)/2),y=Math.floor((96-mat.length*size)/2);
   mat.forEach((row,yy)=>row.forEach((v,xx)=>rect(context,x+xx*size,y+yy*size,size,v)));
  }
  function render(){
-  ctx.fillStyle="#151a24";ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.strokeStyle="rgba(255,255,255,.055)";
+  ctx.fillStyle="#040405";ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle="rgba(255,255,255,.025)";
   for(let x=0;x<=W;x++){ctx.beginPath();ctx.moveTo(x*BLOCK,0);ctx.lineTo(x*BLOCK,H*BLOCK);ctx.stroke();}
   for(let y=0;y<=H;y++){ctx.beginPath();ctx.moveTo(0,y*BLOCK);ctx.lineTo(W*BLOCK,y*BLOCK);ctx.stroke();}
   if(grid)grid.forEach((row,y)=>row.forEach((v,x)=>rect(ctx,x*BLOCK,y*BLOCK,BLOCK,v)));
@@ -152,7 +183,7 @@ function mount(root){
   if(!active||root.closest(".window")?.classList.contains("minimized"))return;
   if(!root.closest(".window")?.classList.contains("focused"))return;
   if(["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName))return;
-  const action={"ArrowLeft":()=>move(-1,0),"ArrowRight":()=>move(1,0),"ArrowDown":soft,"ArrowUp":rotate," ":hardDrop,"c":holdPiece,"C":holdPiece,"p":()=>{if(!over){paused=!paused;updateStatus();}},"P":()=>{if(!over){paused=!paused;updateStatus();}}};
+  const action={"ArrowLeft":()=>move(-1,0),"ArrowRight":()=>move(1,0),"ArrowDown":soft,"ArrowUp":rotate," ":hardDrop,"c":holdPiece,"C":holdPiece,"p":()=>{if(!over){menuOpen=false;paused=!paused;updateStatus();}},"P":()=>{if(!over){menuOpen=false;paused=!paused;updateStatus();}}};
   if(action[e.key]){e.preventDefault();action[e.key]();}
  }
  function tick(){
@@ -164,11 +195,11 @@ function mount(root){
  // La scène se dimensionne selon l'espace réel de la fenêtre.
  function fitBoard(){
   if(!active||!main.isConnected)return;
-  const sideWidth=right.getBoundingClientRect().width||178;
-  const gap=parseFloat(getComputedStyle(main).columnGap)||10;
-  const availableWidth=main.clientWidth-sideWidth-gap-4;
-  const availableHeight=main.clientHeight-4;
-  const width=Math.max(40,Math.min(240,availableWidth,availableHeight/2));
+  const sideWidth=right.getBoundingClientRect().width||155;
+  const gap=parseFloat(getComputedStyle(main).columnGap)||9;
+  const availableWidth=Math.max(60,main.clientWidth-sideWidth-gap-28);
+  const availableHeight=Math.max(125,main.clientHeight-22);
+  const width=Math.max(48,Math.min(240,availableWidth,availableHeight/2));
   if(!Number.isFinite(width))return;
   const pixels=Math.floor(width);
   stage.style.width=pixels+"px";
