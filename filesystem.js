@@ -8,8 +8,8 @@ var DB="zebraos-local-disk-v1", STORE="entries", ROOT="root";
 var dbPromise=null,clipboard=null,requestId=0;
 var initial=[
   {id:"system-tape",parent:ROOT,name:"ZEBRA TAPE 2",kind:"folder"},
-  {id:"system-screens",parent:ROOT,name:"SCREENSHOTS",kind:"folder"},
-  {id:"system-maps",parent:ROOT,name:"MAPS",kind:"folder"}
+  {id:"system-screens",parent:ROOT,name:"CAPTURES",kind:"folder"},
+  {id:"system-maps",parent:ROOT,name:"CARTES",kind:"folder"}
 ];
 function E(tag,cls,label){
   var n=document.createElement(tag);
@@ -182,7 +182,7 @@ function openRoot(host,opt){
   host.innerHTML="";
   var win=host.closest(".window");if(win){var t=win.querySelector(".windowtitle");if(t)t.textContent="Poste de travail — C:\\ROOT";}
   host.appendChild(E("div","folder-path","POSTE DE TRAVAIL — STUDIO ZEBRA RECORD"));
-  host.appendChild(E("p","local-disk-hint","Deux espaces : le disque local modifiable ici et le dossier GitHub publié."));
+  host.appendChild(E("p","local-disk-hint","Tes brouillons restent sur cet appareil. Les fichiers publiés sont visibles par tous."));
   var list=E("div","folder-list local-drive-root");
   function drive(name,icon,desc,action){
     var button=E("button","file-entry local-drive-item");
