@@ -1,0 +1,46 @@
+name: Vérifier le rendu réel des textures Tetris
+on:
+  push:
+    paths:
+      - '.github/workflows/verify-tetris-render.yml'
+      - 'tetris-artwork.js'
+      - 'assets/games/zebra-tetris-ui.png'
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tester les textures dans Chromium
+        run: |
+          cat > _verify_tetris.html <<'HTML'
+          <!doctype html><html lang="fr"><head><meta charset="utf-8"></head><body>
+          <div id="wrap"><img id="logo" alt="Tetris"><img id="overlay" alt="Etat">
+          <button id="play">Jouer</button><button id="restart">Recommencer</button><button id="menu">Menu</button></div>
+          <script src="/tetris-artwork.js?v=1.6"></script>
+          <script>
+          window.addEventListener('load',function(){
+            const wrap=document.getElementById('wrap'),logo=document.getElementById('logo'),overlay=document.getElementById('overlay');
+            window.ZebraTetrisArtwork.apply({
+              wrap:wrap,logo:logo,overlay:overlay,start:document.getElementById('play'),
+              restart:document.getElementById('restart'),menu:document.getElementById('menu'),
+              onReady:function(){
+                setTimeout(function(){
+                  const ok=logo.naturalWidth>0&&overlay.naturalWidth>0&&
+                    !!wrap.style.getPropertyValue('--zt-wall')&&
+                    document.getElementById('play').style.backgroundImage.includes('url(');
+                  document.body.setAttribute('data-result',ok?'ok':'failed');
+                },800);
+              }
+            });
+          });
+          setTimeout(function(){if(!document.body.hasAttribute('data-result'))document.body.setAttribute('data-result','timeout');},5500);
+          </script></body></html>
+          HTML
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/tetris-server.log 2>&1 &
+          sleep 1
+          which google-chrome
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=6500 --dump-dom http://127.0.0.1:8765/_verify_tetris.html > /tmp/tetris-result.html 2>/tmp/chrome.log
+          grep -o 'data-result="[^"]*"' /tmp/tetris-result.html
+          grep -q 'data-result="ok"' /tmp/tetris-result.html
