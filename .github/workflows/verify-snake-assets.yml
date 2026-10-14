@@ -1,0 +1,35 @@
+name: Vérifier les sprites de Zebra Snake
+on:
+  push:
+    paths:
+      - "assets/games/zebra-snake-atlas.png"
+      - ".github/workflows/verify-snake-assets.yml"
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier signature, intégrité des blocs et décompression PNG
+        shell: python
+        run: |
+          import pathlib,struct,zlib
+          p=pathlib.Path("assets/games/zebra-snake-atlas.png")
+          b=p.read_bytes()
+          assert b[:8]==bytes.fromhex("89504e470d0a1a0a"), "signature PNG invalide"
+          off=8
+          chunks=[]
+          idat=b""
+          while off+12 <= len(b):
+              size=struct.unpack(">I",b[off:off+4])[0]
+              kind=b[off+4:off+8]
+              data=b[off+8:off+8+size]
+              crc=struct.unpack(">I",b[off+8+size:off+12+size])[0]
+              assert zlib.crc32(kind+data)==crc, f"CRC incorrect pour {kind!r}"
+              chunks.append(kind)
+              if kind==b"IDAT":idat+=data
+              off+=size+12
+              if kind==b"IEND":break
+          assert chunks[0]==b"IHDR" and chunks[-1]==b"IEND"
+          assert zlib.decompress(idat), "Données pixels illisibles"
+          print("PNG chargé avec succès, taille :", len(b), "octets.")
