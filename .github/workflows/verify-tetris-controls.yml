@@ -1,0 +1,83 @@
+name: Tester les commandes Tetris
+on:
+  push:
+    paths:
+      - '.github/workflows/verify-tetris-controls.yml'
+      - 'tetris.js'
+      - 'tetris-artwork.js'
+      - 'style.css'
+      - 'assets/games/zebra-tetris-ui.png'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  navigateur:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tester la manette et les interactions dans Chromium
+        run: |
+          cat > _verify_tetris_controls.html <<'HTML'
+          <!doctype html><html lang="fr"><head><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <link rel="stylesheet" href="/style.css">
+          </head><body>
+          <div class="window focused" style="width:420px;height:820px;position:relative">
+            <div id="test-root" class="window-body zebra-game-body" style="height:100%;width:100%;"></div>
+          </div>
+          <script src="/tetris-artwork.js"></script>
+          <script src="/tetris.js"></script>
+          <script>
+          const root=document.getElementById("test-root"),report={};
+          const finish=()=>{
+            const passed=Object.values(report).every(x=>x===true);
+            document.body.dataset.result=passed?"ok":"failed";
+            document.body.dataset.report=JSON.stringify(report);
+          };
+          function pointer(button){
+            button.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,button:0,pointerId:55,pointerType:"touch"}));
+            button.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,button:0,pointerId:55,pointerType:"touch"}));
+          }
+          window.addEventListener("load",()=>{
+            try{
+              window.ZebraTetris.mount(root);
+              const $=selector=>root.querySelector(selector);
+              report.mount=!!$(".zt-dpad")&&!!$(".zt-a")&&!!$(".zt-b")&&!!$(".zt-select");
+              report.assets=!!$(".zt-logo");
+              report.buttons=!!$(".zt-play")&&!!$(".zt-restart")&&!!$(".zt-menu");
+              $(".zt-play").click();
+              report.start=$(".zg-state").textContent==="EN COURS";
+              pointer($(".zt-dir-left"));
+              pointer($(".zt-dir-up"));
+              pointer($(".zt-dir-down"));
+              pointer($(".zt-a"));
+              pointer($(".zt-b"));
+              report.hardDrop=Number($(".zg-stat strong").textContent)>0;
+              pointer($(".zt-select"));
+              report.hold=$(".zg-mini").length===2;
+              $(".zt-play").click();
+              report.pause=$(".zg-state").textContent==="PAUSE";
+              $(".zt-play").click();
+              report.resume=$(".zg-state").textContent==="EN COURS";
+              $(".zt-restart").click();
+              report.restart=$(".zg-state").textContent==="EN COURS"&&Number($(".zg-stat strong").textContent)===0;
+              $(".zt-menu").click();
+              report.menu=$(".zg-state").textContent==="MENU";
+              $(".zt-play").click();
+              report.exitMenu=$(".zg-state").textContent==="EN COURS";
+              setTimeout(()=>{
+                report.loadedTextures=$(".zt-logo").naturalWidth>0&&root.querySelector(".zt-art-loaded")!==null;
+                root._zebraDispose();
+                finish();
+              },1600);
+            }catch(e){report.error=String(e);finish();}
+          });
+          setTimeout(()=>{if(!document.body.dataset.result){report.timeout=false;finish();}},3800);
+          </script></body></html>
+          HTML
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebra-tetris-test-server.log 2>&1 &
+          sleep 1
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --touch-events=enabled --window-size=430,900 --virtual-time-budget=4800 --dump-dom http://127.0.0.1:8765/_verify_tetris_controls.html > /tmp/zebra-tetris-test.html 2>/tmp/zebra-tetris-chrome.log
+          grep -o 'data-report="[^"]*"' /tmp/zebra-tetris-test.html
+          grep -o 'data-result="[^"]*"' /tmp/zebra-tetris-test.html
+          grep -q 'data-result="ok"' /tmp/zebra-tetris-test.html
