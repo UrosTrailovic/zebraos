@@ -5,7 +5,7 @@
 var $=function(id){return document.getElementById(id)};
 var users=[["visitor","Visitor","Guest account","V"],["zebra","Zebra","Studio owner","Z"],["admin","Admin","System operator","A"],["daniel","Daniel","...","?"]];
 var wallpaper={visitor:"visitor",zebra:"zebra",admin:"admin",daniel:"daniel"};
-var session=null,opened={},z=20,seq=0,selectedTrack=-1,localTracks=[],tracks=[],adminApproved=false;
+var session=null,opened={},z=20,seq=0,selectedTrack=-1,localTracks=[],tracks=[],adminApproved=false,adminLoginUnlocked=false;
 for(var t=1;t<=9;t++)tracks.push(("0"+t).slice(-2)+" - UNTITLED");
 var music=new Audio(),musicLoaded=false;
 /* Local filesystem replaces the former demo-only filenames. */
@@ -143,6 +143,7 @@ function windowIcon(id){
   if(id==="amp")return "zebraamp";
   if(id==="explorer")return "computer";
   if(id==="settings")return "control-panel";
+  if(id==="manager")return "computer";
   if(id==="viewer")return "jpg";
   if(id==="about")return "zebraos";
   if(id==="adminprompt")return "settings";
@@ -212,14 +213,79 @@ function stopBootSequences(){
   bootAudio.pause();sessionAudio.pause();
 }
 function login(){var r=$("login-users");r.innerHTML="";users.forEach(function(u){var b=el("button","user-card");b.innerHTML='<span class="user-avatar"></span><span class="user-name"></span><span class="user-sub"></span>';b.children[0].textContent=u[3];b.children[1].textContent=u[1];b.children[2].textContent=u[2];b.onclick=function(){sfx("confirm");start(u[0])};r.appendChild(b)});show("login-screen")}
-function start(id){beginSessionBoot(id)}
-function end(){sfx("switch");stopBootSequences();music.pause();adminApproved=false;closeAll();session=null;show("power-screen")}
-function signout(){sfx("switch");stopBootSequences();music.pause();closeAll();session=null;login()}
+/* Studio operator login. A client-side password is for roleplay / casual access
+   only, NOT real authentication. Never store confidential material in this site. */
+var adminPasswordDigest="e5be98a98f2a095123d497892f346cc70153c9d348f276a639fcbbe946183f30";
+function requestAdminPassword(){
+  var existing=document.querySelector(".admin-login-mask");
+  if(existing){existing.querySelector("input").focus();return;}
+  var mask=el("div","admin-login-mask");
+  var panel=el("form","admin-login-dialog");
+  panel.setAttribute("autocomplete","off");
+  panel.appendChild(el("div","admin-login-banner","ZebraOS Studio / Authentication"));
+  panel.appendChild(el("div","admin-login-symbol","Z"));
+  panel.appendChild(el("p","admin-login-text","ADMINISTRATOR ACCESS"));
+  panel.appendChild(el("p","admin-login-intro","Enter your password to access the studio workspace."));
+  var input=el("input","admin-login-input");
+  input.type="password";
+  input.autocomplete="off";
+  input.spellcheck=false;
+  input.placeholder="Password";
+  input.setAttribute("aria-label","Mot de passe Admin");
+  var error=el("div","admin-login-error","");
+  error.setAttribute("role","status");
+  var actions=el("div","admin-login-actions");
+  var cancel=el("button","admin-login-cancel","CANCEL");
+  cancel.type="button";
+  cancel.onclick=function(){mask.remove();};
+  var submit=el("button","admin-login-submit","LOGIN");
+  submit.type="submit";
+  actions.appendChild(cancel);actions.appendChild(submit);
+  panel.appendChild(input);panel.appendChild(error);panel.appendChild(actions);
+  panel.onsubmit=function(event){
+    event.preventDefault();
+    var pass=input.value;
+    input.value="";
+    submit.disabled=true;
+    error.textContent="Checking credentials...";
+    if(!window.crypto||!window.crypto.subtle||!window.TextEncoder){
+      error.textContent="Secure browser APIs unavailable.";submit.disabled=false;return;
+    }
+    var bytes=new TextEncoder().encode("zebraos-studio-admin-2026:"+pass);
+    crypto.subtle.digest("SHA-256",bytes).then(function(buffer){
+      var value=Array.from(new Uint8Array(buffer)).map(function(b){return b.toString(16).padStart(2,"0");}).join("");
+      if(value===adminPasswordDigest){
+        adminLoginUnlocked=true;
+        mask.remove();
+        sfx("confirm");
+        beginSessionBoot("admin");
+      }else{
+        sfx("error");
+        error.textContent="ACCESS DENIED — Incorrect password";
+        input.focus();
+        submit.disabled=false;
+      }
+    }).catch(function(){
+      error.textContent="Authentication check failed. Try again.";
+      submit.disabled=false;
+    });
+  };
+  mask.onkeydown=function(event){if(event.key==="Escape"){event.preventDefault();mask.remove();}};
+  mask.appendChild(panel);
+  $("login-screen").appendChild(mask);
+  input.focus();
+}
+function start(id){
+  if(id==="admin"&&!adminLoginUnlocked){requestAdminPassword();return;}
+  beginSessionBoot(id);
+}
+function end(){sfx("switch");stopBootSequences();music.pause();adminApproved=false;adminLoginUnlocked=false;closeAll();session=null;show("power-screen")}
+function signout(){sfx("switch");stopBootSequences();music.pause();adminLoginUnlocked=false;closeAll();session=null;login()}
 function getStore(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function setStore(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 function setWall(name,custom){var w=$("wallpaper");w.className="wallpaper wallpaper-"+name;w.style.backgroundImage=custom?'url("'+custom+'")':"";w.style.backgroundSize=custom?"cover":"";if(session&&!custom)setStore("zebra.wall."+session,name)}
 function isTouchOpen(e){return (e && e.pointerType==="touch") || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) || window.innerWidth<701;}
-function desk(){var r=$("desktop-icons");r.innerHTML="";var items=[["My Computer","computer","explorer:root"],["ZebraAMP.exe","zebraamp","amp"],["ZEBRA TAPE 2","zebratape2","explorer:tape"],["Screenshots","jpg","explorer:screens"],["README.TXT","readme","txt:readme"],["Recycle Bin","recycle-bin","explorer:recycle"],["Control Panel","control-panel","settings"]];if(session==="daniel")items.push(["DANIEL.TXT","txt","txt:daniel"]);items.forEach(function(it){var b=el("button","desk-icon");b.innerHTML='<span class="desk-symbol"></span><span></span>';b.children[0].appendChild(osIcon(it[1],40));b.children[1].textContent=it[0];b.onclick=function(e){document.querySelectorAll(".desk-icon").forEach(function(x){x.classList.remove("selected")});b.classList.add("selected");if(isTouchOpen(e)||e.detail===0)open(it[2])};b.ondblclick=function(e){if(!isTouchOpen(e))open(it[2])};r.appendChild(b)})}
+function desk(){var r=$("desktop-icons");r.innerHTML="";var items=[["My Computer","computer","explorer:root"],["ZebraAMP.exe","zebraamp","amp"],["ZEBRA TAPE 2","zebratape2","explorer:tape"],["Screenshots","jpg","explorer:screens"],["README.TXT","readme","txt:readme"],["Recycle Bin","recycle-bin","explorer:recycle"],["Control Panel","control-panel","settings"]];if(session==="admin")items.push(["STUDIO MANAGER","computer","studio-manager"]);if(session==="daniel")items.push(["DANIEL.TXT","txt","txt:daniel"]);items.forEach(function(it){var b=el("button","desk-icon");b.innerHTML='<span class="desk-symbol"></span><span></span>';b.children[0].appendChild(osIcon(it[1],40));b.children[1].textContent=it[0];b.onclick=function(e){document.querySelectorAll(".desk-icon").forEach(function(x){x.classList.remove("selected")});b.classList.add("selected");if(isTouchOpen(e)||e.detail===0)open(it[2])};b.ondblclick=function(e){if(!isTouchOpen(e))open(it[2])};r.appendChild(b)})}
 function closeAll(){Object.keys(opened).forEach(function(k){opened[k].w.remove()});opened={};$("task-items").innerHTML="";$("start-menu").classList.add("hidden")}
 function task(){var r=$("task-items");r.innerHTML="";Object.keys(opened).forEach(function(k){var p=opened[k],b=el("button","win-button",p.title);b.onclick=function(){if(p.w.classList.contains("minimized")){p.w.classList.remove("minimized");focus(k);sfx("restore")}else{p.w.classList.add("minimized");sfx("minimize")}};r.appendChild(b)})}
 function focus(id){if(opened[id]){opened[id].w.style.zIndex=++z;Object.keys(opened).forEach(function(k){opened[k].w.classList.toggle("focused",k===id)})}}
@@ -261,12 +327,37 @@ function animateWindowOpen(w,launcher){
 }
 function windowBox(id,title,width,height){var launcher=document.activeElement;if(opened[id]){if(opened[id].w.classList.contains("minimized"))sfx("restore");opened[id].w.classList.remove("minimized");focus(id);return opened[id].w.querySelector(".window-body")}var w=el("div","window");w.style.width=width+"px";w.style.height=height+"px";var offset=seq++*23;w.style.left=Math.max(8,Math.min(115+offset,window.innerWidth-width-10))+"px";w.style.top=Math.max(8,Math.min(55+offset,window.innerHeight-height-50))+"px";w.innerHTML='<div class="titlebar"><span>▣</span><span class="windowtitle"></span><div class="titlebuttons"><button data-min>_</button><button data-close>×</button></div></div><div class="window-body"></div><div class="window-status">ZebraOS 2.0 / STUDIO COMPUTER</div>';w.querySelector(".windowtitle").textContent=title;var winSymbol=w.querySelector(".titlebar > span:first-child");winSymbol.textContent="";winSymbol.appendChild(osIcon(windowIcon(id),16));$("windows-area").appendChild(w);opened[id]={w:w,title:title};setTimeout(function(){if(document.body.contains(w))sfx("open")},125);w.querySelector("[data-min]").onclick=function(){sfx("minimize");w.classList.add("minimized")};w.querySelector("[data-close]").onclick=function(){sfx("close");w.remove();delete opened[id];task()};w.onpointerdown=function(){focus(id)};var bar=w.querySelector(".titlebar"),drag=null;bar.onpointerdown=function(e){if(e.target.tagName==="BUTTON"||window.innerWidth<701)return;drag={x:e.clientX,y:e.clientY,left:parseInt(w.style.left,10),top:parseInt(w.style.top,10)};bar.setPointerCapture(e.pointerId)};bar.onpointermove=function(e){if(!drag)return;w.style.left=Math.max(0,Math.min(innerWidth-70,drag.left+e.clientX-drag.x))+"px";w.style.top=Math.max(0,Math.min(innerHeight-70,drag.top+e.clientY-drag.y))+"px"};bar.onpointerup=bar.onpointercancel=function(){drag=null};task();focus(id);animateWindowOpen(w,launcher);return w.querySelector(".window-body")}
 function button(txt,cb){var b=el("button","classic-button",txt);b.onclick=cb;return b}
+function studioManager(){
+  if(session!=="admin")return;
+  var r=windowBox("manager","STUDIO MANAGER — PRIVATE WORKSPACE",550,440);
+  r.innerHTML="";
+  var intro=el("div","manager-intro");
+  intro.appendChild(el("div","manager-title","ZEBRA RECORD // STUDIO MANAGER"));
+  intro.appendChild(el("p","","Prepare your files privately on this device, then publish them separately on GitHub."));
+  r.appendChild(intro);
+  function section(title,description,cta,callback){
+    var card=el("div","manager-card");
+    card.appendChild(el("h3","",title));
+    card.appendChild(el("p","",description));
+    card.appendChild(button(cta,callback));
+    r.appendChild(card);
+  }
+  section("C:\\STUDIO  ·  WORKSPACE","Create folders, import images, audio, maps and other files. Saved locally in this browser, not online.","OPEN LOCAL DRIVE",function(){explorer("local:root");});
+  section("STUDIO (GITHUB)  ·  PUBLIC","Preview what your visitors can access. Only committed files appear here.","VIEW PUBLISHED FILES",function(){explorer("github:STUDIO");});
+  section("PUBLISH ON GITHUB","When your drafts are ready, upload them to the public repository. GitHub login is required.","OPEN GITHUB UPLOAD",function(){window.open("https://github.com/UrosTrailovic/zebraos/tree/main/STUDIO","_blank","noopener,noreferrer");});
+  r.appendChild(el("p","manager-disclaimer","ADMIN ACCESS IS COSMETIC. Do not store secrets in ZebraOS or its public repository."));
+}
 function explorer(id){
  id=id||"root";
+ if(session!=="admin"){
+   if(id==="tape")id="github:STUDIO/AUDIO";
+   else if(id==="screens")id="github:STUDIO/ARTWORK";
+   else if(id.indexOf("github:")!==0)id="github:STUDIO";
+ }
  var body=windowBox("explorer","My Computer — C:\\ROOT",560,430);
  body.innerHTML="";
  if(id.indexOf("github:")===0){
-  if(window.ZebraGitFiles)window.ZebraGitFiles.mount(body,id.slice(7),{explorer:explorer,osIcon:osIcon,windowBox:windowBox});
+  if(window.ZebraGitFiles)window.ZebraGitFiles.mount(body,id.slice(7),{explorer:explorer,osIcon:osIcon,windowBox:windowBox,canUpload:session==="admin"});
   else body.appendChild(el("p","github-drive-error","GitHub est indisponible."));
   return;
  }
@@ -312,7 +403,7 @@ function player(index){if(session==="admin"&&!opened.amp&&!opened.adminprompt&&!
 var r=windowBox("amp","ZebraAMP.exe",480,470);r.innerHTML='<div class="amp"><div class="amp-header"><span>ZEBRAAMP 2.0</span><span>● STEREO</span></div><div class="amp-screen"><span class="amp-track" data-track>NO TRACK LOADED</span><span class="amp-time" data-time>00:00 / 00:00</span><input type="range" min="0" max="100" value="0" data-seek></div><div class="amp-transport"><button data-prev>Ⅰ◀</button><button data-play>▶</button><button data-stop>■</button><button data-next>▶Ⅰ</button></div><div class="basic-row">VOL <input type="range" min="0" max="100" value="70" data-volume></div><button class="amp-load" data-import>Load MP3(s) from device</button><div class="amp-playlist" data-list></div><div class="amp-help" data-help>Importez vos MP3 pour tester. La tape n’est pas encore publique.</div></div>';
 var list=r.querySelector("[data-list]");tracks.forEach(function(n,i){var b=el("button","amp-song",(i+1)+". "+n);b.onclick=function(){pickTrack(i)};list.appendChild(b)});
 r.querySelector("[data-play]").onclick=function(){if(selectedTrack<0)pickTrack(0);else if(music.paused){music.play().catch(function(){})}else music.pause();renderAmp()};r.querySelector("[data-stop]").onclick=function(){music.pause();music.currentTime=0;renderAmp()};r.querySelector("[data-prev]").onclick=function(){pickTrack((selectedTrack+8)%9)};r.querySelector("[data-next]").onclick=function(){pickTrack((selectedTrack+1)%9)};r.querySelector("[data-volume]").oninput=function(e){music.volume=e.target.value/100};r.querySelector("[data-seek]").oninput=function(e){if(music.duration)music.currentTime=e.target.value*music.duration/100};r.querySelector("[data-import]").onclick=function(){$("file-music").click()};music.volume=.7;if(index!==undefined)pickTrack(index);else renderAmp()}
-function open(code){$("start-menu").classList.add("hidden");if(code==="amp")player();else if(code==="settings")settings();else if(code==="about")about();else if(code==="notepad")notepad("notes");else if(code==="viewer")viewer("cover");else if(code.indexOf("explorer:")===0)explorer(code.split(":")[1]);else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
+function open(code){$("start-menu").classList.add("hidden");if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="notepad")notepad("notes");else if(code==="viewer")viewer("cover");else if(code.indexOf("explorer:")===0)explorer(code.split(":")[1]);else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
 decorateSystemMenus();
 $("power-btn").onclick=powerOn;$("skip-boot").onclick=finishBoot;$("skip-session-boot").onclick=finishSessionBoot;$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
 $("start-button").onclick=function(e){e.stopPropagation();$("start-menu").classList.toggle("hidden")};document.querySelectorAll("[data-start]").forEach(function(b){b.onclick=function(){open(b.dataset.start)}});document.addEventListener("pointerdown",function(e){if(!e.target.closest("#start-menu")&&!e.target.closest("#start-button"))$("start-menu").classList.add("hidden")});
