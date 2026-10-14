@@ -328,24 +328,34 @@ function animateWindowOpen(w,launcher){
 function windowBox(id,title,width,height){var launcher=document.activeElement;if(opened[id]){if(opened[id].w.classList.contains("minimized"))sfx("restore");opened[id].w.classList.remove("minimized");focus(id);return opened[id].w.querySelector(".window-body")}var w=el("div","window");w.style.width=width+"px";w.style.height=height+"px";var offset=seq++*23;w.style.left=Math.max(8,Math.min(115+offset,window.innerWidth-width-10))+"px";w.style.top=Math.max(8,Math.min(55+offset,window.innerHeight-height-50))+"px";w.innerHTML='<div class="titlebar"><span>▣</span><span class="windowtitle"></span><div class="titlebuttons"><button data-min>_</button><button data-close>×</button></div></div><div class="window-body"></div><div class="window-status">ZebraOS 2.0 / STUDIO COMPUTER</div>';w.querySelector(".windowtitle").textContent=title;var winSymbol=w.querySelector(".titlebar > span:first-child");winSymbol.textContent="";winSymbol.appendChild(osIcon(windowIcon(id),16));$("windows-area").appendChild(w);opened[id]={w:w,title:title};setTimeout(function(){if(document.body.contains(w))sfx("open")},125);w.querySelector("[data-min]").onclick=function(){sfx("minimize");w.classList.add("minimized")};w.querySelector("[data-close]").onclick=function(){sfx("close");w.remove();delete opened[id];task()};w.onpointerdown=function(){focus(id)};var bar=w.querySelector(".titlebar"),drag=null;bar.onpointerdown=function(e){if(e.target.tagName==="BUTTON"||window.innerWidth<701)return;drag={x:e.clientX,y:e.clientY,left:parseInt(w.style.left,10),top:parseInt(w.style.top,10)};bar.setPointerCapture(e.pointerId)};bar.onpointermove=function(e){if(!drag)return;w.style.left=Math.max(0,Math.min(innerWidth-70,drag.left+e.clientX-drag.x))+"px";w.style.top=Math.max(0,Math.min(innerHeight-70,drag.top+e.clientY-drag.y))+"px"};bar.onpointerup=bar.onpointercancel=function(){drag=null};task();focus(id);animateWindowOpen(w,launcher);return w.querySelector(".window-body")}
 function button(txt,cb){var b=el("button","classic-button",txt);b.onclick=cb;return b}
 function studioManager(){
-  if(session!=="admin")return;
-  var r=windowBox("manager","STUDIO MANAGER — PRIVATE WORKSPACE",550,440);
-  r.innerHTML="";
-  var intro=el("div","manager-intro");
-  intro.appendChild(el("div","manager-title","ZEBRA RECORD // STUDIO MANAGER"));
-  intro.appendChild(el("p","","Prepare your files privately on this device, then publish them separately on GitHub."));
-  r.appendChild(intro);
-  function section(title,description,cta,callback){
-    var card=el("div","manager-card");
-    card.appendChild(el("h3","",title));
-    card.appendChild(el("p","",description));
-    card.appendChild(button(cta,callback));
-    r.appendChild(card);
-  }
-  section("C:\\STUDIO  ·  WORKSPACE","Create folders, import images, audio, maps and other files. Saved locally in this browser, not online.","OPEN LOCAL DRIVE",function(){explorer("local:root");});
-  section("STUDIO (GITHUB)  ·  PUBLIC","Preview what your visitors can access. Only committed files appear here.","VIEW PUBLISHED FILES",function(){explorer("github:STUDIO");});
-  section("PUBLISH ON GITHUB","When your drafts are ready, upload them to the public repository. GitHub login is required.","OPEN GITHUB UPLOAD",function(){window.open("https://github.com/UrosTrailovic/zebraos/tree/main/STUDIO","_blank","noopener,noreferrer");});
-  r.appendChild(el("p","manager-disclaimer","ADMIN ACCESS IS COSMETIC. Do not store secrets in ZebraOS or its public repository."));
+ if(session!=="admin")return;
+ var r=windowBox("manager","STUDIO MANAGER — ADMIN",Math.min(630,innerWidth-20),Math.min(480,innerHeight-65));
+ r.innerHTML="";
+ var heading=el("div","manager-intro");
+ heading.appendChild(el("div","manager-title","ZEBRA RECORD // STUDIO MANAGER"));
+ heading.appendChild(el("p","","Ton espace pour préparer le contenu de ZebraOS."));
+ r.appendChild(heading);
+ r.appendChild(el("div","manager-warning","IMPORTANT : importer un fichier en local ne le publie PAS sur ZebraOS pour les autres visiteurs."));
+ function section(number,title,description,label,action){
+  var card=el("div","manager-card");
+  card.appendChild(el("div","manager-step-number",String(number)));
+  var content=el("div","manager-step-content");
+  content.appendChild(el("h3","",title));
+  content.appendChild(el("p","",description));
+  card.appendChild(content);
+  card.appendChild(button(label,action));
+  r.appendChild(card);
+ }
+ section(1,"MES BROUILLONS — DISQUE LOCAL",
+  "Crée des dossiers et importe tes images, MP3 ou documents. Ils restent sur CE navigateur et ne sont jamais visibles aux visiteurs.",
+  "OUVRIR MES BROUILLONS",function(){explorer("local:root");});
+ section(2,"VOIR LE SITE PUBLIC",
+  "Voici exactement la bibliothèque accessible depuis les sessions Zebra, Visitor et Daniel. Les dossiers vides restent vides tant que rien n'est publié.",
+  "VOIR LES FICHIERS PUBLICS",function(){explorer("github:STUDIO");});
+ section(3,"PUBLIER MES FICHIERS",
+  "Pour l'instant, la publication est manuelle : télécharge tes fichiers du disque local si besoin, ajoute-les au dossier STUDIO sur GitHub et valide le commit.",
+  "OUVRIR GITHUB",function(){window.open("https://github.com/UrosTrailovic/zebraos/tree/main/STUDIO","_blank","noopener,noreferrer");});
+ r.appendChild(el("p","manager-disclaimer","Le mot de passe Admin n'est pas une sécurité serveur. Évite les fichiers confidentiels dans ce site."));
 }
 function explorer(id){
  id=id||"root";
