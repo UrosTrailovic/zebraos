@@ -21,7 +21,7 @@ var presetValues={
  "Voix":[-4,-2,3,5,2]
 };
 var eqFreq=[70,250,1000,3500,11000],eqNames=["GRAVES","BAS-MÉD.","MÉDIUMS","PRÉSENCE","AIGUS"];
-var animation=null,loadingId=0,notifyText="",initDone=false;
+var animation=null,loadingId=0,notifyText="",initDone=false,albumChecked=false;
 function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
 function b(label,action,cls){var x=el("button",cls||"amp3-btn",label);x.type="button";x.onclick=action;return x;}
 function stamp(){return "pl-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);}
@@ -32,7 +32,7 @@ function format(t){if(!Number.isFinite(t)||t<0)return "00:00";t=Math.floor(t);re
 function status(text){notifyText=text||"";renderStatus();}
 function store(){
  try{localStorage.setItem(KEY,JSON.stringify({
-   playlists:playlists,current:current,volume:volume,shuffle:shuffle,repeat:repeat,
+   playlists:playlists,volume:volume,shuffle:shuffle,repeat:repeat,
    speed:speed,eq:eq,preset:preset
  }));}catch(e){status("Stockage des préférences indisponible.");}
 }
@@ -46,7 +46,8 @@ function restore(){
   }).map(function(p){return{id:p.id,name:p.name.slice(0,90),readonly:false,
    tracks:p.tracks.filter(function(t){return t&&typeof t.id==="string"&&
     (t.kind==="blob"||t.kind==="public")&&typeof t.name==="string";}).slice(0,800)};});
-  if(typeof d.current==="string")current=d.current;
+  // À chaque nouvel accès au site, la playlist de démarrage est Zebra Tape 2.
+  // Le changement de playlist reste possible ensuite pendant la session.
   if(!Number.isNaN(Number(d.volume)))volume=Math.max(0,Math.min(1,Number(d.volume)));
   shuffle=!!d.shuffle;repeat=["aucun","tout","un"].includes(d.repeat)?d.repeat:"tout";
   speed=[.75,1,1.25,1.5].includes(d.speed)?d.speed:1;
@@ -54,7 +55,7 @@ function restore(){
   if(typeof d.preset==="string")preset=d.preset;
  }catch(e){}
  audio.volume=volume;audio.playbackRate=speed;
- if(current!==ALBUM&&!playlists.some(function(p){return p.id===current;}))current=ALBUM;
+ current=ALBUM;
 }
 function db(){
  if(dbPromise)return dbPromise;
@@ -87,21 +88,42 @@ function urlFor(path){return "https://raw.githubusercontent.com/UrosTrailovic/ze
 function looksAudio(name){return /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(name||"");}
 function syncAlbum(entries){
  if(!Array.isArray(entries))return;
- var dir=entries.find(function(x){return x.type==="dir"&&x.path.split("/").slice(0,-1).join("/")==="STUDIO/BUREAU"&&x.name.toLowerCase()==="zebra tape 2";});
- var prefix=dir?dir.path+"/":"STUDIO/BUREAU/Zebra Tape 2/";
- album.tracks=entries.filter(function(x){return x.type==="file"&&x.path.startsWith(prefix)&&looksAudio(x.name)&&
-  !/\.icone\.(png|webp|jpg)$/i.test(x.name);
- }).sort(function(a,b){return a.path.localeCompare(b.path,undefined,{numeric:true,sensitivity:"base"});})
- .map(function(x){return{id:"public:"+x.path,name:label(x.name),kind:"public",path:x.path};});
+ // Les MP3 peuvent être à la racine de Zebra Tape 2 OU dans Son, SONS,
+ // voire un autre sous-dossier. La casse des noms ne doit pas bloquer.
+ var root="STUDIO/BUREAU/";
+ var folder=entries.find(function(x){
+  return x.type==="dir" && x.path.split("/").slice(0,-1).join("/")===root.slice(0,-1)
+    && (x.name||x.path.split("/").pop()).toLocaleLowerCase("fr")==="zebra tape 2";
+ });
+ var prefix=(folder?folder.path:root+"Zebra Tape 2")+"/";
+ album.tracks=entries.filter(function(x){
+  return x.type==="file"&&typeof x.path==="string"&&x.path.startsWith(prefix)
+    &&looksAudio(x.name||x.path.split("/").pop());
+ }).sort(function(a,b){
+  var nameA=a.path.slice(prefix.length),nameB=b.path.slice(prefix.length);
+  return nameA.localeCompare(nameB,"fr",{numeric:true,sensitivity:"base"});
+ }).map(function(x){
+  return {id:"public:"+x.path,name:label(x.name||x.path.split("/").pop()),kind:"public",path:x.path};
+ });
+ albumChecked=true;
  if(current===ALBUM){
-  if(currentId&&!album.tracks.some(function(t){return t.id===currentId;})){audio.pause();currentId=null;audio.removeAttribute("src");}
+  if(currentId&&!album.tracks.some(function(t){return t.id===currentId;})){
+   audio.pause();currentId=null;audio.removeAttribute("src");releaseUrl();
+  }
   render();
  }
 }
 function updatePublic(){
  var lib=window.ZebraGitFiles;
- if(!lib)return Promise.resolve();
- return lib.load().then(function(r){if(r&&r.ok&&Array.isArray(r.entries))syncAlbum(r.entries);});
+ if(!lib)return Promise.resolve({ok:false,error:"Bibliothèque ZebraOS non disponible."});
+ return lib.load().then(function(result){
+  if(!result||!result.ok||!Array.isArray(result.entries))
+   return {ok:false,error:result&&result.error||"Index des fichiers inaccessible."};
+  syncAlbum(result.entries);
+  return {ok:true,count:album.tracks.length};
+ }).catch(function(err){
+  return {ok:false,error:err.message||"Connexion au dépôt impossible."};
+ });
 }
 function init(){
  if(initDone)return;
@@ -337,7 +359,7 @@ function render(){
  var list=getList(),sel=view.querySelector("[data-amp-select]");
  var last=sel.value;sel.innerHTML="";
  [album].concat(playlists).forEach(function(p){
-  var opt=el("option","",p.name+(p.readonly?" • officiel":""));
+  var opt=el("option","",p.name);
   opt.value=p.id;sel.appendChild(opt);
  });
  sel.value=current;
@@ -348,7 +370,9 @@ function render(){
  view.querySelector("[data-amp-import]").textContent=editable?"＋ Importer des sons":"＋ Créer avec mes sons";
  if(!list.tracks.length){
   rows.appendChild(el("div","amp3-empty",list.readonly?
-   "La Zebra Tape 2 est en préparation. Les MP3 publiés dans STUDIO/BUREAU/Zebra Tape 2 apparaîtront ici automatiquement.":
+   albumChecked?
+    "Aucun morceau trouvé sur GitHub. Vérifie STUDIO/BUREAU/Zebra Tape 2/Son : les fichiers audio doivent être enregistrés avec « Commit changes ».":
+    "Chargement de Zebra Tape 2 depuis GitHub…":
    "Playlist vide. Importe un ou plusieurs morceaux, même en une seule fois."));
  }else{
   list.tracks.forEach(function(t,i){
@@ -477,11 +501,23 @@ function open(){
  var rows=el("div","amp3-list");rows.setAttribute("data-amp-rows","");root.appendChild(rows);
  var actions=el("div","amp3-bottom");
  actions.appendChild(b("＋ IMPORTER DES SONS",function(){var input=document.getElementById("file-music");if(input)input.click();},"amp3-btn amp3-import")).setAttribute("data-amp-import","");
- actions.appendChild(b("↻ ACTUALISER LA TAPE",function(){status("Recherche des morceaux publiés…");updatePublic().then(function(){status("Playlist officielle actualisée.");});},"amp3-btn"));
+ actions.appendChild(b("↻ ACTUALISER LA TAPE",function(){
+  status("Recherche des morceaux dans Zebra Tape 2…");
+  updatePublic().then(function(result){
+   if(result.ok)status(result.count+" morceau(x) trouvé(s) dans Zebra Tape 2.");
+   else status("Actualisation impossible : "+result.error);
+  });
+ },"amp3-btn"));
  root.appendChild(actions);
  root.appendChild(el("div","amp3-status","")).setAttribute("data-amp-status","");
  w.appendChild(root);
  render();renderEq();visualize();
+ // Actualise aussi après une réouverture de ZebraAMP, sans attendre un clic.
+ updatePublic().then(function(result){
+   if(result.ok){
+     if(current===ALBUM)status(result.count+" morceau(x) dans Zebra Tape 2.");
+   }else if(current===ALBUM)status("Mise à jour indisponible : "+result.error);
+ });
 }
 function stop(){audio.pause();if(animation){cancelAnimationFrame(animation);animation=null;}view=null;}
 window.ZebraAMP={
