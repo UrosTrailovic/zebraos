@@ -279,8 +279,8 @@ function start(id){
   if(id==="admin"&&!adminLoginUnlocked){requestAdminPassword();return;}
   beginSessionBoot(id);
 }
-function end(){sfx("switch");stopBootSequences();music.pause();adminApproved=false;adminLoginUnlocked=false;closeAll();session=null;show("power-screen")}
-function signout(){sfx("switch");stopBootSequences();music.pause();adminLoginUnlocked=false;closeAll();session=null;login()}
+function end(){sfx("switch");stopBootSequences();music.pause();if(window.ZebraAMP)window.ZebraAMP.stop();adminApproved=false;adminLoginUnlocked=false;closeAll();session=null;show("power-screen")}
+function signout(){sfx("switch");stopBootSequences();music.pause();if(window.ZebraAMP)window.ZebraAMP.stop();adminLoginUnlocked=false;closeAll();session=null;login()}
 function getStore(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function setStore(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 function setWall(name,custom){var w=$("wallpaper");w.className="wallpaper wallpaper-"+name;w.style.backgroundImage=custom?'url("'+custom+'")':"";w.style.backgroundSize=custom?"cover":"";if(session&&!custom)setStore("zebra.wall."+session,name)}
@@ -323,7 +323,7 @@ function desk(){
   lib.list(lib.root).forEach(function(item){
     shortcut(item.name,lib.icon(item,osIcon,40),function(){
       if(item.type==="dir")explorer("github:"+item.path);
-      else lib.openFile(item,{windowBox:windowBox});
+      else lib.openFile(item,{windowBox:windowBox,openAudio:function(file){if(window.ZebraAMP){window.ZebraAMPConfig={windowBox:windowBox};window.ZebraAMP.openPublic(file);}}});
     },true);
   });
  }
@@ -426,7 +426,8 @@ function explorer(id){
  var path=id.indexOf("github:")===0?id.slice(7):"STUDIO/BUREAU";
  if(window.ZebraGitFiles){
   window.ZebraGitFiles.mount(body,path,{
-   explorer:explorer,osIcon:osIcon,windowBox:windowBox,canUpload:session==="admin"
+   explorer:explorer,osIcon:osIcon,windowBox:windowBox,canUpload:session==="admin",
+   openAudio:function(file){if(window.ZebraAMP){window.ZebraAMPConfig={windowBox:windowBox};window.ZebraAMP.openPublic(file);}}
   });
  }else body.appendChild(el("p","github-drive-error","Le bureau n'a pas pu être chargé."));
 }
@@ -447,12 +448,12 @@ r.appendChild(button("Tester le clic de souris",function(){playMechanicalClick("
 r.appendChild(el("p","desktop-note","Sons de l’interface : Kenney (CC0). Volume volontairement discret."))}
 function about(){var r=windowBox("about","Propriétés du système",390,260);r.innerHTML='<div class="props"><b>ZebraOS Professionnel 2.0</b><br>Édition Studio, décembre 2026<br>Enregistré pour : Zebra Record<br>Ordinateur : STUDIO-PC-01<br>CPU: 800 MHz<br>RAM: 64 MB<br><br>www.zebratape2.net</div>'}
 function format(sec){if(!isFinite(sec)||sec<0)return"00:00";var s=Math.floor(sec);return("0"+Math.floor(s/60)).slice(-2)+":"+("0"+s%60).slice(-2)}
-function renderAmp(){var r=opened.amp&&opened.amp.w.querySelector(".window-body");if(!r)return;var tr=r.querySelector("[data-track]"),ti=r.querySelector("[data-time]"),pl=r.querySelector("[data-play]"),seek=r.querySelector("[data-seek]");if(tr)tr.textContent=selectedTrack<0?"AUCUN MORCEAU CHARGÉ":tracks[selectedTrack];if(ti)ti.textContent=format(music.currentTime)+" / "+format(music.duration);if(pl)pl.textContent=music.paused?"▶":"Ⅱ";if(seek)seek.value=isFinite(music.duration)&&music.duration?Math.floor(100*music.currentTime/music.duration):0;r.querySelectorAll(".amp-song").forEach(function(b,i){b.classList.toggle("active",i===selectedTrack)})}
-function pickTrack(i){selectedTrack=i;music.pause();music.src=localTracks[i]||"assets/music/track-"+("0"+(i+1)).slice(-2)+".mp3";music.load();var p=music.play();if(p&&p.catch)p.catch(function(){var r=opened.amp&&opened.amp.w.querySelector("[data-help]");if(r)r.textContent="Aucun MP3 public pour l'instant. Importe les tiens avec le bouton ci-dessous."});renderAmp()}
-function player(index){if(session==="admin"&&!opened.amp&&!opened.adminprompt&&!adminApproved){var r=windowBox("adminprompt","Sécurité ZebraOS",390,205);r.innerHTML="<p>ZebraAMP.exe demande les droits administrateur.</p><p>Éditeur : Zebra Record (non vérifié)</p>";r.appendChild(button("OUI",function(){opened.adminprompt.w.querySelector("[data-close]").click();adminApproved=true;player(index)}));r.appendChild(button("NON",function(){opened.adminprompt.w.querySelector("[data-close]").click();msg("Accès refusé","Daniel a été prévenu.")}));return}
-var r=windowBox("amp","ZebraAMP.exe",480,470);r.innerHTML='<div class="amp"><div class="amp-header"><span>ZEBRAAMP 2.0</span><span>● STÉRÉO</span></div><div class="amp-screen"><span class="amp-track" data-track>AUCUN MORCEAU CHARGÉ</span><span class="amp-time" data-time>00:00 / 00:00</span><input type="range" min="0" max="100" value="0" data-seek></div><div class="amp-transport"><button data-prev>Ⅰ◀</button><button data-play>▶</button><button data-stop>■</button><button data-next>▶Ⅰ</button></div><div class="basic-row">VOL <input type="range" min="0" max="100" value="70" data-volume></div><button class="amp-load" data-import>Importer des fichiers MP3</button><div class="amp-playlist" data-list></div><div class="amp-help" data-help>Importez vos MP3 pour tester. La tape n’est pas encore publique.</div></div>';
-var list=r.querySelector("[data-list]");tracks.forEach(function(n,i){var b=el("button","amp-song",(i+1)+". "+n);b.onclick=function(){pickTrack(i)};list.appendChild(b)});
-r.querySelector("[data-play]").onclick=function(){if(selectedTrack<0)pickTrack(0);else if(music.paused){music.play().catch(function(){})}else music.pause();renderAmp()};r.querySelector("[data-stop]").onclick=function(){music.pause();music.currentTime=0;renderAmp()};r.querySelector("[data-prev]").onclick=function(){pickTrack((selectedTrack+8)%9)};r.querySelector("[data-next]").onclick=function(){pickTrack((selectedTrack+1)%9)};r.querySelector("[data-volume]").oninput=function(e){music.volume=e.target.value/100};r.querySelector("[data-seek]").oninput=function(e){if(music.duration)music.currentTime=e.target.value*music.duration/100};r.querySelector("[data-import]").onclick=function(){$("file-music").click()};music.volume=.7;if(index!==undefined)pickTrack(index);else renderAmp()}
+/* ZebraAMP 3.0 est maintenant un composant autonome. */
+function player(){
+ if(!window.ZebraAMP)return;
+ window.ZebraAMPConfig={windowBox:windowBox};
+ window.ZebraAMP.open();
+}
 function open(code){$("start-menu").classList.add("hidden");if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
 decorateSystemMenus();
 $("power-btn").onclick=powerOn;$("skip-boot").onclick=finishBoot;$("skip-session-boot").onclick=finishSessionBoot;$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
@@ -469,7 +470,15 @@ document.addEventListener("pointerup",function(e){
 },{passive:true});
 
 $("file-wallpaper").onchange=function(e){var f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;if(window.ZebraWallpaper)window.ZebraWallpaper.importFile(f,session);else setWall(session||"visitor",URL.createObjectURL(f))};
-$("file-music").onchange=function(e){localTracks.forEach(function(u){URL.revokeObjectURL(u)});localTracks=[];Array.from(e.target.files).slice(0,9).forEach(function(f,i){localTracks[i]=URL.createObjectURL(f);tracks[i]=f.name.replace(/\.[^.]+$/,"")});player();var p=opened.amp.w.querySelector("[data-list]");p.innerHTML="";tracks.forEach(function(n,i){var b=el("button","amp-song",(i+1)+". "+n);b.onclick=function(){pickTrack(i)};p.appendChild(b)});if(localTracks.length)pickTrack(0)};
-["play","pause","timeupdate","loadedmetadata","ended"].forEach(function(event){music.addEventListener(event,function(){if(event==="ended"&&selectedTrack<8)pickTrack(selectedTrack+1);renderAmp()})});
+$("file-music").onchange=function(e){
+ var files=Array.from(e.target.files||[]);
+ e.target.value="";
+ if(!files.length)return;
+ if(window.ZebraAMP){
+  window.ZebraAMPConfig={windowBox:windowBox};
+  window.ZebraAMP.open();
+  window.ZebraAMP.importFiles(files);
+ }
+};
 function clock(){var d=new Date();$("clock").textContent=("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2)}clock();setInterval(clock,30000);
 }());
