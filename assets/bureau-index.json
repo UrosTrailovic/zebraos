@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-14T10:34:14.976564+00:00",
+  "generatedAt": "2026-10-14T10:35:33.992428+00:00",
   "entries": [
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
@@ -9,6 +9,16 @@
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2/Cover",
       "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Zebra Tape 2/Cover/Back2.webp",
+      "type": "file",
+      "size": 263056
+    },
+    {
+      "path": "STUDIO/BUREAU/Zebra Tape 2/Cover/front 2.webp",
+      "type": "file",
+      "size": 262920
     },
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2/Map cs",
