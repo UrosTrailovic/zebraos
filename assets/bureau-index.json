@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-14T11:13:39.976092+00:00",
+  "generatedAt": "2026-10-14T11:14:36.963179+00:00",
   "entries": [
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
@@ -46,6 +46,26 @@
       "path": "STUDIO/BUREAU/Zebra Tape 2/Son/1_Doma_Intro.mp3",
       "type": "file",
       "size": 5817758
+    },
+    {
+      "path": "STUDIO/BUREAU/Zebra Tape 2/Son/2_Draw_me_a_Zebra.mp3",
+      "type": "file",
+      "size": 6501399
+    },
+    {
+      "path": "STUDIO/BUREAU/Zebra Tape 2/Son/3_In_my_car.mp3",
+      "type": "file",
+      "size": 5689513
+    },
+    {
+      "path": "STUDIO/BUREAU/Zebra Tape 2/Son/4_Shasha.mp3",
+      "type": "file",
+      "size": 5615325
+    },
+    {
+      "path": "STUDIO/BUREAU/Zebra Tape 2/Son/5_I_wanna_dance.mp3",
+      "type": "file",
+      "size": 8031175
     }
   ]
 }
