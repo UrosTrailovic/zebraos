@@ -601,19 +601,28 @@ function explorer(id){
 function msg(title,message){if(/unavailable|denied/i.test(title))sfx("error");var r=windowBox("msg-"+(++seq),title,375,180);r.appendChild(el("p","app-message",message));r.appendChild(button("OK",function(){r.parentNode.remove();Object.keys(opened).forEach(function(k){if(!document.body.contains(opened[k].w))delete opened[k]});task()}))}
 function notepad(id){var name=id==="notes"?"MES_NOTES.TXT":id==="readme"?"LISEZMOI.TXT":(id||"LISEZMOI").toUpperCase()+".TXT";var r=windowBox("note-"+id,name+" — Bloc-notes",480,380);r.innerHTML="";var wrap=el("div","note-editor");var ta=el("textarea");ta.value=id==="notes"?(getStore("zebra.note."+session)||""):docs[id]||"";if(id!=="notes")ta.readOnly=true;wrap.appendChild(ta);if(id==="notes")wrap.appendChild(button("Fichier > Enregistrer",function(){setStore("zebra.note."+session,ta.value);msg("Bloc-notes","Enregistré dans ton navigateur.")}));else wrap.appendChild(el("div","desktop-note","Fichier en lecture seule"));r.appendChild(wrap)}
 function viewer(name){var r=windowBox("viewer","Visionneuse d’images — "+name+".JPG",440,340);r.innerHTML="";var p=el("div","viewer-placeholder","[ "+name.toUpperCase()+".JPG ]\n\nImages et captures à venir");p.style.whiteSpace="pre-line";r.appendChild(p)}
-function settings(){var r=windowBox("settings","Panneau de configuration — Affichage et sons",Math.min(660,Math.max(390,window.innerWidth-35)),Math.min(570,Math.max(380,window.innerHeight-85)));if(window.ZebraWallpaper)window.ZebraWallpaper.mount(r);else{r.innerHTML="<h3>Propriétés de l’affichage</h3>";r.appendChild(button("Importer un fond d’écran…",function(){$("file-wallpaper").click()}));}
-r.appendChild(el("h3","", "Paramètres du son"));
-var mute=button(getStore("zebra.sfx.muted")==="1"?"Sons du système : désactivés":"Sons du système : activés",function(){
-  var wasMuted=getStore("zebra.sfx.muted")==="1";
-  setStore("zebra.sfx.muted",wasMuted?"0":"1");
-  mute.textContent=wasMuted?"Sons du système : activés":"Sons du système : désactivés";
-  if(wasMuted)sfx("confirm");
-});
-r.appendChild(mute);
-r.appendChild(button("Tester le son",function(){sfx("confirm")}));
-r.appendChild(button("Tester le clic de souris",function(){playMechanicalClick("mouseDown");setTimeout(function(){playMechanicalClick("mouseUp")},65)}));
-r.appendChild(el("p","desktop-note","Sons de l’interface : Kenney (CC0). Volume volontairement discret."))}
-function about(){var r=windowBox("about","Propriétés du système",390,260);r.innerHTML='<div class="props"><b>ZebraOS Professionnel 2.0</b><br>Édition Studio, décembre 2026<br>Enregistré pour : Zebra Record<br>Ordinateur : STUDIO-PC-01<br>CPU: 800 MHz<br>RAM: 64 MB<br><br>www.zebratape2.net</div>'}
+/* Panneau de configuration ZebraOS — les fenêtres restent indépendantes. */
+function panelContext(){
+ return {
+  windowBox:windowBox,session:function(){return session||"visiteur";},
+  sfx:sfx,clickSound:function(){
+   playMechanicalClick("mouseDown");
+   setTimeout(function(){playMechanicalClick("mouseUp");},65);
+  },
+  openApp:open,updateClock:clock,
+  closeWindow:function(id){
+   if(opened[id]){opened[id].w.remove();delete opened[id];task();}
+  }
+ };
+}
+function settings(){
+ var root=windowBox("settings","Panneau de configuration",Math.min(660,window.innerWidth-20),Math.min(475,window.innerHeight-60));
+ if(window.ZebraControlPanel)window.ZebraControlPanel.mount(root,panelContext());
+ else root.textContent="Impossible de charger le Panneau de configuration.";
+}
+function about(){if(window.ZebraControlPanel)window.ZebraControlPanel.about(panelContext());}
+function dateTime(){if(window.ZebraControlPanel)window.ZebraControlPanel.dateTime(panelContext());}
+function welcome(){if(window.ZebraControlPanel)window.ZebraControlPanel.welcome(panelContext());}
 function format(sec){if(!isFinite(sec)||sec<0)return"00:00";var s=Math.floor(sec);return("0"+Math.floor(s/60)).slice(-2)+":"+("0"+s%60).slice(-2)}
 /* ZebraAMP 3.0 est maintenant un composant autonome. */
 function player(){
@@ -621,7 +630,7 @@ function player(){
  window.ZebraAMPConfig={windowBox:windowBox};
  window.ZebraAMP.open();
 }
-function open(code){$("start-menu").classList.add("hidden");if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
+function open(code){$("start-menu").classList.add("hidden");if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="datetime")dateTime();else if(code==="welcome")welcome();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
 decorateSystemMenus();
 $("power-btn").onclick=powerOn;$("skip-boot").onclick=finishBoot;$("skip-session-boot").onclick=finishSessionBoot;$("restart-login").onclick=restartLogin;$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
 $("start-button").onclick=function(e){e.stopPropagation();$("start-menu").classList.toggle("hidden")};document.querySelectorAll("[data-start]").forEach(function(b){b.onclick=function(){open(b.dataset.start)}});document.addEventListener("pointerdown",function(e){if(!e.target.closest("#start-menu")&&!e.target.closest("#start-button"))$("start-menu").classList.add("hidden")});
@@ -647,5 +656,16 @@ $("file-music").onchange=function(e){
   window.ZebraAMP.importFiles(files);
  }
 };
-function clock(){var d=new Date();$("clock").textContent=("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2)}clock();setInterval(clock,30000);
+function clock(){
+ var output=$("clock");
+ if(!output)return;
+ output.textContent=window.ZebraControlPanel&&session?
+  window.ZebraControlPanel.clock(session):
+  ("0"+new Date().getHours()).slice(-2)+":"+("0"+new Date().getMinutes()).slice(-2);
+ output.title="Date et heure — double-cliquez pour ouvrir";
+}
+clock();
+setInterval(clock,10000);
+$("clock").ondblclick=function(){if(session)dateTime();};
+$("clock").onclick=function(){if(session&&(window.matchMedia("(pointer:coarse)").matches||window.innerWidth<701))dateTime();};
 }());
