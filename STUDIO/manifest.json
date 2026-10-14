@@ -14,6 +14,11 @@
       "type": "dir"
     },
     {
+      "path": "STUDIO/AUDIO/sessionstartup.mp3",
+      "type": "file",
+      "size": 190790
+    },
+    {
       "path": "STUDIO/AUDIO/startup.mp3",
       "type": "file",
       "size": 180616
