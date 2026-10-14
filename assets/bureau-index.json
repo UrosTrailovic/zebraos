@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-14T12:49:26.644548+00:00",
+  "generatedAt": "2026-10-14T12:50:01.915714+00:00",
   "entries": [
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
@@ -86,11 +86,6 @@
       "path": "STUDIO/BUREAU/Zebra Tape 2/Son/9_Back_home.mp3",
       "type": "file",
       "size": 9579998
-    },
-    {
-      "path": "STUDIO/BUREAU/Zebra Tape 2/zebratape2.png",
-      "type": "file",
-      "size": 21958
     }
   ]
 }
