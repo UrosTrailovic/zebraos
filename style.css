@@ -5,3 +5,34 @@
 .window.window-pending{visibility:hidden;pointer-events:none}
 .window-ghost{position:absolute;box-sizing:border-box;pointer-events:none;border:2px solid #f2f2e8;outline:1px solid #1b1b1b;background:transparent;box-shadow:1px 1px 0 #3a3a3a;transition:left 520ms steps(12,end),top 520ms steps(12,end),width 520ms steps(12,end),height 520ms steps(12,end);will-change:left,top,width,height}
 @media(prefers-reduced-motion:reduce){.window-ghost{transition:none}}
+
+/* ZebraOS v0.6 — custom icon set from the studio (pixel-style sprite sheet). */
+.os-icon-graphic{
+  display:inline-block;
+  flex:none;
+  vertical-align:middle;
+  background-repeat:no-repeat;
+  image-rendering:pixelated;
+  user-select:none;
+  -webkit-user-select:none;
+  pointer-events:none;
+}
+.desk-icon{height:89px;gap:4px}
+.desk-symbol{height:42px;min-height:42px;width:46px;display:flex;align-items:center;justify-content:center;line-height:1}
+.desk-symbol>.os-icon-graphic{filter:drop-shadow(1px 2px 1px rgba(0,0,0,.42))}
+.desk-icon span:last-child{font-size:11px;line-height:14px}
+.file-symbol{height:34px;min-height:34px;display:flex;align-items:center;justify-content:center}
+.file-entry{gap:6px;min-height:84px}
+.start-options button{display:flex;align-items:center;gap:9px}
+.start-options button span{padding-left:0}
+.start-options button>.os-icon-graphic{padding:0}
+.start-button{display:flex;align-items:center;gap:3px}
+.start-z{background:transparent;padding:0;margin-right:3px;display:flex;align-items:center}
+.titlebar>.os-icon-graphic{display:flex;align-self:center}
+.tray-icon{display:flex;align-items:center}
+@media(max-width:700px){
+ .desk-icon{height:84px;width:84px;padding:6px 2px}
+ .desk-symbol{height:42px;min-height:42px}
+ .desktop-icons{gap:2px}
+ .file-entry{min-height:86px}
+}
