@@ -23,6 +23,7 @@ function mount(root){
  root.innerHTML="";
  let active=true,paused=true,over=false,lines=0,score=0,level=1,records=best(),held=null,holdUsed=false;
  let grid,upcoming=[],bag=[],current=null,clock=null,observer=null;
+ let clearRows=[],clearDeadline=0,audioContext=null,lastSound={};
  let wrap=make("div","zg zg-tetris zg-retro");
  let bar=make("div","zg-topline");
  let logo=make("img","zt-logo");
@@ -52,11 +53,11 @@ function mount(root){
  // Bande séparatrice issue de la vraie texture de bordure fournie avec le jeu.
  wrap.appendChild(make("div","zt-panel-divider"));
  let controls=make("div","zg-buttons zt-buttons");
- const start=btn("JOUER",()=>{if(over||!current){reset();return;}menuOpen=false;paused=!paused;updateStatus();});
+ const start=btn("JOUER",()=>{sound("ui");if(over||!current){reset();return;}menuOpen=false;paused=!paused;updateStatus();});
  start.classList.add("zt-image-button","zt-play");
- const restart=btn("RECOMMENCER",()=>reset());
+ const restart=btn("RECOMMENCER",()=>{sound("ui");reset();});
  restart.classList.add("zt-image-button","zt-restart");
- const menu=btn("MENU",()=>{if(!menuOpen){menuOpen=true;paused=true;}else menuOpen=false;updateStatus();});
+ const menu=btn("MENU",()=>{sound("ui");if(!menuOpen){menuOpen=true;paused=true;}else menuOpen=false;updateStatus();});
  menu.classList.add("zt-image-button","zt-menu");
  let menuOpen=false;
  controls.append(start,restart,menu);
@@ -125,6 +126,44 @@ function mount(root){
   });
  }
  let ctx=canvas.getContext("2d"),nextCtx=next.getContext("2d"),holdCtx=hold.getContext("2d");
+ // Petits sons arcade synthétisés localement, sans musique ni lecture automatique.
+ // AudioContext n'est créé qu'après une interaction (tactile, souris ou clavier).
+ function sound(type){
+  if(!active||document.hidden)return;
+  const nowMs=performance.now(),minGap=type==="move"?65:type==="soft"?95:0;
+  if(minGap&&nowMs-(lastSound[type]||0)<minGap)return;
+  lastSound[type]=nowMs;
+  try{
+   const Audio=window.AudioContext||window.webkitAudioContext;
+   if(!Audio)return;
+   if(!audioContext)audioContext=new Audio();
+   if(audioContext.state==="suspended")audioContext.resume().catch(()=>{});
+   const notes={
+    ui:[[560,0,.035]],move:[[240,0,.027]],soft:[[170,0,.027]],
+    rotate:[[390,0,.044],[540,.035,.05]],
+    hold:[[390,0,.035],[270,.05,.06]],
+    hard:[[300,0,.045],[135,.045,.085]],lock:[[125,0,.07]],
+    clear:[[580,0,.065],[760,.105,.065],[950,.21,.12]],
+    tetris:[[530,0,.07],[690,.09,.07],[870,.18,.085],[1080,.29,.16]],
+    level:[[680,0,.09],[960,.12,.15]],
+    gameover:[[420,0,.13],[300,.16,.13],[170,.32,.2]]
+   }[type];
+   if(!notes)return;
+   const startTime=audioContext.currentTime;
+   notes.forEach(([freq,offset,duration])=>{
+    const osc=audioContext.createOscillator(),gain=audioContext.createGain();
+    osc.type=type==="ui"||type==="move"?"square":"triangle";
+    osc.frequency.setValueAtTime(freq,startTime+offset);
+    gain.gain.setValueAtTime(.0001,startTime+offset);
+    gain.gain.linearRampToValueAtTime(type==="move"?.022:.045,startTime+offset+.007);
+    gain.gain.exponentialRampToValueAtTime(.0001,startTime+offset+duration);
+    osc.connect(gain);gain.connect(audioContext.destination);
+    osc.start(startTime+offset);osc.stop(startTime+offset+duration+.015);
+    osc.onended=()=>{osc.disconnect();gain.disconnect();};
+   });
+  }catch(_){/* Audio facultatif : le jeu reste jouable sans Web Audio. */}
+ }
+
  function blank(){return Array.from({length:H},()=>Array(W).fill(0));}
  function nextIndex(){if(!bag.length)bag=randBag();return bag.pop();}
  function refill(){while(upcoming.length<5)upcoming.push(nextIndex());}
@@ -135,46 +174,58 @@ function mount(root){
   refill();let type=upcoming.shift();refill();
   let mat=piece(type);
   current={type,mat,x:Math.floor((W-mat[0].length)/2),y:-1};
-  if(collision(mat,current.x,current.y)){over=true;paused=true;updateStatus();}
+  if(collision(mat,current.x,current.y)){over=true;paused=true;sound("gameover");updateStatus();}
  }
  function reset(){
   grid=blank();bag=[];upcoming=[];lines=0;score=0;level=1;held=null;holdUsed=false;
-  over=false;paused=false;menuOpen=false;current=null;spawn();render();updateStatus();
+  over=false;paused=false;menuOpen=false;current=null;clearRows=[];clearDeadline=0;spawn();render();updateStatus();
  }
  function merged(){
   current.mat.forEach((row,y)=>row.forEach((v,x)=>{if(v&&current.y+y>=0){grid[current.y+y][current.x+x]=v;}}));
-  let cleared=0;
-  for(let y=H-1;y>=0;y--){
-   if(grid[y].every(Boolean)){grid.splice(y,1);grid.unshift(Array(W).fill(0));cleared++;y++;}
+  const completed=[];
+  for(let y=0;y<H;y++)if(grid[y].every(Boolean))completed.push(y);
+  sound("lock");
+  if(completed.length){
+   // Lignes figées pendant 420 ms ; on ne les efface pas avant les flashes.
+   clearRows=completed;clearDeadline=performance.now()+420;current=null;
+   sound(completed.length===4?"tetris":"clear");
+  }else{holdUsed=false;spawn();}
+ }
+ function completeClear(){
+  if(!clearRows.length)return;
+  const cleared=clearRows.length,oldLevel=level;
+  // Du bas vers le haut pour préserver les indices des lignes multiples.
+  for(let i=clearRows.length-1;i>=0;i--){
+   grid.splice(clearRows[i],1);grid.unshift(Array(W).fill(0));
   }
-  if(cleared){
-   score+=([0,100,300,500,800][cleared]||800)*level;
-   lines+=cleared;level=Math.floor(lines/10)+1;
-   if(score>records){records=score;saveBest(records);}
-  }
+  clearRows=[];clearDeadline=0;
+  score+=([0,100,300,500,800][cleared]||800)*level;
+  lines+=cleared;level=Math.floor(lines/10)+1;
+  if(score>records){records=score;saveBest(records);}
+  if(level>oldLevel)sound("level");
   holdUsed=false;spawn();
  }
  function move(dx,dy){
-  if(paused||over||!current)return false;
-  if(!collision(current.mat,current.x+dx,current.y+dy)){current.x+=dx;current.y+=dy;render();return true;}
+  if(paused||over||clearRows.length||!current)return false;
+  if(!collision(current.mat,current.x+dx,current.y+dy)){current.x+=dx;current.y+=dy;if(dx)sound("move");render();return true;}
   if(dy){merged();render();}return false;
  }
- function soft(){if(!move(0,1))return;if(!paused){score++;if(score>records){records=score;saveBest(records);}}render();}
+ function soft(){if(!move(0,1))return;sound("soft");if(!paused){score++;if(score>records){records=score;saveBest(records);}}render();}
  function hardDrop(){
-  if(paused||over||!current)return;
+  if(paused||over||clearRows.length||!current)return;
   let steps=0;while(!collision(current.mat,current.x,current.y+1)){current.y++;steps++;}
   score+=steps*2;if(score>records){records=score;saveBest(records);}
-  merged();render();
+  sound("hard");merged();render();
  }
  function rotate(){
-  if(paused||over||!current)return;
+  if(paused||over||clearRows.length||!current)return;
   const m=current.mat,rot=m[0].map((_,i)=>m.map(r=>r[i]).reverse());
   for(const dx of [0,-1,1,-2,2]){
-   if(!collision(rot,current.x+dx,current.y)){current.mat=rot;current.x+=dx;render();return;}
+   if(!collision(rot,current.x+dx,current.y)){current.mat=rot;current.x+=dx;sound("rotate");render();return;}
   }
  }
  function holdPiece(){
-  if(paused||over||holdUsed||!current)return;
+  if(paused||over||clearRows.length||holdUsed||!current)return;
   let previous=current.type;
   if(held===null){held=previous;spawn();}
   else{
@@ -182,7 +233,7 @@ function mount(root){
    current={type,mat,x:Math.floor((W-mat[0].length)/2),y:-1};
    if(collision(mat,current.x,current.y)){over=true;paused=true;}
   }
-  holdUsed=true;render();updateStatus();
+  holdUsed=true;sound("hold");render();updateStatus();
  }
  function updateStatus(){
   status.textContent=over?"FIN DE PARTIE":menuOpen?"MENU":paused?"PAUSE":"EN COURS";
@@ -223,6 +274,12 @@ function mount(root){
   for(let x=0;x<=W;x++){ctx.beginPath();ctx.moveTo(x*BLOCK,0);ctx.lineTo(x*BLOCK,H*BLOCK);ctx.stroke();}
   for(let y=0;y<=H;y++){ctx.beginPath();ctx.moveTo(0,y*BLOCK);ctx.lineTo(W*BLOCK,y*BLOCK);ctx.stroke();}
   if(grid)grid.forEach((row,y)=>row.forEach((v,x)=>rect(ctx,x*BLOCK,y*BLOCK,BLOCK,v)));
+  if(clearRows.length){
+   // Trois flashes nets dans la grille (chaque phase dure ~70 ms).
+   const phase=Math.floor((420-Math.max(0,clearDeadline-performance.now()))/70);
+   ctx.fillStyle=phase%2===0?"rgba(255,255,235,.93)":"rgba(230,47,255,.48)";
+   clearRows.forEach(y=>ctx.fillRect(0,y*BLOCK,W*BLOCK,BLOCK));
+  }
   if(current){
     let ghostY=current.y;
     while(!collision(current.mat,current.x,ghostY+1))ghostY++;
@@ -242,30 +299,28 @@ function mount(root){
  function tick(){
   if(!active)return;
   if(!root.isConnected){dispose();return;}
-  if(!paused&&!over&&!document.hidden)move(0,1);
+  if(!paused&&!over&&!clearRows.length&&!document.hidden)move(0,1);
  }
  // Garder les 20 lignes du plateau entièrement visibles, même après un resize.
  // La scène se dimensionne selon l'espace réel de la fenêtre.
  function fitBoard(){
   if(!active||!main.isConnected)return;
-  const sideWidth=right.getBoundingClientRect().width||145;
-  const gap=parseFloat(getComputedStyle(main).columnGap)||9;
-  const room=main.getBoundingClientRect();
-  const css=getComputedStyle(main);
-  const sideSpace=parseFloat(css.paddingLeft)||0;
-  const rightSpace=parseFloat(css.paddingRight)||0;
-  const topSpace=parseFloat(css.paddingTop)||0;
-  const bottomSpace=parseFloat(css.paddingBottom)||0;
-  const availableWidth=Math.max(60,main.clientWidth-sideWidth-gap-sideSpace-rightSpace-20);
-  const availableHeight=Math.max(105,main.clientHeight-topSpace-bottomSpace-16);
-  const width=Math.max(48,Math.min(310,availableWidth,availableHeight/2));
-  if(!Number.isFinite(width))return;
-  const pixels=Math.floor(width);
-  stage.style.width=pixels+"px";
-  stage.style.height=(pixels*2)+"px";
+  const css=getComputedStyle(main),sideWidth=right.getBoundingClientRect().width||75;
+  const gap=parseFloat(css.columnGap)||6;
+  const horizontal=(parseFloat(css.paddingLeft)||0)+(parseFloat(css.paddingRight)||0);
+  const vertical=(parseFloat(css.paddingTop)||0)+(parseFloat(css.paddingBottom)||0);
+  const maxWidth=Math.max(48,main.clientWidth-sideWidth-gap-horizontal-8);
+  const maxHeight=Math.max(96,main.clientHeight-vertical-6);
+  // Les 20 lignes restent visibles. On ne bloque plus l'agrandissement à 310px.
+  const pixels=Math.max(48,Math.floor(Math.min(420,maxWidth,maxHeight/2)));
+  if(!Number.isFinite(pixels))return;
+  if(stage.style.width!==pixels+"px"){
+   stage.style.width=pixels+"px";stage.style.height=(pixels*2)+"px";
+  }
  }
  function dispose(){
   active=false;clearHeld();clearInterval(clock);document.removeEventListener("keydown",key);
+  if(audioContext){audioContext.close().catch(()=>{});audioContext=null;}
   window.removeEventListener("resize",fitBoard);
   if(observer){observer.disconnect();observer=null;}
  }
@@ -275,7 +330,14 @@ function mount(root){
  clock=setInterval(()=>{
   if(!active)return;if(!root.isConnected){dispose();return;}
   let now=performance.now(),delta=Math.min(now-last,130);last=now;
-  if(!paused&&!over&&!document.hidden){accum+=delta;if(accum>Math.max(85,750*Math.pow(.83,level-1))){accum=0;tick();}}
+  if(clearRows.length){
+   accum=0;
+   if(now>=clearDeadline)completeClear();
+   render();
+  }else if(!paused&&!over&&!document.hidden){
+   accum+=delta;
+   if(accum>Math.max(85,750*Math.pow(.83,level-1))){accum=0;tick();}
+  }
  },40);
  reset();paused=true;updateStatus();render();
  if(typeof ResizeObserver!=="undefined"){
