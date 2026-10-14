@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>ZebraOS</title>
+  <rect width="64" height="64" rx="9" fill="#102431"/>
+  <path d="M7 15h29v8L18 42h18v8H7v-8l18-19H7z" fill="#f3faf7"/>
+  <path d="M43 15h6L38 50h-6z" fill="#b6d1cf"/>
+  <path d="M55 15h6L50 50h-6z" fill="#769da5"/>
+</svg>
