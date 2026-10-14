@@ -65,8 +65,8 @@ function mount(root){
  menu.classList.add("zt-image-button","zt-menu");
  let menuOpen=false;
  controls.append(start,restart,menu);
- // Manette tactile façon console portable : une croix 4 directions + A/B.
- // Tous les éléments sont en CSS, sans image générée ni texture supplémentaire.
+ // Manette tactile Zebra Tetris 6.0 : les vrais PNG de l'auteur habillent
+ // les sept commandes. Les zones interactives et le repeat restent natifs.
  let pad=make("div","zt-handheld");
  pad.appendChild(controls);
  pad.setAttribute("aria-label","Commandes tactiles Tetris");
@@ -118,6 +118,33 @@ function mount(root){
  actionSide.appendChild(select);
  actionSide.appendChild(make("span","zt-control-caption","B : POSER  ·  A : TOURNER"));
  pad.appendChild(actionSide);
+ // Précharger les vraies textures avant de masquer les contrôles de secours.
+ // Chaque bouton garde sa propre hitbox et ses handlers pointerdown/up.
+ const spriteRoot="assets/games/tetris-controls/";
+ const spriteItems=[
+  [cross.querySelector(".zt-dir-up"),"upTetris.png"],
+  [cross.querySelector(".zt-dir-down"),"downTetris.png"],
+  [cross.querySelector(".zt-dir-left"),"leftTetris.png"],
+  [cross.querySelector(".zt-dir-right"),"rightTetris.png"],
+  [aAction,"btnAtetris.png"],[bAction,"btnBtetris.png"],[select,"selectTetris.png"]
+ ];
+ const spriteLoads=spriteItems.map(function(item){
+  const sprite=make("img","zt-control-sprite");
+  sprite.alt="";sprite.draggable=false;sprite.decoding="async";
+  item[0].appendChild(sprite);
+  return new Promise(function(resolve,reject){
+   sprite.onload=resolve;sprite.onerror=reject;
+   sprite.src=spriteRoot+item[1];
+  });
+ });
+ const skinPanel=new Image();
+ spriteLoads.push(new Promise(function(resolve,reject){
+  skinPanel.onload=resolve;skinPanel.onerror=reject;
+  skinPanel.src=spriteRoot+"interfaceTetris.png";
+ }));
+ Promise.all(spriteLoads).then(function(){
+  if(active&&pad.isConnected)pad.classList.add("zt-skin-ready");
+ }).catch(function(){/* Images indisponibles : ancienne manette CSS conservée. */});
  wrap.appendChild(pad);
  wrap.appendChild(make("div","zg-help","← → déplacer · ↑ tourner · ↓ descendre · Espace poser · C réserve · P pause"));
  root.appendChild(wrap);
