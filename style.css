@@ -1787,3 +1787,46 @@
  .zebra-game-body .zg-retro .zt-ab{height:69px}
  .zebra-game-body .zg-retro .zt-ab-button{width:46px;height:46px;font-size:21px}
 }
+
+/* Zebra Tetris 5.7 — privilégier la taille des 20 lignes sur téléphone.
+   On ne touche PAS aux textures ni à la disposition des commandes du bas. */
+@media(max-width:700px){
+ .zebra-game-body .zg-retro .zg-topline{
+  height:36px;max-height:36px;flex:0 0 36px;
+ }
+ .zebra-game-body .zg-retro .zt-logo{
+  width:120px;height:35px;max-width:55%;
+ }
+ .zebra-game-body .zg-retro .zg-game-layout{
+  padding:3px 7px;gap:5px;
+  justify-content:center;align-items:flex-start;
+ }
+ .zebra-game-body .zg-retro .zg-side{
+  flex:0 0 69px;width:69px;min-width:0;
+  gap:2px;padding:3px 2px;border-width:3px;
+ }
+ .zebra-game-body .zg-retro .zg-stat{
+  min-height:25px;padding:2px 1px;gap:0;
+ }
+ .zebra-game-body .zg-retro .zg-stat small,
+ .zebra-game-body .zg-retro .zg-preview-wrap small{
+  font-size:8px;line-height:1.1;letter-spacing:-.2px;
+ }
+ .zebra-game-body .zg-retro .zg-stat strong{
+  font-size:14px;line-height:1.05;
+ }
+ .zebra-game-body .zg-retro .zg-preview-wrap{
+  padding:2px;gap:1px;
+ }
+ .zebra-game-body .zg-retro .zg-mini{
+  width:41px;height:41px;max-width:100%;
+ }
+}
+@media(max-width:700px) and (max-height:650px){
+ .zebra-game-body .zg-retro .zg-topline{
+  height:30px;max-height:30px;flex-basis:30px;
+ }
+ .zebra-game-body .zg-retro .zt-logo{
+  width:100px;height:29px;
+ }
+}
