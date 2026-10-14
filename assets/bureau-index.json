@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-14T10:35:33.992428+00:00",
+  "generatedAt": "2026-10-14T10:36:38.484679+00:00",
   "entries": [
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
@@ -27,6 +27,16 @@
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2/Poster",
       "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Zebra Tape 2/Poster/Poster tape 2 v4.webp",
+      "type": "file",
+      "size": 1730214
+    },
+    {
+      "path": "STUDIO/BUREAU/Zebra Tape 2/Poster/Poster v1.webp",
+      "type": "file",
+      "size": 1666704
     },
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2/Son",
