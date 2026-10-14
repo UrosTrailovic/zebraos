@@ -1152,3 +1152,163 @@
 .wallpaper-position-line output{text-align:right;font:10px Tahoma,Arial,sans-serif}
 .wallpaper-position-group>.classic-button{align-self:flex-start}
 @media(max-width:600px){.wallpaper-position-line{grid-template-columns:72px minmax(45px,1fr) 36px}}
+
+/* ZEBRA TETRIS — textures fournies v5.2. Jeu d'arcade années 90.
+   Le fond, le logo, les quatre boutons et les deux plaques sont découpés
+   depuis le PNG de l'auteur, pas redessinés artificiellement. */
+.window-body.zebra-game-body:has(.zg-retro){
+ padding:0;background:#141218;overflow:hidden;
+}
+.zebra-game-body .zg.zg-retro{
+ height:100%;min-height:0;overflow:hidden;
+ display:flex;flex-direction:column;justify-content:flex-start;
+ padding:7px 10px 7px;gap:5px;
+ background-color:#28113d;
+ background-image:var(--zt-wall,repeating-conic-gradient(#e000d8 0% 25%,#302fe0 0% 50%,#f63250 0% 75%,#23c4c5 0% 100%));
+ background-size:128px 128px;background-repeat:repeat;
+ color:#101013;
+ font-family:"Courier New",monospace;
+ image-rendering:pixelated;
+}
+.zebra-game-body .zg-retro .zg-topline{
+ flex:0 0 auto;min-height:0;max-height:100px;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:0;border:0;padding:0;background:none;box-shadow:none;
+}
+.zebra-game-body .zg-retro .zt-logo{
+ display:block;width:185px;max-width:68%;height:96px;object-fit:contain;
+ image-rendering:pixelated;filter:drop-shadow(2px 3px 0 #0d0311aa);
+}
+.zebra-game-body .zg-retro .zg-topline .zg-state{
+ display:none;
+}
+.zebra-game-body .zg-retro .zg-game-layout{
+ flex:1 1 auto;min-height:0;width:100%;overflow:hidden;
+ display:flex;align-items:flex-start;justify-content:center;
+ gap:18px;padding:12px 10px;
+ background:transparent;
+}
+.zebra-game-body .zg-retro .zg-side{
+ order:0;flex:0 0 145px;width:145px;min-width:0;
+ display:flex;flex-direction:column;align-content:stretch;
+ gap:4px;padding:9px;
+ overflow:hidden;max-height:100%;min-height:0;
+ background:linear-gradient(90deg,#969696,#d5d5d5 12%,#bebebe 80%,#848484);
+ border:4px ridge #ececec;box-shadow:2px 2px 0 #160a1e;
+}
+.zebra-game-body .zg-retro .zg-stat,
+.zebra-game-body .zg-retro .zg-preview-wrap{
+ display:flex;flex-direction:column;gap:2px;min-height:0;flex:0 0 auto;
+ padding:4px 6px;margin:0;background:#c9c9c9;color:#050505;
+ border:2px inset #fff;box-shadow:none;
+ text-align:center;
+}
+.zebra-game-body .zg-retro .zg-stat{
+ min-height:42px;
+}
+.zebra-game-body .zg-retro .zg-stat small,
+.zebra-game-body .zg-retro .zg-preview-wrap small{
+ font:bold 11px/1.1 "Courier New",monospace;letter-spacing:0;
+ color:#171717;text-shadow:none;
+}
+.zebra-game-body .zg-retro .zg-stat strong{
+ font:bold 21px/1.05 "Courier New",monospace;color:#172de4;
+ text-shadow:1px 1px #fff;
+}
+.zebra-game-body .zg-retro .zg-preview-wrap{padding:4px;gap:3px}
+.zebra-game-body .zg-retro .zg-mini{
+ width:78px;height:78px;display:block;align-self:center;
+ border:2px inset #ccc;background:#000;
+ image-rendering:pixelated;
+}
+.zebra-game-body .zg-retro .zg-tetris-stage{
+ order:1;flex:0 0 auto;position:relative;
+ width:240px;height:480px;max-width:none;
+ box-sizing:border-box;padding:0;background:#000;
+ border:2px solid #030304;
+ outline:8px ridge #d9d9d9;
+ box-shadow:0 0 0 10px #1a1422,4px 6px 0 10px #130816;
+ overflow:hidden;
+}
+.zebra-game-body .zg-retro .zg-tetris-board{
+ width:100%;height:100%;display:block;max-width:none;
+ background:#000;image-rendering:pixelated;
+}
+.zebra-game-body .zg-retro .zg-overlay{
+ position:absolute;inset:0;background:rgba(0,0,0,.77);
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:12px;color:#fff;pointer-events:none;text-align:center;padding:12px;
+}
+.zebra-game-body .zg-retro .zt-overlay-art{
+ width:100%;max-width:240px;height:auto;max-height:100px;
+ object-fit:contain;image-rendering:pixelated;
+}
+.zebra-game-body .zg-retro .zt-overlay-caption{
+ color:#fff;text-shadow:2px 2px 0 #000;
+ font:bold 12px/1.5 "Courier New",monospace;
+}
+.zebra-game-body .zg-retro .zg-buttons.zt-buttons{
+ display:flex;flex:0 0 auto;justify-content:center;align-items:center;
+ gap:7px;padding:0;background:transparent;
+}
+.zebra-game-body .zg-retro .zg-button.zt-image-button{
+ flex:0 1 148px;width:148px;height:43px;min-height:0;
+ border:0;border-radius:0;outline:0;margin:0;padding:0;
+ background-color:#bbb;background-repeat:no-repeat;background-size:100% 100%;
+ box-shadow:2px 2px 0 #100716;
+ font:700 11px "Courier New",monospace;color:#191919;
+ image-rendering:pixelated;transition:none;
+}
+.zebra-game-body .zg-retro.zt-art-loaded .zt-image-button{
+ font-size:0;background-color:transparent;
+}
+.zebra-game-body .zg-retro .zg-button.zt-image-button:hover{
+ background-color:transparent;filter:brightness(1.12);
+}
+.zebra-game-body .zg-retro .zg-button.zt-image-button:active{
+ border:0;box-shadow:none;transform:translate(2px,2px);
+ filter:brightness(.95);
+}
+.zebra-game-body .zg-retro .zg-control-pad{
+ background:#c5c5c5;border:3px ridge #fff;padding:4px;
+}
+.zebra-game-body .zg-retro .zg-control-pad .zg-button{
+ color:#141414;background:#c4c4c4;border:2px outset #fff;
+ box-shadow:none;text-shadow:none;font-size:13px;
+}
+.zebra-game-body .zg-retro .zg-help{
+ flex:0 0 auto;margin:0;padding:3px 5px;
+ background:#c7c7c7;color:#161616;border:2px inset #eee;
+ font:10px/1.15 "Courier New",monospace;
+}
+@media(max-width:700px){
+ .zebra-game-body .zg.zg-retro{padding:4px;gap:4px}
+ .zebra-game-body .zg-retro .zg-topline{max-height:79px}
+ .zebra-game-body .zg-retro .zt-logo{height:75px;width:150px}
+ .zebra-game-body .zg-retro .zg-game-layout{
+  gap:10px;padding:10px 6px;justify-content:center;
+ }
+ .zebra-game-body .zg-retro .zg-side{
+  flex-basis:88px;width:88px;padding:4px;border-width:3px;gap:2px;
+ }
+ .zebra-game-body .zg-retro .zg-stat{min-height:30px;padding:3px 1px}
+ .zebra-game-body .zg-retro .zg-stat small,
+ .zebra-game-body .zg-retro .zg-preview-wrap small{font-size:9px}
+ .zebra-game-body .zg-retro .zg-stat strong{font-size:14px}
+ .zebra-game-body .zg-retro .zg-preview-wrap{padding:2px}
+ .zebra-game-body .zg-retro .zg-mini{width:50px;height:50px}
+ .zebra-game-body .zg-retro .zg-tetris-stage{
+  outline:5px ridge #ddd;box-shadow:0 0 0 7px #14111a;
+ }
+ .zebra-game-body .zg-retro .zg-button.zt-image-button{
+  flex:0 1 31%;height:32px;width:auto;
+ }
+ .zebra-game-body .zg-retro .zg-help{font-size:8px}
+ .zebra-game-body .zg-retro .zt-overlay-caption{font-size:10px}
+}
+@media(max-height:640px){
+ .zebra-game-body .zg-retro .zg-topline{max-height:65px}
+ .zebra-game-body .zg-retro .zt-logo{height:63px}
+ .zebra-game-body .zg-retro .zg-game-layout{padding:10px 7px}
+ .zebra-game-body .zg-retro .zg-button.zt-image-button{height:32px}
+}
