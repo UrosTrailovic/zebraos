@@ -234,3 +234,19 @@
  .manager-card{flex-direction:column;align-items:flex-start}
  .manager-card p{width:100%}
 }
+
+/* ZebraOS v1.2 — hiérarchie visuelle du gestionnaire Admin. */
+.manager-warning{font:11px/1.5 Tahoma,Arial,sans-serif;color:#6e302a;background:#f6ece6;border-left:3px solid #b4684c;padding:8px 10px;margin-bottom:12px}
+.manager-card{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:9px;align-items:center}
+.manager-step-number{display:flex;align-items:center;justify-content:center;width:26px;height:26px;color:#f4f4f4;background:#255564;font:bold 13px "Courier New",monospace}
+.manager-step-content{min-width:0;display:flex;flex-direction:column;gap:4px}
+.manager-step-content h3{width:auto;margin:0;font-size:12px}
+.manager-step-content p{margin:0;width:auto;font-size:11px;min-width:0}
+.manager-card button{white-space:normal;max-width:160px;font-size:10px;text-align:center}
+@media(max-width:700px){
+ .manager-card{grid-template-columns:25px minmax(0,1fr);gap:8px;align-items:start}
+ .manager-card button{grid-column:2;max-width:none;width:100%}
+ .manager-step-number{width:25px;height:25px}
+ .manager-warning{font-size:10px}
+ .desk-icon span:last-child{overflow-wrap:anywhere}
+}
