@@ -849,3 +849,7 @@
 .zapp-tetris{color:#213a7d;background:linear-gradient(135deg,#dbdcd7,#91a6d6)}
 .zapp-snake{color:#245a2e;background:linear-gradient(135deg,#d7e4b8,#83b66e)}
 .zapp-paint{color:#612e2e;background:linear-gradient(135deg,#eee0a8,#d8c4ca)}
+
+/* Le menu Démarrer reste entièrement accessible, même sur petit écran. */
+.start-menu{max-height:calc(100dvh - 44px);min-height:0}
+.start-options{min-height:0;overflow-y:auto;overscroll-behavior:contain}
