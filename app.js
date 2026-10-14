@@ -350,7 +350,7 @@ function studioManager(){
   "Crée des dossiers et importe tes images, MP3 ou documents. Ils restent sur CE navigateur et ne sont jamais visibles aux visiteurs.",
   "OUVRIR MES BROUILLONS",function(){explorer("local:root");});
  section(2,"VOIR LE SITE PUBLIC",
-  "Voici la bibliothèque accessible depuis les sessions Zebra, Visiteur et Daniel. Les dossiers vides n’y apparaissent pas.",
+  "Voici exactement les fichiers et dossiers publiés. Les dossiers vides restent visibles. Les brouillons locaux n’apparaissent pas ici.",
   "VOIR LES FICHIERS PUBLICS",function(){explorer("github:STUDIO");});
  section(3,"PUBLIER MES FICHIERS",
   "La publication est manuelle : télécharge tes brouillons si nécessaire, ajoute-les dans le dossier STUDIO sur GitHub et valide l’enregistrement. L’index sera automatiquement actualisé.",
@@ -371,9 +371,10 @@ function studioManager(){
 }
 function explorer(id){
  id=id||"root";
+ // ZEBRA TAPE 2 ouvre la racine du contenu public, jamais directement AUDIO.
+ if(id==="tape"||id==="public")id="github:STUDIO";
  if(session!=="admin"){
-   if(id==="tape")id="github:STUDIO/AUDIO";
-   else if(id==="screens")id="github:STUDIO/ARTWORK";
+   if(id==="screens")id="github:STUDIO/ARTWORK";
    else if(id.indexOf("github:")!==0)id="github:STUDIO";
  }
  var body=windowBox("explorer","Poste de travail — C:\\ROOT",560,430);
@@ -425,7 +426,7 @@ function player(index){if(session==="admin"&&!opened.amp&&!opened.adminprompt&&!
 var r=windowBox("amp","ZebraAMP.exe",480,470);r.innerHTML='<div class="amp"><div class="amp-header"><span>ZEBRAAMP 2.0</span><span>● STÉRÉO</span></div><div class="amp-screen"><span class="amp-track" data-track>AUCUN MORCEAU CHARGÉ</span><span class="amp-time" data-time>00:00 / 00:00</span><input type="range" min="0" max="100" value="0" data-seek></div><div class="amp-transport"><button data-prev>Ⅰ◀</button><button data-play>▶</button><button data-stop>■</button><button data-next>▶Ⅰ</button></div><div class="basic-row">VOL <input type="range" min="0" max="100" value="70" data-volume></div><button class="amp-load" data-import>Importer des fichiers MP3</button><div class="amp-playlist" data-list></div><div class="amp-help" data-help>Importez vos MP3 pour tester. La tape n’est pas encore publique.</div></div>';
 var list=r.querySelector("[data-list]");tracks.forEach(function(n,i){var b=el("button","amp-song",(i+1)+". "+n);b.onclick=function(){pickTrack(i)};list.appendChild(b)});
 r.querySelector("[data-play]").onclick=function(){if(selectedTrack<0)pickTrack(0);else if(music.paused){music.play().catch(function(){})}else music.pause();renderAmp()};r.querySelector("[data-stop]").onclick=function(){music.pause();music.currentTime=0;renderAmp()};r.querySelector("[data-prev]").onclick=function(){pickTrack((selectedTrack+8)%9)};r.querySelector("[data-next]").onclick=function(){pickTrack((selectedTrack+1)%9)};r.querySelector("[data-volume]").oninput=function(e){music.volume=e.target.value/100};r.querySelector("[data-seek]").oninput=function(e){if(music.duration)music.currentTime=e.target.value*music.duration/100};r.querySelector("[data-import]").onclick=function(){$("file-music").click()};music.volume=.7;if(index!==undefined)pickTrack(index);else renderAmp()}
-function open(code){$("start-menu").classList.add("hidden");if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.split(":")[1]);else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
+function open(code){$("start-menu").classList.add("hidden");if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
 decorateSystemMenus();
 $("power-btn").onclick=powerOn;$("skip-boot").onclick=finishBoot;$("skip-session-boot").onclick=finishSessionBoot;$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
 $("start-button").onclick=function(e){e.stopPropagation();$("start-menu").classList.toggle("hidden")};document.querySelectorAll("[data-start]").forEach(function(b){b.onclick=function(){open(b.dataset.start)}});document.addEventListener("pointerdown",function(e){if(!e.target.closest("#start-menu")&&!e.target.closest("#start-button"))$("start-menu").classList.add("hidden")});
