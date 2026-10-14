@@ -44,6 +44,83 @@ function sfx(name){
     if(promise&&promise.catch)promise.catch(function(){});
   }catch(e){}
 }
+
+/* Zebra Mouse Switch — native Web Audio, so touches are audible on mobile.
+   Use a shaped mechanical transient immediately, then add the Kenney CC0 sample
+   if OGG decoding is supported. No autoplay or remote files required. */
+var mouseContext=null, mouseSamples={}, mouseSynth={}, mouseSamplesRequested=false;
+function makeMechanicalSwitch(ctx,name){
+  var release=name==="mouseUp",rate=ctx.sampleRate,seconds=release?.065:.082;
+  var count=Math.ceil(rate*seconds),buffer=ctx.createBuffer(1,count,rate),pcm=buffer.getChannelData(0);
+  var seed=release?19681:73243,previous=0,peak=.00001;
+  for(var i=0;i<count;i++){
+    var t=i/rate;
+    seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+    var white=(seed/2147483648)-1;
+    var sharp=white-previous*.7;
+    previous=white;
+    var main=Math.exp(-t*(release?175:130));
+    var tickAt=release?.012:.016;
+    var delayed=t>tickAt?Math.exp(-(t-tickAt)*220):0;
+    var spring=Math.sin(2*Math.PI*(release?1450:1050)*t)*Math.exp(-t*115);
+    var body=Math.sin(2*Math.PI*(release?460:325)*t)*Math.exp(-t*100);
+    var value=sharp*(main*.85+delayed*.27)+spring*.32+body*.18;
+    pcm[i]=value;
+    peak=Math.max(peak,Math.abs(value));
+  }
+  var normalise=.93/peak;
+  for(var j=0;j<count;j++)pcm[j]*=normalise;
+  return buffer;
+}
+function decodeMouseSamples(ctx){
+  if(mouseSamplesRequested)return;
+  mouseSamplesRequested=true;
+  var data=window.ZebraSFXData||{};
+  ["mouseDown","mouseUp"].forEach(function(name){
+    try{
+      var uri=data[name];
+      if(!uri||uri.indexOf("base64,")<0)return;
+      var raw=atob(uri.split("base64,")[1]);
+      var bytes=new Uint8Array(raw.length);
+      for(var i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
+      ctx.decodeAudioData(bytes.buffer).then(function(decoded){
+        mouseSamples[name]=decoded;
+      }).catch(function(){});
+    }catch(e){}
+  });
+}
+function playMechanicalClick(name){
+  if(getStore("zebra.sfx.muted")==="1")return;
+  try{
+    var Context=window.AudioContext||window.webkitAudioContext;
+    if(!Context){sfx(name);return;}
+    if(!mouseContext)mouseContext=new Context();
+    var ctx=mouseContext;
+    if(!mouseSynth[name])mouseSynth[name]=makeMechanicalSwitch(ctx,name);
+    // Touch pointerup and mouse pointerdown are user-activation events.
+    if(ctx.state==="suspended"){
+      var resumed=ctx.resume();
+      if(resumed&&resumed.catch)resumed.catch(function(){});
+    }
+    var source=ctx.createBufferSource();
+    source.buffer=mouseSynth[name];
+    var gain=ctx.createGain();
+    gain.gain.value=name==="mouseUp"?.44:.72;
+    source.connect(gain);
+    gain.connect(ctx.destination);
+    source.start();
+    // Keep the original mechanical mouse sample alongside our instant transient.
+    if(mouseSamples[name]){
+      var sample=ctx.createBufferSource(),level=ctx.createGain();
+      sample.buffer=mouseSamples[name];
+      level.gain.value=name==="mouseUp"?.8:1.15;
+      sample.connect(level);level.connect(ctx.destination);
+      sample.start();
+    }
+    decodeMouseSamples(ctx);
+  }catch(e){sfx(name);}
+}
+
 function el(tag,cls,txt){var n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;}
 function show(id){["power-screen","login-screen","desktop-screen"].forEach(function(s){$(s).classList.toggle("active",s===id)});}
 function login(){var r=$("login-users");r.innerHTML="";users.forEach(function(u){var b=el("button","user-card");b.innerHTML='<span class="user-avatar"></span><span class="user-name"></span><span class="user-sub"></span>';b.children[0].textContent=u[3];b.children[1].textContent=u[1];b.children[2].textContent=u[2];b.onclick=function(){sfx("confirm");start(u[0])};r.appendChild(b)});show("login-screen")}
@@ -110,7 +187,7 @@ var mute=button(getStore("zebra.sfx.muted")==="1"?"System sounds: OFF":"System s
 });
 r.appendChild(mute);
 r.appendChild(button("Test sound",function(){sfx("confirm")}));
-r.appendChild(button("Test mouse click",function(){sfx("mouseDown");setTimeout(function(){sfx("mouseUp")},65)}));
+r.appendChild(button("Test mouse click",function(){playMechanicalClick("mouseDown");setTimeout(function(){playMechanicalClick("mouseUp")},65)}));
 r.appendChild(el("p","desktop-note","Interface sounds: Kenney (CC0). Volume intentionally low."))}
 function about(){var r=windowBox("about","System Properties",390,260);r.innerHTML='<div class="props"><b>ZebraOS Professional 2.0</b><br>Studio Edition, December 2026<br>Registered to: Zebra Record<br>Machine: STUDIO-PC-01<br>CPU: 800 MHz<br>RAM: 64 MB<br><br>www.zebratape2.net</div>'}
 function format(sec){if(!isFinite(sec)||sec<0)return"00:00";var s=Math.floor(sec);return("0"+Math.floor(s/60)).slice(-2)+":"+("0"+s%60).slice(-2)}
@@ -124,13 +201,14 @@ function open(code){$("start-menu").classList.add("hidden");if(code==="amp")play
 $("power-btn").onclick=function(){sfx("switch");login()};$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
 $("start-button").onclick=function(e){e.stopPropagation();$("start-menu").classList.toggle("hidden")};document.querySelectorAll("[data-start]").forEach(function(b){b.onclick=function(){open(b.dataset.start)}});document.addEventListener("pointerdown",function(e){if(!e.target.closest("#start-menu")&&!e.target.closest("#start-button"))$("start-menu").classList.add("hidden")});
 /* A physical mouse click exists independently of what the computer does afterwards.
-   Play on pointer events (also fired by phone taps), not only on desktop double-click. */
+   Play the main click on touch pointerup (mobile user activation), and on mouse pointerdown.
+   Desktop double-click still works normally. The click no longer relies on quiet OGG playback. */
 function isPrimaryPointer(e){return e.isPrimary!==false&&(e.pointerType!=="mouse"||e.button===0)}
 document.addEventListener("pointerdown",function(e){
-  if(isPrimaryPointer(e)&&e.target.closest(".screen.active"))sfx("mouseDown");
+  if(isPrimaryPointer(e)&&e.pointerType!=="touch"&&e.target.closest(".screen.active"))playMechanicalClick("mouseDown");
 },{passive:true});
 document.addEventListener("pointerup",function(e){
-  if(isPrimaryPointer(e)&&e.target.closest(".screen.active"))sfx("mouseUp");
+  if(isPrimaryPointer(e)&&e.target.closest(".screen.active")){if(e.pointerType==="touch")playMechanicalClick("mouseDown");else playMechanicalClick("mouseUp");}
 },{passive:true});
 
 $("file-wallpaper").onchange=function(e){var f=e.target.files[0];if(f)setWall(session||"visitor",URL.createObjectURL(f))};
