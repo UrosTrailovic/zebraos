@@ -315,7 +315,15 @@ function renderEq(){
   group.appendChild(el("span","amp3-eq-gain",(gain>0?"+":"")+gain+" dB"));
   var input=el("input");input.type="range";input.min="-12";input.max="12";input.step="1";input.value=String(gain);
   input.setAttribute("aria-label",eqNames[i]);
-  input.oninput=function(){var next=eq.slice();next[i]=Number(input.value);setEq(next,"Personnalisé");};
+  input.oninput=function(){
+   eq[i]=Number(input.value);
+   group.firstChild.textContent=(eq[i]>0?"+":"")+eq[i]+" dB";
+   if(filters[i])filters[i].gain.value=eq[i];
+   preset="Personnalisé";
+   var selected=view&&view.querySelector("[data-amp-preset]");
+   if(selected)selected.value="Personnalisé";
+   store();
+  };
   group.appendChild(input);
   group.appendChild(el("span","amp3-eq-name",eqNames[i]));
   cols.appendChild(group);
@@ -349,8 +357,8 @@ function render(){
    row.ondragstart=function(ev){if(!editable)return;ev.dataTransfer.setData("text/plain",t.id);ev.dataTransfer.effectAllowed="move";};
    row.ondragover=function(ev){if(editable)ev.preventDefault();};
    row.ondrop=function(ev){if(!editable)return;ev.preventDefault();dropTrack(ev.dataTransfer.getData("text/plain"),t.id);};
-   var playBtn=b("▶","", "amp3-item-play");
-   playBtn.onclick=function(){pick(t.id,true);};
+   var playBtn=b("▶",function(){pick(t.id,true);},"amp3-item-play");
+
    row.appendChild(playBtn);
    var info=el("div","amp3-track-info");
    info.appendChild(el("span","amp3-track-title",(i+1)+". "+t.name));
