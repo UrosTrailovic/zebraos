@@ -52,8 +52,17 @@ function clean(items){
    return {path:x.path,type:x.type,size:Number(x.size)||0,name:x.path.split("/").pop()};
  });
 }
-function direct(items,path){
- return items.filter(function(x){return x.path.substring(0,x.path.lastIndexOf("/"))===path;})
+function direct(items,path,isAdmin){
+ return items.filter(function(x){
+   if(x.path.substring(0,x.path.lastIndexOf("/"))!==path)return false;
+   if(isAdmin)return true;
+   if(x.type==="file")return x.name!=="README.txt";
+   // Un visiteur ne voit pas les dossiers sans contenu réel publié.
+   return items.some(function(child){
+     return child.type==="file" && child.name!=="README.txt" &&
+       child.path.startsWith(x.path+"/");
+   });
+ })
  .sort(function(a,b){
    if(a.type!==b.type)return a.type==="dir"?-1:1;
    return a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:"base"});
@@ -126,22 +135,24 @@ function preview(item,options){
 function mount(host,path,options){
  if(!host)return;
  path=safe(path);
+ host._zebraPublicTicket=(host._zebraPublicTicket||0)+1;
+ var ticket=host._zebraPublicTicket;
  var isAdmin=!!options.canUpload;
  var folder=path===ROOT?"Mes fichiers":path.split("/").slice(1).join(" / ");
  var w=host.closest(".window");
- if(w){var title=w.querySelector(".windowtitle");if(title)title.textContent="My Computer — "+folder;}
+ if(w){var title=w.querySelector(".windowtitle");if(title)title.textContent="Poste de travail — "+folder;}
  host.innerHTML="";
  var toolbar=E("div","github-drive-toolbar");
  function tool(text,fn){var b=E("button","classic-button",text);b.type="button";b.onclick=fn;toolbar.appendChild(b);}
  tool("⌂",function(){options.explorer("root");});
  tool("↑",function(){mount(host,path===ROOT?ROOT:path.substring(0,path.lastIndexOf("/")),options);});
- tool("↻ Actualiser",function(){refresh(true).then(function(){render();});});
+ tool("↻ Actualiser",function(){refresh(true).then(render);});
  if(isAdmin)tool("Publier sur GitHub ↗",function(){openExternal(uploadUrl(path));});
  host.appendChild(toolbar);
  host.appendChild(E("div","folder-path","C:\\STUDIO"+(path===ROOT?"":"\\"+path.substring(ROOT.length+1).replace(/\//g,"\\"))));
  var hint=E("p","github-drive-hint",isAdmin?
-   "CONTENU PUBLIC · Ces fichiers sont visibles par les visiteurs. Les imports locaux ne sont pas publiés automatiquement.":
-   "Fichiers de Zebra Record");
+   "CONTENU PUBLIÉ · Visible pour tous. Les fichiers de tes brouillons ne sont pas publiés automatiquement.":
+   "Bibliothèque Zebra Record");
  host.appendChild(hint);
  var state=E("div","github-drive-state","Ouverture du dossier…");
  host.appendChild(state);
@@ -150,14 +161,14 @@ function mount(host,path,options){
  var status=E("p","github-drive-count","");
  host.appendChild(status);
  function render(){
-   if(!host.isConnected)return;
+   if(!host.isConnected||host._zebraPublicTicket!==ticket)return;
    list.innerHTML="";
-   var items=direct(snapshot||[],path);
+   var items=direct(snapshot||[],path,isAdmin);
    state.style.display="none";
    if(!items.length){
      state.style.display="";
      state.className="github-drive-empty";
-     state.textContent=isAdmin?"Ce dossier publié est vide. Ajoute des fichiers sur GitHub.":"Ce dossier est vide pour le moment.";
+     state.textContent=isAdmin?"Aucun fichier publié dans ce dossier. Les brouillons locaux sont séparés.":"Aucun fichier disponible pour le moment.";
    }
    items.forEach(function(item){
      var b=E("button","file-entry github-file-entry");b.type="button";
@@ -172,10 +183,10 @@ function mount(host,path,options){
    status.textContent=items.length+" élément(s)";
  }
  initial().then(function(){
-   if(!host.isConnected)return;
+   if(!host.isConnected||host._zebraPublicTicket!==ticket)return;
    render();
    if(Date.now()>=throttledUntil)
-     refresh(false).then(function(){if(host.isConnected)render();});
+     refresh(false).then(function(){render();});
  });
 }
 window.ZebraGitFiles={mount:mount,root:ROOT};
