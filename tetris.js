@@ -49,6 +49,8 @@ function mount(root){
  let holdBox=make("div","zg-preview-wrap");holdBox.appendChild(make("small","","RÉSERVE (C)"));
  let hold=make("canvas","zg-mini");hold.width=96;hold.height=96;holdBox.appendChild(hold);right.appendChild(holdBox);
  main.insertBefore(right,stage);wrap.appendChild(main);
+ // Bande séparatrice issue de la vraie texture de bordure fournie avec le jeu.
+ wrap.appendChild(make("div","zt-panel-divider"));
  let controls=make("div","zg-buttons zt-buttons");
  const start=btn("JOUER",()=>{if(over||!current){reset();return;}menuOpen=false;paused=!paused;updateStatus();});
  start.classList.add("zt-image-button","zt-play");
@@ -57,10 +59,11 @@ function mount(root){
  const menu=btn("MENU",()=>{if(!menuOpen){menuOpen=true;paused=true;}else menuOpen=false;updateStatus();});
  menu.classList.add("zt-image-button","zt-menu");
  let menuOpen=false;
- controls.append(start,restart,menu);wrap.appendChild(controls);
+ controls.append(start,restart,menu);
  // Manette tactile façon console portable : une croix 4 directions + A/B.
  // Tous les éléments sont en CSS, sans image générée ni texture supplémentaire.
  let pad=make("div","zt-handheld");
+ pad.appendChild(controls);
  pad.setAttribute("aria-label","Commandes tactiles Tetris");
  let dpad=make("div","zt-dpad"),cross=make("div","zt-cross");
  let repeatDelay=null,repeatTimer=null,heldControl=null;
@@ -247,9 +250,15 @@ function mount(root){
   if(!active||!main.isConnected)return;
   const sideWidth=right.getBoundingClientRect().width||145;
   const gap=parseFloat(getComputedStyle(main).columnGap)||9;
-  const availableWidth=Math.max(60,main.clientWidth-sideWidth-gap-30);
-  const availableHeight=Math.max(125,main.clientHeight-26);
-  const width=Math.max(48,Math.min(240,availableWidth,availableHeight/2));
+  const room=main.getBoundingClientRect();
+  const css=getComputedStyle(main);
+  const sideSpace=parseFloat(css.paddingLeft)||0;
+  const rightSpace=parseFloat(css.paddingRight)||0;
+  const topSpace=parseFloat(css.paddingTop)||0;
+  const bottomSpace=parseFloat(css.paddingBottom)||0;
+  const availableWidth=Math.max(60,main.clientWidth-sideWidth-gap-sideSpace-rightSpace-20);
+  const availableHeight=Math.max(105,main.clientHeight-topSpace-bottomSpace-16);
+  const width=Math.max(48,Math.min(310,availableWidth,availableHeight/2));
   if(!Number.isFinite(width))return;
   const pixels=Math.floor(width);
   stage.style.width=pixels+"px";
