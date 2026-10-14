@@ -121,6 +121,59 @@ function playMechanicalClick(name){
   }catch(e){sfx(name);}
 }
 
+/* Custom ZebraOS desktop sprite: user-supplied 128px PNGs, optimised for small UI sizes. */
+function osIcon(name,size){
+  var pack=window.ZebraIconPack, i=pack&&pack.names?pack.names.indexOf(name):-1;
+  var node=el("span","os-icon-graphic");
+  node.setAttribute("aria-hidden","true");
+  if(i<0){node.textContent="▣";return node;}
+  var col=i%pack.columns,row=Math.floor(i/pack.columns);
+  node.style.width=size+"px";
+  node.style.height=size+"px";
+  node.style.backgroundImage='url("'+pack.image+'")';
+  node.style.backgroundSize=(pack.columns*size)+"px "+(Math.ceil(pack.names.length/pack.columns)*size)+"px";
+  node.style.backgroundPosition=(-col*size)+"px "+(-row*size)+"px";
+  return node;
+}
+function fileIcon(f){
+  if(f[1]==="folder"){
+    if(f[2]==="tape")return "zebratape2";
+    if(f[2]==="screens"||f[2]==="art")return "jpg";
+    if(f[2]==="maps"||f[2]==="sadate")return "zip";
+    if(f[2]==="recycle")return "recycle-bin";
+    return "folder";
+  }
+  if(f[1]==="audio")return "mp3";
+  if(f[1]==="image")return "jpg";
+  if(f[1]==="download")return "zip";
+  if(f[2]==="readme")return "readme";
+  return "txt";
+}
+function windowIcon(id){
+  if(id==="amp")return "zebraamp";
+  if(id==="explorer")return "computer";
+  if(id==="settings")return "control-panel";
+  if(id==="viewer")return "jpg";
+  if(id==="about")return "zebraos";
+  if(id==="adminprompt")return "settings";
+  return "txt";
+}
+function decorateSystemMenus(){
+  var mappings={amp:"zebraamp",explorer:"computer",notepad:"txt",viewer:"jpg",settings:"control-panel",about:"zebraos"};
+  document.querySelectorAll("#start-menu [data-start]").forEach(function(b){
+    Array.prototype.slice.call(b.childNodes).forEach(function(n){if(n.nodeType===3)n.remove()});
+    b.insertBefore(osIcon(mappings[b.dataset.start]||"folder",20),b.firstChild);
+  });
+  [["logout","computer"],["shutdown-desktop","shutdown"]].forEach(function(row){
+    var b=$(row[0]);
+    Array.prototype.slice.call(b.childNodes).forEach(function(n){if(n.nodeType===3)n.remove()});
+    b.insertBefore(osIcon(row[1],20),b.firstChild);
+  });
+  var logo=document.querySelector("#start-button .start-z");
+  if(logo){logo.textContent="";logo.appendChild(osIcon("zebraos",20));}
+  var tray=document.querySelector(".tray-icon");
+  if(tray){tray.textContent="";tray.appendChild(osIcon("network",16));}
+}
 function el(tag,cls,txt){var n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;}
 function show(id){["power-screen","login-screen","desktop-screen"].forEach(function(s){$(s).classList.toggle("active",s===id)});}
 function login(){var r=$("login-users");r.innerHTML="";users.forEach(function(u){var b=el("button","user-card");b.innerHTML='<span class="user-avatar"></span><span class="user-name"></span><span class="user-sub"></span>';b.children[0].textContent=u[3];b.children[1].textContent=u[1];b.children[2].textContent=u[2];b.onclick=function(){sfx("confirm");start(u[0])};r.appendChild(b)});show("login-screen")}
@@ -131,7 +184,7 @@ function getStore(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function setStore(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 function setWall(name,custom){var w=$("wallpaper");w.className="wallpaper wallpaper-"+name;w.style.backgroundImage=custom?'url("'+custom+'")':"";w.style.backgroundSize=custom?"cover":"";if(session&&!custom)setStore("zebra.wall."+session,name)}
 function isTouchOpen(e){return (e && e.pointerType==="touch") || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) || window.innerWidth<701;}
-function desk(){var r=$("desktop-icons");r.innerHTML="";var items=[["My Computer","▣","explorer:root"],["ZebraAMP.exe","♫","amp"],["ZEBRA TAPE 2","▣","explorer:tape"],["Screenshots","▧","explorer:screens"],["README.TXT","▤","txt:readme"],["Recycle Bin","♻","explorer:recycle"],["Control Panel","⚙","settings"]];if(session==="daniel")items.push(["DANIEL.TXT","?","txt:daniel"]);items.forEach(function(it){var b=el("button","desk-icon");b.innerHTML='<span class="desk-symbol"></span><span></span>';b.children[0].textContent=it[1];b.children[1].textContent=it[0];b.onclick=function(e){document.querySelectorAll(".desk-icon").forEach(function(x){x.classList.remove("selected")});b.classList.add("selected");if(isTouchOpen(e)||e.detail===0)open(it[2])};b.ondblclick=function(e){if(!isTouchOpen(e))open(it[2])};r.appendChild(b)})}
+function desk(){var r=$("desktop-icons");r.innerHTML="";var items=[["My Computer","computer","explorer:root"],["ZebraAMP.exe","zebraamp","amp"],["ZEBRA TAPE 2","zebratape2","explorer:tape"],["Screenshots","jpg","explorer:screens"],["README.TXT","readme","txt:readme"],["Recycle Bin","recycle-bin","explorer:recycle"],["Control Panel","control-panel","settings"]];if(session==="daniel")items.push(["DANIEL.TXT","txt","txt:daniel"]);items.forEach(function(it){var b=el("button","desk-icon");b.innerHTML='<span class="desk-symbol"></span><span></span>';b.children[0].appendChild(osIcon(it[1],40));b.children[1].textContent=it[0];b.onclick=function(e){document.querySelectorAll(".desk-icon").forEach(function(x){x.classList.remove("selected")});b.classList.add("selected");if(isTouchOpen(e)||e.detail===0)open(it[2])};b.ondblclick=function(e){if(!isTouchOpen(e))open(it[2])};r.appendChild(b)})}
 function closeAll(){Object.keys(opened).forEach(function(k){opened[k].w.remove()});opened={};$("task-items").innerHTML="";$("start-menu").classList.add("hidden")}
 function task(){var r=$("task-items");r.innerHTML="";Object.keys(opened).forEach(function(k){var p=opened[k],b=el("button","win-button",p.title);b.onclick=function(){if(p.w.classList.contains("minimized")){p.w.classList.remove("minimized");focus(k);sfx("restore")}else{p.w.classList.add("minimized");sfx("minimize")}};r.appendChild(b)})}
 function focus(id){if(opened[id]){opened[id].w.style.zIndex=++z;Object.keys(opened).forEach(function(k){opened[k].w.classList.toggle("focused",k===id)})}}
@@ -171,9 +224,9 @@ function animateWindowOpen(w,launcher){
   ghost.addEventListener("transitionend",function(e){if(e.propertyName==="width")reveal()});
   timer=setTimeout(reveal,700);
 }
-function windowBox(id,title,width,height){var launcher=document.activeElement;if(opened[id]){if(opened[id].w.classList.contains("minimized"))sfx("restore");opened[id].w.classList.remove("minimized");focus(id);return opened[id].w.querySelector(".window-body")}var w=el("div","window");w.style.width=width+"px";w.style.height=height+"px";var offset=seq++*23;w.style.left=Math.max(8,Math.min(115+offset,window.innerWidth-width-10))+"px";w.style.top=Math.max(8,Math.min(55+offset,window.innerHeight-height-50))+"px";w.innerHTML='<div class="titlebar"><span>▣</span><span class="windowtitle"></span><div class="titlebuttons"><button data-min>_</button><button data-close>×</button></div></div><div class="window-body"></div><div class="window-status">ZebraOS 2.0 / STUDIO COMPUTER</div>';w.querySelector(".windowtitle").textContent=title;$("windows-area").appendChild(w);opened[id]={w:w,title:title};setTimeout(function(){if(document.body.contains(w))sfx("open")},125);w.querySelector("[data-min]").onclick=function(){sfx("minimize");w.classList.add("minimized")};w.querySelector("[data-close]").onclick=function(){sfx("close");w.remove();delete opened[id];task()};w.onpointerdown=function(){focus(id)};var bar=w.querySelector(".titlebar"),drag=null;bar.onpointerdown=function(e){if(e.target.tagName==="BUTTON"||window.innerWidth<701)return;drag={x:e.clientX,y:e.clientY,left:parseInt(w.style.left,10),top:parseInt(w.style.top,10)};bar.setPointerCapture(e.pointerId)};bar.onpointermove=function(e){if(!drag)return;w.style.left=Math.max(0,Math.min(innerWidth-70,drag.left+e.clientX-drag.x))+"px";w.style.top=Math.max(0,Math.min(innerHeight-70,drag.top+e.clientY-drag.y))+"px"};bar.onpointerup=bar.onpointercancel=function(){drag=null};task();focus(id);animateWindowOpen(w,launcher);return w.querySelector(".window-body")}
+function windowBox(id,title,width,height){var launcher=document.activeElement;if(opened[id]){if(opened[id].w.classList.contains("minimized"))sfx("restore");opened[id].w.classList.remove("minimized");focus(id);return opened[id].w.querySelector(".window-body")}var w=el("div","window");w.style.width=width+"px";w.style.height=height+"px";var offset=seq++*23;w.style.left=Math.max(8,Math.min(115+offset,window.innerWidth-width-10))+"px";w.style.top=Math.max(8,Math.min(55+offset,window.innerHeight-height-50))+"px";w.innerHTML='<div class="titlebar"><span>▣</span><span class="windowtitle"></span><div class="titlebuttons"><button data-min>_</button><button data-close>×</button></div></div><div class="window-body"></div><div class="window-status">ZebraOS 2.0 / STUDIO COMPUTER</div>';w.querySelector(".windowtitle").textContent=title;var winSymbol=w.querySelector(".titlebar > span:first-child");winSymbol.textContent="";winSymbol.appendChild(osIcon(windowIcon(id),16));$("windows-area").appendChild(w);opened[id]={w:w,title:title};setTimeout(function(){if(document.body.contains(w))sfx("open")},125);w.querySelector("[data-min]").onclick=function(){sfx("minimize");w.classList.add("minimized")};w.querySelector("[data-close]").onclick=function(){sfx("close");w.remove();delete opened[id];task()};w.onpointerdown=function(){focus(id)};var bar=w.querySelector(".titlebar"),drag=null;bar.onpointerdown=function(e){if(e.target.tagName==="BUTTON"||window.innerWidth<701)return;drag={x:e.clientX,y:e.clientY,left:parseInt(w.style.left,10),top:parseInt(w.style.top,10)};bar.setPointerCapture(e.pointerId)};bar.onpointermove=function(e){if(!drag)return;w.style.left=Math.max(0,Math.min(innerWidth-70,drag.left+e.clientX-drag.x))+"px";w.style.top=Math.max(0,Math.min(innerHeight-70,drag.top+e.clientY-drag.y))+"px"};bar.onpointerup=bar.onpointercancel=function(){drag=null};task();focus(id);animateWindowOpen(w,launcher);return w.querySelector(".window-body")}
 function button(txt,cb){var b=el("button","classic-button",txt);b.onclick=cb;return b}
-function explorer(id){id=id||"root";var r=windowBox("explorer","My Computer — C:\\"+id.toUpperCase(),560,430);r.innerHTML="";var row=el("div","folder-toolbar");row.appendChild(button("↑ C:",function(){explorer("root")}));row.appendChild(button("↻ Refresh",function(){explorer(id)}));r.appendChild(row);r.appendChild(el("div","folder-path","C:\\STUDIO\\"+(id==="root"?"":id.toUpperCase())));var list=el("div","folder-list");(dir[id]||[]).forEach(function(f){var b=el("button","file-entry");b.innerHTML='<span class="file-symbol"></span><span></span>';b.children[0].textContent=f[1]==="folder"?"▣":f[1]==="audio"?"♫":f[1]==="image"?"▧":f[1]==="download"?"⇩":"▤";b.children[1].textContent=f[0];b.onclick=function(){if(f[1]==="folder"){sfx("select");explorer(f[2])}else if(f[1]==="audio")player(Number(f[2]));else if(f[1]==="txt")notepad(f[2]);else if(f[1]==="image")viewer(f[2]);else msg("File unavailable", "Preview asset to be added to ZebraOS.");};list.appendChild(b)});r.appendChild(list)}
+function explorer(id){id=id||"root";var r=windowBox("explorer","My Computer — C:\\"+id.toUpperCase(),560,430);r.innerHTML="";var row=el("div","folder-toolbar");row.appendChild(button("↑ C:",function(){explorer("root")}));row.appendChild(button("↻ Refresh",function(){explorer(id)}));r.appendChild(row);r.appendChild(el("div","folder-path","C:\\STUDIO\\"+(id==="root"?"":id.toUpperCase())));var list=el("div","folder-list");(dir[id]||[]).forEach(function(f){var b=el("button","file-entry");b.innerHTML='<span class="file-symbol"></span><span></span>';b.children[0].appendChild(osIcon(fileIcon(f),32));b.children[1].textContent=f[0];b.onclick=function(){if(f[1]==="folder"){sfx("select");explorer(f[2])}else if(f[1]==="audio")player(Number(f[2]));else if(f[1]==="txt")notepad(f[2]);else if(f[1]==="image")viewer(f[2]);else msg("File unavailable", "Preview asset to be added to ZebraOS.");};list.appendChild(b)});r.appendChild(list)}
 function msg(title,message){if(/unavailable|denied/i.test(title))sfx("error");var r=windowBox("msg-"+(++seq),title,375,180);r.appendChild(el("p","app-message",message));r.appendChild(button("OK",function(){r.parentNode.remove();Object.keys(opened).forEach(function(k){if(!document.body.contains(opened[k].w))delete opened[k]});task()}))}
 function notepad(id){var name=id==="notes"?"MY_NOTES.TXT":(id||"README").toUpperCase()+".TXT";var r=windowBox("note-"+id,name+" - Notepad",480,380);r.innerHTML="";var wrap=el("div","note-editor");var ta=el("textarea");ta.value=id==="notes"?(getStore("zebra.note."+session)||""):docs[id]||"";if(id!=="notes")ta.readOnly=true;wrap.appendChild(ta);if(id==="notes")wrap.appendChild(button("File > Save",function(){setStore("zebra.note."+session,ta.value);msg("Notepad","Enregistré dans ton navigateur.")}));else wrap.appendChild(el("div","desktop-note","Read-only file"));r.appendChild(wrap)}
 function viewer(name){var r=windowBox("viewer","Image Viewer - "+name+".JPG",440,340);r.innerHTML="";var p=el("div","viewer-placeholder","[ "+name.toUpperCase()+".JPG ]\n\nArtwork / screenshots à venir");p.style.whiteSpace="pre-line";r.appendChild(p)}
@@ -198,6 +251,7 @@ var r=windowBox("amp","ZebraAMP.exe",480,470);r.innerHTML='<div class="amp"><div
 var list=r.querySelector("[data-list]");tracks.forEach(function(n,i){var b=el("button","amp-song",(i+1)+". "+n);b.onclick=function(){pickTrack(i)};list.appendChild(b)});
 r.querySelector("[data-play]").onclick=function(){if(selectedTrack<0)pickTrack(0);else if(music.paused){music.play().catch(function(){})}else music.pause();renderAmp()};r.querySelector("[data-stop]").onclick=function(){music.pause();music.currentTime=0;renderAmp()};r.querySelector("[data-prev]").onclick=function(){pickTrack((selectedTrack+8)%9)};r.querySelector("[data-next]").onclick=function(){pickTrack((selectedTrack+1)%9)};r.querySelector("[data-volume]").oninput=function(e){music.volume=e.target.value/100};r.querySelector("[data-seek]").oninput=function(e){if(music.duration)music.currentTime=e.target.value*music.duration/100};r.querySelector("[data-import]").onclick=function(){$("file-music").click()};music.volume=.7;if(index!==undefined)pickTrack(index);else renderAmp()}
 function open(code){$("start-menu").classList.add("hidden");if(code==="amp")player();else if(code==="settings")settings();else if(code==="about")about();else if(code==="notepad")notepad("notes");else if(code==="viewer")viewer("cover");else if(code.indexOf("explorer:")===0)explorer(code.split(":")[1]);else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
+decorateSystemMenus();
 $("power-btn").onclick=function(){sfx("switch");login()};$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
 $("start-button").onclick=function(e){e.stopPropagation();$("start-menu").classList.toggle("hidden")};document.querySelectorAll("[data-start]").forEach(function(b){b.onclick=function(){open(b.dataset.start)}});document.addEventListener("pointerdown",function(e){if(!e.target.closest("#start-menu")&&!e.target.closest("#start-button"))$("start-menu").classList.add("hidden")});
 /* A physical mouse click exists independently of what the computer does afterwards.
