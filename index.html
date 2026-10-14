@@ -28,9 +28,20 @@
   <button id="skip-session-boot" class="zboot-skip" aria-label="Passer l'ouverture de session" >PASSER &gt;</button>
 </div>
 <div id="login-screen" class="screen">
-  <div class="login-header"><div class="zebra-logo">Z<span>///</span></div><div><h1>ZebraOS</h1><small>ÉDITION STUDIO · VERSION 2.0</small></div></div>
-  <div class="login-main"><p>CHOISISSEZ UNE SESSION</p><div id="login-users" class="login-users"></div></div>
-  <div class="login-footer"><span>RÉSEAU ZEBRA RECORD — ORDINATEUR DU STUDIO</span><button id="shutdown-login" class="plain-dark">⏻ Éteindre l’ordinateur</button></div>
+  <div class="login-top-band" aria-hidden="true"></div>
+  <main class="login-content">
+    <div class="login-header">
+      <img class="login-brand-logo" src="/assets/boot/logo.png" alt="ZebraOS">
+    </div>
+    <p class="login-prompt">Pour commencer, cliquez sur votre nom d’utilisateur.</p>
+    <div id="login-users" class="login-users" aria-label="Choix de la session"></div>
+  </main>
+  <div class="login-footer">
+    <div class="login-power-actions">
+      <button id="restart-login" class="login-power-button" type="button">↻ <span>Redémarrer</span></button>
+      <button id="shutdown-login" class="login-power-button" type="button">⏻ <span>Éteindre l’ordinateur</span></button>
+    </div>
+  </div>
 </div>
 <div id="desktop-screen" class="screen">
   <div id="wallpaper" class="wallpaper wallpaper-visitor"><div class="wallpaper-grain"></div><div class="wallpaper-label">ZEBRA TAPE 2 <span>STUDIO // 2026</span></div></div>
