@@ -1,94 +1,32 @@
-# ZebraOS — Prototype jouable v0.1
+# ZebraOS — Zebra Tape 2
 
-Ce dossier est **un premier prototype** pour éprouver l'idée, pas le site final. Il contient un écran PC éteint, une sélection de session, un bureau avec fenêtres, un explorateur de dossiers imbriqués, un lecteur MP3, une galerie, un bloc-notes, les réglages de fonds et quelques clins d'œil à Daniel.
+Un faux système d'exploitation rétro, développé en HTML, CSS et JavaScript, publié avec GitHub Pages sur **zebratape2.net**.
 
-## Pour l'ouvrir
+## Le seul dossier de contenu
 
-Ouvrir `index.html` dans Chrome, Firefox ou Edge. Pour un test fidèle aux conditions d'un vrai site (notamment téléchargement ZIP), utiliser un serveur HTTP statique local ou déposer ces fichiers sur un hébergement de test. Aucune compilation, aucun `npm`, aucun framework.
+Tous les fichiers visibles sur le bureau viennent de **`STUDIO/BUREAU`**.
 
-Sur PC : **double-cliquer** les icônes. Sur téléphone : **toucher** une icône. Cliquer le bouton POWER pour commencer.
+- Le bureau démarre vide, sauf les applications système (Poste de travail, ZebraAMP, Panneau de configuration, Gestionnaire Studio en Admin).
+- Un dossier ajouté dans `STUDIO/BUREAU` devient une icône sur le bureau.
+- Les sous-dossiers et fichiers se consultent dans les fenêtres de l'explorateur.
+- Les icônes personnalisées sont lues depuis `icone.png` placé dans chaque dossier, ou `nom.ext.icone.png` à côté d'un fichier.
+- Les fichiers `.gitkeep` et les images d'icônes sont masqués.
+- À chaque publication sur GitHub, une action régénère **`assets/bureau-index.json`**. ZebraOS récupère cet index sans utiliser l'API GitHub dans le navigateur.
 
-## Ajouter du contenu réel
+➡️ **[Guide pratique : créer des dossiers et choisir leurs icônes](GUIDE_BUREAU.md)**
 
-- Musique : renommer tes MP3 `track-01.mp3` à `track-09.mp3` et les placer dans `assets/music/`. Ou ouvrir ZebraAMP puis utiliser **Load MP3(s) from device** pour tester avec tes propres fichiers (import temporaire, sans envoi).
-- Visuels : `assets/screenshots/cover.jpg`, `poster.jpg` et `sadate-01.jpg` à `sadate-04.jpg`.
-- Map : mettre l'archive compilée et testée dans `assets/maps/sadate-map.zip`.
-- Fonds du bureau : dans cette maquette ils sont générés en CSS. Les vrais fonds seront des captures travaillées de ta map et remplaceront ces fonds provisoires.
-- Fichier éditable : `STUDIO/MY_NOTES.TXT` dans l'explorateur. Sauvegarde **locale uniquement**, pas partagée.
+## Organisation
 
-## Délimitations
+- `STUDIO/BUREAU/` : **tout ton contenu public**, géré sur GitHub.
+- `assets/bureau-index.json` : index technique généré automatiquement.
+- `app.js` : bureau, fenêtres, sessions et applications.
+- `github-files.js` : explorateur du bureau public.
+- `style.css` : style rétro ZebraOS.
+- `wallpaper.js` : fonds d'écran du navigateur.
+- `assets/boot-assets-v07.js` : logo et sons de démarrage intégrés.
 
-- **Pas de musique réelle incluse** : aucun titre, fichier ou cover n'a été inventé pour l'album. Le lecteur fonctionnera avec des MP3 fournis.
-- Les comptes sont des **profils fictifs** : ils n'imposent aucune permission serveur.
-- **Pas de protection fiable d'écoute anticipée** dans ce prototype statique.
-- Sur le faux bureau, les dossiers ne sont pas des vrais dossiers de votre machine.
-- L'interface est volontairement provisoire : pas encore d'icônes originales, de vrai art ZebraOS, de fichiers de session approfondis, d'égaliseur audio paramétrique ou de vraie vue galerie finale.
-- La fenêtre Notepad utilise le stockage local du navigateur. Les changements ne sont pas partagés entre visiteurs.
+**Les brouillons stockés autrefois en IndexedDB ne sont pas publiés et ne sont pas effacés par cette mise à jour.** Le nouveau contenu du bureau est géré par GitHub.
 
-## Statut
+## Attention
 
-Prototype P0-A / P0-B + aperçu P0-C / P0-D. Avant publication, effectuer tests PC/mobile, finaliser les assets et séparer `app.js` en modules (voir `CAHIER_DES_CHARGES.md`).
-
-## Son système (v0.3)
-
-Les bruitages de ZebraOS proviennent de **Kenney — Interface Sounds (2020)**, sous licence **Creative Commons CC0 1.0** : https://kenney.nl/assets/interface-sounds
-
-Les neuf fichiers OGG sélectionnés sont embarqués dans `sfx.js` pour fonctionner sans CDN ni compte externe. Sons prévus : clic, sélection, ouverture, fermeture, réduction, restauration, confirmation, erreur et interrupteur.
-
-- Ouvrir une session, un dossier, ZebraAMP, puis réduire/restaurer/fermer une fenêtre pour tester.
-- Panneau de configuration → **Sound Properties** : activer/désactiver les sons ou lancer un test.
-- Les sons démarrent seulement après une action de l'utilisateur, conformément aux restrictions habituelles d'autoplay des navigateurs.
-- La musique de Zebra Tape 2 est séparée des bruitages. Aucun master inédit n'est publié ici.
-
-Merci à Kenney pour les assets CC0. Aucune ressource audio Windows/Microsoft n'a été copiée.
-
-
-## Clic de souris mécanique (v0.4)
-
-- À chaque pression puis relâchement sur le site (souris **ou** écran tactile), un son physique distinct est joué.
-- Le son d'ouverture des fenêtres reste séparé et démarre légèrement après le clic pour que les deux soient perceptibles.
-- Les anciens clics électroniques sur certaines commandes ont été supprimés afin d'éviter les doublons.
-- **Control Panel → Sound Properties → Test mouse click** permet d'écouter le nouveau bruitage. L'option « System sounds » coupe tous les effets, comme auparavant.
-- Sources audio supplémentaires : **Kenney — UI Audio**, `mouseclick1.ogg` et `mouserelease1.ogg`, licence CC0 : https://kenney.nl/assets/ui-audio
-
-Le fichier `sfx.js` contient les deux sons en OGG intégrés, sans serveur ou CDN tiers.
-
-
-## Fonds d’écran (v0.8)
-
-Dans **Control Panel → Personnaliser votre arrière-plan**, chaque session sélectionne son propre fond d’écran et le mode d’affichage : Remplir, Ajuster, Étirer, Vignette, Centrer ou Étendre.
-
-- **Parcourir les photos** accepte PNG, JPG, WEBP et BMP (30 Mo maximum). Les GIF sont convertis en image fixe.
-- Les imports sont redimensionnés à 1920 pixels maximum, puis gardés localement dans IndexedDB.
-- Les images récentes sont partagées entre les sessions **du même navigateur**, mais chaque session conserve son propre fond.
-- Le choix du fond et son mode sont sauvegardés dans localStorage.
-- Supprimer une image de la galerie la supprime de cet appareil et rétablit le fond d'origine des sessions qui l'utilisaient.
-- Aucune image importée n’est envoyée sur GitHub. Elles ne sont pas synchronisées entre appareils.
-- « Étendre » correspond ici à « Remplir » puisqu’il n’y a qu’un seul écran virtuel.
-
-Tests : importer une image dans Visitor ; choisir Vignette, Ajuster et Remplir ; changer de session ; revenir ; recharger le navigateur.
-
-## Idées de la prochaine phase
-
-- **Paintbrush** : outil de dessin style Windows 95 avec import/export d’images et effets simples.
-- **System Settings** : date, heure, format, fuseau horaire simulé et horloge plus complète.
-- **File explorer** : dossier du dépôt synchronisé en lecture pour afficher automatiquement les fichiers publics.
-- **Desktop** : redimensionnement des fenêtres sur ordinateur, anti-sélection accidentelle du texte.
-- **Login** : refonte du sélecteur de session.
-- **ZebraAMP** : égaliseur et fonctions audio supplémentaires.
-
-## Admin et Studio Manager (v1.1)
-
-L'écran de sélection de session demande désormais un mot de passe pour **Admin**. Le mot de passe n'est pas écrit en clair dans les fichiers de l'application : son empreinte SHA-256 est comparée côté navigateur (API Web Crypto).
-
-**Attention :** ce n'est pas une vraie authentification sécurisée. Tout le JavaScript du site est public ; il est possible de contourner la vérification avec les outils de développement. Ne pas y stocker des secrets, des documents confidentiels, des accès GitHub, ni des informations personnelles.
-
-Une fois connecté en Admin, le bureau propose **STUDIO MANAGER**, un point d'accès central à :
-
-- **STUDIO LOCAL** : disque privé *à cet appareil*, modifiable depuis le navigateur (IndexedDB).
-- **STUDIO (GITHUB)** : répertoire public publié sur GitHub, accessible aux visiteurs en lecture seule.
-- **PUBLICATION** : lien ouvrant GitHub pour transférer les fichiers quand ils sont prêts.
-
-Les sessions **Visitor**, **Zebra** et **Daniel** accèdent aux fichiers publics, sans les commandes de gestion du disque local. La corbeille locale n'apparaît que dans le bureau Admin.
-
-La séparation des deux lecteurs évite la confusion : un fichier importé dans le disque local ne se publie **jamais automatiquement** et reste sur le navigateur qui l'a importé.
+Le dépôt est public. Le mot de passe de la session Admin est un élément de l'expérience rétro et ne constitue pas une vraie protection serveur. N'y dépose aucun document confidentiel.
