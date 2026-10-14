@@ -1144,3 +1144,11 @@
  .safari-help{padding:4px;font-size:9px}
  .safari-main-foot{font-size:9px}
 }
+
+/* Wallpaper positioning controls */
+.wallpaper-position-group{display:flex;flex-direction:column;gap:7px;margin-top:5px;padding:9px;border:1px solid #a9b0ad;background:#e2e7e3}
+.wallpaper-position-line{display:grid;grid-template-columns:78px minmax(50px,1fr) 40px;gap:7px;align-items:center;font:11px Tahoma,Arial,sans-serif}
+.wallpaper-position-line input{width:100%;accent-color:#1c4352;touch-action:pan-y}
+.wallpaper-position-line output{text-align:right;font:10px Tahoma,Arial,sans-serif}
+.wallpaper-position-group>.classic-button{align-self:flex-start}
+@media(max-width:600px){.wallpaper-position-line{grid-template-columns:72px minmax(45px,1fr) 36px}}
