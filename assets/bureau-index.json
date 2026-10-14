@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-14T10:33:30.314636+00:00",
+  "generatedAt": "2026-10-14T10:33:58.169871+00:00",
   "entries": [
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
@@ -8,6 +8,10 @@
     },
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2/Cover",
+      "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Zebra Tape 2/Poster",
       "type": "dir"
     },
     {
