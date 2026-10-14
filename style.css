@@ -162,3 +162,44 @@
  .github-drive-hint{font-size:10px}
  .github-file-size{font-size:9px}
 }
+
+/* ZebraOS v1.0: persistent local filesystem windows. */
+.local-disk-toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-bottom:9px;border-bottom:1px solid #9ca5a6;margin-bottom:8px}
+.local-disk-toolbar button{min-height:29px}
+.local-disk-hint{font:11px/1.45 Tahoma,Arial,sans-serif;color:#586469;margin:8px 0 13px}
+.local-drive-root{grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:12px}
+.local-drive-item{min-height:118px}
+.local-drive-item .file-symbol{height:42px;display:flex;align-items:center;justify-content:center}
+.local-file-list{grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:5px}
+.local-file-card{position:relative;display:flex;flex-direction:column;min-width:0;align-items:center;padding:2px;border:1px solid transparent}
+.local-file-card:hover{background:#dfe8e8;border:1px dotted #769294}
+.local-file-open{width:100%;padding:5px 4px 3px;min-height:84px}
+.local-file-open .file-symbol{height:34px;display:flex;align-items:center;justify-content:center}
+.local-file-name{max-width:100%;overflow-wrap:anywhere;line-height:1.3}
+.local-file-more{position:absolute;top:1px;right:0;width:24px;height:23px;font-size:18px;line-height:14px;border:2px outset white;background:#d2d2d2;cursor:pointer;color:#263e45}
+.local-file-more:hover{background:#b4d2d3}
+.local-file-menu{position:absolute;top:23px;right:0;display:flex;flex-direction:column;gap:1px;z-index:999;background:#c3c9c7;border:2px outset #eef2ed;box-shadow:3px 4px 0 #3337;padding:4px;min-width:142px}
+.local-file-menu button{text-align:left;white-space:nowrap;border:0;background:transparent;padding:8px 6px;font-size:11px}
+.local-file-menu button:hover{background:#1b3b82;color:#fff}
+.local-disk-empty{padding:24px 12px;border:2px inset #ddd;background:#eeefed;text-align:center;font:11px "Courier New",monospace;color:#4a5a5e}
+.local-drop-zone{margin-top:14px;border:2px dashed #aebebf;background:#e8eeee;text-align:center;padding:13px 6px;font:11px "Courier New",monospace;color:#617273}
+.local-drop-zone.drag-over{background:#cae7df;border-color:#2b796a}
+.local-disk-status{margin-top:11px;padding-top:6px;border-top:1px solid #adb8b3;font:10px "Courier New",monospace;color:#697874}
+.local-disk-error{padding:9px;color:#a31b17;border:1px solid #b3544c;background:#fee9e6;font-size:11px}
+.local-preview-tools{display:flex;gap:8px;margin-bottom:12px}
+.local-modal{position:absolute;inset:0;background:rgba(0,0,0,.28);display:grid;place-items:center;z-index:9999;padding:12px}
+.local-modal-pane{width:min(300px,100%);padding:14px;border:3px outset #f4f4f4;background:#c0c0c0;box-shadow:2px 4px 0 #30303088}
+.local-modal-pane h3{margin:0 0 12px;font-size:13px}
+.local-modal-input{width:100%;padding:6px;font:12px Tahoma,Arial,sans-serif;border:2px inset #fff;background:#fff}
+.local-modal-actions{display:flex;gap:7px;justify-content:flex-end;margin-top:12px}
+.local-modal-actions button{min-width:76px}
+@media(max-width:700px){
+ .local-disk-toolbar button{min-height:36px;padding:5px 8px}
+ .local-file-list{grid-template-columns:repeat(3,minmax(0,1fr));gap:2px}
+ .local-file-card{padding:0}
+ .local-file-more{width:28px;height:28px}
+ .local-drive-root{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .local-drive-item{min-height:102px}
+ .local-disk-hint{font-size:10px}
+ .local-drop-zone{display:none}
+}
