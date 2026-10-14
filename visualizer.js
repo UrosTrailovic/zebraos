@@ -5,11 +5,11 @@
 (function(){
 "use strict";
 var presets=[
-  ["SPECTRUM 2000","Equalizer bars and glowing peaks"],
-  ["PHOSPHOR SCOPE","Retro waveform monitor"],
-  ["NEON TUNNEL","Bass-driven perspective rings"],
-  ["KALEIDO REACTOR","Mirrored neon geometry"],
-  ["HYPERDRIVE","Audio-synced starfield"]
+  ["SPECTRE 2000","Barres lumineuses"],
+  ["OSCILLOSCOPE","Courbe analogique verte"],
+  ["TUNNEL NÉON","Tunnels réactifs aux basses"],
+  ["KALÉIDOSCOPE","Géométrie néon symétrique"],
+  ["HYPERVITESSE","Étoiles synchronisées au son"]
 ];
 var audioContext=null,audioNode=null,analyser=null,mediaRef=null,active=null;
 var spectrum=new Uint8Array(1024),wave=new Uint8Array(2048),lowPower=window.matchMedia?matchMedia("(pointer:coarse)").matches:false;
@@ -217,21 +217,21 @@ function mount(host,media,options){
   var shell=element("div","zviz");
   var heading=element("div","zviz-top");
   var branding=element("div","zviz-brand","ZEBRAVIS 1.0");
-  var led=element("span","zviz-led","● AUDIO INPUT");
+  var led=element("span","zviz-led","● SIGNAL AUDIO");
   heading.appendChild(branding);heading.appendChild(led);shell.appendChild(heading);
   var stage=element("div","zviz-stage");
   var canvas=element("canvas","zviz-canvas");
   canvas.setAttribute("aria-label","Visualisation audio animée de ZebraAMP");
   stage.appendChild(canvas);
   var overlay=element("div","zviz-overlay");
-  overlay.appendChild(element("span","zviz-no-signal","NO SIGNAL — START A TRACK IN ZEBRAAMP"));
+  overlay.appendChild(element("span","zviz-no-signal","AUCUN SIGNAL — LANCE UN MORCEAU DANS ZEBRAAMP"));
   stage.appendChild(overlay);
   shell.appendChild(stage);
   var bar=element("div","zviz-controls");
   var back=element("button","zviz-step","◀");
   var next=element("button","zviz-step","▶");
   var modeText=element("div","zviz-mode-name");
-  var autoButton=element("button","zviz-auto","AUTO: OFF");
+  var autoButton=element("button","zviz-auto","AUTO : NON");
   var fullButton=element("button","zviz-fullscreen","⛶");
   var mode=readMode(),auto=false,lastSwitch=0,lastFrame=0,stars=makeStars();
   var ctx=canvas.getContext("2d",{alpha:false});
@@ -244,7 +244,7 @@ function mount(host,media,options){
   }
   back.onclick=function(){mode=(mode+presets.length-1)%presets.length;updatePreset();};
   next.onclick=function(){mode=(mode+1)%presets.length;updatePreset();};
-  autoButton.onclick=function(){auto=!auto;autoButton.textContent=auto?"AUTO: ON":"AUTO: OFF";lastSwitch=performance.now();};
+  autoButton.onclick=function(){auto=!auto;autoButton.textContent=auto?"AUTO: ON":"AUTO : NON";lastSwitch=performance.now();};
   fullButton.title="Plein écran";
   fullButton.onclick=function(){
     if(stage.requestFullscreen){var p=stage.requestFullscreen();if(p&&p.catch)p.catch(function(){});}
@@ -252,15 +252,15 @@ function mount(host,media,options){
   bar.appendChild(back);bar.appendChild(modeText);bar.appendChild(next);bar.appendChild(autoButton);bar.appendChild(fullButton);
   shell.appendChild(bar);
   var footer=element("div","zviz-footer");
-  var hint=element("span","","LIVE AUDIO REACTIVE / CANVAS 2D");
-  var connectButton=element("button","zviz-connect","LINK AUDIO");
+  var hint=element("span","","EFFETS RÉACTIFS AU SON / CANVAS 2D");
+  var connectButton=element("button","zviz-connect","LIER AUDIO");
   footer.appendChild(hint);footer.appendChild(connectButton);shell.appendChild(footer);
   host.appendChild(shell);
   function connectNow(){
     var ok=connect(media,options&&options.analyser);
-    connectButton.textContent=ok?"AUDIO LINKED":"RETRY AUDIO";
+    connectButton.textContent=ok?"AUDIO LIÉ":"RÉESSAYER";
     led.classList.toggle("on",ok);
-    if(ok)requestAnimationFrame(function(){if(audioContext.state==="suspended")audioContext.resume().catch(function(){});});
+    if(ok&&audioContext)requestAnimationFrame(function(){if(audioContext&&audioContext.state==="suspended")audioContext.resume().catch(function(){});});
     return ok;
   }
   connectButton.onclick=connectNow;
