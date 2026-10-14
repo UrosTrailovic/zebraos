@@ -84,3 +84,47 @@
  .zboot-logo-frame,.zboot-session-content,#login-screen.active{animation:none}
  .zboot-power{transition:none}
 }
+
+/* ZebraOS v0.8 — Personalize your desktop (one session at a time). */
+.wallpaper-heading{display:flex;align-items:center;gap:13px;padding:5px 1px 12px;border-bottom:1px solid #adadad}
+.wallpaper-heading-icon{display:grid;place-items:center;width:38px;height:38px;flex:none;border:2px outset #fafafa;background:#d4dad7;font-size:23px;color:#173b46}
+.wallpaper-heading-text h3{font-size:15px;margin:0 0 5px;font-weight:700}
+.wallpaper-heading-text p{font-size:11px;color:#4f5858;margin:0}
+.wallpaper-stage{display:flex;align-items:center;gap:17px;padding:15px 0 16px}
+.wallpaper-preview{position:relative;flex:none;width:min(45%,260px);aspect-ratio:16/10;border:5px ridge #9ba5a6;box-shadow:1px 2px 0 #535858,3px 4px 0 #313b3b;background-size:cover;overflow:hidden}
+.wallpaper-preview-sticker{position:absolute;right:5px;bottom:5px;max-width:94%;background:rgba(0,0,0,.58);color:white;padding:3px 5px;font:9px "Courier New",monospace;text-shadow:none;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;letter-spacing:.5px}
+.wallpaper-controls{display:flex;flex:1;min-width:0;flex-direction:column;gap:8px}
+.wallpaper-label-setting{font-size:12px;font-weight:bold}
+.wallpaper-mode{height:35px;border:2px inset #e8e8e8;background:#fff;padding:5px 7px;color:#202020;max-width:100%}
+.wallpaper-mode:focus-visible{outline:1px solid #174e99}
+.wallpaper-hint{margin:0;font:10px/1.45 Tahoma,Arial,sans-serif;color:#626666}
+.wallpaper-section-head{display:flex;align-items:center;gap:12px;justify-content:space-between;border-top:1px solid #aaa;padding:13px 1px 9px}
+.wallpaper-section-head h4{font-size:13px;margin:0}
+.wallpaper-section-head .classic-button{padding:6px 10px;white-space:nowrap}
+.wallpaper-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(102px,1fr));gap:9px;align-items:start}
+.wallpaper-thumb{display:flex;min-width:0;flex-direction:column;align-items:stretch;gap:5px;max-width:100%;border:2px solid transparent;padding:4px;background:transparent;color:#222;text-align:left}
+.wallpaper-thumb:hover{background:#e2e9e9;border-color:#879a9e}
+.wallpaper-thumb.active{background:#cbdadd;border:2px solid #216a83;box-shadow:inset 0 0 0 1px #fff}
+.wallpaper-thumb-photo{display:block;width:100%;height:72px;object-fit:cover;background:#15232a;border:1px solid #9a9a9a}
+.wallpaper-thumb-caption{font-size:10px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.default-wallpaper-visitor{background:linear-gradient(125deg,#475b52 0%,#7a897c 35%,#152d35 36%,#152a30 65%,#0c1b21 100%)}
+.default-wallpaper-zebra{background:linear-gradient(130deg,#162f35 0%,#273a42 50%,#091d26 51%,#30444b 100%)}
+.default-wallpaper-admin{background:linear-gradient(145deg,#122948,#4c6174 50%,#091b32 51%,#13264d 100%)}
+.default-wallpaper-daniel{background:linear-gradient(125deg,#482e40,#c3a2b2 48%,#3d2744 49%,#171e2d)}
+.wallpaper-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0 3px;border-top:1px solid #aaa;margin-top:12px}
+.wallpaper-status{font:10px/1.5 "Courier New",monospace;color:#4c5b59}
+.wallpaper-status.error{color:#a12727}
+.wallpaper-remove{font-size:10px}
+.wallpaper-remove:disabled{opacity:.55;cursor:default}
+@media(max-width:700px){
+  .wallpaper-heading{gap:9px}
+  .wallpaper-stage{flex-direction:column;align-items:stretch;gap:13px}
+  .wallpaper-preview{width:100%;max-width:290px;margin:auto}
+  .wallpaper-controls{width:100%}
+  .wallpaper-section-head{gap:8px}
+  .wallpaper-section-head h4{font-size:12px}
+  .wallpaper-gallery{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  .wallpaper-thumb{padding:3px}
+  .wallpaper-thumb-photo{height:62px}
+  .wallpaper-footer{align-items:flex-start;flex-direction:column}
+}
