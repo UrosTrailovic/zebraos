@@ -167,7 +167,20 @@ function showGallery(target){
       b.title=item.name||"Image importée";
       b.classList.toggle("active",cfg.imageId===item.id);
       b.onclick=function(){selectImage(item.id);};
-      target.appendChild(b);
+      var remove=el("button","wallpaper-thumb-delete","×");
+      remove.type="button";
+      remove.setAttribute("aria-label","Supprimer "+(item.name||"cette image")+" de la galerie");
+      remove.title="Supprimer définitivement cette image";
+      remove.onclick=function(event){
+        event.preventDefault();
+        event.stopPropagation();
+        removeImage(item.id);
+      };
+      // Kept separate from the selection button: nested buttons are invalid HTML.
+      var wrapper=el("div","wallpaper-thumb-wrap");
+      wrapper.appendChild(b);
+      wrapper.appendChild(remove);
+      target.appendChild(wrapper);
     });
     var selected=cfg.imageId?items.filter(function(x){return x.id===cfg.imageId})[0]:null;
     selectedItem=selected||null;
@@ -219,20 +232,23 @@ function importFile(file,account){
   image.onerror=function(){URL.revokeObjectURL(url);announce("Impossible de lire cette image.",true);};
   image.src=url;
 }
-function removeSelected(){
-  if(!selectedItem)return;
-  var id=selectedItem.id;
-  if(!window.confirm("Supprimer cette image de la galerie de cet appareil ?"))return;
+function removeImage(id){
+  if(!id)return;
+  if(!window.confirm("Supprimer définitivement ce fond d’écran de cet appareil ?"))return;
   query("delete",id).then(function(){
     delete cache[id];
     accounts.forEach(function(account){
       var cfg=read(account);
       if(cfg.imageId===id){cfg.imageId=null;save(account,cfg);}
     });
+    selectedItem=null;
     if(currentSession)apply(currentSession);
     if(refreshGallery)refreshGallery();
-    announce("Image supprimée de la galerie.");
+    announce("Fond d’écran supprimé.");
   }).catch(function(e){announce("Suppression impossible : "+e.message,true);});
+}
+function removeSelected(){
+  if(selectedItem)removeImage(selectedItem.id);
 }
 function mount(parent){
   if(!parent||!currentSession)return;
@@ -278,11 +294,12 @@ function mount(parent){
   var status=el("span","wallpaper-status","Chargement de la galerie…");
   status.id="wallpaper-status";
   bar.appendChild(status);
-  var remove=el("button","classic-button wallpaper-remove","Supprimer l'image sélectionnée");
+  var remove=el("button","classic-button wallpaper-remove","Supprimer le fond utilisé");
   remove.id="wallpaper-remove";remove.disabled=true;
   remove.onclick=removeSelected;
   bar.appendChild(remove);
   parent.appendChild(bar);
+  parent.appendChild(el("p","wallpaper-hint wallpaper-delete-hint","Pour supprimer une image, utilise la petite croix sur sa miniature. Cela ne supprime aucun fichier de ton appareil."));
 
   refreshGallery=function(){if(parent.isConnected)showGallery(gallery);};
   refreshGallery();
