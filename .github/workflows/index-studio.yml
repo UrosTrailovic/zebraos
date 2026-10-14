@@ -1,63 +1,58 @@
-name: Actualiser la bibliothèque ZebraOS
+name: Actualiser le bureau ZebraOS
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
-      - 'STUDIO/**'
-      - '!STUDIO/manifest.json'
+      - 'STUDIO/BUREAU/**'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  index-public:
+  index-bureau:
     runs-on: ubuntu-latest
     steps:
       - name: Récupérer les fichiers
         uses: actions/checkout@v4
-        with:
-          persist-credentials: true
 
-      - name: Générer l'index des fichiers publiés
+      - name: Construire l'index du bureau
         run: |
           python3 - <<'PY'
           import json
           from datetime import datetime, timezone
           from pathlib import Path
 
-          root = Path("STUDIO")
+          root = Path("STUDIO/BUREAU")
           entries = []
           for path in sorted(root.rglob("*")):
-              if path.name.startswith(".") or path.name == "manifest.json":
+              if path.name.startswith("."):
                   continue
               if any(part.startswith(".") for part in path.parts):
+                  continue
+              if path.name == ".gitkeep":
                   continue
               entries.append({
                   "path": path.as_posix(),
                   "type": "dir" if path.is_dir() else "file",
                   **({} if path.is_dir() else {"size": path.stat().st_size})
               })
-
-          manifest = {
-              "version": 3,
+          output = Path("assets/bureau-index.json")
+          output.parent.mkdir(exist_ok=True)
+          output.write_text(json.dumps({
+              "version": 1,
               "generatedAt": datetime.now(timezone.utc).isoformat(),
               "entries": entries
-          }
-          (root / "manifest.json").write_text(
-              json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-              encoding="utf-8"
-          )
+          }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
           PY
 
-      - name: Enregistrer l'index actualisé
+      - name: Publier l'index actualisé
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add STUDIO/manifest.json
+          git add assets/bureau-index.json
           if ! git diff --cached --quiet; then
-            git commit -m "chore: mettre à jour l'index public ZebraOS"
+            git commit -m "chore: actualiser le bureau public ZebraOS"
             git push
           fi
