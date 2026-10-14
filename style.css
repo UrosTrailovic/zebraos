@@ -136,3 +136,29 @@
 .wallpaper-thumb-delete:hover{background:#aa3b32;color:#fff}
 .wallpaper-thumb-delete:active{border-style:inset}
 .wallpaper-delete-hint{margin:4px 0 8px}
+
+/* ZebraOS v0.9 — a live read-only GitHub volume inside My Computer. */
+.github-drive-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;border-bottom:1px solid #8e9996;padding-bottom:8px;margin-bottom:8px}
+.github-drive-toolbar button{min-height:29px}
+.github-drive-toolbar button:nth-last-child(1){margin-left:auto;background:#d5e4db}
+.github-drive-hint{font:11px/1.55 Tahoma,Arial,sans-serif;color:#4a5a5c;margin:9px 0}
+.github-drive-state,.github-drive-empty{background:#eceeed;border:1px inset #abb7b2;color:#2c3636;padding:16px 12px;font:11px/1.5 "Courier New",monospace}
+.github-drive-error{color:#8f1c18!important}
+.github-drive-list{padding-bottom:8px}
+.github-file-entry{transition:background 100ms linear;min-width:0}
+.github-file-entry:hover{background:#d3e3df}
+.github-file-name{font-size:11px!important;font-weight:500;line-height:1.3;overflow-wrap:anywhere}
+.github-file-size{font:10px "Courier New",monospace;color:#6d7373}
+.github-drive-count{font:10px "Courier New",monospace;color:#66736f;border-top:1px solid #a9b4b1;margin-top:12px;padding-top:6px}
+.github-preview-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
+.github-download{display:inline-flex;align-items:center;text-decoration:none;color:#1c292d}
+.github-image-preview{display:block;max-width:100%;max-height:calc(100% - 45px);height:auto;width:auto;object-fit:contain;margin:0 auto;border:1px solid #999;image-rendering:auto}
+.github-audio-preview{display:block;width:100%;margin-top:22px}
+.github-video-preview{display:block;width:100%;max-height:calc(100% - 55px)}
+.github-text-preview{margin:0;background:#fff;border:2px inset #b0b0b0;white-space:pre-wrap;overflow-wrap:anywhere;overflow:auto;max-height:calc(100% - 44px);padding:10px;color:#202020;font:12px/1.45 "Courier New",monospace;user-select:text;-webkit-user-select:text}
+@media(max-width:700px){
+ .github-drive-toolbar button{padding:6px;min-height:35px}
+ .github-drive-toolbar button:nth-last-child(1){margin-left:0}
+ .github-drive-hint{font-size:10px}
+ .github-file-size{font-size:9px}
+}
