@@ -8,9 +8,8 @@
 "use strict";
 var REPO="UrosTrailovic/zebraos",BRANCH="main",ROOT="STUDIO";
 var STATIC="STUDIO/manifest.json";
-var TREE="https://api.github.com/repos/"+REPO+"/git/trees/"+BRANCH+"?recursive=1";
 var snapshot=null,lastLiveCheck=0,updatePromise=null;
-var API_COOLDOWN=120000,THROTTLE_WAIT=3600000,throttledUntil=0;
+var CHECK_DELAY=30000;
 var ext={
  image:/\.(png|jpg|jpeg|gif|webp|bmp)$/i,
  audio:/\.(mp3|wav|ogg|m4a|flac)$/i,
@@ -89,21 +88,16 @@ function initial(){
 function refresh(force){
  var now=Date.now();
  if(updatePromise)return updatePromise;
- if(now<throttledUntil||(!force&&now-lastLiveCheck<API_COOLDOWN))return Promise.resolve(snapshot);
+ if(!force&&now-lastLiveCheck<CHECK_DELAY)return Promise.resolve(snapshot);
  lastLiveCheck=now;
- updatePromise=fetch(TREE,{cache:"no-store",headers:{Accept:"application/vnd.github+json"}})
-  .then(function(r){
-    if(r.status===403||r.status===429){throttledUntil=Date.now()+THROTTLE_WAIT;throw Error("LIMIT");}
-    if(!r.ok)throw Error("HTTP "+r.status);
-    return r.json();
-  }).then(function(d){
-    if(!Array.isArray(d.tree)||d.truncated)throw Error("Arborescence incomplète");
-    snapshot=clean(d.tree.map(function(x){
-      return {path:x.path,type:x.type==="tree"?"dir":"file",size:x.size};
-    }));
-    save(snapshot);return snapshot;
-  }).catch(function(){return snapshot;})
-    .finally(function(){updatePromise=null;});
+ // L'index public est créé automatiquement après une publication dans STUDIO.
+ // Pas de requêtes répétées vers l'API GitHub : aucun blocage à 60 appels/heure.
+ var url="https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+STATIC+"?actualisation="+now;
+ updatePromise=fetch(url,{cache:"no-store"})
+   .then(function(r){if(!r.ok)throw Error("Index temporairement indisponible");return r.json();})
+   .then(function(data){snapshot=clean(data.entries||data);save(snapshot);return snapshot;})
+   .catch(function(){return snapshot;})
+   .finally(function(){updatePromise=null;});
  return updatePromise;
 }
 function preview(item,options){
@@ -151,7 +145,7 @@ function mount(host,path,options){
  host.appendChild(toolbar);
  host.appendChild(E("div","folder-path","C:\\STUDIO"+(path===ROOT?"":"\\"+path.substring(ROOT.length+1).replace(/\//g,"\\"))));
  var hint=E("p","github-drive-hint",isAdmin?
-   "CONTENU PUBLIÉ · Visible pour tous. Les fichiers de tes brouillons ne sont pas publiés automatiquement.":
+   "CONTENU PUBLIÉ · Les fichiers de tes brouillons sont invisibles ici. Après publication sur GitHub, attends la mise à jour de l’index puis actualise.":
    "Bibliothèque Zebra Record");
  host.appendChild(hint);
  var state=E("div","github-drive-state","Ouverture du dossier…");
@@ -185,8 +179,7 @@ function mount(host,path,options){
  initial().then(function(){
    if(!host.isConnected||host._zebraPublicTicket!==ticket)return;
    render();
-   if(Date.now()>=throttledUntil)
-     refresh(false).then(function(){render();});
+   refresh(false).then(function(){render();});
  });
 }
 window.ZebraGitFiles={mount:mount,root:ROOT};
