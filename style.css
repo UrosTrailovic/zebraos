@@ -993,3 +993,154 @@
  .zebra-game-body .zg-topline{min-height:27px}
  .zebra-game-body .zg-buttons .zg-button{min-height:27px;padding:3px 8px}
 }
+
+/* ZEBRA SNAKE — Édition Safari v5.0. Vrai jeu pixel art, pas de panneaux gaming modernes. */
+.window-body.zebra-game-body:has(.safari){padding:0;background:#160f0c;overflow:hidden}
+.window-body.zebra-game-body .safari{
+ display:grid;grid-template-columns:205px minmax(0,1fr);grid-template-rows:minmax(0,1fr);
+ gap:10px;padding:9px;height:100%;min-height:0;overflow:hidden;
+ color:#ffdfa7;background:
+  repeating-linear-gradient(90deg,#160e0b 0 5px,#1b110b 5px 7px,#130c09 7px 10px);
+ font:12px/1.3 "Courier New",monospace;
+}
+.safari *{box-sizing:border-box}
+.safari-sidebar{
+ display:flex;flex-direction:column;align-items:stretch;gap:8px;
+ min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#ab7039 #120d0b;
+ border:4px ridge #a4642b;outline:1px solid #271109;
+ padding:7px;background:
+ repeating-linear-gradient(90deg,rgba(245,158,58,.035) 0 2px,transparent 2px 5px),#160f0c;
+}
+.safari-logo-wrap{
+ padding:4px;display:flex;align-items:center;justify-content:center;flex:none;
+ background:#130b09;border:2px solid #8e552c;
+}
+.safari-logo{display:block;width:100%;height:auto;max-height:90px;image-rendering:pixelated}
+.safari-info{display:flex;flex-direction:column;gap:5px}
+.safari-info-card{
+ display:flex;flex-direction:column;gap:4px;min-height:59px;
+ background:#0b1115;border:3px ridge #9c632a;
+ padding:6px 10px;box-shadow:inset 0 0 0 1px #3d240f;
+}
+.safari-info-card small{
+ color:#d5a556;letter-spacing:1px;font:bold 11px "Courier New",monospace;
+}
+.safari-info-card strong{
+ color:#fff0cd;font:bold 24px/1.1 "Courier New",monospace;
+ text-shadow:2px 2px #613923;
+}
+.safari-speed-box{
+ background:#0d1417;border:3px ridge #9c632a;padding:6px 8px;min-height:54px;
+}
+.safari-speed-label{
+ color:#dfa651;display:flex;flex-direction:column;gap:5px;
+ font:bold 11px "Courier New",monospace;letter-spacing:1px;
+}
+.safari-select{
+ background:#211a11;color:#ffe0a8;border:2px inset #9c632a;
+ padding:3px 6px;border-radius:0;
+ font:12px "Courier New",monospace;width:100%;
+}
+.safari-walls{
+ display:flex;align-items:center;gap:6px;padding:2px 3px;
+ color:#c6a679;font:10px/1.3 "Courier New",monospace;cursor:pointer;
+}
+.safari-walls input{width:14px;height:14px;accent-color:#bc8739}
+.safari-actions{display:flex;flex-direction:column;gap:6px}
+.safari .safari-btn{
+ min-height:35px;border:3px outset #ad7735;border-radius:0;
+ color:#ffe2a8;background:#392414;
+ box-shadow:inset 0 1px #895328;
+ text-shadow:1px 1px #22140b;
+ font:bold 12px "Courier New",monospace;
+ letter-spacing:.3px;padding:5px 8px;cursor:pointer;
+ transition:none;
+}
+.safari .safari-btn:hover{background:#513019;color:#fff2cf}
+.safari .safari-btn:active{border-style:inset;background:#27170f}
+.safari .safari-play{background:#79501e}
+.safari-help{
+ border:2px inset #945e2d;background:#0e1517;color:#bd9c75;
+ padding:7px;font:10px/1.65 "Courier New",monospace;margin-top:auto;
+}
+.safari-help strong{color:#f3c47b;letter-spacing:1px}
+.safari-main{
+ display:flex;flex-direction:column;min-height:0;min-width:0;align-items:stretch;gap:6px;
+ border:4px ridge #a66c34;outline:1px solid #342217;
+ background:repeating-linear-gradient(45deg,#25150c 0 5px,#2e1c0d 5px 8px);
+ padding:6px;
+}
+.safari-main-heading{
+ flex:0 0 auto;background:#0d1010;border:2px inset #8c5c30;
+ color:#d9b070;font:bold 12px "Courier New",monospace;
+ display:flex;justify-content:space-between;align-items:center;
+ padding:5px 9px;letter-spacing:1px;
+}
+.safari-state{color:#f6d28a}
+.safari-frame{
+ display:flex;flex:1 1 auto;align-items:center;justify-content:center;
+ min-height:0;min-width:0;position:relative;overflow:hidden;
+}
+.safari-canvas{
+ image-rendering:pixelated;display:block;
+ width:auto;height:auto;max-width:100%;max-height:100%;
+ aspect-ratio:1;object-fit:contain;
+ filter:drop-shadow(0 2px 1px #0d0a06);
+}
+.safari-overlay{
+ position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+ background:#120e0ddd;border:3px ridge #ab7134;
+ padding:12px 18px;display:flex;align-items:center;justify-content:center;
+ flex-direction:column;text-align:center;gap:7px;max-width:83%;min-width:145px;
+ pointer-events:none;
+}
+.safari-overlay strong{color:#ffe2a2;font:bold 19px/1.1 "Courier New",monospace;letter-spacing:1px}
+.safari-overlay span{color:#ddbd8c;font:10px "Courier New",monospace}
+.safari-main-foot{
+ text-align:center;font:bold 10px "Courier New",monospace;
+ color:#bd8d55;flex:0 0 auto;letter-spacing:1px;padding:2px;
+}
+.safari-touch{display:none}
+@media (hover:none),(pointer:coarse){
+ .safari-touch{
+  grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:5px;max-width:245px;width:100%;margin:0 auto;
+ }
+ .safari-touch .safari-direction{min-height:39px}
+}
+@media(max-width:700px){
+ .window-body.zebra-game-body .safari{
+  display:flex;flex-direction:column;padding:4px;gap:5px;overflow-y:auto;
+ }
+ .safari-sidebar{
+  flex:0 0 auto;display:grid;grid-template-columns:110px minmax(0,1fr);
+  grid-template-rows:auto auto;gap:5px;overflow:visible;
+  padding:4px;border-width:2px;
+ }
+ .safari-logo-wrap{grid-column:1;grid-row:1/3;padding:2px}
+ .safari-logo{width:100%;max-height:65px}
+ .safari-info{grid-column:2;grid-row:1;display:grid;grid-template-columns:1fr 1fr;gap:3px}
+ .safari-info-card{min-height:37px;padding:4px;border-width:2px}
+ .safari-info-card small{font-size:8px}
+ .safari-info-card strong{font-size:15px}
+ .safari-speed-box{grid-column:2;grid-row:2;padding:3px;border-width:2px;min-height:0}
+ .safari-speed-label{font-size:9px;flex-direction:row;align-items:center;gap:5px}
+ .safari-select{font-size:10px;min-width:0;width:auto;flex:1}
+ .safari-walls,.safari-help{display:none}
+ .safari-actions{grid-column:1/-1;flex-direction:row;gap:5px}
+ .safari-actions .safari-btn{flex:1;min-height:28px;padding:3px;font-size:11px}
+ .safari-main{flex:1 1 auto;min-height:200px;padding:3px;border-width:2px;gap:3px}
+ .safari-main-heading,.safari-main-foot{font-size:9px;padding:3px}
+ .safari-overlay{padding:7px 10px}
+ .safari-overlay strong{font-size:14px}
+ .safari-touch{flex:0 0 auto;min-height:122px;gap:4px;max-width:220px}
+ .safari-touch .safari-direction{min-height:36px}
+}
+@media (max-height:700px) and (min-width:701px){
+ .safari-sidebar{gap:4px;padding:5px}
+ .safari-logo{max-height:72px}
+ .safari-info-card{min-height:47px;padding:4px 7px}
+ .safari-info-card strong{font-size:19px}
+ .safari-help{padding:4px;font-size:9px}
+ .safari-main-foot{font-size:9px}
+}
