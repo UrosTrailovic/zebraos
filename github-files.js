@@ -58,13 +58,9 @@ function clean(items){
 function direct(items,path,isAdmin){
  return items.filter(function(x){
    if(x.path.substring(0,x.path.lastIndexOf("/"))!==path)return false;
-   if(isAdmin)return true;
-   if(x.type==="file")return x.name!=="README.txt";
-   // Un visiteur ne voit pas les dossiers sans contenu réel publié.
-   return items.some(function(child){
-     return child.type==="file" && child.name!=="README.txt" &&
-       child.path.startsWith(x.path+"/");
-   });
+   // Tous les dossiers publiés sont visibles, même encore vides.
+   // README.txt et les marqueurs techniques restent masqués aux visiteurs.
+   return isAdmin || x.type==="dir" || x.name!=="README.txt";
  })
  .sort(function(a,b){
    if(a.type!==b.type)return a.type==="dir"?-1:1;
