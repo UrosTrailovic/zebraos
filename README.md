@@ -30,3 +30,17 @@ Tous les fichiers visibles sur le bureau viennent de **`STUDIO/BUREAU`**.
 ## Attention
 
 Le dépôt est public. Le mot de passe de la session Admin est un élément de l'expérience rétro et ne constitue pas une vraie protection serveur. N'y dépose aucun document confidentiel.
+
+## ZebraAMP 3.0 — musique et playlists
+
+- Au lancement, ZebraAMP sélectionne **Zebra Tape 2**. Les morceaux de cette playlist sont lus automatiquement depuis `STUDIO/BUREAU/Zebra Tape 2/`, y compris ses sous-dossiers. Il n'y a plus de neuf emplacements fictifs.
+- Pour l'ordre officiel des titres, nomme tes fichiers `01 - Titre.mp3`, `02 - Titre.mp3`, etc. L'ordre est calculé à partir des noms.
+- Pour créer une **playlist personnelle**, clique sur `+ Nouvelle`, donne-lui un nom, puis `+ Importer des sons`. La sélection de plusieurs fichiers en un seul import est possible, et chaque import ajoute des lignes supplémentaires.
+- La **playlist Fichiers ouverts** est créée automatiquement lorsqu'un fichier audio du bureau ou d'un dossier est ouvert. Elle ne remplace pas Zebra Tape 2.
+- Une playlist personnelle peut être réorganisée avec les flèches haut/bas ou par glisser-déposer sur ordinateur. Il est également possible de la renommer ou de retirer un titre.
+- La liste des playlists est mémorisée dans **localStorage**, les fichiers audio importés sont sauvegardés dans **IndexedDB** pour ce navigateur. Les données ne sont pas synchronisées entre appareils. Les limites d'espace du navigateur s'appliquent.
+- L'**égaliseur cinq bandes** traite le signal audio réel avec les filtres Web Audio. Préréglages : neutre, basses, clair, vintage, nuit et voix.
+- Effets supplémentaires : aléatoire, répétition d'un titre/de la playlist, vitesse variable, spectre animé, et **ZebraVIS.exe** (cinq styles).
+- Les fichiers de la tape ne sont pas encore publiés par défaut : ZebraAMP affiche une playlist officielle vide tant que tu n'as pas ajouté de MP3 sur GitHub.
+
+Pour éviter tout problème de sécurité, on ne place aucun mot de passe GitHub dans le lecteur.
