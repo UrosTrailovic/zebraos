@@ -36,6 +36,10 @@ function iconFor(item){
  if(ext.text.test(item.name))return "txt";
  return "zip";
 }
+function frenchFolder(name){
+ var aliases={ARTWORK:"VISUELS",MAPS:"CARTES"};
+ return aliases[name]||name;
+}
 function prettySize(bytes){
  if(!(bytes>=0))return "";
  return bytes>=1048576?(bytes/1048576).toFixed(1)+" Mo":bytes>=1024?Math.round(bytes/1024)+" Ko":bytes+" o";
@@ -132,7 +136,7 @@ function mount(host,path,options){
  host._zebraPublicTicket=(host._zebraPublicTicket||0)+1;
  var ticket=host._zebraPublicTicket;
  var isAdmin=!!options.canUpload;
- var folder=path===ROOT?"Mes fichiers":path.split("/").slice(1).join(" / ");
+ var folder=path===ROOT?"Mes fichiers":path.split("/").slice(1).map(frenchFolder).join(" / ");
  var w=host.closest(".window");
  if(w){var title=w.querySelector(".windowtitle");if(title)title.textContent="Poste de travail — "+folder;}
  host.innerHTML="";
@@ -143,7 +147,7 @@ function mount(host,path,options){
  tool("↻ Actualiser",function(){refresh(true).then(render);});
  if(isAdmin)tool("Publier sur GitHub ↗",function(){openExternal(uploadUrl(path));});
  host.appendChild(toolbar);
- host.appendChild(E("div","folder-path","C:\\STUDIO"+(path===ROOT?"":"\\"+path.substring(ROOT.length+1).replace(/\//g,"\\"))));
+ host.appendChild(E("div","folder-path","C:\\STUDIO"+(path===ROOT?"":"\\"+path.substring(ROOT.length+1).split("/").map(frenchFolder).join("\\"))));
  var hint=E("p","github-drive-hint",isAdmin?
    "CONTENU PUBLIÉ · Les fichiers de tes brouillons sont invisibles ici. Après publication sur GitHub, attends la mise à jour de l’index puis actualise.":
    "Bibliothèque Zebra Record");
@@ -169,7 +173,7 @@ function mount(host,path,options){
      var symbol=E("span","file-symbol");
      symbol.appendChild(options.osIcon(iconFor(item),32));
      b.appendChild(symbol);
-     b.appendChild(E("span","github-file-name",item.name));
+     b.appendChild(E("span","github-file-name",item.type==="dir"?frenchFolder(item.name):item.name));
      b.appendChild(E("small","github-file-size",item.type==="dir"?"Dossier":prettySize(item.size)));
      b.onclick=function(){if(item.type==="dir")mount(host,item.path,options);else preview(item,options);};
      list.appendChild(b);
