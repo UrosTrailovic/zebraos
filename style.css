@@ -768,3 +768,77 @@
  .zcp-welcome-head h2{font-size:19px}
  .zcp-welcome-actions .classic-button{font-size:10px;padding:4px}
 }
+
+/* ZebraOS jeux et Paint v4.0 — esthétique Windows 95, aucune librairie externe */
+.zg,.zp{height:100%;min-height:0;display:flex;flex-direction:column;gap:8px;box-sizing:border-box;font:12px Tahoma,Arial,sans-serif;color:#141414}
+.zg *,.zp *{box-sizing:border-box}
+.zg-topline{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:#e1e1e1;border:2px inset #fff;font:12px Tahoma,Arial}
+.zg-topline strong{letter-spacing:1px}
+.zg-state{color:#19376e;font:bold 10px Tahoma,Arial}
+.zg-button,.zp-button,.zp-tool{border:2px outset #fff;background:#c0c0c0;color:#111;padding:6px 9px;font:12px Tahoma,Arial;cursor:pointer;border-radius:0;white-space:nowrap}
+.zg-button:active,.zp-button:active,.zp-tool:active,.zp-tool.selected{border-style:inset;background:#adadad}
+.zg-game-layout{display:flex;justify-content:center;gap:12px;min-height:0}
+.zg-tetris-stage,.zg-snake-stage{position:relative;border:3px inset #b6b6b6;background:#141922;flex:0 1 auto;min-width:0}
+.zg-tetris-board{width:240px;height:480px;max-width:100%;display:block;image-rendering:pixelated}
+.zg-side{display:flex;flex-direction:column;gap:8px;min-width:110px;width:120px;max-height:480px;overflow:auto}
+.zg-stat,.zg-preview-wrap{border:2px inset #fff;background:#ddd;padding:6px 8px;display:flex;flex-direction:column;gap:5px}
+.zg-stat small,.zg-preview-wrap small{font-size:10px;color:#333}
+.zg-stat strong{font:700 17px "Courier New",monospace}
+.zg-mini{width:96px;height:96px;max-width:100%;background:#111419;image-rendering:pixelated}
+.zg-overlay{position:absolute;inset:0;background:rgba(9,18,24,.82);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#fff;text-align:center;padding:15px;pointer-events:none}
+.zg-overlay strong{font:700 23px "Courier New",monospace;letter-spacing:2px}
+.zg-overlay span{font-size:11px}
+.zg-buttons{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.zg-control-pad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;max-width:390px;width:100%;margin:0 auto}
+.zg-control-pad .zg-button{min-height:34px;font-size:13px}
+.zg-help{padding:5px 0;font:10px/1.4 "Courier New",monospace;color:#444;text-align:center}
+.zg-snake-stats{display:flex;justify-content:space-between;gap:10px;background:#e0e0e0;padding:8px;border:2px inset #fff;font:14px "Courier New",monospace}
+.zg-snake-stage{align-self:center}
+.zg-snake-board{display:block;width:min(400px,calc(100vw - 55px));height:auto;aspect-ratio:1;image-rendering:pixelated}
+.zg-snake-options{display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap}
+.zg-select{border:2px inset #fff;background:#fff;padding:4px;color:#111}
+.zg-snake-wrap{display:flex;align-items:center;gap:5px}
+.zg-snake-pad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));max-width:220px;gap:4px;margin:auto;width:100%}
+.zg-snake-pad .zg-button{min-height:34px}
+.zp{gap:5px}
+.zp-menu{display:flex;flex-wrap:wrap;gap:5px;flex:none;border-bottom:1px solid #aaa;padding-bottom:5px}
+.zp-body{display:flex;flex:1;min-height:0;gap:6px}
+.zp-tools{width:67px;flex:none;display:grid;grid-template-columns:repeat(2,1fr);align-content:start;gap:3px}
+.zp-tool{height:34px;padding:3px;font:bold 21px/1 Tahoma,Arial;display:grid;place-items:center}
+.zp-tool.selected{background:#a3a3a3;box-shadow:inset 1px 1px #333}
+.zp-work{flex:1;min-width:0;min-height:0;display:flex;border:2px inset #eee;background:#808080;overflow:auto}
+.zp-stage{margin:auto;padding:12px;min-width:max-content;min-height:max-content}
+.zp-canvas{display:block;width:640px;height:400px;background:white;box-shadow:1px 1px 3px #444;touch-action:none;cursor:crosshair;image-rendering:auto}
+.zp-options{display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:#dedede;border:2px inset #eee;padding:6px;flex:none}
+.zp-active-color{width:39px;height:33px;border:3px ridge #fff;flex:none}
+.zp-options input[type=color]{width:35px;height:30px;padding:0;border:2px inset #fff;cursor:pointer}
+.zp-palette{display:flex;flex-wrap:wrap;gap:3px;flex:1;min-width:125px}
+.zp-swatch{width:19px;height:19px;border:2px outset #fff;cursor:pointer;padding:0}
+.zp-swatch:focus-visible{outline:2px solid #1f468a;outline-offset:1px}
+.zp-size{display:flex;align-items:center;gap:5px;font-size:11px}
+.zp-size input{width:75px;accent-color:#264b8a}
+.zp-edits{display:flex;gap:4px}
+.zp-edits .zp-button:disabled{opacity:.45;cursor:default}
+.zp-status{border-top:1px solid #aaa;padding:3px 5px;font:11px "Courier New",monospace;flex:none}
+@media(max-width:700px){
+ .zg{gap:5px}
+ .zg-tetris-board{width:min(49vw,200px);height:auto}
+ .zg-side{min-width:86px;width:100px;max-height:none;gap:4px}
+ .zg-stat,.zg-preview-wrap{padding:4px}
+ .zg-stat strong{font-size:14px}
+ .zg-mini{width:74px;height:74px}
+ .zg-game-layout{gap:5px}
+ .zg-snake-board{width:min(310px,calc(100vw - 55px))}
+ .zg-control-pad .zg-button,.zg-snake-pad .zg-button{min-height:39px}
+ .zg-help{font-size:9px}
+ .zp-body{gap:3px}
+ .zp-tools{width:57px}
+ .zp-tool{height:31px;font-size:17px}
+ .zp-canvas{width:640px;height:400px}
+ .zp-stage{padding:6px}
+ .zp-options{gap:4px;padding:4px}
+ .zp-palette{gap:2px}
+ .zp-swatch{width:16px;height:16px}
+ .zp-size input{width:65px}
+ .zp-menu .zp-button{font-size:11px;padding:5px 6px}
+}
