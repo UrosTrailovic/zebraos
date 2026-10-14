@@ -63,7 +63,7 @@ function mountPanel(root,ctx){
  main.appendChild(e("div","zcp-description","Double-cliquez sur une icône pour modifier les paramètres de ZebraOS."));
  var grid=e("div","zcp-grid");
  var options=[
-  ["Affichage","▣","Fonds d’écran et apparence",function(){showDisplay(ctx);}],
+  ["Fond d’écran","▣","Fonds d’écran et apparence",function(){showDisplay(ctx);}],
   ["Sons","♫","Sons de l’interface",function(){showSounds(ctx);}],
   ["Date et heure","◷","Calendrier et horloge",function(){showDateTime(ctx);}],
   ["Système","▤","Détails de l’ordinateur",function(){showSystem(ctx);}],
