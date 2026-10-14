@@ -50,7 +50,7 @@ function mount(root){
  let hold=make("canvas","zg-mini");hold.width=96;hold.height=96;holdBox.appendChild(hold);right.appendChild(holdBox);
  main.insertBefore(right,stage);wrap.appendChild(main);
  let controls=make("div","zg-buttons zt-buttons");
- const start=btn("JOUER",()=>{if(over||!current){reset();return;}paused=!paused;updateStatus();});
+ const start=btn("JOUER",()=>{if(over||!current){reset();return;}menuOpen=false;paused=!paused;updateStatus();});
  start.classList.add("zt-image-button","zt-play");
  const restart=btn("RECOMMENCER",()=>reset());
  restart.classList.add("zt-image-button","zt-restart");
