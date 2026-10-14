@@ -1876,3 +1876,23 @@
   max-width:72%;
  }
 }
+
+/* Zebra Tetris 5.9 — panneaux latéraux symétriques.
+   Le plateau reste centré ; stats à gauche, prochaine pièce et réserve à droite.
+   Commandes tactiles, textures, logo et animations inchangés. */
+.zebra-game-body .zg-retro .zg-game-layout > .zg-side-stats{
+ grid-column:1;
+ grid-row:1;
+ justify-self:end;
+ align-self:start;
+}
+.zebra-game-body .zg-retro .zg-game-layout > .zg-side-previews{
+ grid-column:3;
+ grid-row:1;
+ justify-self:start;
+ align-self:start;
+ height:max-content;
+}
+.zebra-game-body .zg-retro .zg-side-previews .zg-preview-wrap{
+ flex:0 0 auto;
+}
