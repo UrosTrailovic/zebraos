@@ -10,6 +10,8 @@ var modes=[
 ];
 var accounts=["visitor","zebra","admin","daniel"];
 var dbPromise=null,currentSession=null,applyToken=0,refreshGallery=null,selectedItem=null;
+var zebraDefault="/assets/wallpapers/zebra-default.avif?v=1";
+function builtIn(account){return account==="zebra"?zebraDefault:null;}
 var cache={};
 var gradients={
   visitor:"linear-gradient(125deg,#475b52 0%,#7a897c 35%,#152d35 36%,#152a30 65%,#0c1b21 100%)",
@@ -108,12 +110,12 @@ function apply(name){
   var token=++applyToken;
   var cfg=read(name),wall=document.getElementById("wallpaper");
   if(!wall)return;
-  paint(wall,name,null,cfg.mode);
+  paint(wall,name,builtIn(name),cfg.mode);
   if(!cfg.imageId)return;
   loadOne(cfg.imageId).then(function(item){
     if(token!==applyToken||currentSession!==name)return;
     if(item&&item.data)paint(wall,name,item.data,cfg.mode);
-    else {cfg.imageId=null;save(name,cfg);}
+    else {cfg.imageId=null;save(name,cfg);paint(wall,name,builtIn(name),cfg.mode);}
   }).catch(function(){
     if(token===applyToken)announce("Impossible de retrouver le fond d'écran enregistré.",true);
   });
@@ -150,8 +152,14 @@ function showGallery(target){
     target.innerHTML="";
     var originals=el("button","wallpaper-thumb");
     originals.type="button";
-    originals.appendChild(el("span","wallpaper-thumb-photo default-wallpaper-"+account));
-    originals.appendChild(el("span","wallpaper-thumb-caption","ZebraOS"));
+    var builtinThumb=el("span","wallpaper-thumb-photo default-wallpaper-"+account);
+    if(builtIn(account)){
+      builtinThumb.style.backgroundImage="url("+JSON.stringify(builtIn(account))+")";
+      builtinThumb.style.backgroundSize="cover";
+      builtinThumb.style.backgroundPosition="center";
+    }
+    originals.appendChild(builtinThumb);
+    originals.appendChild(el("span","wallpaper-thumb-caption",account==="zebra"?"Fond Zebra":"ZebraOS"));
     originals.title="Fond d'écran d'origine de cette session";
     originals.classList.toggle("active",!cfg.imageId);
     originals.onclick=function(){selectImage(null);};
@@ -184,14 +192,14 @@ function showGallery(target){
     });
     var selected=cfg.imageId?items.filter(function(x){return x.id===cfg.imageId})[0]:null;
     selectedItem=selected||null;
-    previewImage(selected&&selected.data,cfg.mode);
+    previewImage(selected&&selected.data||builtIn(account),cfg.mode);
     var removal=document.getElementById("wallpaper-remove");
     if(removal)removal.disabled=!selected;
     announce(items.length?items.length+" image(s) dans cette galerie.":"Importe une image pour commencer.");
   }).catch(function(){
     target.innerHTML="";
     target.appendChild(el("p","wallpaper-hint","Galerie indisponible sur ce navigateur. Vérifie que le stockage local est autorisé."));
-    previewImage(null,cfg.mode);
+    previewImage(builtIn(account),cfg.mode);
     announce("Le stockage local des fonds d'écran est désactivé.",true);
   });
 }
