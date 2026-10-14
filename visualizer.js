@@ -12,7 +12,8 @@ var presets=[
   ["HYPERDRIVE","Audio-synced starfield"]
 ];
 var audioContext=null,audioNode=null,analyser=null,mediaRef=null,active=null;
-var spectrum=null,wave=null,lowPower=matchMedia("(pointer:coarse)").matches;
+var spectrum=new Uint8Array(1024),wave=new Uint8Array(2048),lowPower=window.matchMedia?matchMedia("(pointer:coarse)").matches:false;
+wave.fill(128);
 var TAU=Math.PI*2;
 function element(tag,cls,text){
   var n=document.createElement(tag);
@@ -227,6 +228,7 @@ function mount(host,media,options){
   var fullButton=element("button","zviz-fullscreen","⛶");
   var mode=readMode(),auto=false,lastSwitch=0,lastFrame=0,stars=makeStars();
   var ctx=canvas.getContext("2d",{alpha:false});
+  if(!ctx){host.appendChild(element("p","github-drive-error","Canvas 2D non disponible sur ce navigateur."));return;}
   function updatePreset(){
     modeText.textContent=(mode+1)+"/"+presets.length+"  "+presets[mode][0];
     back.title="Mode précédent";next.title="Mode suivant";
@@ -277,7 +279,6 @@ function mount(host,media,options){
       canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
       ctx.setTransform(dpr,0,0,dpr,0,0);
     }
-    if(!ctx)return;
     ctx.clearRect(0,0,w,h);
     backdrop(ctx,w,h);
     if(linked&&analyser){
