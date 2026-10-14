@@ -42,14 +42,18 @@ function mount(root){
  overlay.appendChild(overlayArt);
  overlay.appendChild(make("span","zt-overlay-caption","Appuie sur Jouer pour commencer"));
  stage.appendChild(overlay);main.appendChild(stage);
- let right=make("div","zg-side");
- function stat(title){let box=make("div","zg-stat");box.appendChild(make("small","",title));let count=make("strong","","0");box.appendChild(count);right.appendChild(box);return count;}
+ let statsPanel=make("div","zg-side zg-side-stats");
+ let previewPanel=make("div","zg-side zg-side-previews");
+ function stat(title){let box=make("div","zg-stat");box.appendChild(make("small","",title));let count=make("strong","","0");box.appendChild(count);statsPanel.appendChild(box);return count;}
  let scoreEl=stat("SCORE"),levelEl=stat("NIVEAU"),linesEl=stat("LIGNES"),bestEl=stat("RECORD");
  let nextBox=make("div","zg-preview-wrap");nextBox.appendChild(make("small","","SUIVANT"));
- let next=make("canvas","zg-mini");next.width=96;next.height=96;nextBox.appendChild(next);right.appendChild(nextBox);
+ let next=make("canvas","zg-mini");next.width=96;next.height=96;nextBox.appendChild(next);previewPanel.appendChild(nextBox);
  let holdBox=make("div","zg-preview-wrap");holdBox.appendChild(make("small","","RÉSERVE (C)"));
- let hold=make("canvas","zg-mini");hold.width=96;hold.height=96;holdBox.appendChild(hold);right.appendChild(holdBox);
- main.insertBefore(right,stage);wrap.appendChild(main);
+ let hold=make("canvas","zg-mini");hold.width=96;hold.height=96;holdBox.appendChild(hold);previewPanel.appendChild(holdBox);
+ // Le plateau reste centré, avec les scores à gauche et les pièces à droite.
+ main.insertBefore(statsPanel,stage);
+ main.appendChild(previewPanel);
+ wrap.appendChild(main);
  // Bande séparatrice issue de la vraie texture de bordure fournie avec le jeu.
  wrap.appendChild(make("div","zt-panel-divider"));
  let controls=make("div","zg-buttons zt-buttons");
@@ -304,7 +308,8 @@ function mount(root){
  // La scène se dimensionne selon l'espace réel de la fenêtre.
  function fitBoard(){
   if(!active||!main.isConnected)return;
-  const css=getComputedStyle(main),sideWidth=right.getBoundingClientRect().width||75;
+  const css=getComputedStyle(main);
+  const sideWidth=Math.max(statsPanel.getBoundingClientRect().width,previewPanel.getBoundingClientRect().width)||75;
   const gap=parseFloat(css.columnGap)||6;
   const horizontal=(parseFloat(css.paddingLeft)||0)+(parseFloat(css.paddingRight)||0);
   const vertical=(parseFloat(css.paddingTop)||0)+(parseFloat(css.paddingBottom)||0);
