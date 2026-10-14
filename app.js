@@ -373,7 +373,147 @@ function animateWindowOpen(w,launcher){
   ghost.addEventListener("transitionend",function(e){if(e.propertyName==="width")reveal()});
   timer=setTimeout(reveal,700);
 }
-function windowBox(id,title,width,height){var launcher=document.activeElement;if(opened[id]){if(opened[id].w.classList.contains("minimized"))sfx("restore");opened[id].w.classList.remove("minimized");focus(id);return opened[id].w.querySelector(".window-body")}var w=el("div","window");w.style.width=width+"px";w.style.height=height+"px";var offset=seq++*23;w.style.left=Math.max(8,Math.min(115+offset,window.innerWidth-width-10))+"px";w.style.top=Math.max(8,Math.min(55+offset,window.innerHeight-height-50))+"px";w.innerHTML='<div class="titlebar"><span>▣</span><span class="windowtitle"></span><div class="titlebuttons"><button data-min>_</button><button data-close>×</button></div></div><div class="window-body"></div><div class="window-status">ZebraOS 2.0 / ORDINATEUR DU STUDIO</div>';w.querySelector(".windowtitle").textContent=title;var winSymbol=w.querySelector(".titlebar > span:first-child");winSymbol.textContent="";winSymbol.appendChild(osIcon(windowIcon(id),16));$("windows-area").appendChild(w);opened[id]={w:w,title:title};setTimeout(function(){if(document.body.contains(w))sfx("open")},125);w.querySelector("[data-min]").onclick=function(){sfx("minimize");w.classList.add("minimized")};w.querySelector("[data-close]").onclick=function(){sfx("close");w.remove();delete opened[id];task()};w.onpointerdown=function(){focus(id)};var bar=w.querySelector(".titlebar"),drag=null;bar.onpointerdown=function(e){if(e.target.tagName==="BUTTON"||window.innerWidth<701)return;drag={x:e.clientX,y:e.clientY,left:parseInt(w.style.left,10),top:parseInt(w.style.top,10)};bar.setPointerCapture(e.pointerId)};bar.onpointermove=function(e){if(!drag)return;w.style.left=Math.max(0,Math.min(innerWidth-70,drag.left+e.clientX-drag.x))+"px";w.style.top=Math.max(0,Math.min(innerHeight-70,drag.top+e.clientY-drag.y))+"px"};bar.onpointerup=bar.onpointercancel=function(){drag=null};task();focus(id);animateWindowOpen(w,launcher);return w.querySelector(".window-body")}
+/* Fenêtres ZebraOS : agrandissement, restauration, déplacement et 8 poignées de redimensionnement. */
+function desktopWorkArea(){
+ var desktop=$("desktop-screen");
+ var rect=desktop&&desktop.getBoundingClientRect?desktop.getBoundingClientRect():null;
+ var taskbar=desktop&&desktop.querySelector(".taskbar");
+ var taskHeight=taskbar&&taskbar.getBoundingClientRect?taskbar.getBoundingClientRect().height:36;
+ return {
+  width:Math.max(280,(rect&&rect.width)||window.innerWidth),
+  height:Math.max(170,((rect&&rect.height)||window.innerHeight)-(taskHeight||36))
+ };
+}
+function clampWindow(w){
+ if(!w||w.classList.contains("maximized"))return;
+ var area=desktopWorkArea();
+ var width=Math.min(Math.max(250,parseFloat(w.style.width)||500),area.width);
+ var height=Math.min(Math.max(180,parseFloat(w.style.height)||350),area.height);
+ var left=Math.max(0,Math.min(parseFloat(w.style.left)||0,area.width-width));
+ var top=Math.max(0,Math.min(parseFloat(w.style.top)||0,area.height-height));
+ w.style.width=Math.round(width)+"px";
+ w.style.height=Math.round(height)+"px";
+ w.style.left=Math.round(left)+"px";
+ w.style.top=Math.round(top)+"px";
+}
+function maximizeWindow(w,force){
+ if(!w)return;
+ var makeMax=typeof force==="boolean"?force:!w.classList.contains("maximized");
+ var btn=w.querySelector("[data-max]");
+ if(makeMax){
+  if(w.classList.contains("maximized"))return;
+  w._restoreGeometry={
+   left:w.style.left,top:w.style.top,
+   width:w.style.width,height:w.style.height
+  };
+  w.classList.add("maximized");
+  if(btn){btn.textContent="❐";btn.title="Restaurer";btn.setAttribute("aria-label","Restaurer la fenêtre");}
+ }else{
+  if(!w.classList.contains("maximized"))return;
+  w.classList.remove("maximized");
+  var old=w._restoreGeometry;
+  if(old){Object.keys(old).forEach(function(k){w.style[k]=old[k];});}
+  clampWindow(w);
+  if(btn){btn.textContent="□";btn.title="Agrandir";btn.setAttribute("aria-label","Agrandir la fenêtre");}
+ }
+}
+function addResizeHandles(w){
+ var edges=["n","s","e","w","ne","nw","se","sw"];
+ edges.forEach(function(edge){
+  var handle=el("div","window-resize-handle resize-"+edge);
+  handle.setAttribute("role","separator");
+  handle.setAttribute("aria-label","Redimensionner la fenêtre");
+  handle.title="Redimensionner";
+  handle.onpointerdown=function(e){
+   if(window.innerWidth<=700||w.classList.contains("maximized")||e.button!==0)return;
+   e.stopPropagation();e.preventDefault();focusWindow();
+   var initial={
+    x:e.clientX,y:e.clientY,
+    left:parseFloat(w.style.left)||0,
+    top:parseFloat(w.style.top)||0,
+    width:w.offsetWidth,height:w.offsetHeight
+   };
+   var active=true,area=desktopWorkArea(),minWidth=250,minHeight=180;
+   function move(ev){
+    if(!active)return;
+    var dx=ev.clientX-initial.x,dy=ev.clientY-initial.y;
+    var l=initial.left,t=initial.top,r=l+initial.width,b=t+initial.height;
+    if(edge.includes("w"))l=Math.max(0,Math.min(l+dx,r-minWidth));
+    if(edge.includes("e"))r=Math.max(l+minWidth,Math.min(r+dx,area.width));
+    if(edge.includes("n"))t=Math.max(0,Math.min(t+dy,b-minHeight));
+    if(edge.includes("s"))b=Math.max(t+minHeight,Math.min(b+dy,area.height));
+    w.style.left=Math.round(l)+"px";
+    w.style.top=Math.round(t)+"px";
+    w.style.width=Math.round(r-l)+"px";
+    w.style.height=Math.round(b-t)+"px";
+   }
+   function stop(){
+    if(!active)return;
+    active=false;
+    window.removeEventListener("pointermove",move);
+    window.removeEventListener("pointerup",stop);
+    window.removeEventListener("pointercancel",stop);
+    clampWindow(w);
+   }
+   window.addEventListener("pointermove",move);
+   window.addEventListener("pointerup",stop);
+   window.addEventListener("pointercancel",stop);
+   function focusWindow(){
+    var key=Object.keys(opened).find(function(id){return opened[id].w===w;});
+    if(key)focus(key);
+   }
+  };
+  w.appendChild(handle);
+ });
+}
+function windowBox(id,title,width,height){
+ var launcher=document.activeElement;
+ if(opened[id]){
+  if(opened[id].w.classList.contains("minimized"))sfx("restore");
+  opened[id].w.classList.remove("minimized");
+  focus(id);
+  return opened[id].w.querySelector(".window-body");
+ }
+ var w=el("div","window");
+ var area=desktopWorkArea();
+ w.style.width=Math.min(width,area.width)+"px";
+ w.style.height=Math.min(height,area.height)+"px";
+ var offset=seq++*23;
+ w.style.left=Math.max(0,Math.min(115+offset,area.width-parseFloat(w.style.width)))+"px";
+ w.style.top=Math.max(0,Math.min(55+offset,area.height-parseFloat(w.style.height)))+"px";
+ w.innerHTML='<div class="titlebar"><span>▣</span><span class="windowtitle"></span><div class="titlebuttons"><button data-min title="Réduire" aria-label="Réduire la fenêtre">_</button><button data-max title="Agrandir" aria-label="Agrandir la fenêtre">□</button><button data-close title="Fermer" aria-label="Fermer la fenêtre">×</button></div></div><div class="window-body"></div><div class="window-status">ZebraOS 2.0 / ORDINATEUR DU STUDIO</div>';
+ w.querySelector(".windowtitle").textContent=title;
+ var symbol=w.querySelector(".titlebar > span:first-child");
+ symbol.textContent="";
+ symbol.appendChild(osIcon(windowIcon(id),16));
+ $("windows-area").appendChild(w);
+ opened[id]={w:w,title:title};
+ setTimeout(function(){if(document.body.contains(w))sfx("open");},125);
+ w.querySelector("[data-min]").onclick=function(){sfx("minimize");w.classList.add("minimized");};
+ w.querySelector("[data-max]").onclick=function(){sfx("restore");maximizeWindow(w);focus(id);};
+ w.querySelector("[data-close]").onclick=function(){sfx("close");w.remove();delete opened[id];task();};
+ w.onpointerdown=function(){focus(id);};
+ var bar=w.querySelector(".titlebar"),drag=null;
+ bar.ondblclick=function(e){
+  if(e.target.closest(".titlebuttons"))return;
+  maximizeWindow(w);focus(id);
+ };
+ bar.onpointerdown=function(e){
+  if(e.target.closest(".titlebuttons")||window.innerWidth<=700||w.classList.contains("maximized")||e.button!==0)return;
+  drag={x:e.clientX,y:e.clientY,left:parseFloat(w.style.left)||0,top:parseFloat(w.style.top)||0};
+  bar.setPointerCapture(e.pointerId);
+ };
+ bar.onpointermove=function(e){
+  if(!drag)return;
+  var bounds=desktopWorkArea();
+  w.style.left=Math.max(0,Math.min(bounds.width-80,drag.left+e.clientX-drag.x))+"px";
+  w.style.top=Math.max(0,Math.min(bounds.height-30,drag.top+e.clientY-drag.y))+"px";
+ };
+ bar.onpointerup=bar.onpointercancel=function(){drag=null;};
+ addResizeHandles(w);
+ task();focus(id);animateWindowOpen(w,launcher);
+ return w.querySelector(".window-body");
+}
 function button(txt,cb){var b=el("button","classic-button",txt);b.onclick=cb;return b}
 function studioManager(){
  if(session!=="admin")return;
