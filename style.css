@@ -348,3 +348,44 @@
 .zviz-footer{border-top:1px solid #34524e;padding-top:7px;display:flex;justify-content:space-between;gap:7px;align-items:center}
 .zviz-footer span{color:#819c94;font-size:9px}
 @media(max-width:700px){.zviz{padding:5px;gap:6px}.zviz-stage{min-height:150px}.zviz-mode-name{min-width:120px;font-size:10px}.zviz-top{padding:6px}}
+
+/* Fenêtres ZebraOS 3.1 — maximize / restore / 8 poignées de redimensionnement. */
+.window.maximized{
+ left:0!important;top:0!important;
+ width:100%!important;height:calc(100% - 36px)!important;
+ border-width:2px;
+}
+.window.maximized .window-resize-handle{display:none}
+.window-resize-handle{position:absolute;z-index:6;touch-action:none;user-select:none;-webkit-user-select:none;background:transparent}
+.window-resize-handle.resize-n{top:0;left:10px;right:10px;height:6px;cursor:n-resize}
+.window-resize-handle.resize-s{bottom:0;left:10px;right:10px;height:7px;cursor:s-resize}
+.window-resize-handle.resize-w{left:0;top:10px;bottom:10px;width:6px;cursor:w-resize}
+.window-resize-handle.resize-e{right:0;top:10px;bottom:10px;width:6px;cursor:e-resize}
+.window-resize-handle.resize-nw{top:0;left:0;width:13px;height:13px;cursor:nw-resize;z-index:7}
+.window-resize-handle.resize-ne{top:0;right:0;width:13px;height:13px;cursor:ne-resize;z-index:7}
+.window-resize-handle.resize-sw{bottom:0;left:0;width:13px;height:13px;cursor:sw-resize;z-index:7}
+.window-resize-handle.resize-se{bottom:0;right:0;width:19px;height:19px;cursor:se-resize;z-index:8}
+.window:not(.maximized) .window-resize-handle.resize-se:after{
+ content:"";position:absolute;right:4px;bottom:4px;width:11px;height:11px;
+ background:repeating-linear-gradient(135deg,transparent 0 2px,#666 2px 3px,transparent 3px 5px);
+ opacity:.75;pointer-events:none;
+}
+.titlebar{cursor:move}
+.window.maximized .titlebar{cursor:default}
+.titlebuttons button{font-family:Tahoma,Arial,sans-serif;font-size:15px;font-weight:bold}
+.titlebuttons [data-max]{font-size:15px;line-height:12px}
+.window .window-body.image-viewer-body{
+ display:flex;flex-direction:column;min-width:0;min-height:0;
+ padding:8px;overflow:auto;gap:6px;
+}
+.image-viewer-body .github-preview-toolbar{flex:none;margin-bottom:0}
+.image-viewer-body .github-image-preview{
+ display:block;flex:1 1 auto;width:100%;height:100%;min-height:0;
+ max-width:100%;max-height:none;object-fit:contain;
+ border:0;margin:0 auto;
+}
+@media(max-width:700px){
+ .window-resize-handle{display:none}
+ .window.maximized{left:4px!important;top:3px!important;width:calc(100vw - 8px)!important;height:calc(100dvh - 45px)!important}
+ .titlebar{cursor:default}
+}
