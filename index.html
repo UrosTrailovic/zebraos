@@ -4,11 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ZebraOS 2.0 | Zebra Tape 2</title>
-<link rel="stylesheet" href="style.css?v=0.6">
+<link rel="stylesheet" href="style.css?v=0.7">
 </head>
 <body>
 <div id="power-screen" class="screen active">
-  <div class="monitor-off"><div class="crt-label">ZEBRA <span>RECORD</span> · CRT 2002</div><div class="crt-glass"><div class="crt-dim">NO SIGNAL_</div></div><button id="power-btn" class="physical-power" aria-label="Allumer l'ordinateur"><span class="power-dot"></span> POWER</button><div class="power-hint">CLICK TO START THE COMPUTER</div></div>
+  <button id="power-btn" class="zboot-power" aria-label="Allumer ZebraOS">
+    <span class="zboot-power-symbol" aria-hidden="true">⏻</span>
+    <span class="zboot-power-label">POWER</span>
+  </button>
+</div>
+<div id="boot-screen" class="screen" aria-label="Démarrage de ZebraOS">
+  <div class="zboot-logo-frame"><img class="zboot-logo" src="assets/boot/logo.png" alt="ZebraOS" /></div>
+  <button id="skip-boot" class="zboot-skip" aria-label="Passer l'animation de démarrage">SKIP INTRO &gt;</button>
+</div>
+<div id="session-boot-screen" class="screen" aria-label="Ouverture de session">
+  <div class="zboot-session-content">
+    <img class="zboot-session-logo" src="assets/boot/logo.png" alt="ZebraOS" />
+    <span id="zboot-session-label">LOADING SESSION</span>
+  </div>
+  <button id="skip-session-boot" class="zboot-skip" aria-label="Passer l'ouverture de session">SKIP &gt;</button>
 </div>
 <div id="login-screen" class="screen">
   <div class="login-header"><div class="zebra-logo">Z<span>///</span></div><div><h1>ZebraOS</h1><small>STUDIO EDITION · VERSION 2.0</small></div></div>
@@ -26,6 +40,6 @@
 <input type="file" id="file-music" accept="audio/*" multiple hidden>
 <script src="sfx.js?v=0.4"></script>
 <script src="assets/icons-pack.js?v=0.6"></script>
-<script src="app.js?v=0.6"></script>
+<script src="app.js?v=0.7"></script>
 </body>
 </html>
