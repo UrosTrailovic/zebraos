@@ -354,7 +354,19 @@ function studioManager(){
   "VOIR LES FICHIERS PUBLICS",function(){explorer("github:STUDIO");});
  section(3,"PUBLIER MES FICHIERS",
   "La publication est manuelle : télécharge tes brouillons si nécessaire, ajoute-les dans le dossier STUDIO sur GitHub et valide l’enregistrement. L’index sera automatiquement actualisé.",
-  "AJOUTER SUR GITHUB",function(){window.open("https://github.com/UrosTrailovic/zebraos/upload/main/STUDIO","_blank","noopener,noreferrer");});
+  "OUVRIR LE DOSSIER PUBLIC",function(){window.open("https://github.com/UrosTrailovic/zebraos/tree/main/STUDIO","_blank","noopener,noreferrer");});
+ var direct=el("div","manager-publish-links");
+ [
+  ["PUBLIER DES IMAGES","ARTWORK"],
+  ["PUBLIER DES SONS","AUDIO"],
+  ["PUBLIER DES CARTES","MAPS"],
+  ["PUBLIER DES ARCHIVES","ARCHIVES"]
+ ].forEach(function(item){
+  direct.appendChild(button(item[0],function(){
+   window.open("https://github.com/UrosTrailovic/zebraos/upload/main/STUDIO/"+item[1],"_blank","noopener,noreferrer");
+  }));
+ });
+ r.appendChild(direct);
  r.appendChild(el("p","manager-disclaimer","Le mot de passe Admin n'est pas une sécurité serveur. Évite les fichiers confidentiels dans ce site."));
 }
 function explorer(id){
