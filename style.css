@@ -589,3 +589,49 @@
 @media(prefers-reduced-motion:reduce){
  .wallpaper::before,.wallpaper::after,.wallpaper .wallpaper-grain{animation:none!important;}
 }
+
+/* Zebra CRT lumineux v3.4 — lumière visible, sans flou ni filtre sur les fenêtres.
+   Limité au fond de la session Zebra et désactivé si mouvement réduit. */
+.wallpaper.wallpaper-zebra::before{
+ background:repeating-linear-gradient(
+  to bottom,
+  rgba(6,10,8,.32) 0px,rgba(6,10,8,.32) 1px,
+  rgba(255,255,239,.025) 2px,transparent 4px
+ );
+ opacity:.34;
+ animation:zebra-crt-scan 14s linear infinite;
+}
+.wallpaper.wallpaper-zebra::after{
+ background:
+  radial-gradient(ellipse at 46% 35%,rgba(255,242,207,.30) 0%,rgba(255,225,175,.12) 44%,transparent 77%),
+  radial-gradient(ellipse at 75% 72%,rgba(170,216,254,.13) 0%,transparent 65%),
+  linear-gradient(to bottom,transparent 6%,rgba(255,251,228,.01) 35%,
+    rgba(255,247,210,.32) 50%,rgba(255,247,218,.13) 56%,transparent 80%);
+ background-size:100% 100%,100% 100%,100% 75%;
+ background-repeat:no-repeat;
+ background-position:center center,center center,center -100vh;
+ mix-blend-mode:screen;
+ opacity:.84;
+ will-change:opacity,background-position;
+ animation:zebra-crt-lightroll 18s linear infinite,zebra-crt-brighten 5.5s ease-in-out infinite alternate;
+}
+.wallpaper.wallpaper-zebra .wallpaper-grain{
+ background-image:
+  repeating-linear-gradient(90deg,rgba(255,255,255,.08) 0px,transparent 1px,transparent 5px);
+ opacity:.27;
+ animation:zebra-crt-grain 17s steps(9,end) infinite;
+}
+@keyframes zebra-crt-lightroll{
+ from{background-position:center center,center center,center -100vh;}
+ to{background-position:center center,center center,center 110vh;}
+}
+@keyframes zebra-crt-brighten{
+ from{opacity:.72;}
+ to{opacity:1;}
+}
+@media(prefers-reduced-motion:reduce){
+ .wallpaper.wallpaper-zebra::before,
+ .wallpaper.wallpaper-zebra::after,
+ .wallpaper.wallpaper-zebra .wallpaper-grain{animation:none!important}
+ .wallpaper.wallpaper-zebra::after{background-position:center,center,center center}
+}
