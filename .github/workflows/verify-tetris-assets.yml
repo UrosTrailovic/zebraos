@@ -1,0 +1,23 @@
+name: Verifier les textures Tetris
+on:
+  push:
+    paths:
+      - '.github/workflows/verify-tetris-assets.yml'
+      - 'tetris-artwork.js'
+      - 'assets/games/zebra-tetris-ui.png'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verifier les fichiers PNG et les URLs
+        run: |
+          file assets/games/zebra-tetris-ui.png
+          identify assets/games/zebra-tetris-ui.png || true
+          for url in 'https://www.zebratape2.net/assets/games/zebra-tetris-ui.png?v=1' 'https://raw.githubusercontent.com/UrosTrailovic/zebraos/main/assets/games/zebra-tetris-ui.png'; do
+            echo "Verification de $url"
+            curl -L -sS -o /tmp/texture.bin -w 'Code HTTP %{http_code} ; taille %{size_download} bytes ; MIME %{content_type}\n' "$url"
+            file /tmp/texture.bin
+          done
