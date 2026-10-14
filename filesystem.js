@@ -135,6 +135,7 @@ function preview(host,item,opt){
   body.appendChild(tools);
   var url=URL.createObjectURL(item.blob);
   if(isImage(item)){
+    body.classList.add("image-viewer-body");
     var img=E("img","github-image-preview");img.alt=item.name;img.src=url;body.appendChild(img);
   }else if(isAudio(item)){
     var audio=E("audio","github-audio-preview");audio.src=url;audio.controls=true;audio.preload="metadata";body.appendChild(audio);
