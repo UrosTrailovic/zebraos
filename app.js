@@ -205,7 +205,7 @@ function finishSessionBoot(){
   sessionBooting=false;clearTimeout(sessionTimer);sessionAudio.pause();
   session=pendingSession;pendingSession=null;
   adminApproved=false;closeAll();
-  setWall(getStore("zebra.wall."+session)||session);desk();show("desktop-screen");
+  if(window.ZebraWallpaper)window.ZebraWallpaper.apply(session);else setWall(getStore("zebra.wall."+session)||session);desk();show("desktop-screen");
 }
 function beginSessionBoot(id){
   if(sessionBooting)return;
@@ -275,7 +275,7 @@ function explorer(id){id=id||"root";var r=windowBox("explorer","My Computer — 
 function msg(title,message){if(/unavailable|denied/i.test(title))sfx("error");var r=windowBox("msg-"+(++seq),title,375,180);r.appendChild(el("p","app-message",message));r.appendChild(button("OK",function(){r.parentNode.remove();Object.keys(opened).forEach(function(k){if(!document.body.contains(opened[k].w))delete opened[k]});task()}))}
 function notepad(id){var name=id==="notes"?"MY_NOTES.TXT":(id||"README").toUpperCase()+".TXT";var r=windowBox("note-"+id,name+" - Notepad",480,380);r.innerHTML="";var wrap=el("div","note-editor");var ta=el("textarea");ta.value=id==="notes"?(getStore("zebra.note."+session)||""):docs[id]||"";if(id!=="notes")ta.readOnly=true;wrap.appendChild(ta);if(id==="notes")wrap.appendChild(button("File > Save",function(){setStore("zebra.note."+session,ta.value);msg("Notepad","Enregistré dans ton navigateur.")}));else wrap.appendChild(el("div","desktop-note","Read-only file"));r.appendChild(wrap)}
 function viewer(name){var r=windowBox("viewer","Image Viewer - "+name+".JPG",440,340);r.innerHTML="";var p=el("div","viewer-placeholder","[ "+name.toUpperCase()+".JPG ]\n\nArtwork / screenshots à venir");p.style.whiteSpace="pre-line";r.appendChild(p)}
-function settings(){var r=windowBox("settings","Control Panel",390,350);r.innerHTML="<h3>Display Properties</h3><p>Choose desktop wallpaper:</p>";["visitor","zebra","admin","daniel"].forEach(function(n){r.appendChild(button(n.toUpperCase(),function(){setWall(n)}))});r.appendChild(el("p","desktop-note","Settings are stored locally for this session."));r.appendChild(button("Import background...",function(){$("file-wallpaper").click()}));
+function settings(){var r=windowBox("settings","Control Panel - Display & Sound",Math.min(660,Math.max(390,window.innerWidth-35)),Math.min(570,Math.max(380,window.innerHeight-85)));if(window.ZebraWallpaper)window.ZebraWallpaper.mount(r);else{r.innerHTML="<h3>Display Properties</h3>";r.appendChild(button("Import background...",function(){$("file-wallpaper").click()}));}
 r.appendChild(el("h3","", "Sound Properties"));
 var mute=button(getStore("zebra.sfx.muted")==="1"?"System sounds: OFF":"System sounds: ON",function(){
   var wasMuted=getStore("zebra.sfx.muted")==="1";
@@ -310,7 +310,7 @@ document.addEventListener("pointerup",function(e){
   if(isPrimaryPointer(e)&&e.target.closest(".screen.active")){if(e.pointerType==="touch")playMechanicalClick("mouseDown");else playMechanicalClick("mouseUp");}
 },{passive:true});
 
-$("file-wallpaper").onchange=function(e){var f=e.target.files[0];if(f)setWall(session||"visitor",URL.createObjectURL(f))};
+$("file-wallpaper").onchange=function(e){var f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;if(window.ZebraWallpaper)window.ZebraWallpaper.importFile(f,session);else setWall(session||"visitor",URL.createObjectURL(f))};
 $("file-music").onchange=function(e){localTracks.forEach(function(u){URL.revokeObjectURL(u)});localTracks=[];Array.from(e.target.files).slice(0,9).forEach(function(f,i){localTracks[i]=URL.createObjectURL(f);tracks[i]=f.name.replace(/\.[^.]+$/,"")});player();var p=opened.amp.w.querySelector("[data-list]");p.innerHTML="";tracks.forEach(function(n,i){var b=el("button","amp-song",(i+1)+". "+n);b.onclick=function(){pickTrack(i)};p.appendChild(b)});if(localTracks.length)pickTrack(0)};
 ["play","pause","timeupdate","loadedmetadata","ended"].forEach(function(event){music.addEventListener(event,function(){if(event==="ended"&&selectedTrack<8)pickTrack(selectedTrack+1);renderAmp()})});
 function clock(){var d=new Date();$("clock").textContent=("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2)}clock();setInterval(clock,30000);
