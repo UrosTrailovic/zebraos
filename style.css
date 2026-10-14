@@ -666,3 +666,105 @@
  .wallpaper.wallpaper-zebra .wallpaper-grain{animation:none!important}
  .wallpaper.wallpaper-zebra::after{background-position:center,center}
 }
+
+/* Panneau de configuration ZebraOS v3.5 : authentique rendu Windows classique */
+.zcp,.zcp-dialog,.zcp-about,.zcp-welcome{
+ font-family:Tahoma,Arial,sans-serif;font-size:12px;color:#171717;
+}
+.zcp{min-height:100%;display:flex;flex-direction:column;background:#f3f3f3;}
+.zcp-description{padding:7px 4px 12px;border-bottom:1px solid #b7b7b7;}
+.zcp-grid{
+ display:grid;grid-template-columns:repeat(auto-fill,minmax(114px,1fr));
+ justify-content:start;align-content:start;gap:9px 8px;padding:16px 5px 25px;flex:1;
+}
+.zcp-item{border:1px solid transparent;background:transparent;display:flex;flex-direction:column;align-items:center;gap:8px;padding:9px 4px 6px;min-height:100px;text-align:center;color:#161616;cursor:default}
+.zcp-item.selected,.zcp-item:focus-visible{background:#dce8f8;border:1px dotted #193c75}
+.zcp-symbol{
+ width:47px;height:47px;display:grid;place-items:center;
+ font:bold 38px/1 Georgia,"Segoe UI Symbol",serif;color:#162858;
+ text-shadow:1px 1px #fff,2px 2px #666;
+}
+.zcp-item-title{line-height:1.3;max-width:115px}
+.zcp-status{border-top:1px solid #bbb;padding:7px 4px;color:#555;font-size:11px}
+.zcp-dialog{display:flex;flex-direction:column;min-height:100%;background:#c0c0c0;padding:4px 5px 0;gap:8px}
+.zcp-tabs{display:flex;gap:0;align-items:end;margin:1px 4px -9px;position:relative;z-index:2;}
+.zcp-tab{border:2px outset #fff;background:#c0c0c0;padding:5px 11px 4px;font:12px Tahoma,Arial;min-height:26px;white-space:nowrap}
+.zcp-tab.active{border-bottom:2px solid #c0c0c0;font-weight:bold;position:relative;top:1px}
+.zcp-field{border:2px groove #f6f6f6;padding:12px 10px 11px;min-width:0;background:transparent}
+.zcp-field legend{font:11px Tahoma,Arial;padding:0 5px}
+.zcp-help{font-size:11px;line-height:1.5;color:#333}
+.zcp-check{display:flex;gap:8px;align-items:center;line-height:1.4;cursor:pointer}
+.zcp-check input{width:15px;height:15px}
+.zcp-sound-actions{display:flex;gap:9px;margin:10px 0}
+.zcp-dialog-buttons{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:auto;padding:9px 2px 6px;border-top:1px solid #888}
+.zcp-dialog-buttons .classic-button{min-width:75px;min-height:25px;font:12px Tahoma,Arial}
+.zcp-dialog-buttons .classic-button:disabled{opacity:.55;cursor:default}
+.zcp-about{display:flex;flex-direction:column;height:100%;background:#c0c0c0;padding:14px 10px 5px}
+.zcp-about-head{display:flex;align-items:center;gap:14px;padding-bottom:16px}
+.zcp-about-head img{width:124px;max-height:80px;object-fit:contain;background:#19334b}
+.zcp-about-head strong{font-size:24px}
+.zcp-about-head div div{margin-top:6px}
+.zcp-about-details{flex:1;border-top:1px solid #888;padding:9px 5px;line-height:1.25}
+.zcp-about-details p{margin:6px 0}
+.zcp-about-details hr{border:0;border-top:1px solid #777;margin:15px 0}
+.zcp-system-hero{display:flex;gap:18px;align-items:center;padding:17px 5px}
+.zcp-system-hero img{width:135px;max-width:45%;height:73px;object-fit:contain;background:#203a55}
+.zcp-system-hero p{margin:7px 0}
+.zcp-system-hero strong{font-size:18px}
+.zcp-dialog .zcp-field p{margin:8px 0}
+.zcp-welcome{height:100%;display:flex;flex-direction:column;padding:10px;background:#c0c0c0}
+.zcp-welcome-head{background:#fff9da;border:1px solid #ddd4ae;padding:13px 16px;min-height:104px}
+.zcp-welcome-head h2{font:bold 24px Georgia,serif;margin:0 0 11px}
+.zcp-welcome-head strong{display:block;margin-bottom:5px}
+.zcp-welcome-head p{font-size:12px;margin:5px 0}
+.zcp-welcome-middle{display:flex;flex:1;min-height:0;gap:11px;margin-top:12px}
+.zcp-welcome-art{flex:1;min-width:0;display:grid;place-items:center;background:linear-gradient(150deg,#046e71,#178e88);border:2px inset #e9e9e9}
+.zcp-welcome-art img{width:min(86%,265px);height:auto;max-height:100%;object-fit:contain}
+.zcp-welcome-actions{display:flex;flex-direction:column;gap:8px;width:180px;max-width:45%}
+.zcp-welcome-actions .classic-button{min-height:31px;text-align:center;font:11px Tahoma,Arial}
+.zcp-date{gap:8px}
+.zcp-datetime-content{margin-top:4px;min-height:0;flex:1}
+.zcp-clock-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px}
+.zcp-calendar-field,.zcp-clock-field{height:260px;display:flex;flex-direction:column;min-width:0}
+.zcp-month-controls{display:flex;align-items:center;justify-content:space-between;gap:3px;margin-bottom:6px}
+.zcp-month-controls .classic-button{padding:2px 5px;min-width:22px;min-height:24px}
+.zcp-month-title{text-align:center;white-space:nowrap;flex:1;font-weight:bold;font-size:11px}
+.zcp-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:25px;background:white;border:2px inset #e9e9e9;padding:3px;gap:1px;flex:1;align-content:start}
+.zcp-calendar .zcp-day-head{display:grid;place-items:center;background:#a3a3a3;color:#fff;font-size:10px}
+.zcp-calendar .zcp-blank{min-width:0}
+.zcp-calendar .zcp-day{border:1px solid transparent;background:transparent;padding:0;color:#111;font:11px Tahoma,Arial}
+.zcp-calendar .zcp-day:hover,.zcp-calendar .zcp-day.selected{color:#fff;background:#153586;border:1px dotted #fff}
+.zcp-clock-face{
+ width:154px;height:154px;max-width:100%;aspect-ratio:1;align-self:center;
+ border:2px inset #ddd;border-radius:50%;background:radial-gradient(circle,#f4f6f6,#dedede);
+ position:relative;margin:2px 0 6px;
+}
+.zcp-clock-number{position:absolute;transform:translate(-50%,-50%);font:11px Tahoma,Arial}
+.zcp-clock-hand{
+ position:absolute;left:calc(50% - 1px);bottom:50%;width:2px;background:#071319;
+ transform-origin:bottom center;border-radius:2px
+}
+.zcp-clock-hour{height:30%;width:4px;left:calc(50% - 2px);background:#133243}
+.zcp-clock-minute{height:39%;background:#236c79;width:3px}
+.zcp-clock-second{height:42%;background:#b42b20;width:1px}
+.zcp-clock-center{position:absolute;left:calc(50% - 4px);top:calc(50% - 4px);width:8px;height:8px;border-radius:50%;background:#13202a}
+.zcp-clock-digital{text-align:center;font:13px "Courier New",monospace;margin-bottom:5px}
+.zcp-time-inputs{display:flex;align-items:center;gap:4px;justify-content:center;margin-top:auto}
+.zcp-time-inputs input{width:40px;text-align:center;font:12px Tahoma,Arial;padding:3px 1px;border:2px inset #ddd;background:white}
+.zcp-time-inputs .classic-button{padding:4px 7px;font:11px Tahoma,Arial}
+.zcp-zone-select{padding:4px;width:100%;max-width:340px;border:2px inset white;background:#fff}
+.zcp-timezone-footer{font:10px/1.4 Tahoma,Arial;color:#444;margin:0 5px}
+@media(max-width:700px){
+ .zcp-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
+ .zcp-item{min-height:88px}
+ .zcp-symbol{font-size:32px;width:38px;height:38px}
+ .zcp-date{padding:2px;gap:5px}
+ .zcp-date .zcp-field{padding:7px 4px}
+ .zcp-clock-layout{gap:4px}
+ .zcp-clock-face{width:120px;height:120px}
+ .zcp-calendar{grid-auto-rows:21px;padding:2px}
+ .zcp-clock-field,.zcp-calendar-field{height:235px}
+ .zcp-welcome-actions{width:40%;gap:5px}
+ .zcp-welcome-head h2{font-size:19px}
+ .zcp-welcome-actions .classic-button{font-size:10px;padding:4px}
+}
