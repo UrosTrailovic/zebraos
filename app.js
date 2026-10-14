@@ -177,8 +177,12 @@ function decorateSystemMenus(){
 function el(tag,cls,txt){var n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;}
 function show(id){["power-screen","boot-screen","login-screen","session-boot-screen","desktop-screen"].forEach(function(s){$(s).classList.toggle("active",s===id)});}
 /* Power / studio startup audio. The user clicks POWER so playback is permitted on phones. */
-var bootAudio=new Audio("assets/boot/startup.mp3");
-var sessionAudio=new Audio("assets/boot/sessionstartup.mp3");
+var studioBootAssets=window.ZebraBootAssets||{};
+var bootAudio=new Audio(studioBootAssets.startup||"");
+var sessionAudio=new Audio(studioBootAssets.sessionstartup||studioBootAssets.session||"");
+document.querySelectorAll(".zboot-logo,.zboot-session-logo").forEach(function(img){
+  if(studioBootAssets.logo)img.src=studioBootAssets.logo;
+});
 bootAudio.preload="auto";sessionAudio.preload="auto";
 var bootTimer=0,sessionTimer=0,booting=false,sessionBooting=false,pendingSession=null;
 function playBootTrack(track){
