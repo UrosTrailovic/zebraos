@@ -525,3 +525,67 @@
  #login-screen .user-sub{font-size:9px}
  #login-screen .login-footer{height:58px}
 }
+
+
+/* ZebraOS CRT vivant — discret, au niveau du fond uniquement.
+   Les applications et fenêtres restent nettes et interactives. */
+.wallpaper{
+ isolation:isolate;
+ background-position:center center;
+ background-repeat:no-repeat;
+}
+.wallpaper::before{
+ content:"";
+ position:absolute;
+ inset:0;
+ z-index:2;
+ pointer-events:none;
+ background:repeating-linear-gradient(
+   to bottom,
+   rgba(4,8,6,.18) 0px,
+   rgba(4,8,6,.18) 1px,
+   transparent 1px,
+   transparent 4px
+ );
+ opacity:.22;
+ will-change:background-position;
+ animation:zebra-crt-scan 16s linear infinite;
+}
+.wallpaper::after{
+ content:"";
+ position:absolute;
+ inset:0;
+ z-index:1;
+ pointer-events:none;
+ background:
+   radial-gradient(ellipse at 43% 37%,rgba(255,247,221,.115),transparent 70%),
+   radial-gradient(ellipse at 50% 51%,transparent 47%,rgba(3,7,9,.19) 100%);
+ mix-blend-mode:screen;
+ opacity:.67;
+ animation:zebra-crt-glow 8.5s ease-in-out infinite alternate;
+}
+.wallpaper .wallpaper-grain{
+ position:absolute;
+ inset:0;
+ z-index:3;
+ pointer-events:none;
+ background-image:
+  repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0px,transparent 1px,transparent 5px);
+ opacity:.16;
+ animation:zebra-crt-grain 21s steps(9,end) infinite;
+}
+@keyframes zebra-crt-scan{
+ from{background-position:0 0;}
+ to{background-position:0 24px;}
+}
+@keyframes zebra-crt-glow{
+ from{opacity:.62;}
+ to{opacity:.77;}
+}
+@keyframes zebra-crt-grain{
+ from{background-position:0 0;}
+ to{background-position:9px 0;}
+}
+@media(prefers-reduced-motion:reduce){
+ .wallpaper::before,.wallpaper::after,.wallpaper .wallpaper-grain{animation:none!important;}
+}
