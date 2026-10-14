@@ -1,186 +1,208 @@
-/* ZebraOS Public Library 1.2
- * Visitors browse a clean, read-only studio directory.
- * First load is a static manifest served by the site itself.
- * A single optional GitHub tree API request checks newly published commits.
- * If GitHub throttles, the manifest remains usable; no blocking error.
+/* ZebraOS — bibliothèque publique v1.5.
+ * Source unique : STUDIO/manifest.json, reconstruit automatiquement par GitHub Actions.
+ * AUCUN cache de session ni appel à l'API GitHub depuis le navigateur.
+ * Ouverture et Actualiser vérifient l'index publié à chaque fois.
  */
 (function(){
 "use strict";
-var REPO="UrosTrailovic/zebraos",BRANCH="main",ROOT="STUDIO";
-var STATIC="STUDIO/manifest.json";
-var snapshot=null,lastLiveCheck=0,updatePromise=null;
-var CHECK_DELAY=30000;
-var ext={
- image:/\.(png|jpg|jpeg|gif|webp|bmp)$/i,
+var ROOT="STUDIO",REPO="UrosTrailovic/zebraos",BRANCH="main",INDEX="STUDIO/manifest.json";
+var known=null,updatedAt=null,lastCheck=null,activeRequest=null;
+var types={
+ image:/\.(png|jpe?g|gif|webp|bmp)$/i,
  audio:/\.(mp3|wav|ogg|m4a|flac)$/i,
  video:/\.(mp4|webm)$/i,
- text:/\.(txt|md|markdown|json|csv|log|ini|cfg|css|js|xml|yml|yaml)$/i
+ text:/\.(txt|md|markdown|json|csv|log|ini|cfg|css|js|xml|ya?ml)$/i
 };
-function E(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
+function element(tag,cls,label){
+ var el=document.createElement(tag);
+ if(cls)el.className=cls;
+ if(label!==undefined)el.textContent=label;
+ return el;
+}
+function encode(path){return path.split("/").map(encodeURIComponent).join("/");}
+function localUrl(path){return "/"+encode(path);}
+function remoteUrl(path){return "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+encode(path);}
+function repoFileUrl(path){return "https://github.com/"+REPO+"/blob/"+BRANCH+"/"+encode(path);}
+function uploadUrl(path){return "https://github.com/"+REPO+"/upload/"+BRANCH+"/"+encode(path);}
 function safe(path){
  if(typeof path!=="string")return ROOT;
- var s=path.replace(/\\/g,"/").split("/").filter(Boolean);
- return s[0]===ROOT&&s.length<=25&&!s.some(function(x){return x===".."||x===".";})?s.join("/"):ROOT;
+ var segments=path.replace(/\\/g,"/").split("/").filter(Boolean);
+ if(segments[0]!==ROOT||segments.length>25||segments.some(function(x){return x===".."||x==="."}))return ROOT;
+ return segments.join("/");
 }
-function uri(path){return path.split("/").map(encodeURIComponent).join("/");}
-function staticUrl(path){return "/"+uri(path);}
-function rawUrl(path){return "https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+uri(path);}
-function repositoryUrl(path){return "https://github.com/"+REPO+"/tree/"+BRANCH+"/"+uri(path);}
-function uploadUrl(path){return "https://github.com/"+REPO+"/upload/"+BRANCH+"/"+uri(path);}
-function fileUrl(path){return "https://github.com/"+REPO+"/blob/"+BRANCH+"/"+uri(path);}
-function openExternal(url){var a=E("a");a.href=url;a.target="_blank";a.rel="noopener noreferrer";document.body.appendChild(a);a.click();a.remove();}
+function shortName(name){
+ return {ARTWORK:"VISUELS",MAPS:"CARTES"}[name]||name;
+}
 function iconFor(item){
  if(item.type==="dir")return "folder";
- if(ext.image.test(item.name))return "jpg";
- if(ext.audio.test(item.name))return "mp3";
- if(ext.text.test(item.name))return "txt";
+ if(types.image.test(item.name))return "jpg";
+ if(types.audio.test(item.name))return "mp3";
+ if(types.text.test(item.name))return "txt";
  return "zip";
 }
-function frenchFolder(name){
- var aliases={ARTWORK:"VISUELS",MAPS:"CARTES"};
- return aliases[name]||name;
+function readableSize(bytes){
+ if(!Number.isFinite(bytes)||bytes<0)return "";
+ if(bytes>=1048576)return (bytes/1048576).toFixed(1)+" Mo";
+ if(bytes>=1024)return Math.round(bytes/1024)+" Ko";
+ return bytes+" o";
 }
-function prettySize(bytes){
- if(!(bytes>=0))return "";
- return bytes>=1048576?(bytes/1048576).toFixed(1)+" Mo":bytes>=1024?Math.round(bytes/1024)+" Ko":bytes+" o";
-}
-function clean(items){
- if(!Array.isArray(items))throw Error("Index invalid");
- return items.filter(function(x){
-   return x&&typeof x.path==="string"&&(x.type==="file"||x.type==="dir")&&
-     x.path.startsWith(ROOT+"/")&&x.path.length<1000&&
-     !/(^|\/)(\.gitkeep|\.gitignore|manifest\.json)$/.test(x.path) &&
-     x.path.split("/").every(function(v){return v!==".."&&v!=="."});
- }).map(function(x){
-   return {path:x.path,type:x.type,size:Number(x.size)||0,name:x.path.split("/").pop()};
+function normalize(input){
+ if(!Array.isArray(input))throw Error("Index de fichiers invalide");
+ return input.filter(function(item){
+   return item && typeof item.path==="string" && (item.type==="file"||item.type==="dir") &&
+     item.path.startsWith(ROOT+"/") && item.path.length<1000 &&
+     !/(^|\/)(\.gitkeep|\.gitignore|manifest\.json)$/.test(item.path) &&
+     !item.path.split("/").some(function(part){return part==="."||part==="..";});
+ }).map(function(item){
+   return {path:item.path,type:item.type,name:item.path.split("/").pop(),size:Number(item.size)||0};
  });
 }
-function direct(items,path,isAdmin){
- return items.filter(function(x){
-   if(x.path.substring(0,x.path.lastIndexOf("/"))!==path)return false;
-   // Tous les dossiers publiés sont visibles, même encore vides.
-   // README.txt et les marqueurs techniques restent masqués aux visiteurs.
-   return isAdmin || x.type==="dir" || x.name!=="README.txt";
- })
- .sort(function(a,b){
+function contents(path,isAdmin){
+ return (known||[]).filter(function(item){
+   if(item.path.substring(0,item.path.lastIndexOf("/"))!==path)return false;
+   return isAdmin || item.type==="dir" || item.name!=="README.txt";
+ }).sort(function(a,b){
    if(a.type!==b.type)return a.type==="dir"?-1:1;
    return a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:"base"});
  });
 }
-function current(){
- try{
-   var obj=JSON.parse(sessionStorage.getItem("zebra.studio.public-index")||"null");
-   if(obj&&Array.isArray(obj.entries)&&obj.expiry>Date.now())return clean(obj.entries);
- }catch(e){}
- return null;
+function loadIndex(url){
+ return fetch(url,{cache:"no-store"})
+ .then(function(response){if(!response.ok)throw Error("Erreur HTTP "+response.status);return response.json();})
+ .then(function(json){
+    if(!json||!Array.isArray(json.entries))throw Error("Réponse non valide");
+    return {entries:normalize(json.entries),generatedAt:json.generatedAt||null};
+ });
 }
-function save(items){
- try{sessionStorage.setItem("zebra.studio.public-index",JSON.stringify({entries:items,expiry:Date.now()+3600000}));}catch(e){}
+function update(){
+ // Toujours demander l'index le plus récent : pas de liste conservée pendant une heure.
+ if(activeRequest)return activeRequest;
+ var t=Date.now();
+ var url=remoteUrl(INDEX)+"?v="+t;
+ activeRequest=loadIndex(url)
+  .catch(function(){return loadIndex(localUrl(INDEX)+"?v="+t);})
+  .then(function(result){
+    known=result.entries;
+    updatedAt=result.generatedAt;
+    lastCheck=new Date();
+    return {ok:true};
+  })
+  .catch(function(err){return {ok:false,error:err.message||"Connexion impossible"};})
+  .finally(function(){activeRequest=null;});
+ return activeRequest;
 }
-function initial(){
- if(snapshot)return Promise.resolve(snapshot);
- var cached=current();if(cached){snapshot=cached;return Promise.resolve(snapshot);}
- return fetch(staticUrl(STATIC),{cache:"no-store"})
-  .then(function(r){if(!r.ok)throw Error("Index public absent");return r.json();})
-  .then(function(d){snapshot=clean(d.entries||d);return snapshot;})
-  .catch(function(){snapshot=[];return snapshot;});
+function openExternal(url){
+ var link=element("a");link.href=url;link.target="_blank";link.rel="noopener noreferrer";
+ document.body.appendChild(link);link.click();link.remove();
 }
-function refresh(force){
- var now=Date.now();
- if(updatePromise)return updatePromise;
- if(!force&&now-lastLiveCheck<CHECK_DELAY)return Promise.resolve(snapshot);
- lastLiveCheck=now;
- // L'index public est créé automatiquement après une publication dans STUDIO.
- // Pas de requêtes répétées vers l'API GitHub : aucun blocage à 60 appels/heure.
- var url="https://raw.githubusercontent.com/"+REPO+"/"+BRANCH+"/"+STATIC+"?actualisation="+now;
- updatePromise=fetch(url,{cache:"no-store"})
-   .then(function(r){if(!r.ok)throw Error("Index temporairement indisponible");return r.json();})
-   .then(function(data){snapshot=clean(data.entries||data);save(snapshot);return snapshot;})
-   .catch(function(){return snapshot;})
-   .finally(function(){updatePromise=null;});
- return updatePromise;
-}
-function preview(item,options){
- var name=item.name,source=staticUrl(item.path),url=source;
- if(!(ext.image.test(name)||ext.audio.test(name)||ext.text.test(name)||ext.video.test(name))){
-   openExternal(fileUrl(item.path));return;
+function displayFile(item,options){
+ if(!types.image.test(item.name)&&!types.audio.test(item.name)&&!types.video.test(item.name)&&!types.text.test(item.name)){
+   openExternal(repoFileUrl(item.path));return;
  }
- if(ext.text.test(name)&&item.size>512000){openExternal(fileUrl(item.path));return;}
- var body=options.windowBox("public-file-"+item.path,name+" — ZebraOS",Math.min(630,innerWidth-28),Math.min(480,innerHeight-65));
- body.innerHTML="";
- var bar=E("div","github-preview-toolbar");
- var opener=E("a","classic-button github-download","Ouvrir ↗");
- opener.href=url;opener.target="_blank";opener.rel="noopener noreferrer";
- bar.appendChild(opener);body.appendChild(bar);
- if(ext.image.test(name)){
-   var image=E("img","github-image-preview");image.src=url;image.alt=name;
-   image.onerror=function(){image.src=rawUrl(item.path);image.onerror=function(){image.replaceWith(E("p","github-drive-error","Image indisponible."));};};
-   body.appendChild(image);
- }else if(ext.audio.test(name)){
-   var player=E("audio","github-audio-preview");player.controls=true;player.preload="metadata";player.src=url;body.appendChild(player);
- }else if(ext.video.test(name)){
-   var video=E("video","github-video-preview");video.controls=true;video.preload="metadata";video.src=url;video.playsInline=true;body.appendChild(video);
+ if(types.text.test(item.name)&&item.size>512000){openExternal(repoFileUrl(item.path));return;}
+ var name=item.name,raw=remoteUrl(item.path),fallback=localUrl(item.path);
+ var host=options.windowBox("public-file-"+item.path,name+" — ZebraOS",Math.min(630,innerWidth-28),Math.min(480,innerHeight-65));
+ host.innerHTML="";
+ var actions=element("div","github-preview-toolbar");
+ var link=element("a","classic-button github-download","Ouvrir le fichier ↗");
+ link.href=raw;link.target="_blank";link.rel="noopener noreferrer";actions.appendChild(link);
+ host.appendChild(actions);
+ if(types.image.test(name)){
+   var image=element("img","github-image-preview");image.src=raw;image.alt=name;
+   image.onerror=function(){
+     image.onerror=function(){image.replaceWith(element("p","github-drive-error","Impossible de charger cette image."));};
+     image.src=fallback;
+   };
+   host.appendChild(image);
+ }else if(types.audio.test(name)){
+   var audio=element("audio","github-audio-preview");
+   audio.controls=true;audio.preload="metadata";audio.src=raw;
+   var retried=false;audio.onerror=function(){if(retried)return;retried=true;audio.src=fallback;};
+   host.appendChild(audio);
+ }else if(types.video.test(name)){
+   var video=element("video","github-video-preview");video.controls=true;video.preload="metadata";video.playsInline=true;video.src=raw;host.appendChild(video);
  }else{
-   var pre=E("pre","github-text-preview","Chargement…");body.appendChild(pre);
-   fetch(url).then(function(r){if(!r.ok)throw Error();return r.text();}).then(function(t){if(pre.isConnected)pre.textContent=t.slice(0,512000);})
-    .catch(function(){if(pre.isConnected)pre.textContent="Le document est indisponible. Réessaie plus tard.";});
+   var pre=element("pre","github-text-preview","Chargement du document…");host.appendChild(pre);
+   fetch(raw,{cache:"no-store"})
+    .then(function(res){if(!res.ok)throw Error();return res.text();})
+    .catch(function(){return fetch(fallback).then(function(res){if(!res.ok)throw Error();return res.text();});})
+    .then(function(text){if(pre.isConnected)pre.textContent=text.slice(0,512000);})
+    .catch(function(){if(pre.isConnected)pre.textContent="Document temporairement indisponible.";});
  }
 }
 function mount(host,path,options){
  if(!host)return;
  path=safe(path);
- host._zebraPublicTicket=(host._zebraPublicTicket||0)+1;
- var ticket=host._zebraPublicTicket;
+ var ticket=(host._zebraPublicTicket||0)+1;host._zebraPublicTicket=ticket;
  var isAdmin=!!options.canUpload;
- var folder=path===ROOT?"Mes fichiers":path.split("/").slice(1).map(frenchFolder).join(" / ");
- var w=host.closest(".window");
- if(w){var title=w.querySelector(".windowtitle");if(title)title.textContent="Poste de travail — "+folder;}
+ var folder=path===ROOT?"Fichiers de Zebra Tape 2":path.split("/").slice(1).map(shortName).join(" / ");
+ var outer=host.closest(".window");
+ if(outer){var title=outer.querySelector(".windowtitle");if(title)title.textContent="Poste de travail — "+folder;}
  host.innerHTML="";
- var toolbar=E("div","github-drive-toolbar");
- function tool(text,fn){var b=E("button","classic-button",text);b.type="button";b.onclick=fn;toolbar.appendChild(b);}
- tool("⌂",function(){options.explorer("root");});
- tool("↑",function(){mount(host,path===ROOT?ROOT:path.substring(0,path.lastIndexOf("/")),options);});
- tool("↻ Actualiser",function(){refresh(true).then(render);});
- if(isAdmin)tool("Publier sur GitHub ↗",function(){openExternal(uploadUrl(path));});
- host.appendChild(toolbar);
- host.appendChild(E("div","folder-path","C:\\STUDIO"+(path===ROOT?"":"\\"+path.substring(ROOT.length+1).split("/").map(frenchFolder).join("\\"))));
- var hint=E("p","github-drive-hint",isAdmin?
-   "CONTENU PUBLIÉ · Les fichiers de tes brouillons sont invisibles ici. Après publication sur GitHub, attends la mise à jour de l’index puis actualise.":
-   "Bibliothèque Zebra Record");
- host.appendChild(hint);
- var state=E("div","github-drive-state","Ouverture du dossier…");
- host.appendChild(state);
- var list=E("div","folder-list github-drive-list");
- host.appendChild(list);
- var status=E("p","github-drive-count","");
- host.appendChild(status);
- function render(){
-   if(!host.isConnected||host._zebraPublicTicket!==ticket)return;
-   list.innerHTML="";
-   var items=direct(snapshot||[],path,isAdmin);
-   state.style.display="none";
-   if(!items.length){
-     state.style.display="";
-     state.className="github-drive-empty";
-     state.textContent=isAdmin?"Aucun fichier publié dans ce dossier. Les brouillons locaux sont séparés.":"Aucun fichier disponible pour le moment.";
-   }
-   items.forEach(function(item){
-     var b=E("button","file-entry github-file-entry");b.type="button";
-     var symbol=E("span","file-symbol");
-     symbol.appendChild(options.osIcon(iconFor(item),32));
-     b.appendChild(symbol);
-     b.appendChild(E("span","github-file-name",item.type==="dir"?frenchFolder(item.name):item.name));
-     b.appendChild(E("small","github-file-size",item.type==="dir"?"Dossier":prettySize(item.size)));
-     b.onclick=function(){if(item.type==="dir")mount(host,item.path,options);else preview(item,options);};
-     list.appendChild(b);
-   });
-   status.textContent=items.length+" élément(s)";
+ var tools=element("div","github-drive-toolbar");
+ function command(label,action){
+   var button=element("button","classic-button",label);button.type="button";button.onclick=action;
+   tools.appendChild(button);return button;
  }
- initial().then(function(){
-   if(!host.isConnected||host._zebraPublicTicket!==ticket)return;
-   render();
-   refresh(false).then(function(){render();});
- });
+ command("⌂",function(){options.explorer("root");});
+ command("↑",function(){mount(host,path===ROOT?ROOT:path.substring(0,path.lastIndexOf("/")),options);});
+ var refreshButton=command("↻ Actualiser",function(){reload();});
+ if(isAdmin)command("Ajouter sur GitHub ↗",function(){openExternal(uploadUrl(path));});
+ host.appendChild(tools);
+ host.appendChild(element("div","folder-path","C:\\STUDIO"+(path===ROOT?"":"\\"+path.substring(ROOT.length+1).split("/").map(shortName).join("\\"))));
+ host.appendChild(element("p","github-drive-hint",isAdmin?
+   "Fichiers publiés et visibles par tous. Les brouillons privés restent séparés.":
+   "Bibliothèque Zebra Tape 2"));
+ var message=element("div","github-drive-state","Recherche des fichiers publiés…");host.appendChild(message);
+ var list=element("div","folder-list github-drive-list");host.appendChild(list);
+ var status=element("p","github-drive-count","");host.appendChild(status);
+ function valid(){return host.isConnected&&host._zebraPublicTicket===ticket;}
+ function render(){
+   if(!valid())return;
+   list.innerHTML="";
+   var entries=contents(path,isAdmin);
+   message.style.display=entries.length?"none":"";
+   if(!entries.length){
+     message.className="github-drive-empty";
+     message.textContent="Ce dossier est vide pour le moment.";
+   }
+   entries.forEach(function(item){
+     var button=element("button","file-entry github-file-entry");button.type="button";
+     var symbol=element("span","file-symbol");symbol.appendChild(options.osIcon(iconFor(item),32));
+     button.appendChild(symbol);
+     button.appendChild(element("span","github-file-name",item.type==="dir"?shortName(item.name):item.name));
+     button.appendChild(element("small","github-file-size",item.type==="dir"?"Dossier":readableSize(item.size)));
+     button.onclick=function(){if(item.type==="dir")mount(host,item.path,options);else displayFile(item,options);};
+     list.appendChild(button);
+   });
+   var detail=updatedAt?(" · Index du "+new Date(updatedAt).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})):"";
+   status.textContent=entries.length+" élément(s)"+detail;
+ }
+ function reload(){
+   if(!valid())return;
+   refreshButton.disabled=true;
+   message.style.display="";
+   message.className="github-drive-state";
+   message.textContent="Vérification des fichiers publiés…";
+   update().then(function(result){
+     if(!valid())return;
+     refreshButton.disabled=false;
+     if(result.ok){render();return;}
+     // Aucune erreur cachée : conserver les éléments connus en précisant leur ancienneté.
+     if(known){
+       render();
+       status.textContent+=" · Actualisation impossible, dernière liste conservée";
+     }else{
+       list.innerHTML="";
+       message.style.display="";
+       message.className="github-drive-state github-drive-error";
+       message.textContent="Impossible de charger les fichiers. Appuie sur Actualiser pour réessayer.";
+       status.textContent="Connexion indisponible";
+     }
+   });
+ }
+ if(known)render();
+ reload();
 }
 window.ZebraGitFiles={mount:mount,root:ROOT};
 }());
