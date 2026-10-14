@@ -76,3 +76,19 @@ Tests : importer une image dans Visitor ; choisir Vignette, Ajuster et Remplir ;
 - **Desktop** : redimensionnement des fenêtres sur ordinateur, anti-sélection accidentelle du texte.
 - **Login** : refonte du sélecteur de session.
 - **ZebraAMP** : égaliseur et fonctions audio supplémentaires.
+
+## Admin et Studio Manager (v1.1)
+
+L'écran de sélection de session demande désormais un mot de passe pour **Admin**. Le mot de passe n'est pas écrit en clair dans les fichiers de l'application : son empreinte SHA-256 est comparée côté navigateur (API Web Crypto).
+
+**Attention :** ce n'est pas une vraie authentification sécurisée. Tout le JavaScript du site est public ; il est possible de contourner la vérification avec les outils de développement. Ne pas y stocker des secrets, des documents confidentiels, des accès GitHub, ni des informations personnelles.
+
+Une fois connecté en Admin, le bureau propose **STUDIO MANAGER**, un point d'accès central à :
+
+- **STUDIO LOCAL** : disque privé *à cet appareil*, modifiable depuis le navigateur (IndexedDB).
+- **STUDIO (GITHUB)** : répertoire public publié sur GitHub, accessible aux visiteurs en lecture seule.
+- **PUBLICATION** : lien ouvrant GitHub pour transférer les fichiers quand ils sont prêts.
+
+Les sessions **Visitor**, **Zebra** et **Daniel** accèdent aux fichiers publics, sans les commandes de gestion du disque local. La corbeille locale n'apparaît que dans le bureau Admin.
+
+La séparation des deux lecteurs évite la confusion : un fichier importé dans le disque local ne se publie **jamais automatiquement** et reste sur le navigateur qui l'a importé.
