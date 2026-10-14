@@ -195,9 +195,8 @@ function mount(root){
   if(!clearRows.length)return;
   const cleared=clearRows.length,oldLevel=level;
   // Du bas vers le haut pour préserver les indices des lignes multiples.
-  for(let i=clearRows.length-1;i>=0;i--){
-   grid.splice(clearRows[i],1);grid.unshift(Array(W).fill(0));
-  }
+  for(let i=clearRows.length-1;i>=0;i--)grid.splice(clearRows[i],1);
+  for(let i=0;i<cleared;i++)grid.unshift(Array(W).fill(0));
   clearRows=[];clearDeadline=0;
   score+=([0,100,300,500,800][cleared]||800)*level;
   lines+=cleared;level=Math.floor(lines/10)+1;
