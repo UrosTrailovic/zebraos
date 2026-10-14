@@ -36,3 +36,51 @@
  .desktop-icons{gap:2px}
  .file-entry{min-height:86px}
 }
+
+/* ZebraOS boot sequence v0.7 — dark screen, studio logo, no CRT parody. */
+#power-screen,#boot-screen,#session-boot-screen{background:#000;color:#fff}
+#power-screen.active{display:grid;place-items:center}
+.zboot-power{
+  appearance:none;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:18px;width:144px;height:144px;border:1px solid #383838;background:#060606;
+  color:#eee;border-radius:50%;outline:none;
+  box-shadow:0 0 0 9px rgba(255,255,255,.012),0 0 65px rgba(255,255,255,.045);
+  font:12px "Courier New",monospace;letter-spacing:3px;
+  transition:border-color 170ms ease,box-shadow 170ms ease;
+  -webkit-tap-highlight-color:transparent
+}
+.zboot-power:hover,.zboot-power:focus-visible{border-color:#a7a7a7;box-shadow:0 0 0 9px rgba(255,255,255,.025),0 0 75px rgba(255,255,255,.09)}
+.zboot-power:active{background:#141414}
+.zboot-power-symbol{font:normal 62px Arial,sans-serif;line-height:1;color:#e8e8e8}
+.zboot-power-label{font-size:11px;color:#a6a6a6}
+#boot-screen.active,#session-boot-screen.active{display:grid;place-items:center}
+.zboot-logo-frame{width:min(76vw,820px);max-width:calc(100% - 40px);display:grid;place-items:center;animation:zboot-sequence 5.15s ease-in-out forwards}
+.zboot-logo{width:100%;height:auto;object-fit:contain;display:block;image-rendering:auto}
+@keyframes zboot-sequence{
+  0%,5%{opacity:0;transform:scale(.965);filter:blur(5px)}
+  28%{opacity:1;transform:scale(1);filter:blur(0)}
+  72%{opacity:1;transform:scale(1);filter:blur(0)}
+  89%,100%{opacity:0;transform:scale(1.015);filter:blur(1px)}
+}
+.zboot-skip{position:absolute;bottom:28px;right:30px;padding:10px 12px;border:0;color:#787878;background:transparent;font:10px "Courier New",monospace;letter-spacing:1.8px}
+.zboot-skip:hover,.zboot-skip:focus-visible{color:white;text-decoration:underline}
+.zboot-session-content{display:flex;flex-direction:column;align-items:center;gap:25px;animation:zboot-session-reveal 3.6s ease-in-out forwards}
+.zboot-session-logo{width:min(40vw,340px);max-width:calc(100% - 40px);height:auto;display:block;opacity:.86}
+#zboot-session-label{font:11px "Courier New",monospace;letter-spacing:3px;color:#a3a3a3}
+@keyframes zboot-session-reveal{
+  0%,8%{opacity:0;transform:translateY(7px)}
+  30%,74%{opacity:1;transform:none}
+  96%,100%{opacity:0;transform:none}
+}
+#login-screen.active{animation:zboot-login-reveal 500ms ease-out both}
+@keyframes zboot-login-reveal{from{opacity:0}to{opacity:1}}
+@media(max-width:700px){
+ .zboot-power{width:124px;height:124px}
+ .zboot-logo-frame{width:89vw}
+ .zboot-session-logo{width:68vw}
+ .zboot-skip{bottom:20px;right:14px}
+}
+@media(prefers-reduced-motion:reduce){
+ .zboot-logo-frame,.zboot-session-content,#login-screen.active{animation:none}
+ .zboot-power{transition:none}
+}
