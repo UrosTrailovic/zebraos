@@ -210,7 +210,27 @@ function stopBootSequences(){
   clearTimeout(bootTimer);clearTimeout(sessionTimer);
   bootAudio.pause();sessionAudio.pause();
 }
-function login(){var r=$("login-users");r.innerHTML="";users.forEach(function(u){var b=el("button","user-card");b.innerHTML='<span class="user-avatar"></span><span class="user-name"></span><span class="user-sub"></span>';b.children[0].textContent=u[3];b.children[1].textContent=u[1];b.children[2].textContent=u[2];b.onclick=function(){sfx("confirm");start(u[0])};r.appendChild(b)});show("login-screen")}
+function login(){
+ var r=$("login-users");r.innerHTML="";
+ users.forEach(function(u){
+  var b=el("button","user-card user-"+u[0]);
+  b.type="button";
+  b.innerHTML='<span class="user-avatar" aria-hidden="true"></span><span class="user-name"></span><span class="user-sub"></span>';
+  var avatar=b.children[0];
+  // Avatars rétro provisoires : les vraies photos pourront remplacer le contenu du cadre.
+  if(u[0]==="visitor"){
+    avatar.appendChild(el("span","user-silhouette"));
+  }else{
+    var icons={zebra:"zebraos",admin:"control-panel",daniel:"help"};
+    avatar.appendChild(osIcon(icons[u[0]]||"help",72));
+  }
+  b.children[1].textContent=u[1];
+  b.children[2].textContent=u[2]==="..."?"":u[2];
+  b.onclick=function(){sfx("confirm");start(u[0]);};
+  r.appendChild(b);
+ });
+ show("login-screen");
+}
 /* Studio operator login. A client-side password is for roleplay / casual access
    only, NOT real authentication. Never store confidential material in this site. */
 var adminPasswordDigest="e5be98a98f2a095123d497892f346cc70153c9d348f276a639fcbbe946183f30";
@@ -278,6 +298,15 @@ function start(id){
   beginSessionBoot(id);
 }
 function end(){sfx("switch");stopBootSequences();if(window.ZebraAMP)window.ZebraAMP.stop();adminApproved=false;adminLoginUnlocked=false;closeAll();session=null;show("power-screen")}
+function restartLogin(){
+ sfx("switch");
+ stopBootSequences();
+ if(window.ZebraAMP)window.ZebraAMP.stop();
+ adminApproved=false;adminLoginUnlocked=false;
+ closeAll();session=null;
+ show("power-screen");
+ powerOn();
+}
 function signout(){sfx("switch");stopBootSequences();if(window.ZebraAMP)window.ZebraAMP.stop();adminLoginUnlocked=false;closeAll();session=null;login()}
 function getStore(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function setStore(k,v){try{localStorage.setItem(k,v)}catch(e){}}
@@ -594,7 +623,7 @@ function player(){
 }
 function open(code){$("start-menu").classList.add("hidden");if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
 decorateSystemMenus();
-$("power-btn").onclick=powerOn;$("skip-boot").onclick=finishBoot;$("skip-session-boot").onclick=finishSessionBoot;$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
+$("power-btn").onclick=powerOn;$("skip-boot").onclick=finishBoot;$("skip-session-boot").onclick=finishSessionBoot;$("restart-login").onclick=restartLogin;$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
 $("start-button").onclick=function(e){e.stopPropagation();$("start-menu").classList.toggle("hidden")};document.querySelectorAll("[data-start]").forEach(function(b){b.onclick=function(){open(b.dataset.start)}});document.addEventListener("pointerdown",function(e){if(!e.target.closest("#start-menu")&&!e.target.closest("#start-button"))$("start-menu").classList.add("hidden")});
 /* A physical mouse click exists independently of what the computer does afterwards.
    Play the main click on touch pointerup (mobile user activation), and on mouse pointerdown.
