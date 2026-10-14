@@ -41,3 +41,14 @@ Les neuf fichiers OGG sélectionnés sont embarqués dans `sfx.js` pour fonction
 - La musique de Zebra Tape 2 est séparée des bruitages. Aucun master inédit n'est publié ici.
 
 Merci à Kenney pour les assets CC0. Aucune ressource audio Windows/Microsoft n'a été copiée.
+
+
+## Clic de souris mécanique (v0.4)
+
+- À chaque pression puis relâchement sur le site (souris **ou** écran tactile), un son physique distinct est joué.
+- Le son d'ouverture des fenêtres reste séparé et démarre légèrement après le clic pour que les deux soient perceptibles.
+- Les anciens clics électroniques sur certaines commandes ont été supprimés afin d'éviter les doublons.
+- **Control Panel → Sound Properties → Test mouse click** permet d'écouter le nouveau bruitage. L'option « System sounds » coupe tous les effets, comme auparavant.
+- Sources audio supplémentaires : **Kenney — UI Audio**, `mouseclick1.ogg` et `mouserelease1.ogg`, licence CC0 : https://kenney.nl/assets/ui-audio
+
+Le fichier `sfx.js` contient les deux sons en OGG intégrés, sans serveur ou CDN tiers.
