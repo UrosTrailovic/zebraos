@@ -642,7 +642,7 @@ function player(){
 }
 function openGame(name){
  var apps={
-  tetris:[window.ZebraTetris,"Tetris.exe",570,680],
+  tetris:[window.ZebraTetris,"Tetris.exe",735,770],
   snake:[window.ZebraSnake,"Snake.exe",790,650],
   paint:[window.ZebraPaint,"ZebraPaint.exe",850,640]
  };
