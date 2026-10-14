@@ -22,8 +22,15 @@ function element(tag,cls,text){
   return n;
 }
 function rounded(v,min,max){return Math.max(min,Math.min(max,v));}
-function connect(media){
+function connect(media, externalAnalyser){
   if(!media)return false;
+  if(externalAnalyser){
+    analyser=externalAnalyser;
+    spectrum=new Uint8Array(analyser.frequencyBinCount);
+    wave=new Uint8Array(analyser.fftSize);
+    mediaRef=media;
+    return true;
+  }
   var Ctx=window.AudioContext||window.webkitAudioContext;
   if(!Ctx)return false;
   try{
@@ -250,7 +257,7 @@ function mount(host,media,options){
   footer.appendChild(hint);footer.appendChild(connectButton);shell.appendChild(footer);
   host.appendChild(shell);
   function connectNow(){
-    var ok=connect(media);
+    var ok=connect(media,options&&options.analyser);
     connectButton.textContent=ok?"AUDIO LINKED":"RETRY AUDIO";
     led.classList.toggle("on",ok);
     if(ok)requestAnimationFrame(function(){if(audioContext.state==="suspended")audioContext.resume().catch(function(){});});
