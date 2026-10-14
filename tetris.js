@@ -45,7 +45,7 @@ function mount(root){
  let hold=make("canvas","zg-mini");hold.width=96;hold.height=96;holdBox.appendChild(hold);right.appendChild(holdBox);
  main.appendChild(right);wrap.appendChild(main);
  let controls=make("div","zg-buttons");
- const start=btn("▶ Jouer",()=>{if(over||!current)reset();paused=!paused;updateStatus();});
+ const start=btn("▶ Jouer",()=>{if(over||!current){reset();return;}paused=!paused;updateStatus();});
  const restart=btn("↻ Recommencer",()=>reset());
  controls.append(start,restart);wrap.appendChild(controls);
  let pad=make("div","zg-control-pad");
