@@ -53,7 +53,7 @@ function mount(root){
  // Bande séparatrice issue de la vraie texture de bordure fournie avec le jeu.
  wrap.appendChild(make("div","zt-panel-divider"));
  let controls=make("div","zg-buttons zt-buttons");
- const start=btn("JOUER",()=>{sound("ui");if(over||!current){reset();return;}menuOpen=false;paused=!paused;updateStatus();});
+ const start=btn("JOUER",()=>{sound("ui");if(over||(!current&&!clearRows.length)){reset();return;}menuOpen=false;paused=!paused;updateStatus();});
  start.classList.add("zt-image-button","zt-play");
  const restart=btn("RECOMMENCER",()=>{sound("ui");reset();});
  restart.classList.add("zt-image-button","zt-restart");
