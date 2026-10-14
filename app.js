@@ -641,9 +641,17 @@ function player(){
  window.ZebraAMP.open();
 }
 function openGame(name){
- var apps={tetris:[window.ZebraTetris,"Tetris.exe",490,690],snake:[window.ZebraSnake,"Snake.exe",490,655],paint:[window.ZebraPaint,"ZebraPaint.exe",850,640]};
+ var apps={
+  tetris:[window.ZebraTetris,"Tetris.exe",570,680],
+  snake:[window.ZebraSnake,"Snake.exe",540,650],
+  paint:[window.ZebraPaint,"ZebraPaint.exe",850,640]
+ };
  var entry=apps[name];if(!entry||!entry[0])return;
  var root=windowBox(name,entry[1],Math.min(entry[2],window.innerWidth-16),Math.min(entry[3],window.innerHeight-50));
+ if(name==="tetris"||name==="snake")root.classList.add("zebra-game-body");
+ // Réouvrir une fenêtre existante ne doit plus réinitialiser une partie en cours.
+ if(root._zebraApp===name)return;
+ root._zebraApp=name;
  entry[0].mount(root);
 }
 function open(code){$("start-menu").classList.add("hidden");if(code==="tetris"||code==="snake"||code==="paint")openGame(code);else if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="datetime")dateTime();else if(code==="welcome")welcome();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
