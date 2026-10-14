@@ -119,7 +119,7 @@ function mount(host,path,options){
   tool("⌂ C:",function(){options.explorer("root");});
   tool("↑",function(){mount(host,segments.length<=1?drive:segments.slice(0,-1).join("/"),options);});
   tool("↻ Refresh",function(){mount(host,path,options);});
-  tool("+ Ajouter",function(){openExternal(uploadUrl(path));});
+  if(options.canUpload)tool("+ Ajouter",function(){openExternal(uploadUrl(path));});
   host.appendChild(toolbar);
   host.appendChild(element("div","folder-path","C:\\STUDIO"+(relative?"\\"+relative:"")+"  [GitHub LIVE]"));
   host.appendChild(element("p","github-drive-hint","Fichiers publics du dépôt. Ajoute-les sur GitHub, puis clique Refresh pour les voir."));
