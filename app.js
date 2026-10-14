@@ -175,11 +175,52 @@ function decorateSystemMenus(){
   if(tray){tray.textContent="";tray.appendChild(osIcon("network",16));}
 }
 function el(tag,cls,txt){var n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;}
-function show(id){["power-screen","login-screen","desktop-screen"].forEach(function(s){$(s).classList.toggle("active",s===id)});}
+function show(id){["power-screen","boot-screen","login-screen","session-boot-screen","desktop-screen"].forEach(function(s){$(s).classList.toggle("active",s===id)});}
+/* Power / studio startup audio. The user clicks POWER so playback is permitted on phones. */
+var bootAudio=new Audio("assets/boot/startup.mp3");
+var sessionAudio=new Audio("assets/boot/sessionstartup.mp3");
+bootAudio.preload="auto";sessionAudio.preload="auto";
+var bootTimer=0,sessionTimer=0,booting=false,sessionBooting=false,pendingSession=null;
+function playBootTrack(track){
+  try {track.pause();track.currentTime=0;var p=track.play();if(p&&p.catch)p.catch(function(){});}catch(e){}
+}
+function finishBoot(){
+  if(!booting)return;
+  booting=false;clearTimeout(bootTimer);
+  bootAudio.pause();login();
+}
+function powerOn(){
+  if(booting)return;
+  booting=true;
+  show("boot-screen");
+  playBootTrack(bootAudio);
+  bootTimer=setTimeout(finishBoot,5200);
+}
+function finishSessionBoot(){
+  if(!sessionBooting)return;
+  sessionBooting=false;clearTimeout(sessionTimer);sessionAudio.pause();
+  session=pendingSession;pendingSession=null;
+  adminApproved=false;closeAll();
+  setWall(getStore("zebra.wall."+session)||session);desk();show("desktop-screen");
+}
+function beginSessionBoot(id){
+  if(sessionBooting)return;
+  pendingSession=id;sessionBooting=true;
+  var name=users.filter(function(u){return u[0]===id})[0];
+  $("zboot-session-label").textContent="WELCOME "+(name?name[1].toUpperCase():"USER");
+  show("session-boot-screen");
+  playBootTrack(sessionAudio);
+  sessionTimer=setTimeout(finishSessionBoot,3600);
+}
+function stopBootSequences(){
+  booting=false;sessionBooting=false;pendingSession=null;
+  clearTimeout(bootTimer);clearTimeout(sessionTimer);
+  bootAudio.pause();sessionAudio.pause();
+}
 function login(){var r=$("login-users");r.innerHTML="";users.forEach(function(u){var b=el("button","user-card");b.innerHTML='<span class="user-avatar"></span><span class="user-name"></span><span class="user-sub"></span>';b.children[0].textContent=u[3];b.children[1].textContent=u[1];b.children[2].textContent=u[2];b.onclick=function(){sfx("confirm");start(u[0])};r.appendChild(b)});show("login-screen")}
-function start(id){session=id;adminApproved=false;closeAll();setWall(getStore("zebra.wall."+id)||id);desk();show("desktop-screen")}
-function end(){sfx("switch");music.pause();adminApproved=false;closeAll();session=null;show("power-screen")}
-function signout(){sfx("switch");music.pause();closeAll();session=null;login()}
+function start(id){beginSessionBoot(id)}
+function end(){sfx("switch");stopBootSequences();music.pause();adminApproved=false;closeAll();session=null;show("power-screen")}
+function signout(){sfx("switch");stopBootSequences();music.pause();closeAll();session=null;login()}
 function getStore(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function setStore(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 function setWall(name,custom){var w=$("wallpaper");w.className="wallpaper wallpaper-"+name;w.style.backgroundImage=custom?'url("'+custom+'")':"";w.style.backgroundSize=custom?"cover":"";if(session&&!custom)setStore("zebra.wall."+session,name)}
@@ -252,7 +293,7 @@ var list=r.querySelector("[data-list]");tracks.forEach(function(n,i){var b=el("b
 r.querySelector("[data-play]").onclick=function(){if(selectedTrack<0)pickTrack(0);else if(music.paused){music.play().catch(function(){})}else music.pause();renderAmp()};r.querySelector("[data-stop]").onclick=function(){music.pause();music.currentTime=0;renderAmp()};r.querySelector("[data-prev]").onclick=function(){pickTrack((selectedTrack+8)%9)};r.querySelector("[data-next]").onclick=function(){pickTrack((selectedTrack+1)%9)};r.querySelector("[data-volume]").oninput=function(e){music.volume=e.target.value/100};r.querySelector("[data-seek]").oninput=function(e){if(music.duration)music.currentTime=e.target.value*music.duration/100};r.querySelector("[data-import]").onclick=function(){$("file-music").click()};music.volume=.7;if(index!==undefined)pickTrack(index);else renderAmp()}
 function open(code){$("start-menu").classList.add("hidden");if(code==="amp")player();else if(code==="settings")settings();else if(code==="about")about();else if(code==="notepad")notepad("notes");else if(code==="viewer")viewer("cover");else if(code.indexOf("explorer:")===0)explorer(code.split(":")[1]);else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
 decorateSystemMenus();
-$("power-btn").onclick=function(){sfx("switch");login()};$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
+$("power-btn").onclick=powerOn;$("skip-boot").onclick=finishBoot;$("skip-session-boot").onclick=finishSessionBoot;$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
 $("start-button").onclick=function(e){e.stopPropagation();$("start-menu").classList.toggle("hidden")};document.querySelectorAll("[data-start]").forEach(function(b){b.onclick=function(){open(b.dataset.start)}});document.addEventListener("pointerdown",function(e){if(!e.target.closest("#start-menu")&&!e.target.closest("#start-button"))$("start-menu").classList.add("hidden")});
 /* A physical mouse click exists independently of what the computer does afterwards.
    Play the main click on touch pointerup (mobile user activation), and on mouse pointerdown.
