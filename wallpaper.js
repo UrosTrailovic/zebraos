@@ -41,12 +41,14 @@ function el(tag,cls,label){
 }
 function key(name){return "zebra.wallpaper.v2."+name;}
 function read(name){
-  var state={imageId:null,mode:"fill"};
+  var state={imageId:null,mode:"fill",posX:50,posY:50};
   try{
     var saved=JSON.parse(localStorage.getItem(key(name))||"null");
     if(saved&&typeof saved==="object"){
       if(typeof saved.imageId==="string"&&saved.imageId.length<100)state.imageId=saved.imageId;
       if(modes.some(function(m){return m[0]===saved.mode}))state.mode=saved.mode;
+      if(Number.isFinite(saved.posX))state.posX=Math.max(0,Math.min(100,saved.posX));
+      if(Number.isFinite(saved.posY))state.posY=Math.max(0,Math.min(100,saved.posY));
     }
   }catch(e){}
   return state;
@@ -94,7 +96,7 @@ function loadOne(id){
   if(cache[id])return Promise.resolve(cache[id]);
   return query("get",id).then(function(item){if(item)cache[id]=item;return item;});
 }
-function paint(target,account,data,mode){
+function paint(target,account,data,mode,posX,posY){
   if(target.id==="wallpaper")target.className="wallpaper wallpaper-"+account;
   else target.className="wallpaper-preview wallpaper-"+account;
   target.style.backgroundImage="";
@@ -115,7 +117,7 @@ function paint(target,account,data,mode){
   };
   var opts=settings[mode]||settings.fill;
   target.style.backgroundSize=opts[0];
-  target.style.backgroundPosition=opts[1];
+  target.style.backgroundPosition=(mode==="tile"?"left top":((posX==null?50:posX)+"% "+(posY==null?50:posY)+"%"));
   target.style.backgroundRepeat=opts[2];
 }
 function apply(name){
@@ -124,17 +126,17 @@ function apply(name){
   var token=++applyToken;
   var cfg=read(name),wall=document.getElementById("wallpaper");
   if(!wall)return;
-  paint(wall,name,builtIn(name),cfg.mode);
+  paint(wall,name,builtIn(name),cfg.mode,cfg.posX,cfg.posY);
   if(name==="zebra"&&!cfg.imageId){
     checkHiRes().then(function(available){
       if(available&&token===applyToken&&currentSession==="zebra"&&!read(name).imageId)
-        paint(wall,name,builtIn(name),read(name).mode);
+        paint(wall,name,builtIn(name),read(name).mode,read(name).posX,read(name).posY);
     });
   }
   if(!cfg.imageId)return;
   loadOne(cfg.imageId).then(function(item){
     if(token!==applyToken||currentSession!==name)return;
-    if(item&&item.data)paint(wall,name,item.data,cfg.mode);
+    if(item&&item.data)paint(wall,name,item.data,cfg.mode,cfg.posX,cfg.posY);
     else {cfg.imageId=null;save(name,cfg);paint(wall,name,builtIn(name),cfg.mode);}
   }).catch(function(){
     if(token===applyToken)announce("Impossible de retrouver le fond d'écran enregistré.",true);
@@ -162,7 +164,7 @@ function setMode(mode){
 }
 function previewImage(data,mode){
   var preview=document.getElementById("wallpaper-preview");
-  if(preview&&currentSession)paint(preview,currentSession,data,mode);
+  if(preview&&currentSession){var cfg=read(currentSession);paint(preview,currentSession,data,mode,cfg.posX,cfg.posY);}
 }
 function showGallery(target){
   if(!target||!target.isConnected||!currentSession)return;
@@ -305,6 +307,19 @@ function mount(parent){
   select.value=cfg.mode;
   select.onchange=function(){setMode(select.value);};
   controls.appendChild(select);
+  var positionGroup=el("div","wallpaper-position-group");
+  positionGroup.appendChild(el("span","wallpaper-label-setting","Position de l’image"));
+  [["posX","Horizontal", "↔"],["posY","Vertical","↕"]].forEach(function(spec){
+    var line=el("label","wallpaper-position-line");
+    line.appendChild(el("span","",spec[2]+" "+spec[1]));
+    var slider=el("input");slider.type="range";slider.min="0";slider.max="100";slider.step="1";slider.value=String(cfg[spec[0]]);
+    var value=el("output","",slider.value+" %");
+    slider.oninput=function(){var state=read(currentSession);state[spec[0]]=Number(slider.value);save(currentSession,state);value.textContent=slider.value+" %";apply(currentSession);previewImage(selectedItem&&selectedItem.data||builtIn(currentSession),state.mode);};
+    line.appendChild(slider);line.appendChild(value);positionGroup.appendChild(line);
+  });
+  var reset=el("button","classic-button","Recentrer l’image");
+  reset.type="button";reset.onclick=function(){var state=read(currentSession);state.posX=50;state.posY=50;save(currentSession,state);apply(currentSession);mount(parent);};
+  positionGroup.appendChild(reset);controls.appendChild(positionGroup);
   controls.appendChild(el("p","wallpaper-hint","« Étendre » correspond à l'affichage sur plusieurs moniteurs. Sur ce bureau unique, il utilise Remplir."));
   stage.appendChild(controls);
   parent.appendChild(stage);
