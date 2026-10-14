@@ -5,9 +5,7 @@
 var $=function(id){return document.getElementById(id)};
 var users=[["visitor","Visiteur","Session publique","V"],["zebra","Zebra","Session du studio","Z"],["admin","Admin","Gestion du studio","A"],["daniel","Daniel","...","?"]];
 var wallpaper={visitor:"visitor",zebra:"zebra",admin:"admin",daniel:"daniel"};
-var session=null,opened={},z=20,seq=0,selectedTrack=-1,localTracks=[],tracks=[],adminApproved=false,adminLoginUnlocked=false;
-for(var t=1;t<=9;t++)tracks.push(("0"+t).slice(-2)+" - SANS TITRE");
-var music=new Audio(),musicLoaded=false;
+var session=null,opened={},z=20,seq=0,adminApproved=false,adminLoginUnlocked=false;
 /* Local filesystem replaces the former demo-only filenames. */
 var docs={
 readme:"ZEBRA RECORD // ORDINATEUR DU STUDIO\n\nBienvenue sur ZebraOS.\n\nCette machine contient ZEBRA TAPE 2, une map Counter-Strike 1.6, des documents et des archives du studio.\n\nExplore les fichiers du studio. Ne formate pas C:.\n\nwww.zebratape2.net",
@@ -279,8 +277,8 @@ function start(id){
   if(id==="admin"&&!adminLoginUnlocked){requestAdminPassword();return;}
   beginSessionBoot(id);
 }
-function end(){sfx("switch");stopBootSequences();music.pause();if(window.ZebraAMP)window.ZebraAMP.stop();adminApproved=false;adminLoginUnlocked=false;closeAll();session=null;show("power-screen")}
-function signout(){sfx("switch");stopBootSequences();music.pause();if(window.ZebraAMP)window.ZebraAMP.stop();adminLoginUnlocked=false;closeAll();session=null;login()}
+function end(){sfx("switch");stopBootSequences();if(window.ZebraAMP)window.ZebraAMP.stop();adminApproved=false;adminLoginUnlocked=false;closeAll();session=null;show("power-screen")}
+function signout(){sfx("switch");stopBootSequences();if(window.ZebraAMP)window.ZebraAMP.stop();adminLoginUnlocked=false;closeAll();session=null;login()}
 function getStore(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function setStore(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 function setWall(name,custom){var w=$("wallpaper");w.className="wallpaper wallpaper-"+name;w.style.backgroundImage=custom?'url("'+custom+'")':"";w.style.backgroundSize=custom?"cover":"";if(session&&!custom)setStore("zebra.wall."+session,name)}
