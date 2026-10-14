@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-14T11:14:36.963179+00:00",
+  "generatedAt": "2026-10-14T11:15:13.656411+00:00",
   "entries": [
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
@@ -66,6 +66,21 @@
       "path": "STUDIO/BUREAU/Zebra Tape 2/Son/5_I_wanna_dance.mp3",
       "type": "file",
       "size": 8031175
+    },
+    {
+      "path": "STUDIO/BUREAU/Zebra Tape 2/Son/6_Stouse.mp3",
+      "type": "file",
+      "size": 5245531
+    },
+    {
+      "path": "STUDIO/BUREAU/Zebra Tape 2/Son/7_Loner.mp3",
+      "type": "file",
+      "size": 6205531
+    },
+    {
+      "path": "STUDIO/BUREAU/Zebra Tape 2/Son/8_Same_old_Zebra.mp3",
+      "type": "file",
+      "size": 8292571
     }
   ]
 }
