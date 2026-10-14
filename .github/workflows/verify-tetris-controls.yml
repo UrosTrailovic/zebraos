@@ -73,6 +73,12 @@ jobs:
                 const logo=$(".zt-logo").getBoundingClientRect();
                 report.boardCentered=Math.abs((board.left+board.right)/2-(main.left+main.right)/2)<3;
                 report.scoreLeft=hud.right<=board.left-2&&hud.left>=main.left-2;
+                const previews=$(".zg-side-previews").getBoundingClientRect();
+                report.previewRight=previews.left>=board.right+2&&previews.right<=main.right+2;
+                report.panelsSeparated=$(".zg-side-stats").querySelectorAll(".zg-stat").length===4
+                  &&$(".zg-side-stats").querySelectorAll(".zg-preview-wrap").length===0
+                  &&$(".zg-side-previews").querySelectorAll(".zg-preview-wrap").length===2
+                  &&$(".zg-side-previews").querySelectorAll(".zg-stat").length===0;
                 report.boardFits=board.height>350&&board.bottom<=main.bottom+2;
                 report.logoReadable=logo.height>=58&&logo.width>=170;
                 root._zebraDispose();
