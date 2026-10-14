@@ -128,3 +128,11 @@
   .wallpaper-thumb-photo{height:62px}
   .wallpaper-footer{align-items:flex-start;flex-direction:column}
 }
+
+/* ZebraOS v0.81 — explicit per-thumbnail wallpaper deletion. */
+.wallpaper-thumb-wrap{position:relative;min-width:0}
+.wallpaper-thumb-wrap>.wallpaper-thumb{width:100%}
+.wallpaper-thumb-delete{position:absolute;top:1px;right:1px;width:25px;height:25px;display:flex;align-items:center;justify-content:center;border:2px outset #fafafa;background:#cbcbcb;color:#801b1b;font:bold 20px/1 Tahoma,Arial,sans-serif;z-index:2;padding:0;cursor:pointer}
+.wallpaper-thumb-delete:hover{background:#aa3b32;color:#fff}
+.wallpaper-thumb-delete:active{border-style:inset}
+.wallpaper-delete-hint{margin:4px 0 8px}
