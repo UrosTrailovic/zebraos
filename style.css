@@ -389,3 +389,139 @@
  .window.maximized{left:4px!important;top:3px!important;width:calc(100vw - 8px)!important;height:calc(100dvh - 45px)!important}
  .titlebar{cursor:default}
 }
+
+/* ZebraOS connexion XP v3.2 — vraie grille horizontale, sans cartes.
+   Logo centré → instruction → quatre grandes vignettes → bande d'alimentation. */
+#login-screen{
+  background:linear-gradient(110deg,#80a7ef 0%,#6f98e9 22%,#5f87dc 70%,#5984d6 100%);
+  color:#fff;
+  isolation:isolate;
+}
+#login-screen::after{
+  content:"";position:absolute;inset:0;z-index:5;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent 0px,transparent 3px,rgba(25,36,107,.065) 3px,rgba(25,36,107,.065) 4px);
+  opacity:.48;
+}
+#login-screen .login-top-band{
+ position:absolute;left:0;right:0;top:0;height:clamp(30px,6.2vh,56px);
+ background:linear-gradient(180deg,#07319e,#0634af);
+ border-bottom:2px solid #a9ccff;
+ box-shadow:0 1px 0 #4578df;
+}
+#login-screen .login-content{
+ position:absolute;left:50%;top:45%;
+ transform:translate(-50%,-50%);
+ width:min(94vw,880px);max-height:calc(100% - 150px);
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:0;text-align:center;
+}
+#login-screen .login-header{
+ position:static;display:flex;align-items:center;justify-content:center;
+ margin:0 0 15px;width:min(570px,80vw);height:auto;
+}
+#login-screen .login-brand-logo{
+ display:block;width:min(460px,72vw);height:auto;max-height:116px;
+ object-fit:contain;mix-blend-mode:screen;filter:drop-shadow(0 2px 2px rgba(16,48,136,.2));
+}
+#login-screen .login-prompt{
+ margin:0 0 38px;max-width:90%;
+ font:17px/1.4 Tahoma,Arial,sans-serif;
+ text-shadow:0 1px 1px #274b93;
+ color:#fff;
+}
+#login-screen .login-users{
+ display:flex;flex-wrap:nowrap;align-items:flex-start;justify-content:center;
+ width:100%;gap:clamp(14px,3.8vw,60px);
+ padding:4px 8px 12px;overflow-x:auto;overflow-y:hidden;
+ scrollbar-width:thin;scrollbar-color:#d6e7ff transparent;
+}
+#login-screen .user-card{
+ flex:0 0 clamp(118px,15vw,150px);
+ padding:3px;min-height:0;display:flex;flex-direction:column;align-items:center;
+ gap:7px;color:white;border:0;outline:none;border-radius:0;box-shadow:none;
+ background:transparent;cursor:pointer;transition:transform .13s ease;
+ font-family:Tahoma,Arial,sans-serif;
+}
+#login-screen .user-card:hover,#login-screen .user-card:focus-visible{
+ background:transparent;border:0;transform:translateY(-3px);
+}
+#login-screen .user-avatar{
+ width:clamp(92px,10vw,116px);height:clamp(92px,10vw,116px);
+ border:3px solid #f1f6ff;outline:1px solid #3154a3;
+ box-shadow:0 2px 5px rgba(18,36,95,.45), inset 0 0 0 2px rgba(255,255,255,.2);
+ background:linear-gradient(140deg,#a9c7f5 0%,#4477cf 75%,#2952ac 100%);
+ display:flex;align-items:center;justify-content:center;
+ position:relative;overflow:hidden;
+}
+#login-screen .user-avatar:after{
+ content:"";position:absolute;inset:0;pointer-events:none;
+ background:linear-gradient(125deg,rgba(255,255,255,.35),transparent 45%);
+}
+#login-screen .user-avatar .os-icon-graphic{
+ flex:0 0 72px;image-rendering:auto;
+ filter:drop-shadow(1px 2px 1px #244a8e88);
+}
+#login-screen .user-silhouette{display:block;width:88px;height:88px;position:relative;overflow:hidden}
+#login-screen .user-silhouette:before{
+ content:"";position:absolute;top:11px;left:30px;width:29px;height:29px;
+ border-radius:50%;background:#fff;box-shadow:0 1px 3px #2f58a280;
+}
+#login-screen .user-silhouette:after{
+ content:"";position:absolute;top:47px;left:7px;width:75px;height:68px;
+ border-radius:40px 40px 13px 13px;background:#fff;
+}
+#login-screen .user-name{
+ color:#fff;font:700 17px/1.2 Tahoma,Arial,sans-serif;
+ text-shadow:0 1px 2px #284b90;margin-top:5px;
+}
+#login-screen .user-sub{
+ color:#eef4ff;font:11px/1.3 Tahoma,Arial,sans-serif;
+ text-shadow:0 1px #36599e;min-height:14px;letter-spacing:0;
+}
+#login-screen .user-card:hover .user-avatar,#login-screen .user-card:focus-visible .user-avatar{
+ border-color:#fff2a3;outline-color:#e7a340;
+ box-shadow:0 0 0 2px rgba(255,246,187,.45),0 3px 7px #2b479a7a;
+}
+#login-screen .login-footer{
+ position:absolute;left:0;right:0;bottom:0;height:clamp(68px,11.5vh,110px);
+ background:linear-gradient(180deg,#354cae,#273a93);
+ border-top:2px solid #f0bb68;
+ display:flex;align-items:center;justify-content:flex-start;
+ padding:0 clamp(14px,5vw,72px);box-sizing:border-box;
+}
+#login-screen .login-power-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+#login-screen .login-power-button{
+ border:1px solid #8da7e9;background:rgba(18,38,124,.28);color:white;
+ font:12px Tahoma,Arial,sans-serif;padding:9px 12px;cursor:pointer;
+ border-radius:2px;
+}
+#login-screen .login-power-button:hover,#login-screen .login-power-button:focus-visible{
+ background:#486bc5;outline:1px solid #dae7ff;
+}
+@media(max-width:700px){
+ #login-screen .login-content{top:43%;width:100%;max-height:calc(100% - 115px)}
+ #login-screen .login-header{margin-bottom:12px}
+ #login-screen .login-brand-logo{width:min(300px,76vw);max-height:75px}
+ #login-screen .login-prompt{font-size:13px;margin:0 12px 24px}
+ #login-screen .login-users{justify-content:space-evenly;gap:5px;padding:4px 4px 12px}
+ #login-screen .user-card{flex:0 0 min(23.5vw,110px);padding:1px;gap:6px}
+ #login-screen .user-avatar{width:clamp(58px,18vw,83px);height:clamp(58px,18vw,83px);border-width:2px}
+ #login-screen .user-avatar .os-icon-graphic{transform:scale(.78)}
+ #login-screen .user-silhouette{transform:scale(.72);flex:none}
+ #login-screen .user-name{font-size:12px;margin-top:2px}
+ #login-screen .user-sub{font-size:9px;line-height:1.2}
+ #login-screen .login-footer{justify-content:center;padding:8px}
+ #login-screen .login-power-actions{gap:7px}
+ #login-screen .login-power-button{padding:8px 10px;font-size:11px}
+}
+@media(max-height:560px){
+ #login-screen .login-content{top:45%}
+ #login-screen .login-header{margin-bottom:6px}
+ #login-screen .login-brand-logo{max-height:68px}
+ #login-screen .login-prompt{margin-bottom:12px;font-size:12px}
+ #login-screen .user-avatar{width:66px;height:66px}
+ #login-screen .user-card{gap:4px}
+ #login-screen .user-name{font-size:12px;margin:0}
+ #login-screen .user-sub{font-size:9px}
+ #login-screen .login-footer{height:58px}
+}
