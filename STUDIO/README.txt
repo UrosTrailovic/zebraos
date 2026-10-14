@@ -1,17 +1,19 @@
-ZEBRA RECORD — STUDIO DRIVE
-===========================
+ZEBRA RECORD — FICHIERS DU STUDIO
+================================
 
-Ce dossier GitHub est lu automatiquement par ZebraOS.
+Ce dossier contient les fichiers publics de ZebraOS.
 
-Pour ajouter du contenu :
-1. Va sur GitHub dans UrosTrailovic/zebraos
-2. Ouvre STUDIO (ou un sous-dossier)
-3. Add file → Upload files → Commit changes
-4. Sur zebratape2.net, ouvre My Computer → STUDIO (GITHUB)
-5. Clique Refresh pour afficher les nouveaux fichiers.
+Pour publier un nouveau contenu :
+1. Connecte-toi à GitHub avec ton compte.
+2. Ouvre le dépôt UrosTrailovic/zebraos, puis le dossier STUDIO.
+3. Crée un sous-dossier ou utilise « Add file / Upload files ».
+4. Confirme l'envoi avec « Commit changes ».
+5. Attends la mise à jour automatique de l'index, puis actualise ZebraOS.
 
-Types consultables : images JPG/PNG/WEBP/GIF, MP3/WAV/OGG, TXT/MD.
-Types téléchargeables : ZIP, BSP, PDF et autres.
+Les fichiers ajoutés aux BROUILLONS du gestionnaire Admin restent
+dans le navigateur. Ils ne sont pas publiés automatiquement.
 
-Important : tout ce qui est déposé ici est PUBLIC puisque le dépôt est public.
-Ne jamais y mettre de données personnelles ou de fichiers confidentiels.
+ATTENTION : les fichiers présents dans ce dépôt sont accessibles publiquement.
+N'y dépose jamais de documents confidentiels.
+
+Ce document est destiné à l'administration du studio.
