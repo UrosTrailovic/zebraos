@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-14T10:36:38.484679+00:00",
+  "generatedAt": "2026-10-14T11:13:39.976092+00:00",
   "entries": [
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
@@ -41,6 +41,11 @@
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2/Son",
       "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Zebra Tape 2/Son/1_Doma_Intro.mp3",
+      "type": "file",
+      "size": 5817758
     }
   ]
 }
