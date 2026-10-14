@@ -10,7 +10,7 @@ for(var t=1;t<=9;t++)tracks.push(("0"+t).slice(-2)+" - SANS TITRE");
 var music=new Audio(),musicLoaded=false;
 /* Local filesystem replaces the former demo-only filenames. */
 var docs={
-readme:"ZEBRA RECORD // STUDIO COMPUTER\n\nBienvenue sur ZebraOS.\n\nCette machine contient ZEBRA TAPE 2, une map Counter-Strike 1.6, des documents et des archives du studio.\n\nExplore les fichiers du studio. Ne formate pas C:.\n\nwww.zebratape2.net",
+readme:"ZEBRA RECORD // ORDINATEUR DU STUDIO\n\nBienvenue sur ZebraOS.\n\nCette machine contient ZEBRA TAPE 2, une map Counter-Strike 1.6, des documents et des archives du studio.\n\nExplore les fichiers du studio. Ne formate pas C:.\n\nwww.zebratape2.net",
 album:"ZEBRA TAPE 2\nDÉCEMBRE 2026\n\nLISTE DES TITRES À CONFIRMER\n9 MORCEAUX\n\nwww.zebratape2.net",
 install:"SADATE — COUNTER-STRIKE 1.6\n\nLa map sera téléchargeable ici une fois terminée.\nFichier ZIP et textures à venir.",
 daniel:"DANIEL\n\nCe fichier n'est pas à toi.\n\nPourquoi tu l'ouvres ?\n\n-- Daniel",
@@ -350,10 +350,10 @@ function studioManager(){
   "Crée des dossiers et importe tes images, MP3 ou documents. Ils restent sur CE navigateur et ne sont jamais visibles aux visiteurs.",
   "OUVRIR MES BROUILLONS",function(){explorer("local:root");});
  section(2,"VOIR LE SITE PUBLIC",
-  "Voici exactement la bibliothèque accessible depuis les sessions Zebra, Visitor et Daniel. Les dossiers vides restent vides tant que rien n'est publié.",
+  "Voici la bibliothèque accessible depuis les sessions Zebra, Visiteur et Daniel. Les dossiers vides n’y apparaissent pas.",
   "VOIR LES FICHIERS PUBLICS",function(){explorer("github:STUDIO");});
  section(3,"PUBLIER MES FICHIERS",
-  "Pour l'instant, la publication est manuelle : télécharge tes fichiers du disque local si besoin, ajoute-les au dossier STUDIO sur GitHub et valide le commit.",
+  "La publication est manuelle : télécharge tes brouillons si nécessaire, ajoute-les dans le dossier STUDIO sur GitHub et valide l’enregistrement. L’index sera automatiquement actualisé.",
   "OUVRIR GITHUB",function(){window.open("https://github.com/UrosTrailovic/zebraos/tree/main/STUDIO","_blank","noopener,noreferrer");});
  r.appendChild(el("p","manager-disclaimer","Le mot de passe Admin n'est pas une sécurité serveur. Évite les fichiers confidentiels dans ce site."));
 }
