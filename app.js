@@ -388,6 +388,7 @@ function studioManager(){
  root.appendChild(el("p","manager-warning","Pas de dossiers de démonstration. Ajoute uniquement ce que tu veux montrer sur le bureau."));
  function group(title,body,label,fn){
   var card=el("div","manager-card");
+  card.appendChild(el("div","manager-step-number",title.charAt(0)));
   var details=el("div","manager-step-content");
   details.appendChild(el("h3","",title));
   details.appendChild(el("p","",body));
