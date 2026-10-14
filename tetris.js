@@ -58,8 +58,58 @@ function mount(root){
  menu.classList.add("zt-image-button","zt-menu");
  let menuOpen=false;
  controls.append(start,restart,menu);wrap.appendChild(controls);
- let pad=make("div","zg-control-pad");
- [["◀",()=>move(-1,0)],["⟳",rotate],["▶",()=>move(1,0)],["▼",()=>soft()],["⤓",hardDrop],["Réserve",holdPiece]].forEach(([label,action])=>pad.appendChild(btn(label,action)));
+ // Manette tactile façon console portable : une croix 4 directions + A/B.
+ // Tous les éléments sont en CSS, sans image générée ni texture supplémentaire.
+ let pad=make("div","zt-handheld");
+ pad.setAttribute("aria-label","Commandes tactiles Tetris");
+ let dpad=make("div","zt-dpad"),cross=make("div","zt-cross");
+ let repeatDelay=null,repeatTimer=null,heldControl=null;
+ function clearHeld(){
+  if(repeatDelay!==null){clearTimeout(repeatDelay);repeatDelay=null;}
+  if(repeatTimer!==null){clearInterval(repeatTimer);repeatTimer=null;}
+  heldControl=null;
+ }
+ function control(label,cls,action,repeat){
+  let b=make("button","zt-control "+cls,label);
+  b.type="button";b.setAttribute("aria-label",label);
+  b.onclick=function(e){if(e.detail===0)action();}; // Activation clavier ; ne double pas le toucher.
+  b.addEventListener("pointerdown",function(e){
+   if(e.button!==undefined&&e.button!==0)return;
+   e.preventDefault();
+   clearHeld();heldControl=b;action();
+   if(repeat){
+    repeatDelay=setTimeout(function(){
+     repeatDelay=null;repeatTimer=setInterval(function(){if(active&&!paused&&!over)action();},95);
+    },270);
+   }
+   try{b.setPointerCapture(e.pointerId);}catch(_){}
+  });
+  b.addEventListener("pointerup",function(){if(heldControl===b)clearHeld();});
+  b.addEventListener("pointercancel",function(){if(heldControl===b)clearHeld();});
+  b.addEventListener("lostpointercapture",function(){if(heldControl===b)clearHeld();});
+  b.addEventListener("contextmenu",function(e){e.preventDefault();});
+  return b;
+ }
+ cross.appendChild(make("div","zt-cross-shape"));
+ cross.appendChild(control("Haut — tourner","zt-dir zt-dir-up",rotate,false));
+ cross.appendChild(control("Bas — descendre","zt-dir zt-dir-down",soft,true));
+ cross.appendChild(control("Gauche","zt-dir zt-dir-left",function(){move(-1,0);},true));
+ cross.appendChild(control("Droite","zt-dir zt-dir-right",function(){move(1,0);},true));
+ cross.appendChild(make("span","zt-cross-center"));
+ dpad.appendChild(cross);
+ dpad.appendChild(make("span","zt-control-caption","DIRECTION"));
+ pad.appendChild(dpad);
+ let actionSide=make("div","zt-action-side"),ab=make("div","zt-ab");
+ let bAction=control("B — poser la pièce","zt-ab-button zt-b",hardDrop,false);
+ let aAction=control("A — tourner la pièce","zt-ab-button zt-a",rotate,false);
+ bAction.textContent="B";aAction.textContent="A";
+ ab.appendChild(bAction);ab.appendChild(aAction);
+ actionSide.appendChild(ab);
+ let select=control("SELECT — réserve","zt-select",holdPiece,false);
+ select.textContent="SELECT";
+ actionSide.appendChild(select);
+ actionSide.appendChild(make("span","zt-control-caption","B : POSER  ·  A : TOURNER"));
+ pad.appendChild(actionSide);
  wrap.appendChild(pad);
  wrap.appendChild(make("div","zg-help","← → déplacer · ↑ tourner · ↓ descendre · Espace poser · C réserve · P pause"));
  root.appendChild(wrap);
@@ -206,7 +256,7 @@ function mount(root){
   stage.style.height=(pixels*2)+"px";
  }
  function dispose(){
-  active=false;clearInterval(clock);document.removeEventListener("keydown",key);
+  active=false;clearHeld();clearInterval(clock);document.removeEventListener("keydown",key);
   window.removeEventListener("resize",fitBoard);
   if(observer){observer.disconnect();observer=null;}
  }
