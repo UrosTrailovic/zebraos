@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-14",
+  "entries": [
+    {
+      "path": "STUDIO/ARCHIVES",
+      "type": "dir"
+    },
+    {
+      "path": "STUDIO/ARTWORK",
+      "type": "dir"
+    },
+    {
+      "path": "STUDIO/AUDIO",
+      "type": "dir"
+    },
+    {
+      "path": "STUDIO/MAPS",
+      "type": "dir"
+    },
+    {
+      "path": "STUDIO/README.txt",
+      "type": "file",
+      "size": 662
+    }
+  ]
+}
