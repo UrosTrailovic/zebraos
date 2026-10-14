@@ -308,9 +308,13 @@ function mount(root){
   const gap=parseFloat(css.columnGap)||6;
   const horizontal=(parseFloat(css.paddingLeft)||0)+(parseFloat(css.paddingRight)||0);
   const vertical=(parseFloat(css.paddingTop)||0)+(parseFloat(css.paddingBottom)||0);
-  const maxWidth=Math.max(48,main.clientWidth-sideWidth-gap-horizontal-8);
+  // Le plateau occupe exactement la colonne centrale d'une grille symétrique.
+  // On réserve donc assez de largeur à GAUCHE pour les scores, et autant à droite
+  // pour que le centre du plateau coïncide avec celui de la fenêtre.
+  const sideGutter=sideWidth+gap+6;
+  const maxWidth=Math.max(48,main.clientWidth-horizontal-2*sideGutter);
   const maxHeight=Math.max(96,main.clientHeight-vertical-6);
-  // Les 20 lignes restent visibles. On ne bloque plus l'agrandissement à 310px.
+  // Les 20 lignes restent visibles, y compris sur petit écran.
   const pixels=Math.max(48,Math.floor(Math.min(420,maxWidth,maxHeight/2)));
   if(!Number.isFinite(pixels))return;
   if(stage.style.width!==pixels+"px"){
