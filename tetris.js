@@ -22,7 +22,7 @@ function mount(root){
  if(root._zebraDispose)root._zebraDispose();
  root.innerHTML="";
  let active=true,paused=true,over=false,lines=0,score=0,level=1,records=best(),held=null,holdUsed=false;
- let grid,upcoming=[],bag=[],current=null,clock=null;
+ let grid,upcoming=[],bag=[],current=null,clock=null,observer=null;
  let wrap=make("div","zg zg-tetris");
  let bar=make("div","zg-topline");
  bar.appendChild(make("strong","","ZEBRA TETRIS"));
@@ -160,7 +160,25 @@ function mount(root){
   if(!root.isConnected){dispose();return;}
   if(!paused&&!over&&!document.hidden)move(0,1);
  }
- function dispose(){active=false;clearInterval(clock);document.removeEventListener("keydown",key);}
+ // Garder les 20 lignes du plateau entièrement visibles, même après un resize.
+ // La scène se dimensionne selon l'espace réel de la fenêtre.
+ function fitBoard(){
+  if(!active||!main.isConnected)return;
+  const sideWidth=right.getBoundingClientRect().width||178;
+  const gap=parseFloat(getComputedStyle(main).columnGap)||10;
+  const availableWidth=main.clientWidth-sideWidth-gap-4;
+  const availableHeight=main.clientHeight-4;
+  const width=Math.max(40,Math.min(240,availableWidth,availableHeight/2));
+  if(!Number.isFinite(width))return;
+  const pixels=Math.floor(width);
+  stage.style.width=pixels+"px";
+  stage.style.height=(pixels*2)+"px";
+ }
+ function dispose(){
+  active=false;clearInterval(clock);document.removeEventListener("keydown",key);
+  window.removeEventListener("resize",fitBoard);
+  if(observer){observer.disconnect();observer=null;}
+ }
  root._zebraDispose=dispose;
  document.addEventListener("keydown",key);
  let last=performance.now(),accum=0;
@@ -170,6 +188,11 @@ function mount(root){
   if(!paused&&!over&&!document.hidden){accum+=delta;if(accum>Math.max(85,750*Math.pow(.83,level-1))){accum=0;tick();}}
  },40);
  reset();paused=true;updateStatus();render();
+ if(typeof ResizeObserver!=="undefined"){
+  observer=new ResizeObserver(fitBoard);
+  observer.observe(main);
+ }else window.addEventListener("resize",fitBoard);
+ requestAnimationFrame(fitBoard);
  return dispose;
 }
 window.ZebraTetris={mount};
