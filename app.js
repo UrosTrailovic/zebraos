@@ -285,7 +285,57 @@ function getStore(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function setStore(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 function setWall(name,custom){var w=$("wallpaper");w.className="wallpaper wallpaper-"+name;w.style.backgroundImage=custom?'url("'+custom+'")':"";w.style.backgroundSize=custom?"cover":"";if(session&&!custom)setStore("zebra.wall."+session,name)}
 function isTouchOpen(e){return (e && e.pointerType==="touch") || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) || window.innerWidth<701;}
-function desk(){var r=$("desktop-icons");r.innerHTML="";var items=[["Poste de travail","computer","explorer:root"],["ZebraAMP.exe","zebraamp","amp"],["ZEBRA TAPE 2","zebratape2","explorer:tape"],["Captures d’écran","jpg","explorer:screens"],["LISEZMOI.TXT","readme","txt:readme"],["Corbeille","recycle-bin","explorer:recycle"],["Panneau de configuration","control-panel","settings"]];if(session==="admin")items.push(["GESTIONNAIRE STUDIO","computer","studio-manager"]);else items=items.filter(function(it){return it[0]!=="Corbeille";});if(session==="daniel")items.push(["DANIEL.TXT","txt","txt:daniel"]);items.forEach(function(it){var b=el("button","desk-icon");b.innerHTML='<span class="desk-symbol"></span><span></span>';b.children[0].appendChild(osIcon(it[1],40));b.children[1].textContent=it[0];b.onclick=function(e){document.querySelectorAll(".desk-icon").forEach(function(x){x.classList.remove("selected")});b.classList.add("selected");if(isTouchOpen(e)||e.detail===0)open(it[2])};b.ondblclick=function(e){if(!isTouchOpen(e))open(it[2])};r.appendChild(b)})}
+/* Les applications système restent fixes ; le contenu de STUDIO/BUREAU vient de GitHub. */
+var bureauRepaint=null,bureauListenerSet=false,bureauEpoch=0;
+function desk(){
+ var root=$("desktop-icons");
+ root.innerHTML="";
+ var epoch=++bureauEpoch,currentSession=session;
+ var apps=[
+  ["Poste de travail","computer","explorer:root"],
+  ["ZebraAMP.exe","zebraamp","amp"],
+  ["Panneau de configuration","control-panel","settings"]
+ ];
+ if(session==="admin"){
+  apps.push(["Corbeille","recycle-bin","explorer:recycle"]);
+  apps.push(["Gestionnaire Studio","computer","studio-manager"]);
+ }
+ function shortcut(title,symbol,action,userFile){
+  var b=el("button","desk-icon"+(userFile?" desk-user-file":""));
+  b.type="button";b.title=title;
+  b.innerHTML='<span class="desk-symbol"></span><span class="desk-caption"></span>';
+  b.children[0].appendChild(symbol);
+  b.children[1].textContent=title;
+  b.onclick=function(e){
+   document.querySelectorAll(".desk-icon").forEach(function(x){x.classList.remove("selected")});
+   b.classList.add("selected");
+   if(isTouchOpen(e)||e.detail===0)action();
+  };
+  b.ondblclick=function(e){if(!isTouchOpen(e))action();};
+  root.appendChild(b);return b;
+ }
+ apps.forEach(function(app){shortcut(app[0],osIcon(app[1],40),function(){open(app[2]);},false);});
+ function renderUserFiles(){
+  if(epoch!==bureauEpoch||currentSession!==session)return;
+  Array.prototype.forEach.call(root.querySelectorAll(".desk-user-file"),function(b){b.remove();});
+  var lib=window.ZebraGitFiles;
+  if(!lib)return;
+  lib.list(lib.root).forEach(function(item){
+    shortcut(item.name,lib.icon(item,osIcon,40),function(){
+      if(item.type==="dir")explorer("github:"+item.path);
+      else lib.openFile(item,{windowBox:windowBox});
+    },true);
+  });
+ }
+ bureauRepaint=renderUserFiles;
+ if(window.ZebraGitFiles){
+  if(!bureauListenerSet){
+   bureauListenerSet=true;
+   window.ZebraGitFiles.subscribe(function(){if(bureauRepaint)bureauRepaint();});
+  }
+  window.ZebraGitFiles.load().then(function(){renderUserFiles();});
+ }
+}
 function closeAll(){Object.keys(opened).forEach(function(k){opened[k].w.remove()});opened={};$("task-items").innerHTML="";$("start-menu").classList.add("hidden")}
 function task(){var r=$("task-items");r.innerHTML="";Object.keys(opened).forEach(function(k){var p=opened[k],b=el("button","win-button",p.title);b.onclick=function(){if(p.w.classList.contains("minimized")){p.w.classList.remove("minimized");focus(k);sfx("restore")}else{p.w.classList.add("minimized");sfx("minimize")}};r.appendChild(b)})}
 function focus(id){if(opened[id]){opened[id].w.style.zIndex=++z;Object.keys(opened).forEach(function(k){opened[k].w.classList.toggle("focused",k===id)})}}
@@ -329,79 +379,55 @@ function windowBox(id,title,width,height){var launcher=document.activeElement;if
 function button(txt,cb){var b=el("button","classic-button",txt);b.onclick=cb;return b}
 function studioManager(){
  if(session!=="admin")return;
- var r=windowBox("manager","GESTIONNAIRE STUDIO — ADMIN",Math.min(630,innerWidth-20),Math.min(480,innerHeight-65));
- r.innerHTML="";
- var heading=el("div","manager-intro");
- heading.appendChild(el("div","manager-title","ZEBRA RECORD // GESTIONNAIRE STUDIO"));
- heading.appendChild(el("p","","Ton espace pour préparer le contenu de ZebraOS."));
- r.appendChild(heading);
- r.appendChild(el("div","manager-warning","IMPORTANT : importer un fichier en local ne le publie PAS sur ZebraOS pour les autres visiteurs."));
- function section(number,title,description,label,action){
+ var root=windowBox("manager","GESTIONNAIRE STUDIO — BUREAU",Math.min(620,innerWidth-20),Math.min(455,innerHeight-65));
+ root.innerHTML="";
+ var head=el("div","manager-intro");
+ head.appendChild(el("div","manager-title","ZEBRA RECORD // GESTION DU BUREAU"));
+ head.appendChild(el("p","","Tous les dossiers et fichiers affichés dans ZebraOS proviennent de STUDIO/BUREAU sur GitHub."));
+ root.appendChild(head);
+ root.appendChild(el("p","manager-warning","Pas de dossiers de démonstration. Ajoute uniquement ce que tu veux montrer sur le bureau."));
+ function group(title,body,label,fn){
   var card=el("div","manager-card");
-  card.appendChild(el("div","manager-step-number",String(number)));
-  var content=el("div","manager-step-content");
-  content.appendChild(el("h3","",title));
-  content.appendChild(el("p","",description));
-  card.appendChild(content);
-  card.appendChild(button(label,action));
-  r.appendChild(card);
+  var details=el("div","manager-step-content");
+  details.appendChild(el("h3","",title));
+  details.appendChild(el("p","",body));
+  card.appendChild(details);
+  card.appendChild(button(label,fn));
+  root.appendChild(card);
  }
- section(1,"MES BROUILLONS — DISQUE LOCAL",
-  "Crée des dossiers et importe tes images, MP3 ou documents. Ils restent sur CE navigateur et ne sont jamais visibles aux visiteurs.",
-  "OUVRIR MES BROUILLONS",function(){explorer("local:root");});
- section(2,"VOIR LE SITE PUBLIC",
-  "Voici exactement les fichiers et dossiers publiés. Les dossiers vides restent visibles. Les brouillons locaux n’apparaissent pas ici.",
-  "VOIR LES FICHIERS PUBLICS",function(){explorer("github:STUDIO");});
- section(3,"PUBLIER MES FICHIERS",
-  "La publication est manuelle : télécharge tes brouillons si nécessaire, ajoute-les dans le dossier STUDIO sur GitHub et valide l’enregistrement. L’index sera automatiquement actualisé.",
-  "OUVRIR LE DOSSIER PUBLIC",function(){window.open("https://github.com/UrosTrailovic/zebraos/tree/main/STUDIO","_blank","noopener,noreferrer");});
- var direct=el("div","manager-publish-links");
- [
-  ["PUBLIER DES IMAGES","ARTWORK"],
-  ["PUBLIER DES SONS","AUDIO"],
-  ["PUBLIER DES CARTES","MAPS"],
-  ["PUBLIER DES ARCHIVES","ARCHIVES"]
- ].forEach(function(item){
-  direct.appendChild(button(item[0],function(){
-   window.open("https://github.com/UrosTrailovic/zebraos/upload/main/STUDIO/"+item[1],"_blank","noopener,noreferrer");
-  }));
- });
- r.appendChild(direct);
- r.appendChild(el("p","manager-disclaimer","Le mot de passe Admin n'est pas une sécurité serveur. Évite les fichiers confidentiels dans ce site."));
+ function external(url){window.open(url,"_blank","noopener,noreferrer");}
+ group("1. CRÉER ET ORGANISER",
+  "Sur GitHub, crée tes dossiers dans STUDIO/BUREAU et ajoute autant de sous-dossiers que tu veux. Un dossier vide doit contenir un fichier .gitkeep.",
+  "OUVRIR LE BUREAU GITHUB",
+  function(){external("https://github.com/UrosTrailovic/zebraos/tree/main/STUDIO/BUREAU");});
+ group("2. IMPORTER DES FICHIERS",
+  "Ajoute tes images, morceaux MP3, documents et archives avec le bouton d'envoi de GitHub. Après l'enregistrement, l'index est généré automatiquement.",
+  "AJOUTER DES FICHIERS",
+  function(){external("https://github.com/UrosTrailovic/zebraos/upload/main/STUDIO/BUREAU");});
+ group("3. CHOISIR UNE ICÔNE",
+  "Dans un dossier, ajoute une image nommée icone.png. Pour un fichier, place NOM.ext.icone.png juste à côté. ZebraOS masque ces images techniques et utilise leurs visuels comme icônes.",
+  "VOIR LE BUREAU",
+  function(){explorer("github:STUDIO/BUREAU");});
+ root.appendChild(el("p","manager-disclaimer","Les fichiers GitHub sont publics. La session Admin n'est pas une authentification sécurisée."));
 }
 function explorer(id){
  id=id||"root";
- // ZEBRA TAPE 2 ouvre la racine du contenu public, jamais directement AUDIO.
- if(id==="tape"||id==="public")id="github:STUDIO";
- if(session!=="admin"){
-   if(id==="screens")id="github:STUDIO/ARTWORK";
-   else if(id.indexOf("github:")!==0)id="github:STUDIO";
- }
- var body=windowBox("explorer","Poste de travail — C:\\ROOT",560,430);
+ var body=windowBox("explorer","Poste de travail — BUREAU",560,430);
  body.innerHTML="";
- if(id.indexOf("github:")===0){
-  if(window.ZebraGitFiles)window.ZebraGitFiles.mount(body,id.slice(7),{explorer:explorer,osIcon:osIcon,windowBox:windowBox,canUpload:session==="admin"});
-  else body.appendChild(el("p","github-drive-error","La bibliothèque est momentanément indisponible."));
+ if(id==="recycle"&&session==="admin"&&window.ZebraLocalFiles){
+  window.ZebraLocalFiles.mount(body,"trash",{
+   osIcon:osIcon,windowBox:windowBox,
+   github:function(){explorer("root");},
+   playAudio:function(){}
+  });
   return;
  }
- if(!window.ZebraLocalFiles){body.appendChild(el("p","local-disk-error","Disque local indisponible."));return;}
- var options={
-  osIcon:osIcon,windowBox:windowBox,
-  github:function(path){explorer("github:"+path);},
-  playAudio:function(blob,name){
-   var url=URL.createObjectURL(blob);
-   if(localTracks[0])URL.revokeObjectURL(localTracks[0]);
-   localTracks[0]=url;
-   tracks[0]=name.replace(/\.[^.]+$/,"");
-   player(0);
-   var list=opened.amp&&opened.amp.w.querySelector("[data-list]");
-   if(list){list.innerHTML="";tracks.forEach(function(n,i){var b=el("button","amp-song",(i+1)+". "+n);b.onclick=function(){pickTrack(i)};list.appendChild(b);});}
-  }
- };
- if(id==="root")window.ZebraLocalFiles.home(body,options);
- else if(id==="tape"||id==="screens"||id==="maps")window.ZebraLocalFiles.openNamed(body,id,options);
- else if(id==="recycle")window.ZebraLocalFiles.mount(body,"trash",options);
- else window.ZebraLocalFiles.mount(body,id.indexOf("local:")===0?id.slice(6):"root",options);
+ var path=id.indexOf("github:")===0?id.slice(7):"STUDIO/BUREAU";
+ if(window.ZebraGitFiles){
+  window.ZebraGitFiles.mount(body,path,{
+   explorer:explorer,osIcon:osIcon,windowBox:windowBox,canUpload:session==="admin"
+  });
+ }else body.appendChild(el("p","github-drive-error","Le bureau n'a pas pu être chargé."));
 }
 function msg(title,message){if(/unavailable|denied/i.test(title))sfx("error");var r=windowBox("msg-"+(++seq),title,375,180);r.appendChild(el("p","app-message",message));r.appendChild(button("OK",function(){r.parentNode.remove();Object.keys(opened).forEach(function(k){if(!document.body.contains(opened[k].w))delete opened[k]});task()}))}
 function notepad(id){var name=id==="notes"?"MES_NOTES.TXT":id==="readme"?"LISEZMOI.TXT":(id||"LISEZMOI").toUpperCase()+".TXT";var r=windowBox("note-"+id,name+" — Bloc-notes",480,380);r.innerHTML="";var wrap=el("div","note-editor");var ta=el("textarea");ta.value=id==="notes"?(getStore("zebra.note."+session)||""):docs[id]||"";if(id!=="notes")ta.readOnly=true;wrap.appendChild(ta);if(id==="notes")wrap.appendChild(button("Fichier > Enregistrer",function(){setStore("zebra.note."+session,ta.value);msg("Bloc-notes","Enregistré dans ton navigateur.")}));else wrap.appendChild(el("div","desktop-note","Fichier en lecture seule"));r.appendChild(wrap)}
