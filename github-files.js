@@ -144,6 +144,7 @@ function preview(item,opts){
  a.href=raw(item.path);a.target="_blank";a.rel="noopener noreferrer";bar.appendChild(a);
  body.appendChild(bar);
  if(kinds.image.test(item.name)){
+  body.classList.add("image-viewer-body");
   var image=node("img","github-image-preview");image.src=raw(item.path);image.alt=item.name;
   image.onerror=function(){image.onerror=function(){image.replaceWith(node("p","github-drive-error","Impossible de charger cette image."));};image.src=site(item.path);};
   body.appendChild(image);
