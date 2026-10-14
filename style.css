@@ -250,3 +250,8 @@
  .manager-warning{font-size:10px}
  .desk-icon span:last-child{overflow-wrap:anywhere}
 }
+
+/* Accès direct aux dossiers publics du studio. */
+.manager-publish-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:8px 0 15px}
+.manager-publish-links button{white-space:normal;min-height:36px;padding:6px 8px;font:bold 10px "Courier New",monospace;text-align:center}
+@media(max-width:700px){.manager-publish-links{grid-template-columns:repeat(2,minmax(0,1fr))}}
