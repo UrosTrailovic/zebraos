@@ -2,7 +2,7 @@
 (function(){
 "use strict";
 const W=10,H=20,BLOCK=24;
-const COLORS=["","#30c7d7","#e8bb3c","#b061d9","#5caf69","#c75457","#4974cb","#dc9657"];
+const COLORS=["","#28def0","#ffde0c","#bd12e4","#3be931","#ff3232","#2147ff","#ff9118"];
 const SHAPES=[
  [[1,1,1,1]],
  [[2,0,0],[2,2,2]],
@@ -27,7 +27,7 @@ function mount(root){
  let bar=make("div","zg-topline");
  let logo=make("img","zt-logo");
  logo.alt="Zebra Tetris";
- logo.src="";
+ logo.loading="eager";
  bar.appendChild(logo);
  let status=make("span","zg-state","PRÊT");
  bar.appendChild(status);wrap.appendChild(bar);
@@ -86,7 +86,7 @@ function mount(root){
  }
  function reset(){
   grid=blank();bag=[];upcoming=[];lines=0;score=0;level=1;held=null;holdUsed=false;
-  over=false;paused=false;current=null;spawn();render();updateStatus();
+  over=false;paused=false;menuOpen=false;current=null;spawn();render();updateStatus();
  }
  function merged(){
   current.mat.forEach((row,y)=>row.forEach((v,x)=>{if(v&&current.y+y>=0){grid[current.y+y][current.x+x]=v;}}));
@@ -195,10 +195,10 @@ function mount(root){
  // La scène se dimensionne selon l'espace réel de la fenêtre.
  function fitBoard(){
   if(!active||!main.isConnected)return;
-  const sideWidth=right.getBoundingClientRect().width||155;
+  const sideWidth=right.getBoundingClientRect().width||145;
   const gap=parseFloat(getComputedStyle(main).columnGap)||9;
-  const availableWidth=Math.max(60,main.clientWidth-sideWidth-gap-28);
-  const availableHeight=Math.max(125,main.clientHeight-22);
+  const availableWidth=Math.max(60,main.clientWidth-sideWidth-gap-30);
+  const availableHeight=Math.max(125,main.clientHeight-26);
   const width=Math.max(48,Math.min(240,availableWidth,availableHeight/2));
   if(!Number.isFinite(width))return;
   const pixels=Math.floor(width);
