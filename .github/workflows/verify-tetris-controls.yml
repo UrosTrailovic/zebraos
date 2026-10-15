@@ -72,6 +72,34 @@ jobs:
                 const sprites=Array.from(root.querySelectorAll(".zt-control-sprite"));
                 report.customPanel=skin.classList.contains("zt-skin-ready");
                 report.sevenControls=sprites.length===7&&sprites.every(i=>i.complete&&i.naturalWidth>0);
+                if(report.customPanel){
+                  const panel=skin.getBoundingClientRect();
+                  const bar=skin.querySelector(".zt-buttons").getBoundingClientRect();
+                  const panelTop=panel.top+parseFloat(getComputedStyle(skin,"::before").top||"0");
+                  const inPanel=el=>{
+                    const rect=el.getBoundingClientRect();
+                    return rect.top>=panelTop-3&&rect.bottom<=panel.bottom+3
+                      &&rect.left>=panel.left-3&&rect.right<=panel.right+3;
+                  };
+                  report.toolbarAboveArt=bar.top<panelTop&&bar.bottom<=panelTop+3;
+                  report.dpadInsideArt=["up","down","left","right"].every(dir=>inPanel($(".zt-dir-"+dir)));
+                  report.actionsInsideArt=[".zt-a",".zt-b",".zt-select"].every(sel=>inPanel($(sel)));
+                  const up=$(".zt-dir-up").getBoundingClientRect(),down=$(".zt-dir-down").getBoundingClientRect();
+                  const left=$(".zt-dir-left").getBoundingClientRect(),right=$(".zt-dir-right").getBoundingClientRect();
+                  report.dpadAligned=Math.abs((up.left+up.right)/2-(down.left+down.right)/2)<3
+                    &&Math.abs((left.top+left.bottom)/2-(right.top+right.bottom)/2)<3;
+                  console.log("ZEBRA_LAYOUT",JSON.stringify({
+                    panelTop:Math.round(panelTop-panel.top),
+                    toolbarBottom:Math.round(bar.bottom-panel.top),
+                    up:Math.round(up.top-panel.top),downBottom:Math.round(down.bottom-panel.top),
+                    selectBottom:Math.round($(".zt-select").getBoundingClientRect().bottom-panel.top)
+                  }));
+                }else{
+                  report.toolbarAboveArt=false;
+                  report.dpadInsideArt=false;
+                  report.actionsInsideArt=false;
+                  report.dpadAligned=false;
+                }
                 report.controlsStillMapped=!!$(".zt-dir-up")&&!!$(".zt-dir-down")
                   &&!!$(".zt-dir-left")&&!!$(".zt-dir-right")&&!!$(".zt-a")&&!!$(".zt-b")&&!!$(".zt-select");
                 if(report.customPanel){
