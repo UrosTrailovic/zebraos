@@ -27,7 +27,7 @@ jobs:
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <link rel="stylesheet" href="/style.css">
           </head><body>
-          <div class="window focused" style="width:420px;height:820px;position:relative">
+          <div class="window focused" style="width:min(420px,calc(100vw - 10px));height:820px;position:relative">
             <div id="test-root" class="window-body zebra-game-body" style="height:100%;width:100%;"></div>
           </div>
           <script src="/tetris-artwork.js"></script>
@@ -75,7 +75,7 @@ jobs:
                 const skin=$(".zt-handheld");
                 const sprites=Array.from(root.querySelectorAll(".zt-control-sprite"));
                 report.customPanel=skin.classList.contains("zt-skin-ready");
-                report.expandedControls=skin.getBoundingClientRect().height>=188;
+                report.expandedControls=skin.getBoundingClientRect().height>=(innerWidth<=370?215:225);
                 report.sevenControls=sprites.length===7&&sprites.every(i=>i.complete&&i.naturalWidth>0);
                 if(report.customPanel){
                   const panel=skin.getBoundingClientRect();
@@ -89,6 +89,13 @@ jobs:
                   report.toolbarAboveArt=bar.top<panelTop&&bar.bottom<=panelTop+3;
                   report.dpadInsideArt=["up","down","left","right"].every(dir=>inPanel($(".zt-dir-"+dir)));
                   report.actionsInsideArt=[".zt-a",".zt-b",".zt-select"].every(sel=>inPanel($(sel)));
+                  // La texture comporte un cadre argenté: garder de l'air autour des boutons.
+                  const comfortable=el=>{
+                    const rect=el.getBoundingClientRect();
+                    return rect.top>=panelTop+8&&rect.bottom<=panel.bottom-8;
+                  };
+                  report.noButtonTouchesFrame=["up","down","left","right"].every(dir=>comfortable($(".zt-dir-"+dir)))
+                    &&[".zt-a",".zt-b",".zt-select"].every(sel=>comfortable($(sel)));
                   const up=$(".zt-dir-up").getBoundingClientRect(),down=$(".zt-dir-down").getBoundingClientRect();
                   const left=$(".zt-dir-left").getBoundingClientRect(),right=$(".zt-dir-right").getBoundingClientRect();
                   report.dpadAligned=Math.abs((up.left+up.right)/2-(down.left+down.right)/2)<3
@@ -103,6 +110,7 @@ jobs:
                   report.toolbarAboveArt=false;
                   report.dpadInsideArt=false;
                   report.actionsInsideArt=false;
+                  report.noButtonTouchesFrame=false;
                   report.dpadAligned=false;
                 }
                 report.controlsStillMapped=!!$(".zt-dir-up")&&!!$(".zt-dir-down")
@@ -123,7 +131,8 @@ jobs:
                   &&$(".zg-side-stats").querySelectorAll(".zg-preview-wrap").length===0
                   &&$(".zg-side-previews").querySelectorAll(".zg-preview-wrap").length===2
                   &&$(".zg-side-previews").querySelectorAll(".zg-stat").length===0;
-                report.boardFits=board.height>350&&board.bottom<=main.bottom+2;
+                report.boardFits=board.height>(innerWidth<=370?290:350)&&board.bottom<=main.bottom+2;
+                report.boardProportions=Math.abs(board.height-2*board.width)<2;
                 report.logoReadable=logo.height>=58&&logo.width>=170;
                 root._zebraDispose();
                 finish();
@@ -139,3 +148,8 @@ jobs:
           grep -o 'data-report="[^"]*"' /tmp/zebra-tetris-test.html
           grep -o 'data-result="[^"]*"' /tmp/zebra-tetris-test.html
           grep -q 'data-result="ok"' /tmp/zebra-tetris-test.html
+          # Simuler aussi un petit téléphone et ses médias CSS compacts.
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --touch-events=enabled --window-size=360,900 --virtual-time-budget=4800 --dump-dom http://127.0.0.1:8765/_verify_tetris_controls.html > /tmp/zebra-tetris-compact.html 2>/tmp/zebra-tetris-compact-chrome.log
+          grep -o 'data-report="[^"]*"' /tmp/zebra-tetris-compact.html
+          grep -o 'data-result="[^"]*"' /tmp/zebra-tetris-compact.html
+          grep -q 'data-result="ok"' /tmp/zebra-tetris-compact.html
