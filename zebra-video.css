@@ -1,0 +1,197 @@
+/* ZEBRA VIDEO 1.0 — poste vidéo métallique rétro, sans dépendances. */
+.window .window-body.zvideo-window-body{
+ padding:0!important;overflow:hidden!important;min-width:0;min-height:0;
+ background:#11151d;color:#edf3f9;display:flex;flex-direction:column;
+}
+.zvideo,.zvideo *{box-sizing:border-box}
+.zvideo{
+ --zv-blue:#5b8cc8;--zv-teal:#76e8d1;
+ display:flex;flex-direction:column;width:100%;height:100%;min-height:0;
+ background:#131a26;color:#e1e9f0;
+ font:12px Tahoma,Arial,sans-serif;
+ overflow:hidden;
+}
+.zvideo button,.zvideo select,.zvideo input{font:inherit}
+.zvideo [hidden]{display:none!important}
+.zvideo-header{
+ display:flex;align-items:center;gap:10px;flex:0 0 auto;
+ padding:9px 12px 8px;min-height:55px;
+ background:linear-gradient(180deg,#45556c 0%,#273347 51%,#1b2533 52%,#242f3e 100%);
+ border-bottom:3px ridge #7b8ca0;
+ box-shadow:inset 0 1px #a2b4c7;
+}
+.zvideo-brand-symbol{
+ color:#94fce6;text-shadow:1px 1px #090c16;
+ width:32px;height:30px;flex:0 0 32px;
+ background:linear-gradient(#252d3d,#0e1627);
+ display:grid;place-items:center;
+ border:2px outset #6f889d;
+ font:bold 18px "Courier New",monospace;
+}
+.zvideo-brand{display:flex;flex-direction:column;gap:3px;min-width:0}
+.zvideo-brand strong{font:bold 15px/1 "Courier New",monospace;letter-spacing:1.5px;color:#f2f7ff;text-shadow:1px 2px #12131d}
+.zvideo-brand small{font:8px/1.1 "Courier New",monospace;letter-spacing:1.5px;color:#adc9d6}
+.zvideo-led{
+ margin-left:auto;flex:none;font:bold 10px "Courier New",monospace;
+ letter-spacing:.4px;padding:5px 7px;color:#e6c991;
+ background:#131924;border:1px inset #8b99a7;white-space:nowrap;
+}
+.zvideo[data-status="ready"] .zvideo-led{color:#9ceec0}
+.zvideo[data-status="playing"] .zvideo-led{color:#64e6d3}
+.zvideo[data-status="error"] .zvideo-led{color:#ffa3a8}
+.zvideo-screen{
+ position:relative;flex:1 1 auto;min-height:108px;overflow:hidden;
+ display:flex;justify-content:center;align-items:center;
+ background:radial-gradient(ellipse at 50% 45%,#1b2538 0%,#090e1a 65%,#060812 100%);
+ isolation:isolate;
+}
+.zvideo-screen::after{
+ content:"";position:absolute;inset:0;pointer-events:none;z-index:4;
+ background:repeating-linear-gradient(to bottom,transparent 0 3px,#050b1115 4px 4px);
+ opacity:.32;
+}
+.zvideo-media{
+ display:block;position:relative;z-index:1;
+ max-width:100%;width:100%;height:100%;max-height:100%;
+ min-height:0;object-fit:contain;
+ background:transparent;
+}
+.zvideo-loading{
+ position:absolute;inset:0;z-index:3;
+ display:flex;align-items:center;justify-content:center;flex-direction:column;
+ gap:12px;padding:12px;text-align:center;
+ background:linear-gradient(180deg,#101725ee,#060a15ea);
+ color:#c9dce6;pointer-events:none;
+ opacity:1;transition:opacity 180ms ease;
+}
+.zvideo-loading.zvideo-is-hidden{opacity:0;visibility:hidden}
+.zvideo-loading-ring{
+ display:block;width:48px;height:48px;border-radius:50%;
+ border:4px solid #263a54;border-top-color:#8bdceb;border-right-color:#5580b5;
+ animation:zvideo-spin 750ms steps(12,end) infinite;
+ box-shadow:0 0 0 2px #070b14,inset 0 0 7px #2f5279;
+}
+@keyframes zvideo-spin{to{transform:rotate(360deg)}}
+.zvideo-loading-title{
+ color:#e6f6ff;font:700 14px "Courier New",monospace;letter-spacing:1.5px;
+ text-shadow:2px 2px 0 #040c1b;
+}
+.zvideo-loading-detail{
+ color:#94b9cc;font:11px/1.45 "Courier New",monospace;max-width:380px;
+}
+.zvideo-loading-track{
+ width:min(220px,85%);height:11px;border:2px inset #52687a;
+ overflow:hidden;background:#0b1b28;position:relative;
+}
+.zvideo-loading-pulse{
+ display:block;position:absolute;height:100%;width:35%;
+ background:repeating-linear-gradient(90deg,#6bd1de 0 12px,#3d81b5 12px 19px);
+ animation:zvideo-progress 1.2s steps(25,end) infinite;
+}
+@keyframes zvideo-progress{0%{left:-35%}100%{left:100%}}
+.zvideo-retry{
+ margin:4px 0 0;padding:8px 13px;
+ border:2px outset #aeb8c7;background:#b6c8d4;color:#152439;
+ pointer-events:auto;font:700 11px "Courier New",monospace!important;
+}
+.zvideo-center-play{
+ position:absolute;z-index:5;top:50%;left:50%;transform:translate(-50%,-50%);
+ width:72px;height:72px;border-radius:50%;
+ border:3px solid #a8d5ecbe;background:#172d4bc9;
+ color:#b7ffed;font:bold 31px "Courier New",monospace;
+ display:grid;place-items:center;cursor:pointer;
+ box-shadow:0 6px 25px #0009,inset 1px 2px 0 #ffffff3c;
+ transition:background 140ms;
+}
+.zvideo-center-play:hover{background:#235c7bdf}
+.zvideo-console{
+ display:flex;flex-direction:column;gap:8px;
+ background:linear-gradient(#b8c2ce,#9faebf 45%,#8897a8);
+ color:#1b2837;flex:0 0 auto;
+ padding:10px 13px 8px;border-top:3px ridge #e0e6ea;
+ box-shadow:inset 0 2px #f1f6ff;
+}
+.zvideo-info{display:flex;flex-direction:column;gap:3px;min-width:0}
+.zvideo-filename{
+ display:block;color:#162b47;font:700 12px Tahoma,Arial,sans-serif;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.zvideo-meta{font:10px "Courier New",monospace;color:#374b65}
+.zvideo-timeline{display:flex;flex-direction:column;gap:1px}
+.zvideo-seek{
+ display:block;width:100%;height:17px;margin:0;cursor:pointer;accent-color:#28588f;
+ appearance:none;-webkit-appearance:none;background:transparent;
+}
+.zvideo-seek::-webkit-slider-runnable-track{
+ height:10px;border:2px inset #859caf;border-radius:0;
+ background:linear-gradient(90deg,#315d91 0 var(--played,0%),#728d9d var(--played,0%) var(--buffered,0%),#e1e8f0 var(--buffered,0%));
+}
+.zvideo-seek::-moz-range-track{
+ height:9px;border:2px inset #8297a9;border-radius:0;
+ background:linear-gradient(90deg,#315d91 0 var(--played,0%),#728d9d var(--played,0%) var(--buffered,0%),#e1e8f0 var(--buffered,0%));
+}
+.zvideo-seek::-webkit-slider-thumb{
+ appearance:none;-webkit-appearance:none;width:15px;height:17px;margin-top:-6px;
+ border:2px outset #fff;border-radius:1px;background:#cedae8;box-shadow:1px 1px #263e56;
+}
+.zvideo-seek::-moz-range-thumb{
+ width:12px;height:17px;border-radius:1px;border:2px outset #fff;background:#cedae8;
+}
+.zvideo-seek:disabled{cursor:default;opacity:.55}
+.zvideo-time{display:flex;justify-content:space-between;color:#264159;font:10px "Courier New",monospace}
+.zvideo-buttons{display:flex;align-items:center;gap:6px;min-width:0}
+.zvideo-button,.zvideo-rate{
+ border:2px outset #e9f3fb;background:linear-gradient(#e6ecf2,#bdc9d6);
+ color:#20344d;min-height:32px;border-radius:1px;cursor:pointer;
+ font:700 12px "Courier New",monospace!important;
+ padding:5px 9px;white-space:nowrap;flex:none;
+}
+.zvideo-button:active{border-style:inset}
+.zvideo-primary{
+ min-width:49px;font-size:16px!important;
+ background:linear-gradient(#c8f0ef,#77baa9);color:#0b3640;
+}
+.zvideo-mute{min-width:38px}
+.zvideo-volume{flex:1 1 65px;min-width:30px;max-width:105px;accent-color:#1d6791}
+.zvideo-rate{min-width:52px;padding:5px 3px}
+.zvideo-full{margin-left:auto;font-size:20px!important;min-width:38px;padding:2px 6px}
+.zvideo-footer{
+ display:flex;justify-content:space-between;align-items:center;gap:8px;
+ font:9px "Courier New",monospace;color:#30445c;
+ border-top:1px solid #65788e;padding-top:5px;
+}
+.zvideo-open{
+ color:#17375f;font-weight:bold;text-decoration:underline;
+ white-space:nowrap;font-size:9px;
+}
+.zvideo-screen:fullscreen{
+ width:100vw;height:100vh;background:#000;
+}
+.zvideo-screen:fullscreen .zvideo-media{width:100%;height:100%;object-fit:contain}
+@media(max-width:700px){
+ .zvideo-header{min-height:48px;padding:6px 8px;gap:7px}
+ .zvideo-brand-symbol{width:26px;height:25px;flex-basis:26px;font-size:16px}
+ .zvideo-brand strong{font-size:13px}
+ .zvideo-brand small{font-size:7px}
+ .zvideo-led{font-size:8px;padding:4px}
+ .zvideo-console{gap:7px;padding:8px 7px 7px}
+ .zvideo-buttons{gap:4px}
+ .zvideo-button,.zvideo-rate{min-height:37px;padding:5px 6px;font-size:11px!important}
+ .zvideo-primary{min-width:43px}
+ .zvideo-volume{max-width:62px;min-width:18px}
+ .zvideo-pip{display:none}
+ .zvideo-full{min-width:34px}
+ .zvideo-footer{font-size:8px}
+}
+@media(max-width:370px){
+ .zvideo-brand small{letter-spacing:0}
+ .zvideo-button{padding:4px 5px}
+ .zvideo-volume{max-width:37px}
+ .zvideo-rate{min-width:46px}
+ .zvideo-footer span{display:none}
+ .zvideo-footer{justify-content:flex-end}
+}
+@media(prefers-reduced-motion:reduce){
+ .zvideo-loading-ring,.zvideo-loading-pulse{animation:none}
+ .zvideo-loading{transition:none}
+}
