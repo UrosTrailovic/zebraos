@@ -649,7 +649,7 @@ function appFolder(type){
  var body=windowBox(id,games?"JEUX — ZebraOS":"ATELIER — ZebraOS",Math.min(560,innerWidth-14),Math.min(460,innerHeight-56));
  body.innerHTML="";
  var wrap=el("div","zu-folder");
- wrap.appendChild(el("div","zu-folder-heading",games?"C:\ZEBRAOS\JEUX":"C:\ZEBRAOS\ATELIER"));
+ wrap.appendChild(el("div","zu-folder-heading",games?"C:\\ZEBRAOS\\JEUX":"C:\\ZEBRAOS\\ATELIER"));
  var grid=el("div","zu-folder-items");
  var items=games?[
   ["Zebra Tetris","tetris","tetris"],["Zebra Snake","snake","snake"]
