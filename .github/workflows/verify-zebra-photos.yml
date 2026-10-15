@@ -58,9 +58,10 @@ jobs:
                 &&!!$(".zpic-image").naturalWidth;
               // Une photo peut forcer visibility:visible; le composite entier
               // doit rester opaque à zéro pendant le contour Windows 95.
+              const oldVisibility=$(".zpic-image").style.visibility;
               $(".zpic-image").style.visibility="visible";
               report.compositeHidden=getComputedStyle(win).opacity==="0";
-              $(".zpic-image").style.visibility="hidden";
+              $(".zpic-image").style.visibility=oldVisibility;
               // Simule la disparition du contour animé ZebraOS.
               win.classList.remove("window-pending");
               await sleep(145);
