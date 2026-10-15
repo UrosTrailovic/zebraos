@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T07:18:45.269002+00:00",
+  "generatedAt": "2026-10-15T07:19:38.748557+00:00",
   "entries": [
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
@@ -95,6 +95,11 @@
     {
       "path": "STUDIO/BUREAU/sadate",
       "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/sadate/icone.png",
+      "type": "file",
+      "size": 24476
     }
   ]
 }
