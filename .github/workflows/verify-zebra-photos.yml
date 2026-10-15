@@ -56,9 +56,15 @@ jobs:
               report.windowAnimationGuard=win.classList.contains("window-pending")
                 &&$(".zpic").classList.contains("zpic-initializing")
                 &&!!$(".zpic-image").naturalWidth;
+              // Une photo peut forcer visibility:visible; le composite entier
+              // doit rester opaque à zéro pendant le contour Windows 95.
+              $(".zpic-image").style.visibility="visible";
+              report.compositeHidden=getComputedStyle(win).opacity==="0";
+              $(".zpic-image").style.visibility="hidden";
               // Simule la disparition du contour animé ZebraOS.
               win.classList.remove("window-pending");
               await sleep(145);
+              report.compositeRestored=getComputedStyle(win).opacity==="1";
               report.revealTogether=!$(".zpic").classList.contains("zpic-initializing")
                 &&getComputedStyle($(".zpic")).visibility==="visible"
                 &&getComputedStyle($(".zpic-toolbar")).visibility==="visible"
