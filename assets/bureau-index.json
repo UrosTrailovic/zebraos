@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T10:40:14.993605+00:00",
+  "generatedAt": "2026-10-15T10:47:50.540996+00:00",
   "desktopOrder": [
     "Panneau de configuration",
     "Poste de travail",
@@ -61,11 +61,21 @@
       "icon": "txt"
     },
     {
+      "path": "STUDIO/BUREAU/OUTILS/Bloc-notes.zebraos.json.icone.png",
+      "type": "file",
+      "size": 15509
+    },
+    {
       "path": "STUDIO/BUREAU/OUTILS/ZebraCalc.exe.zebraos.json",
       "type": "app",
       "name": "ZebraCalc.exe",
       "app": "calc",
       "icon": "calc"
+    },
+    {
+      "path": "STUDIO/BUREAU/OUTILS/ZebraCalc.exe.zebraos.json.icone.png",
+      "type": "file",
+      "size": 26182
     },
     {
       "path": "STUDIO/BUREAU/OUTILS/ZebraPaint.exe.zebraos.json",
@@ -75,6 +85,11 @@
       "icon": "paint"
     },
     {
+      "path": "STUDIO/BUREAU/OUTILS/ZebraPaint.exe.zebraos.json.icone.png",
+      "type": "file",
+      "size": 23204
+    },
+    {
       "path": "STUDIO/BUREAU/OUTILS/ZebraPlanner.exe.zebraos.json",
       "type": "app",
       "name": "ZebraPlanner.exe",
@@ -82,11 +97,21 @@
       "icon": "planner"
     },
     {
+      "path": "STUDIO/BUREAU/OUTILS/ZebraPlanner.exe.zebraos.json.icone.png",
+      "type": "file",
+      "size": 19207
+    },
+    {
       "path": "STUDIO/BUREAU/OUTILS/ZebraSticky.exe.zebraos.json",
       "type": "app",
       "name": "ZebraSticky.exe",
       "app": "sticky",
       "icon": "sticky"
+    },
+    {
+      "path": "STUDIO/BUREAU/OUTILS/ZebraSticky.exe.zebraos.json.icone.png",
+      "type": "file",
+      "size": 18706
     },
     {
       "path": "STUDIO/BUREAU/OUTILS/icone.png",
