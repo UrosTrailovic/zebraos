@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T08:09:49.002662+00:00",
+  "generatedAt": "2026-10-15T08:10:21.198860+00:00",
   "desktopOrder": [
     "Panneau de configuration",
     "Poste de travail",
@@ -97,6 +97,10 @@
     },
     {
       "path": "STUDIO/BUREAU/Photo et images cool",
+      "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool",
       "type": "dir"
     },
     {
