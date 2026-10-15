@@ -139,3 +139,14 @@
  .zp-layer-thumb{width:29px;height:29px}
  .zp-layer-action{min-width:24px;width:24px;height:30px}
 }
+
+/* Calque de peinture au PREMIER PLAN, photos dessous et fond blanc du support. */
+.zp-canvas-frame .zp-canvas{
+ position:absolute;inset:0;z-index:4;
+ width:100%;height:100%;
+ background:transparent!important;
+}
+.zp-canvas-frame .zp-layer-stage{z-index:2}
+.zp-canvas-frame.zp-select-mode .zp-canvas{pointer-events:none}
+.zp-canvas-frame.zp-select-mode .zp-layer-stage .zp-imported-image{pointer-events:auto}
+.zp-canvas-frame .zp-image-resize{z-index:6}
