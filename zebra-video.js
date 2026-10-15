@@ -107,7 +107,7 @@ function mount(root,item,opts){
  function updatePlay(){
   var playing=!video.paused&&!video.ended;
   play.textContent=playing?"❚❚":"▶";
-  play.title=playing?"Pause":"Lire";play.setAttribute("aria-label",play.title);
+  play.title=playing?"Mettre en pause":"Lire";play.setAttribute("aria-label",play.title);
   centerPlay.hidden=playing||frame.dataset.status==="loading"||frame.dataset.status==="error";
   if(playing)state("LECTURE","playing");
   else if(frame.dataset.status==="playing")state("PRÊT À LIRE","ready");
