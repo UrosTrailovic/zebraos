@@ -1,0 +1,116 @@
+name: Vérifier ZebraVideo
+on:
+  push:
+    paths:
+      - 'zebra-video.js'
+      - 'zebra-video.css'
+      - 'github-files.js'
+      - 'index.html'
+      - '.github/workflows/verify-zebra-video.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  navigateur:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier la syntaxe des lecteurs
+        run: |
+          node --check zebra-video.js
+          node --check github-files.js
+      - name: Tester chargement, vidéo verticale, commandes et fichiers GitHub
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path("index.html").read_text()
+          checks=r'''<script>
+          window.addEventListener("load",()=>{
+            const report={};
+            try{
+              HTMLMediaElement.prototype.load=function(){};
+              const wrapper=document.createElement("div");wrapper.className="window focused";
+              wrapper.style.cssText="position:relative;left:0;top:0;width:380px;height:650px";
+              const host=document.createElement("div");host.className="window-body";
+              host.style.cssText="width:100%;height:100%";
+              wrapper.append(host);document.body.append(wrapper);
+              const item={type:"file",name:"demo-portrait.mp4",path:"STUDIO/BUREAU/demo-portrait.mp4",size:14000000};
+              window.ZebraGitFiles.openFile(item,{
+                windowBox:function(id,title,w,h){report.route=id.includes("demo-portrait")&&w>=600&&h>=450;return host;}
+              });
+              const $=sel=>host.querySelector(sel);
+              const v=$(".zvideo-media");
+              report.player=!!v&&host.classList.contains("zvideo-window-body")
+                &&!!$(".zvideo-console")&&!!$(".zvideo-header");
+              report.screenLoading=host.querySelector(".zvideo").dataset.status==="loading"
+                &&!!$(".zvideo-loading-ring")
+                &&getComputedStyle($(".zvideo-loading")).visibility!=="hidden"
+                &&$(".zvideo-loading-title").textContent.includes("CHARGEMENT");
+              report.verticalFit=getComputedStyle(v).objectFit==="contain"
+                &&getComputedStyle($(".zvideo-screen")).backgroundImage!=="none";
+              report.mobileFit=$(".zvideo-console").getBoundingClientRect().width<=host.clientWidth+2;
+              report.controls=!v.controls&&!!$(".zvideo-seek")&&!!$(".zvideo-volume")
+                &&!!$(".zvideo-full")&&!!$(".zvideo-rate");
+              let current=0,mute=false,paused=true;
+              Object.defineProperty(v,"currentTime",{configurable:true,get(){return current;},set(n){current=n;}});
+              Object.defineProperty(v,"duration",{configurable:true,get(){return 333;}});
+              Object.defineProperty(v,"videoWidth",{configurable:true,get(){return 360;}});
+              Object.defineProperty(v,"videoHeight",{configurable:true,get(){return 640;}});
+              Object.defineProperty(v,"paused",{configurable:true,get(){return paused;}});
+              v.play=function(){paused=false;v.dispatchEvent(new Event("playing"));return Promise.resolve();};
+              v.pause=function(){paused=true;v.dispatchEvent(new Event("pause"));};
+              v.dispatchEvent(new Event("loadedmetadata"));
+              report.metadata=$(".zvideo-meta").textContent.includes("360 × 640")
+                &&$(".zvideo-duration").textContent==="5:33"
+                &&!$(".zvideo-center-play").hidden;
+              v.dispatchEvent(new Event("loadeddata"));
+              report.ready=$(".zvideo").dataset.status==="ready"
+                &&$(".zvideo-loading").classList.contains("zvideo-is-hidden");
+              $(".zvideo-primary").click();
+              report.play=$(".zvideo").dataset.status==="playing"
+                &&$(".zvideo-primary").getAttribute("aria-label")==="Mettre en pause";
+              $(".zvideo-seek").value="500";
+              $(".zvideo-seek").dispatchEvent(new Event("change",{bubbles:true}));
+              report.seek=Math.abs(current-166.5)<1;
+              $(".zvideo-buttons [aria-label='Avancer de 10 secondes']").click();
+              report.skip=Math.abs(current-176.5)<1;
+              $(".zvideo-volume").value=".3";
+              $(".zvideo-volume").dispatchEvent(new Event("input",{bubbles:true}));
+              report.volume=Math.abs(v.volume-.3)<.05;
+              $(".zvideo-rate").value="1.5";
+              $(".zvideo-rate").dispatchEvent(new Event("change",{bubbles:true}));
+              report.rate===true;
+              report.speed=v.playbackRate===1.5;
+              $(".zvideo-primary").click();
+              report.pause=$(".zvideo-primary").getAttribute("aria-label")==="Lire";
+              v.dispatchEvent(new Event("waiting"));
+              report.buffering=$(".zvideo").dataset.status==="loading"
+                &&$(".zvideo-loading-title").textContent.includes("MÉMOIRE");
+              v.dispatchEvent(new Event("canplay"));
+              report.resumeReady=$(".zvideo").dataset.status==="ready";
+              v.dispatchEvent(new Event("error"));
+              report.fallback=v.src.includes("raw.githubusercontent.com");
+              v.dispatchEvent(new Event("error"));
+              report.error=$(".zvideo").dataset.status==="error"&&!$(".zvideo-retry").hidden;
+              $(".zvideo-retry").click();
+              report.retry=$(".zvideo").dataset.status==="loading"
+                &&v.src.includes("STUDIO/BUREAU/demo-portrait.mp4");
+              const cleanup=host._zebraDispose;
+              report.disposal=typeof cleanup==="function";
+              cleanup();
+              report.cleanup=host._zebraDispose===null;
+            }catch(e){report.exception=String(e.stack||e);}
+            document.documentElement.dataset.videoReport=JSON.stringify(report);
+            document.documentElement.dataset.videoResult=Object.values(report).every(x=>x===true)?"ok":"failed";
+          });
+          </script>'''
+          Path("_verify_video.html").write_text(html.replace("</body>",checks+"</body>"))
+          PY
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebra-video-server.log 2>&1 &
+          sleep 1
+          for width in 390 1050; do
+            google-chrome --headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu --window-size=$width,900 --virtual-time-budget=2500 --dump-dom http://127.0.0.1:8765/_verify_video.html > /tmp/zebra-video-$width.html 2>/tmp/zebra-video-$width.log
+            grep -o 'data-video-report="[^"]*"' /tmp/zebra-video-$width.html | tail -c 5000
+            grep -o 'data-video-result="[^"]*"' /tmp/zebra-video-$width.html
+            grep -q 'data-video-result="ok"' /tmp/zebra-video-$width.html
+          done
