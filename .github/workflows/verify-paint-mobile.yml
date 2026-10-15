@@ -1,0 +1,99 @@
+name: Vérifier ZebraPaint mobile
+on:
+  push:
+    paths:
+      - 'paint.js'
+      - 'paint-responsive.css'
+      - 'index.html'
+      - '.github/workflows/verify-paint-mobile.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  paint-mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier la syntaxe de ZebraPaint
+        run: node --check paint.js
+      - name: Tester importation, déplacement, taille et bouton Allumer sur Android
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path("index.html").read_text()
+          script=r'''<script>
+          window.addEventListener("load",async()=>{
+            const report={};
+            try{
+              const power=document.getElementById("power-btn");
+              const symbol=power.querySelector(".zboot-power-svg");
+              const style=getComputedStyle(symbol);
+              report.powerSvg=!!symbol&&symbol.querySelectorAll("path").length===2
+                &&Number.parseFloat(style.width)>=50&&Number.parseFloat(style.height)>=50
+                &&style.display!=="none";
+              const host=document.createElement("div");
+              host.id="paint-test-host";
+              host.style.cssText="position:absolute;top:20px;left:10px;width:350px;height:555px;z-index:9999;overflow:hidden;";
+              host.className="zebra-game-body";
+              document.body.appendChild(host);
+              window.ZebraPaint.mount(host);
+              const frame=host.querySelector(".zp-canvas-frame");
+              const canvas=host.querySelector(".zp-canvas");
+              const work=host.querySelector(".zp-work");
+              const r=frame.getBoundingClientRect(),w=work.getBoundingClientRect();
+              report.fitMobile=r.width<=w.width+1&&r.left>=w.left-2&&r.right<=w.right+2
+                &&canvas.getBoundingClientRect().width<=w.width+1&&canvas.width===640&&canvas.height===400;
+              const testImage=document.createElement("canvas");
+              testImage.width=120;testImage.height=80;
+              const ctx=testImage.getContext("2d");
+              ctx.fillStyle="#ff0000";ctx.fillRect(0,0,120,80);
+              const blob=await new Promise(resolve=>testImage.toBlob(resolve,"image/png"));
+              const input=host.querySelector("input[type=file]");
+              Object.defineProperty(input,"files",{configurable:true,value:[new File([blob],"example.png",{type:"image/png"})]});
+              input.dispatchEvent(new Event("change",{bubbles:true}));
+              await new Promise(resolve=>setTimeout(resolve,250));
+              const layer=host.querySelector(".zp-imported-image");
+              report.importLayer=!!layer;
+              const before=layer.getBoundingClientRect(),frameRect=frame.getBoundingClientRect();
+              report.importCentered=Math.abs((before.left+before.right)/2-(frameRect.left+frameRect.right)/2)<3
+                &&Math.abs((before.top+before.bottom)/2-(frameRect.top+frameRect.bottom)/2)<3;
+              function event(type,x,y){
+                return new PointerEvent(type,{bubbles:true,cancelable:true,isPrimary:true,pointerId:31,pointerType:"touch",button:0,clientX:x,clientY:y});
+              }
+              let x=before.left+before.width*.42,y=before.top+before.height*.42;
+              layer.dispatchEvent(event("pointerdown",x,y));
+              window.dispatchEvent(event("pointermove",x+25,y+20));
+              window.dispatchEvent(event("pointerup",x+25,y+20));
+              const afterMove=layer.getBoundingClientRect();
+              report.drag=Math.abs(afterMove.left-before.left)>14&&Math.abs(afterMove.top-before.top)>10;
+              const handle=layer.querySelector(".zp-image-resize");
+              const originalWidth=layer.getBoundingClientRect().width;
+              const handleRect=handle.getBoundingClientRect();
+              x=(handleRect.left+handleRect.right)/2;y=(handleRect.top+handleRect.bottom)/2;
+              handle.dispatchEvent(event("pointerdown",x,y));
+              window.dispatchEvent(event("pointermove",x+28,y+18));
+              window.dispatchEvent(event("pointerup",x+28,y+18));
+              report.resize=layer.getBoundingClientRect().width>originalWidth+10;
+              report.applyVisible=getComputedStyle(host.querySelector(".zp-import-controls")).display!=="none";
+              host.querySelector(".zp-apply-image").click();
+              report.applied=!host.querySelector(".zp-imported-image")&&host.querySelector(".zp-import-controls").hidden;
+              const pixels=canvas.getContext("2d").getImageData(0,0,640,400).data;
+              let red=0;
+              for(let i=0;i<pixels.length;i+=40)if(pixels[i]>220&&pixels[i+1]<60&&pixels[i+2]<60)red++;
+              report.canvasColored=red>10;
+              host.querySelector(".zp-edits button").click();
+              const undone=canvas.getContext("2d").getImageData(320,200,1,1).data;
+              report.undo=undone[0]===255&&undone[1]===255&&undone[2]===255;
+            }catch(e){report.error=String(e.stack||e);}
+            document.documentElement.dataset.paintReport=JSON.stringify(report);
+            document.documentElement.dataset.paintStatus=Object.values(report).every(v=>v===true)?"ok":"failed";
+          });
+          </script>'''
+          Path("_verify_paint_mobile.html").write_text(html.replace("</body>",script+"</body>"))
+          PY
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebra-paint-server.log 2>&1 &
+          sleep 1
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --touch-events=enabled --window-size=390,860 --virtual-time-budget=5500 --dump-dom http://127.0.0.1:8765/_verify_paint_mobile.html > /tmp/zebra-paint-mobile.html 2>/tmp/zebra-paint-chrome.log
+          grep -o 'data-paint-report="[^"]*"' /tmp/zebra-paint-mobile.html | tail -c 4000
+          grep -o 'data-paint-status="[^"]*"' /tmp/zebra-paint-mobile.html
+          grep -q 'data-paint-status="ok"' /tmp/zebra-paint-mobile.html
