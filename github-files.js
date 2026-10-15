@@ -239,12 +239,23 @@ function preview(item,opts){
  }
  if(kinds.text.test(item.name)&&item.size>512000){openExternal(fileLink(item.path));return;}
  var isVideo=kinds.video.test(item.name),isImage=kinds.image.test(item.name);
+ var isEditableText=/\.txt$/i.test(item.name)&&!!window.ZebraTextEditor;
  var body=opts.windowBox("public-file-"+item.path,item.name+" — ZebraOS",
    Math.min(isVideo?840:isImage?900:630,innerWidth-28),
    Math.min(isVideo?600:isImage?650:480,innerHeight-65));
  if(body._zebraDispose)body._zebraDispose();
- body.classList.remove("zvideo-window-body","zpic-window-body","image-viewer-body");
+ body.classList.remove("zvideo-window-body","zpic-window-body","image-viewer-body","ztext-window-body");
  body.innerHTML="";
+ // Le TXT reste un fichier public GitHub en lecture seule côté serveur,
+ // mais la copie de travail est modifiable dans le stockage LOCAL du navigateur.
+ if(isEditableText){
+  body.classList.add("ztext-window-body");
+  window.ZebraTextEditor.mount(body,item,{
+   session:opts&&opts.session||"visitor",
+   source:function(file){return site(file.path);}
+  });
+  return;
+ }
  // Galerie photo : uniquement les images voisines dans le même dossier.
  if(isImage){
   body.classList.add("zpic-window-body");
