@@ -32,6 +32,10 @@ jobs:
           root=Path('STUDIO/BUREAU')
           index=json.loads(Path('assets/bureau-index.json').read_text())
           entries=index['entries']
+          config=json.loads(Path('STUDIO/BUREAU/.ordre-bureau.json').read_text())
+          assert index['desktopOrder']==config['ordre'],"Ordre non synchronisé avec GitHub"
+          root_items={e.get('name') or Path(e['path']).name for e in entries if Path(e['path']).parent==root}
+          assert set(index['desktopOrder'])<=root_items,"Raccourci inconnu dans l'ordre par défaut"
           assert all(root in Path(e['path']).parents for e in entries)
           for item in entries:
               if item['type']=='app':
@@ -62,6 +66,8 @@ jobs:
             document.getElementById("skip-session-boot").click();
             var result=await lib.load();
             report.indexLoaded=result.ok&&lib.list(lib.root).some(x=>x.name==="OUTILS");
+            report.configOrder=lib.list(lib.root).slice(0,3).map(e=>e.name).join("|")
+              ==="Panneau de configuration|Poste de travail|ZebraAMP.exe";
             await new Promise(resolve=>setTimeout(resolve,160));
             var icons=Array.from(document.querySelectorAll(".desk-icon .desk-caption")).map(e=>e.textContent);
             report.desktop=["JEUX","OUTILS","Zebra Tape 2","sadate","Poste de travail","ZebraAMP.exe","Panneau de configuration"].every(n=>icons.includes(n))
