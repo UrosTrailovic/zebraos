@@ -4,8 +4,11 @@ on:
     paths:
       - 'zebra-tools.js'
       - 'zebra-tools.css'
+      - 'github-files.js'
       - 'app.js'
       - 'index.html'
+      - 'STUDIO/BUREAU/**'
+      - 'assets/bureau-index.json'
       - '.github/workflows/verify-zebra-tools.yml'
   workflow_dispatch:
 permissions:
@@ -15,48 +18,74 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Vérifier syntaxe JavaScript
+      - name: Vérifier la syntaxe et les raccourcis GitHub
         run: |
           node --check zebra-tools.js
+          node --check github-files.js
           node --check app.js
-      - name: Vérifier bureau, fenêtres et stockage dans Chromium
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('STUDIO/BUREAU')
+          index=json.loads(Path('assets/bureau-index.json').read_text())
+          entries=index['entries']
+          assert all(root in Path(e['path']).parents for e in entries)
+          for item in entries:
+              if item['type']=='app':
+                  assert Path(item['path']).is_file(),item
+                  assert json.loads(Path(item['path']).read_text())['app']==item['app']
+          names=[e['path'] for e in entries]
+          for name in ['JEUX','OUTILS','Zebra Tape 2','sadate']:
+              assert 'STUDIO/BUREAU/'+name in names,name
+          for item in entries:
+              if item['type']=='app' and item['app']=='settings':
+                  assert item['path'].startswith('STUDIO/BUREAU/Panneau'),item
+          print('Structure GitHub : OK,',len(entries),'entrées')
+          PY
+      - name: Tester bureau, dossiers et trois utilitaires dans Chromium
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          page=Path("index.html").read_text()
+          page=Path('index.html').read_text()
           script=r'''<script>
-          window.addEventListener("load",function(){
+          window.addEventListener("load",async function(){
            var report={};
            try{
-            var tools=window.ZebraTools;
-            report.loaded=!!tools&&typeof tools.calculator==="function"
-              &&typeof tools.planner==="function"&&typeof tools.stickyManager==="function";
+            var tools=window.ZebraTools,lib=window.ZebraGitFiles;
+            report.loaded=!!tools&&!!lib;
             document.getElementById("power-btn").click();
             document.getElementById("skip-boot").click();
             document.querySelector(".user-visitor").click();
             document.getElementById("skip-session-boot").click();
+            var result=await lib.load();
+            report.indexLoaded=result.ok&&lib.list(lib.root).some(x=>x.name==="OUTILS");
+            await new Promise(resolve=>setTimeout(resolve,160));
             var icons=Array.from(document.querySelectorAll(".desk-icon .desk-caption")).map(e=>e.textContent);
-            report.desktop=icons.includes("JEUX")&&icons.includes("ATELIER")
-              &&icons.includes("ZebraAMP.exe")&&!icons.includes("Tetris.exe")&&!icons.includes("Snake.exe");
-            var button=function(text,context){
-             return Array.from(context.querySelectorAll("button")).find(b=>b.textContent.trim().includes(text));
-            };
-            var jeux=Array.from(document.querySelectorAll(".desk-icon")).find(e=>e.textContent.includes("JEUX"));
-            jeux.click();
-            report.gamesFolder=!!document.querySelector(".zu-folder")&&!!button("Zebra Tetris",document.querySelector(".zu-folder"));
-            var atelier=Array.from(document.querySelectorAll(".desk-icon")).find(e=>e.textContent.includes("ATELIER"));
-            atelier.click();
-            var folder=Array.from(document.querySelectorAll(".zu-folder")).find(e=>e.textContent.includes("ZebraCalc"));
-            report.toolsFolder=!!folder&&!!button("ZebraSticky",folder)&&!!button("ZebraPlanner",folder);
-            button("ZebraCalc",folder).click();
-            var calc=document.querySelector(".zu-calc"),key=function(v){button(v,calc.querySelector(".zu-calc-keys")).click();};
+            report.desktop=["JEUX","OUTILS","Zebra Tape 2","sadate","Poste de travail","ZebraAMP.exe","Panneau de configuration"].every(n=>icons.includes(n))
+              &&!icons.includes("ATELIER")&&!icons.includes("Tetris.exe")&&!icons.includes("Snake.exe")
+              &&!icons.includes("Corbeille")&&!icons.includes("Gestionnaire Studio");
+            function desk(label){return Array.from(document.querySelectorAll(".desk-icon")).find(e=>e.querySelector(".desk-caption")?.textContent===label);}
+            function entry(label){return Array.from(document.querySelectorAll(".github-file-entry")).find(e=>e.querySelector(".github-file-name")?.textContent===label);}
+            function button(label,element){return Array.from(element.querySelectorAll("button")).find(e=>e.textContent.trim().includes(label));}
+            desk("JEUX").click();
+            await new Promise(resolve=>setTimeout(resolve,150));
+            report.gamesFolder=!!entry("Tetris.exe")&&!!entry("Snake.exe")
+              &&!entry("ZebraCalc.exe");
+            entry("Tetris.exe").click();
+            report.tetrisWorks=!!document.querySelector(".zg-tetris-stage");
+            desk("OUTILS").click();
+            await new Promise(resolve=>setTimeout(resolve,150));
+            report.toolsFolder=!!entry("ZebraCalc.exe")&&!!entry("ZebraSticky.exe")
+              &&!!entry("ZebraPlanner.exe")&&!!entry("ZebraPaint.exe")
+              &&!!entry("Bloc-notes")&&!entry("Panneau de configuration");
+            entry("ZebraCalc.exe").click();
+            var calc=document.querySelector(".zu-calc"),key=function(v){return Array.from(calc.querySelectorAll(".zu-calc-key")).find(b=>b.textContent.trim()===v).click();};
             key("2");key("+");key("3");key("=");
             report.calc=document.querySelector(".zu-calc-display").textContent==="5";
             report.calcPersistence=JSON.parse(localStorage.getItem("zebra.tools.v1.calc.visitor")).length===1;
-            button("ZebraSticky",folder).click();
-            var sticky=document.querySelector(".zu-sticky-manager-list");
-            report.stickyWindow=!!sticky;
-            button("+ NOUVEAU POST-IT",document.querySelector(".zu-app-header")||document).click();
+            entry("ZebraSticky.exe").click();
+            report.stickyWindow=!!document.querySelector(".zu-sticky-manager-list");
+            button("+ NOUVEAU POST-IT",document.querySelector(".zu-app-header")).click();
             var layer=document.querySelector(".zu-sticky-layer");
             report.desktopSticky=!!layer&&layer.querySelectorAll(".zu-sticky-note").length===1;
             var textarea=layer.querySelector("textarea");
@@ -67,7 +96,7 @@ jobs:
             report.sessionIsolation=document.querySelectorAll(".zu-sticky-note").length===0;
             tools.stickyDesktop("visitor");
             report.stickyReload=document.querySelector(".zu-sticky-text").value==="Mémoriser ce refrain";
-            button("ZebraPlanner",folder).click();
+            entry("ZebraPlanner.exe").click();
             var planner=document.querySelector(".zu-planner");
             report.plannerWindow=!!planner&&planner.querySelectorAll(".zu-day").length>=28;
             planner.querySelector(".zu-planner-form input[type=text]").value="Studio";
@@ -78,16 +107,15 @@ jobs:
             planner.querySelector(".zu-task input[type=checkbox]").click();
             report.plannerCheck=JSON.parse(localStorage.getItem("zebra.tools.v1.planner.visitor"))[0].done===true;
            }catch(e){report.error=String(e.stack||e);}
-           document.documentElement.setAttribute("data-zebra-report",JSON.stringify(report));
-           document.documentElement.setAttribute("data-zebra-result",Object.values(report).every(v=>v===true)?"ok":"failed");
+           document.documentElement.dataset.zebraReport=JSON.stringify(report);
+           document.documentElement.dataset.zebraResult=Object.values(report).every(v=>v===true)?"ok":"failed";
           });
           </script>'''
-          assert '</body>' in page
-          Path("_verify_zebra_tools.html").write_text(page.replace("</body>",script+"</body>"))
+          Path('_verify_zebra_tools.html').write_text(page.replace('</body>',script+'</body>'))
           PY
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebra-tools-server.log 2>&1 &
           sleep 1
-          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --touch-events=enabled --window-size=430,900 --virtual-time-budget=8500 --dump-dom http://127.0.0.1:8765/_verify_zebra_tools.html > /tmp/zebra-tools-result.html 2>/tmp/zebra-tools-chrome.log
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --touch-events=enabled --window-size=430,900 --virtual-time-budget=10000 --dump-dom http://127.0.0.1:8765/_verify_zebra_tools.html > /tmp/zebra-tools-result.html 2>/tmp/zebra-tools-chrome.log
           grep -o 'data-zebra-report="[^"]*"' /tmp/zebra-tools-result.html | tail -c 3500
           grep -o 'data-zebra-result="[^"]*"' /tmp/zebra-tools-result.html
           grep -q 'data-zebra-result="ok"' /tmp/zebra-tools-result.html
