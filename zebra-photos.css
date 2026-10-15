@@ -99,3 +99,13 @@
  .zpic-stage-arrow{width:28px;height:46px}
 }
 @media(prefers-reduced-motion:reduce){.zpic-wait-wheel{animation:none}}
+
+/* ZebraPhotos 1.2 : ouverture synchronisée avec le contour Windows 95.
+   Toute l'interface attend la fin de l'animation, pas seulement le JPEG. */
+.zpic.zpic-initializing{
+ visibility:hidden!important;
+ pointer-events:none!important;
+}
+.zpic:not(.zpic-initializing){
+ visibility:visible;
+}
