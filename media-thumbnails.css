@@ -1,0 +1,50 @@
+/* ZebraOS Media Explorer 1.0 — miniatures photo/vidéo façon Windows 9x.
+   S'applique uniquement aux fichiers, jamais aux icônes personnalisées. */
+.bureau-media-thumb{
+ position:relative;display:inline-flex;align-items:center;justify-content:center;
+ flex:none;width:66px;height:54px;min-width:0;min-height:0;
+ padding:3px;overflow:hidden;background:linear-gradient(135deg,#e4e4e4,#969696);
+ border:3px ridge #f4f4f4;box-shadow:1px 2px 0 #2424248c;
+ vertical-align:middle;image-rendering:auto;
+}
+.bureau-media-image{
+ position:absolute;inset:3px;width:calc(100% - 6px);height:calc(100% - 6px);
+ object-fit:cover;object-position:50% 50%;display:block;
+ opacity:0;transition:opacity 120ms linear;image-rendering:auto;
+ background:#252525;
+}
+.bureau-media-thumb.bureau-thumb-loaded .bureau-media-image{opacity:1}
+.bureau-media-fallback{
+ display:flex;align-items:center;justify-content:center;
+ width:100%;height:100%;background:#949ca2;overflow:hidden;
+}
+.bureau-media-thumb.bureau-thumb-loaded .bureau-media-fallback{visibility:hidden}
+.bureau-video-thumb{background:#161b30}
+.bureau-video-play{
+ position:absolute;z-index:2;bottom:5px;right:5px;
+ display:flex;align-items:center;justify-content:center;
+ min-width:19px;height:19px;padding-left:2px;
+ border:1px solid #fff9;color:#fff;background:#13378bdb;
+ box-shadow:1px 1px #000b;font:bold 10px Arial,sans-serif;
+ pointer-events:none;
+}
+.github-file-entry>.bureau-media-thumb{
+ width:76px;height:60px;
+ max-width:calc(100% - 4px);
+ margin:0 auto 3px;
+}
+.github-file-entry:has(>.bureau-media-thumb){min-height:128px}
+.github-file-entry:has(>.bureau-media-thumb)>.github-file-name{
+ width:100%;font-size:11px!important;overflow-wrap:anywhere;
+ text-align:center;
+}
+.desk-icon .bureau-media-thumb{
+ width:42px;height:40px;min-width:42px;min-height:40px;
+ border-width:2px;padding:2px;
+}
+.desk-icon .bureau-media-image{inset:2px;width:calc(100% - 4px);height:calc(100% - 4px)}
+.desk-icon .bureau-video-play{min-width:13px;height:13px;font-size:8px;right:3px;bottom:3px}
+@media(max-width:700px){
+ .github-file-entry>.bureau-media-thumb{width:72px;height:57px}
+ .github-file-entry:has(>.bureau-media-thumb){min-height:125px}
+}
