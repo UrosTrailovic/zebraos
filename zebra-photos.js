@@ -20,7 +20,7 @@ function mount(root,initial,collection,options){
  var index=Math.max(0,files.findIndex(function(f){return f.path===initial.path;}));
  var active=true,disposed=false,loaded=false,fit=true,zoom=100,offsetX=0,offsetY=0,pointer=null,requestId=0;
  var naturalWidth=0,naturalHeight=0;
- var frame=el("section","zpic");
+ var frame=el("section","zpic zpic-initializing");
  frame.setAttribute("aria-label","Visionneuse de photos ZebraOS");
  var stage=el("div","zpic-stage");
  var image=el("img","zpic-image");image.alt="";image.draggable=false;
@@ -49,6 +49,41 @@ function mount(root,initial,collection,options){
  var full=button("⛶","zpic-tool zpic-full","Plein écran",toggleFullscreen);
  adjustments.append(fitBtn,minus,slider,plus,amount,full);
  toolbar.append(details,nav,adjustments);frame.append(stage,toolbar);root.append(frame);
+ // La fenêtre ZebraOS s'ouvre via un contour animé. Ne montrer aucun
+ // fragment de l'image avant que la fenêtre ET toutes les commandes soient
+ // en place. Pour un chargement lent, révéler le loader avec la fenêtre.
+ var openingWindow=root.closest(".window");
+ var startupObserver=null,startupRaf1=0,startupRaf2=0,startupTimer=0;
+ var startupScheduled=false,startupComplete=false;
+ function revealTogether(){
+  if(!active||startupComplete||startupScheduled)return;
+  if(openingWindow&&openingWindow.classList.contains("window-pending"))return;
+  startupScheduled=true;
+  startupRaf1=requestAnimationFrame(function(){
+   startupRaf2=requestAnimationFrame(function(){
+    startupScheduled=false;
+    if(!active||startupComplete)return;
+    if(openingWindow&&openingWindow.classList.contains("window-pending"))return;
+    if(!frame.isConnected||stage.clientWidth<1||toolbar.clientHeight<1){
+     // Les dimensions peuvent arriver une frame après la restauration.
+     startupTimer=setTimeout(revealTogether,35);
+     return;
+    }
+    startupComplete=true;
+    if(startupObserver)startupObserver.disconnect();
+    clearTimeout(startupTimer);
+    // Les métadonnées, l'image (ou son loader) et les contrôles sont
+    // présentés dans une seule frame, après calcul de l'ajustement.
+    if(loaded)layout();
+    frame.classList.remove("zpic-initializing");
+   });
+  });
+ }
+ if(openingWindow&&typeof MutationObserver!=="undefined"){
+  startupObserver=new MutationObserver(revealTogether);
+  startupObserver.observe(openingWindow,{attributes:true,attributeFilter:["class"]});
+ }
+ startupTimer=setTimeout(revealTogether,0);
  var cleanups=[];
  function listen(target,type,fn,config){
   target.addEventListener(type,fn,config);cleanups.push(function(){target.removeEventListener(type,fn,config);});
@@ -106,8 +141,17 @@ function mount(root,initial,collection,options){
    if(!active||thisRequest!==requestId)return;
    loaded=true;naturalWidth=image.naturalWidth;naturalHeight=image.naturalHeight;
    metadata.textContent=(file.name.split(".").pop()||"IMAGE").toUpperCase()+"  |  "+naturalWidth+" × "+naturalHeight+"  |  "+(opts.sizeText?opts.sizeText(file.size):"");
-   image.alt=file.name;image.style.visibility="visible";
-   frame.dataset.loading="false";wait.hidden=true;layout();
+   image.alt=file.name;
+   layout();
+   // Attendre aussi le décodage du JPEG pour éviter le flash d'une
+   // image brute avant la composition du panneau inférieur.
+   var decoding=typeof image.decode==="function"?image.decode():Promise.resolve();
+   decoding.catch(function(){}).then(function(){
+    if(!active||thisRequest!==requestId)return;
+    image.style.visibility="visible";
+    frame.dataset.loading="false";wait.hidden=true;layout();
+    revealTogether();
+   });
   };
   image.onerror=function(){
    if(!active||thisRequest!==requestId)return;
@@ -178,6 +222,9 @@ function mount(root,initial,collection,options){
   if(disposed)return;disposed=true;active=false;requestId++;
   cleanups.forEach(function(fn){fn();});
   if(observer)observer.disconnect();
+  if(startupObserver)startupObserver.disconnect();
+  clearTimeout(startupTimer);
+  cancelAnimationFrame(startupRaf1);cancelAnimationFrame(startupRaf2);
   image.onload=null;image.onerror=null;image.removeAttribute("src");
   if(root._zebraDispose===dispose)root._zebraDispose=null;
  }
