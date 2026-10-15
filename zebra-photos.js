@@ -170,10 +170,14 @@ function mount(root,initial,collection,options){
  listen(document,"keydown",keyboard);
  listen(window,"resize",layout);
  listen(document,"fullscreenchange",layout);
+ // Maximisation/réduction de fenêtre ZebraOS sans événement resize global.
+ var observer=typeof ResizeObserver!=="undefined"?new ResizeObserver(function(){if(active&&fit)layout();}):null;
+ if(observer)observer.observe(stage);
  show();
  function dispose(){
   if(disposed)return;disposed=true;active=false;requestId++;
   cleanups.forEach(function(fn){fn();});
+  if(observer)observer.disconnect();
   image.onload=null;image.onerror=null;image.removeAttribute("src");
   if(root._zebraDispose===dispose)root._zebraDispose=null;
  }
