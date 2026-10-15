@@ -52,6 +52,17 @@ jobs:
               report.initiallyHidden=$(".zg-retro").classList.contains("zt-assembling")
                 &&getComputedStyle($(".zg-retro")).visibility==="hidden"
                 &&!!$(".zt-startup-loader");
+              const opening=root.closest(".window");
+              opening.classList.add("window-pending");
+              const forcedVisible=document.createElement("span");
+              forcedVisible.style.visibility="visible";
+              forcedVisible.textContent="NE PAS AFFICHER";
+              root.appendChild(forcedVisible);
+              report.compositeHidden=getComputedStyle(opening).opacity==="0"
+                &&getComputedStyle(forcedVisible).visibility==="visible";
+              opening.classList.remove("window-pending");
+              report.compositeRestored=getComputedStyle(opening).opacity==="1";
+              forcedVisible.remove();
 
               report.assets=!!$(".zt-logo");
               report.buttons=!!$(".zt-play")&&!!$(".zt-restart")&&!!$(".zt-menu");
