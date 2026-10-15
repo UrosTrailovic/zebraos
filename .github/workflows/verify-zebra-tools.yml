@@ -39,7 +39,7 @@ jobs:
             report.desktop=icons.includes("JEUX")&&icons.includes("ATELIER")
               &&icons.includes("ZebraAMP.exe")&&!icons.includes("Tetris.exe")&&!icons.includes("Snake.exe");
             var button=function(text,context){
-             return Array.from(context.querySelectorAll("button")).find(b=>b.textContent.trim()===text);
+             return Array.from(context.querySelectorAll("button")).find(b=>b.textContent.trim().includes(text));
             };
             var jeux=Array.from(document.querySelectorAll(".desk-icon")).find(e=>e.textContent.includes("JEUX"));
             jeux.click();
