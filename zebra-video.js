@@ -24,15 +24,12 @@ function mount(root,item,opts){
  opts=opts||{};
  var active=true,triedFallback=false,dragging=false,disposed=false;
  var frame=node("section","zvideo");frame.setAttribute("aria-label","Lecteur ZebraVideo");
- var header=node("header","zvideo-header");
- var brand=node("div","zvideo-brand");
- brand.append(node("strong","","ZEBRA VIDEO"),node("small","","MEDIA CENTER  •  ZEBRAOS"));
  var led=node("span","zvideo-led","● CHARGEMENT");
  led.setAttribute("role","status");
- header.append(node("span","zvideo-brand-symbol","▶"),brand,led);
  var screen=node("div","zvideo-screen");
  var video=node("video","zvideo-media");
  video.preload="metadata";video.playsInline=true;video.controls=false;
+ video.setAttribute("controlsList","nodownload noremoteplayback");
  video.setAttribute("aria-label",item.name);
  var loading=node("div","zvideo-loading");
  loading.setAttribute("role","status");loading.setAttribute("aria-live","polite");
@@ -51,7 +48,7 @@ function mount(root,item,opts){
  var info=node("div","zvideo-info");
  var filename=node("strong","zvideo-filename",item.name);filename.title=item.name;
  var meta=node("small","zvideo-meta","VIDÉO • "+(opts.sizeText?opts.sizeText(item.size):"MP4"));
- info.append(filename,meta);
+ info.append(filename,meta,led);
  var timeline=node("div","zvideo-timeline");
  var seek=node("input","zvideo-seek");seek.type="range";seek.min="0";seek.max="1000";seek.step="1";seek.value="0";
  seek.setAttribute("aria-label","Position dans la vidéo");
@@ -72,12 +69,8 @@ function mount(root,item,opts){
  var pip=button("▣","zvideo-button zvideo-pip","Image dans l'image",requestPip);
  var full=button("⛶","zvideo-button zvideo-full","Plein écran",requestFull);
  controls.append(play,backward,forward,mute,volume,rate,pip,full);
- var footer=node("div","zvideo-footer");
- var open=node("a","zvideo-open","OUVRIR LE FICHIER ↗");
- open.href=opts.primary||opts.backup||"#";open.target="_blank";open.rel="noopener noreferrer";
- footer.append(node("span","","ZEBRAOS  •  PLAYER 1.0"),open);
- panel.append(info,timeline,controls,footer);
- frame.append(header,screen,panel);root.append(frame);
+ panel.append(info,timeline,controls);
+ frame.append(screen,panel);root.append(frame);
  var events=[];
  function listen(target,type,fn){target.addEventListener(type,fn);events.push(function(){target.removeEventListener(type,fn);});}
  function state(message,kind){
@@ -119,7 +112,7 @@ function mount(root,item,opts){
    video.src=opts.backup;video.load();
   }else{
    state("VIDÉO INDISPONIBLE","error");
-   loadingDetail.textContent="Impossible de lire ce format. Ouvre le fichier directement.";
+   loadingDetail.textContent="Le navigateur ne peut pas lire cette vidéo.";
   }
  }
  function retryLoad(){
@@ -187,6 +180,8 @@ function mount(root,item,opts){
  listen(video,"volumechange",volumeLabel);
  listen(video,"error",fail);
  listen(video,"click",toggle);
+ listen(frame,"contextmenu",function(e){e.preventDefault();});
+ listen(frame,"dragstart",function(e){e.preventDefault();});
  listen(screen,"dblclick",requestFull);
  listen(seek,"input",function(){
   dragging=true;var d=Number.isFinite(video.duration)?video.duration:0;
