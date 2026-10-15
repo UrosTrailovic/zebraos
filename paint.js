@@ -217,30 +217,52 @@ function mount(root){
   layerStage.replaceChildren(...layers.map(l=>l.node));
   layers.forEach(l=>{
    l.node.hidden=!l.visible;
+   l.node.style.opacity=String(l.opacity??1);
    if(l.type==="image")positionImage(l);
   });
   panelTitle.textContent="CALQUES · "+layers.length;
   changeControls.hidden=!getSelected();
   const image=getSelected()?.type==="image"?getSelected():null;
   scaleRow.hidden=!image;
-  if(image){const pct=Math.round(image.w/image.baseW*100);
-   scale.value=String(clamp(pct,10,500));scaleValue.textContent=pct+" %";}
+  transformPanel.hidden=!getSelected();
+  rotateControl.input.parentNode.hidden=!image;
+  skewControl.input.parentNode.hidden=!image;
+  if(image){
+   const pct=Math.round(image.w/image.baseW*100);
+   scale.value=String(clamp(pct,10,500));scaleValue.textContent=pct+" %";
+   rotateControl.input.value=String(image.angle||0);rotateControl.output.textContent=(image.angle||0)+"°";
+   skewControl.input.value=String(image.skew||0);skewControl.output.textContent=(image.skew||0)+"°";
+  }
+  if(getSelected()){
+   opacityControl.input.value=String(Math.round((getSelected().opacity??1)*100));
+   opacityControl.output.textContent=opacityControl.input.value+" %";
+  }
+  transformButtons.hidden=!image;
   layerList.replaceChildren();
   layers.slice().reverse().forEach(l=>{
-   const row=el("div","zp-layer-entry"+(l.id===selected?" active":"")+(l.visible?"":" hidden-layer"));
+   const row=el("div","zp-layer-entry"+(l.id===selected?" active":"")+(l.visible?"":" hidden-layer")+(l.id===paintTarget?" zp-paint-target":""));
+   row.dataset.layerId=String(l.id);
    const b=btn("",()=>{select(l.id);if(l.type==="image")choose("select");},"zp-layer-choice");
-   b.append(previewThumb(l),el("span","zp-layer-name",(l.type==="image"?"▣ ":"✎ ")+l.name));
+   b.append(previewThumb(l),el("span","zp-layer-name",(l.type==="image"?"▣ ":"✎ ")+l.name+(l.id===paintTarget?" ●":"")));
+   b.title="Sélectionner "+l.name+(l.id===paintTarget?" (calque de dessin actif)":"");
    const actions=el("div","zp-layer-buttons");
    const eye=btn(l.visible?"◉":"○",()=>visibility(l.id),"zp-layer-action");eye.title=l.visible?"Masquer":"Afficher";eye.setAttribute("aria-label",eye.title);
    const up=btn("↑",()=>moveLayer(l.id,1),"zp-layer-action");up.disabled=layers[layers.length-1]===l;up.title="Devant";up.setAttribute("aria-label","Monter le calque");
    const down=btn("↓",()=>moveLayer(l.id,-1),"zp-layer-action");down.disabled=layers[0]===l;down.title="Derrière";down.setAttribute("aria-label","Descendre le calque");
+   const lock=btn(l.locked?"🔒":"♢",()=>toggleLock(l.id),"zp-layer-action");
+   lock.title=l.locked?"Déverrouiller":"Verrouiller";lock.setAttribute("aria-label",lock.title);
+   const copy=btn("⧉",()=>duplicateLayer(l.id),"zp-layer-action");
+   copy.title="Dupliquer";copy.setAttribute("aria-label","Dupliquer le calque");
+   const rename=btn("✎",()=>renameLayer(l.id),"zp-layer-action");
+   rename.title="Renommer";rename.setAttribute("aria-label","Renommer le calque");
    const del=btn("×",()=>removeLayer(l.id),"zp-layer-action zp-layer-remove");del.title="Supprimer";del.setAttribute("aria-label","Supprimer le calque");
-   actions.append(eye,up,down,del);row.append(b,actions);layerList.append(row);
+   actions.append(eye,up,down,lock,copy,rename,del);row.append(b,actions);layerList.append(row);
   });
  }
  function positionImage(l){
   l.node.style.left=l.x/W*100+"%";l.node.style.top=l.y/H*100+"%";
   l.node.style.width=l.w/W*100+"%";l.node.style.height=l.h/H*100+"%";
+  l.node.style.transform="rotate("+(l.angle||0)+"deg) skewX("+(l.skew||0)+"deg) scale("+(l.flipX||1)+","+(l.flipY||1)+")";
   l.node.classList.toggle("zp-image-selected",l.id===selected);
  }
  function changeScale(v){
@@ -255,6 +277,72 @@ function mount(root){
  }
  scale.onchange=()=>changeScale(scale.value);
  scale.oninput=()=>{scaleValue.textContent=scale.value+" %";};
+ function editTransform(field,value){
+  const l=getSelected();if(!l||l.locked)return;
+  if(field!=="opacity"&&l.type!=="image")return;
+  if(Math.abs((l[field]??(field==="opacity"?1:0))-value)<.0001)return;
+  record();l[field]=value;render();
+  notice("Transformation : "+l.name);
+ }
+ rotateControl.input.oninput=()=>{rotateControl.output.textContent=rotateControl.input.value+"°";};
+ rotateControl.input.onchange=()=>editTransform("angle",Number(rotateControl.input.value));
+ skewControl.input.oninput=()=>{skewControl.output.textContent=skewControl.input.value+"°";};
+ skewControl.input.onchange=()=>editTransform("skew",Number(skewControl.input.value));
+ opacityControl.input.oninput=()=>{opacityControl.output.textContent=opacityControl.input.value+" %";};
+ opacityControl.input.onchange=()=>editTransform("opacity",Number(opacityControl.input.value)/100);
+ function flipSelected(prop){
+  const l=getSelected();if(!l||l.type!=="image"||l.locked)return;
+  record();l[prop]=(l[prop]||1)*-1;render();
+  notice("Image retournée.");
+ }
+ function centerSelected(){
+  const l=getSelected();if(!l||l.type!=="image"||l.locked)return;
+  record();l.x=(W-l.w)/2;l.y=(H-l.h)/2;render();notice("Image centrée.");
+ }
+ function resetTransform(){
+  const l=getSelected();if(!l||l.type!=="image"||l.locked)return;
+  record();l.angle=0;l.skew=0;l.flipX=1;l.flipY=1;l.opacity=1;render();
+  notice("Transformations réinitialisées.");
+ }
+ function toggleLock(id){
+  const l=layers.find(x=>x.id===id);if(!l)return;
+  record();l.locked=!l.locked;render();notice(l.locked?"Calque verrouillé.":"Calque déverrouillé.");
+ }
+ function renameLayer(id){
+  const l=layers.find(x=>x.id===id);if(!l)return;
+  const name=prompt("Nom du calque :",l.name);
+  if(name===null||!name.trim()||name.trim()===l.name)return;
+  record();l.name=name.trim().slice(0,70);render();
+ }
+ function duplicateLayer(id){
+  const l=layers.find(x=>x.id===id);if(!l||layers.length>=MAX_LAYERS)return;
+  record();
+  let copy;
+  if(l.type==="raster"){
+   copy=createRaster(l.name+" copie");
+   copy.surface.getContext("2d").drawImage(l.surface,0,0);
+  }else{
+   const node=el("div","zp-imported-image");
+   const surface=document.createElement("canvas");
+   surface.width=l.surface.width;surface.height=l.surface.height;
+   surface.getContext("2d").drawImage(l.surface,0,0);
+   surface.className="zp-image-visual";
+   const handle=btn("⤡",()=>{},"zp-image-resize");
+   handle.title="Redimensionner";handle.setAttribute("aria-label","Redimensionner l’image");
+   node.append(surface,handle);
+   copy={id:nextId++,type:"image",name:l.name+" copie",img:l.img,url:l.url,
+    surface,node,x:l.x+15,y:l.y+15,w:l.w,h:l.h,
+    baseW:l.baseW,aspect:l.aspect,erase:cloneStrokes(l.erase),visible:true};
+   node.addEventListener("pointerdown",imagePointerDown);registry.set(copy.id,copy);
+  }
+  copy.opacity=l.opacity??1;copy.locked=false;
+  if(copy.type==="image"){copy.angle=l.angle||0;copy.skew=l.skew||0;copy.flipX=l.flipX||1;copy.flipY=l.flipY||1;}
+  const index=layers.findIndex(x=>x.id===id);
+  layers.splice(index+1,0,copy);
+  selected=copy.id;if(copy.type==="raster")paintTarget=copy.id;
+  render();notice("Calque dupliqué.");
+ }
+
  function photoSurface(img){
   const factor=Math.min(1,1200/Math.max(img.width,img.height));
   const surface=document.createElement("canvas");
