@@ -11,19 +11,20 @@ function mount(root){
  const panel=element("div","zp");
  const toolbar=element("div","zp-menu");
  const input=element("input");input.type="file";input.accept="image/*";input.hidden=true;
+ const mergedCanvas=()=>{
+  const out=document.createElement("canvas");out.width=WIDTH;out.height=HEIGHT;
+  const c=out.getContext("2d");c.drawImage(canvas,0,0);
+  layers.forEach(layer=>{if(layer.visible)c.drawImage(layer.img,layer.x,layer.y,layer.w,layer.h);});
+  return out;
+ };
  const download=()=>{
-   // Les transformations non encore validées doivent aussi être exportées.
-   const exportCanvas=document.createElement("canvas");
-   exportCanvas.width=WIDTH;exportCanvas.height=HEIGHT;
-   const ec=exportCanvas.getContext("2d");
-   ec.drawImage(canvas,0,0);
-   if(placedImage)ec.drawImage(placedImage.img,placedImage.x,placedImage.y,placedImage.w,placedImage.h);
-   let a=document.createElement("a");
-   a.download="zebra-paint-"+new Date().toISOString().slice(0,10)+".png";
-   a.href=exportCanvas.toDataURL("image/png");
-   document.body.appendChild(a);a.click();a.remove();notice("Image exportée en PNG.");
-  };
- toolbar.append(button("Nouveau",()=>{if(confirm("Effacer le dessin actuel ?")){discardImport();record();clearCanvas();notice("Nouvelle image.");}}),button("Ouvrir une image",()=>input.click()),button("Enregistrer PNG",download));
+  let a=document.createElement("a");
+  a.download="zebra-paint-"+new Date().toISOString().slice(0,10)+".png";
+  a.href=mergedCanvas().toDataURL("image/png");
+  document.body.appendChild(a);a.click();a.remove();
+  notice("Image exportée en PNG · "+layers.length+" calque(s).");
+ };
+ toolbar.append(button("Nouveau",()=>{if(confirm("Effacer le dessin actuel et tous les calques ?")){record();clearCanvas();layers=[];selectedLayerId=null;renderLayers();notice("Nouveau dessin.");}}),button("Ouvrir une image",()=>input.click()),button("Enregistrer PNG",download));
  toolbar.appendChild(input);
  panel.appendChild(toolbar);
  const body=element("div","zp-body"),tools=element("div","zp-tools"),stage=element("div","zp-stage");
@@ -31,16 +32,28 @@ function mount(root){
  canvas.setAttribute("aria-label","Zone de dessin ZebraPaint");
  const canvasFrame=element("div","zp-canvas-frame");
  canvasFrame.appendChild(canvas);
+ const layerHost=element("div","zp-layer-stage");
+ canvasFrame.appendChild(layerHost);
  stage.appendChild(canvasFrame);
  const work=element("div","zp-work");work.appendChild(stage);
  const paletteBar=element("div","zp-colors");
  let currentColor="#000000",brush=4,tool="pencil",fillTolerance=12;
  let status=element("div","zp-status","640 × 400 px · Crayon");
  let history=[],redoHistory=[],drawing=false,start=null,beforeShape=null,last=null,active=true;
- let placedImage=null;
+ let layers=[],selectedLayerId=null,nextLayerId=1;
+ const layerRegistry=new Map(),imageUrls=new Set();
+ const layerPanel=element("section","zp-layer-panel");
+ layerPanel.setAttribute("aria-label","Calques de ZebraPaint");
+ const layerHeader=element("div","zp-layer-header");
+ const layerTitle=element("strong","","CALQUES · 0");
+ const layerHint=element("span","","Touchez un calque pour le modifier");
+ layerHeader.append(layerTitle,layerHint);
+ const layerList=element("div","zp-layer-list");
+ layerPanel.append(layerHeader,layerList);
+ panel.appendChild(layerPanel);
  const importControls=element("div","zp-import-controls");
- const applyImageButton=button("✓ Appliquer l’image",()=>applyImport(),"zp-button zp-apply-image");
- const cancelImageButton=button("× Annuler",()=>{discardImport();notice("Importation annulée.");},"zp-button");
+ const applyImageButton=button("✓ Terminer placement",()=>finishPlacement(),"zp-button zp-apply-image");
+ const cancelImageButton=button("× Supprimer calque",()=>deleteSelected(),"zp-button");
  importControls.append(applyImageButton,cancelImageButton);
  importControls.hidden=true;
  toolbar.appendChild(importControls);
@@ -49,13 +62,15 @@ function mount(root){
  const toolsDef=[
   ["pencil","✎","Crayon"],["brush","🖌","Pinceau"],["eraser","▧","Gomme"],
   ["line","╱","Ligne"],["rect","▭","Rectangle"],["ellipse","◯","Ellipse"],
-  ["fill","▣","Pot de peinture"],["picker","⌖","Pipette"]
+  ["fill","▣","Pot de peinture"],["picker","⌖","Pipette"],["select","↖","Sélectionner les images"]
  ];
  const toolButtons={};
  function notice(text){status.textContent=text;}
  function choose(t){
   tool=t;Object.keys(toolButtons).forEach(k=>toolButtons[k].classList.toggle("selected",k===t));
-  canvas.style.cursor=t==="picker"?"copy":t==="fill"?"cell":"crosshair";
+  canvas.style.cursor=t==="picker"?"copy":t==="fill"?"cell":t==="select"?"default":"crosshair";
+  canvasFrame.classList.toggle("zp-select-mode",t==="select");
+  renderLayers();
   notice(WIDTH+" × "+HEIGHT+" px · "+toolsDef.find(i=>i[0]===t)[2]);
  }
  toolsDef.forEach(([id,symbol,label])=>{
@@ -89,21 +104,35 @@ function mount(root){
   ctx.fillStyle="#ffffff";ctx.fillRect(0,0,WIDTH,HEIGHT);
   ctx.lineCap="round";ctx.lineJoin="round";
  }
+ function snapshot(){
+  return {
+   pixels:ctx.getImageData(0,0,WIDTH,HEIGHT),selection:selectedLayerId,
+   images:layers.map(l=>({id:l.id,x:l.x,y:l.y,w:l.w,h:l.h,visible:l.visible}))
+  };
+ }
+ function restore(state){
+  ctx.putImageData(state.pixels,0,0);
+  layers=state.images.map(d=>{
+   const layer=layerRegistry.get(d.id);
+   Object.assign(layer,d);return layer;
+  });
+  selectedLayerId=layers.some(l=>l.id===state.selection)?state.selection:null;
+  renderLayers();
+ }
  function record(){
-  history.push(ctx.getImageData(0,0,WIDTH,HEIGHT));if(history.length>MAX_UNDO)history.shift();
+  history.push(snapshot());if(history.length>MAX_UNDO)history.shift();
   redoHistory.length=0;updateHistory();
  }
  function updateHistory(){undoBtn.disabled=!history.length;redoBtn.disabled=!redoHistory.length;}
  function undo(){
-  if(placedImage){discardImport();notice("Importation annulée.");return;}
   if(!history.length)return;
-  redoHistory.push(ctx.getImageData(0,0,WIDTH,HEIGHT));
-  ctx.putImageData(history.pop(),0,0);updateHistory();notice("Modification annulée.");
+  redoHistory.push(snapshot());restore(history.pop());
+  updateHistory();notice("Modification annulée.");
  }
  function redo(){
   if(!redoHistory.length)return;
-  history.push(ctx.getImageData(0,0,WIDTH,HEIGHT));
-  ctx.putImageData(redoHistory.pop(),0,0);updateHistory();notice("Modification rétablie.");
+  history.push(snapshot());restore(redoHistory.pop());
+  updateHistory();notice("Modification rétablie.");
  }
  function point(ev){
   const rect=canvas.getBoundingClientRect();
@@ -155,8 +184,8 @@ function mount(root){
  }
  function onDown(ev){
   if(!active||ev.button!==0)return;
-  if(placedImage)applyImport(true);
   ev.preventDefault();
+  if(tool==="select"){selectLayer(null);return;}
   const p=point(ev);
   if(tool==="picker"){
     let rgb=ctx.getImageData(Math.floor(p.x),Math.floor(p.y),1,1).data;
