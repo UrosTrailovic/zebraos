@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T11:46:11.500332+00:00",
+  "generatedAt": "2026-10-15T16:09:36.012781+00:00",
   "desktopOrder": [
     "Panneau de configuration",
     "Poste de travail",
@@ -514,6 +514,11 @@
       "path": "STUDIO/BUREAU/sadate/icone.png",
       "type": "file",
       "size": 24476
+    },
+    {
+      "path": "STUDIO/BUREAU/thanks.txt",
+      "type": "file",
+      "size": 107
     }
   ]
 }
