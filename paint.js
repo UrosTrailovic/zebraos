@@ -329,7 +329,8 @@ function mount(root){
    surface.className="zp-image-visual";
    const handle=btn("⤡",()=>{},"zp-image-resize");
    handle.title="Redimensionner";handle.setAttribute("aria-label","Redimensionner l’image");
-   node.append(surface,handle);
+   const turn=btn("↻",()=>{},"zp-image-rotate");turn.title="Tourner librement";turn.setAttribute("aria-label","Tourner l’image");
+   node.append(surface,handle,turn);
    copy={id:nextId++,type:"image",name:l.name+" copie",img:l.img,url:l.url,
     surface,node,x:l.x+15,y:l.y+15,w:l.w,h:l.h,
     baseW:l.baseW,aspect:l.aspect,erase:cloneStrokes(l.erase),visible:true};
