@@ -71,11 +71,26 @@ jobs:
                   "type": "dir" if path.is_dir() else "file",
                   **({} if path.is_dir() else {"size": path.stat().st_size})
               })
+          # Ordre par défaut pour TOUS les nouveaux bureaux ZebraOS.
+          # Les noms correspondent exactement aux libellés affichés sur le bureau.
+          # Les dossiers non listés continuent à apparaître après les prioritaires.
+          order_file = root / ".ordre-bureau.json"
+          desktop_order = []
+          if order_file.exists():
+              config = json.loads(order_file.read_text(encoding="utf-8"))
+              if not isinstance(config, dict) or not isinstance(config.get("ordre"), list):
+                  raise ValueError("STUDIO/BUREAU/.ordre-bureau.json : champ ordre requis (liste)")
+              for name in config["ordre"]:
+                  if not isinstance(name, str) or not name.strip() or len(name) > 120:
+                      raise ValueError(f"Nom invalide dans .ordre-bureau.json : {name!r}")
+                  if name.casefold() not in [n.casefold() for n in desktop_order]:
+                      desktop_order.append(name)
           output = Path("assets/bureau-index.json")
           output.parent.mkdir(exist_ok=True)
           output.write_text(json.dumps({
               "version": 1,
               "generatedAt": datetime.now(timezone.utc).isoformat(),
+              "desktopOrder": desktop_order,
               "entries": entries
           }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
           PY
