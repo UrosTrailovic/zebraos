@@ -12,7 +12,7 @@
 .zpic button,.zpic input{font:inherit}
 .zpic-stage{
  position:relative;flex:1 1 auto;min-height:100px;overflow:hidden;
- background:#0c1016;cursor:default;touch-action:pan-y;
+ background:#0c1016;cursor:default;touch-action:none;
 }
 .zpic-stage.zpic-panning{cursor:grabbing;touch-action:none}
 .zpic-image{
