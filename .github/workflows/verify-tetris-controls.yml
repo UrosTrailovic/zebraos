@@ -96,6 +96,11 @@ jobs:
                   };
                   report.noButtonTouchesFrame=["up","down","left","right"].every(dir=>comfortable($(".zt-dir-"+dir)))
                     &&[".zt-a",".zt-b",".zt-select"].every(sel=>comfortable($(sel)));
+                  const aBox=$(".zt-a").getBoundingClientRect();
+                  const bBox=$(".zt-b").getBoundingClientRect();
+                  const aMid=(aBox.top+aBox.bottom)/2,bMid=(bBox.top+bBox.bottom)/2;
+                  report.abBalanced=aMid<bMid&&(bMid-aMid)<60;
+                  report.selectClearance=$(".zt-select").getBoundingClientRect().bottom<=panel.bottom-8;
                   const up=$(".zt-dir-up").getBoundingClientRect(),down=$(".zt-dir-down").getBoundingClientRect();
                   const left=$(".zt-dir-left").getBoundingClientRect(),right=$(".zt-dir-right").getBoundingClientRect();
                   report.dpadAligned=Math.abs((up.left+up.right)/2-(down.left+down.right)/2)<3
