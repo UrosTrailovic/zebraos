@@ -382,7 +382,8 @@ function mount(root){
    const handle=btn("⤡",()=>{},"zp-image-resize");handle.title="Redimensionner";handle.setAttribute("aria-label","Redimensionner l’image");
    container.append(surface,handle);
    const l={id:nextId++,type:"image",name:file.name.slice(0,65),img,url,
-    surface,node:container,x:(W-w)/2,y:(H-h)/2,w,h,baseW:w,aspect:w/h,erase:[],visible:true};
+    surface,node:container,x:(W-w)/2,y:(H-h)/2,w,h,baseW:w,aspect:w/h,erase:[],
+    visible:true,locked:false,opacity:1,angle:0,skew:0,flipX:1,flipY:1};
    registry.set(l.id,l);
    const currentIndex=layers.findIndex(a=>a.id===selected);
    layers.splice(currentIndex<0?layers.length:currentIndex+1,0,l);
@@ -399,10 +400,20 @@ function mount(root){
   return {x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};
  }
  function captureDrawingLayer(){
-  let l=getSelected();
-  if(l&&l.type==="raster"){if(!l.visible){l.visible=true;render();}return l;}
-  // Si une photo est sélectionnée, tout nouveau trait est sur un calque au-dessus.
-  return addRaster(false);
+  const current=getSelected();
+  if(current&&current.type==="raster"&&!current.locked){
+   if(!current.visible){current.visible=true;render();}
+   paintTarget=current.id;return current;
+  }
+  // Photo active : prendre un calque DESSIN au-dessus, sinon en créer un.
+  const lower=layers.findIndex(l=>l.id===selected);
+  const above=layers.slice(lower+1).find(l=>l.type==="raster"&&l.visible&&!l.locked);
+  if(above){paintTarget=above.id;return above;}
+  if(!current){
+   const previous=layers.find(l=>l.id===paintTarget&&l.type==="raster"&&l.visible&&!l.locked);
+   if(previous)return previous;
+  }
+  return addRaster(false,Math.max(0,lower));
  }
  function rasterLine(ctx,a,b,erase){
   ctx.save();ctx.globalCompositeOperation=erase?"destination-out":"source-over";
@@ -430,7 +441,12 @@ function mount(root){
   ctx.putImageData(image,0,0);
  }
  function erasePoint(l,p){
-  return [(p.x-l.x)/l.w,(p.y-l.y)/l.h];
+  // Coordonnées inversées de rotate + skewX + flip : la gomme suit
+  // les pixels de l'image, même lorsqu'elle est transformée.
+  const dx=p.x-l.x-l.w/2,dy=p.y-l.y-l.h/2;
+  const radians=(l.angle||0)*Math.PI/180,c=Math.cos(radians),sn=Math.sin(radians);
+  const y=-sn*dx+c*dy,x=c*dx+sn*dy-Math.tan((l.skew||0)*Math.PI/180)*y;
+  return [(x/(l.flipX||1)+l.w/2)/l.w,(y/(l.flipY||1)+l.h/2)/l.h];
  }
  function onDown(e){
   if(!active||(e.pointerType==="mouse"&&e.button!==0))return;
@@ -442,16 +458,16 @@ function mount(root){
    setColor("#"+[px[0],px[1],px[2]].map(n=>n.toString(16).padStart(2,"0")).join(""));
    notice("Couleur récupérée.");return;
   }
-  record();
   const selectedBefore=getSelected();
+  if(selectedBefore?.locked){notice("Calque verrouillé · déverrouille-le avant de modifier.");return;}
   if(tool==="eraser"&&selectedBefore?.type==="image"){
-   const l=selectedBefore;
+   const l=selectedBefore;record();
    currentErase={diameter:size*2/l.w,pts:[erasePoint(l,p)]};
    l.erase.push(currentErase);redrawImage(l);drawing=true;drawingId=l.id;last=p;
   }else{
-   // L'outil Remplir peut colorier Fond s'il est sélectionné.
    const l=captureDrawingLayer();
-   drawingId=l.id;
+   if(!l)return;
+   record();drawingId=l.id;
    const ctx=l.surface.getContext("2d",{willReadFrequently:true});
    if(tool==="fill"){flood(ctx,p.x,p.y);drawing=false;render();return;}
    drawing=true;last=p;start=p;
@@ -487,7 +503,7 @@ function mount(root){
  }
  function imagePointerDown(e){
   const l=layers.find(item=>item.node===e.currentTarget);
-  if(!l||tool!=="select"||!l.visible||(e.pointerType==="mouse"&&e.button!==0))return;
+  if(!l||tool!=="select"||!l.visible||l.locked||(e.pointerType==="mouse"&&e.button!==0))return;
   e.preventDefault();e.stopPropagation();
   if(selected!==l.id)select(l.id);
   const resized=!!e.target.closest(".zp-image-resize");
@@ -528,12 +544,22 @@ function mount(root){
   window.addEventListener("pointercancel",finish);
  }
  function merged(){
+  // EXPORT = même pile que le plan de travail, dans le même ordre.
+  // Images importées incluses, même après les transformations.
   const output=document.createElement("canvas");output.width=W;output.height=H;
   const ctx=output.getContext("2d");
   layers.forEach(l=>{
    if(!l.visible)return;
+   ctx.save();ctx.globalAlpha=l.opacity??1;
    if(l.type==="raster")ctx.drawImage(l.surface,0,0);
-   else ctx.drawImage(l.surface,l.x,l.y,l.w,l.h);
+   else{
+    ctx.translate(l.x+l.w/2,l.y+l.h/2);
+    ctx.rotate((l.angle||0)*Math.PI/180);
+    ctx.transform(1,0,Math.tan((l.skew||0)*Math.PI/180),1,0,0);
+    ctx.scale(l.flipX||1,l.flipY||1);
+    ctx.drawImage(l.surface,-l.w/2,-l.h/2,l.w,l.h);
+   }
+   ctx.restore();
   });
   return output;
  }
