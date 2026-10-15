@@ -211,47 +211,102 @@ function mount(root){
   drawing=false;beforeShape=null;last=null;
   notice("Image modifiée · "+WIDTH+" × "+HEIGHT+" px");
  }
- /* Image importée = calque temporaire redimensionnable, en coordonnées
-    640×400. Sur mobile, le canvas ET le calque sont réduits ensemble. */
- function discardImport(){
-  if(!placedImage)return;
-  const old=placedImage;placedImage=null;
-  if(old.url)URL.revokeObjectURL(old.url);
-  old.node.remove();
-  importControls.hidden=true;
- }
- function applyImport(silent){
-  if(!placedImage)return;
-  const layer=placedImage;
-  record();clearCanvas();
-  ctx.drawImage(layer.img,layer.x,layer.y,layer.w,layer.h);
-  discardImport();
-  if(!silent)notice("Image placée sur le dessin · 640 × 400 px");
- }
- function updatePlacedImage(){
-  if(!placedImage)return;
-  const o=placedImage;
-  o.node.style.left=o.x/WIDTH*100+"%";
-  o.node.style.top=o.y/HEIGHT*100+"%";
-  o.node.style.width=o.w/WIDTH*100+"%";
-  o.node.style.height=o.h/HEIGHT*100+"%";
- }
+ /* ZebraPaint : calques image non destructifs au-dessus du dessin.
+    Les coordonnées restent en 640×400 sur PC et téléphone. */
+ function currentLayer(){return layers.find(l=>l.id===selectedLayerId)||null;}
  function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+ function updatePlacedImage(layer){
+  layer.node.style.left=layer.x/WIDTH*100+"%";
+  layer.node.style.top=layer.y/HEIGHT*100+"%";
+  layer.node.style.width=layer.w/WIDTH*100+"%";
+  layer.node.style.height=layer.h/HEIGHT*100+"%";
+  layer.node.hidden=!layer.visible;
+  layer.node.classList.toggle("zp-image-selected",layer.id===selectedLayerId);
+ }
+ function selectLayer(id){
+  selectedLayerId=layers.some(l=>l.id===id)?id:null;
+  renderLayers();
+  const item=currentLayer();
+  if(item)notice("Calque sélectionné : "+item.name+" · glisser pour déplacer, ⤡ pour redimensionner");
+ }
+ function finishPlacement(){
+  selectedLayerId=null;choose("pencil");
+  notice("Calques conservés · outil Sélection ↖ ou barre CALQUES pour les modifier");
+ }
+ function deleteSelected(){
+  const target=currentLayer();if(!target)return;
+  record();
+  layers=layers.filter(l=>l!==target);
+  selectedLayerId=layers.length?layers[layers.length-1].id:null;
+  renderLayers();notice("Calque supprimé. Annuler permet de le restaurer.");
+ }
+ function moveLayer(id,delta){
+  const index=layers.findIndex(l=>l.id===id),next=index+delta;
+  if(index<0||next<0||next>=layers.length)return;
+  record();
+  const [item]=layers.splice(index,1);layers.splice(next,0,item);
+  selectedLayerId=id;renderLayers();
+  notice("Ordre des calques modifié.");
+ }
+ function toggleLayer(id){
+  const item=layers.find(l=>l.id===id);if(!item)return;
+  record();item.visible=!item.visible;
+  if(!item.visible&&selectedLayerId===id)selectedLayerId=null;
+  renderLayers();notice(item.visible?"Calque affiché.":"Calque masqué.");
+ }
+ function renderLayers(){
+  // La pile est affichée du fond (premier) au premier plan (dernier).
+  layerHost.replaceChildren(...layers.map(l=>l.node));
+  layers.forEach(updatePlacedImage);
+  layerTitle.textContent="CALQUES · "+layers.length;
+  layerPanel.classList.toggle("zp-layer-empty",layers.length===0);
+  importControls.hidden=!currentLayer();
+  layerList.replaceChildren();
+  if(!layers.length){
+   layerList.appendChild(element("span","zp-layer-empty-text","Ouvre une image pour créer un calque."));
+   return;
+  }
+  layers.slice().reverse().forEach((layer,index)=>{
+   const row=element("div","zp-layer-entry"+(layer.id===selectedLayerId?" active":"")+(layer.visible?"":" hidden-layer"));
+   const chooseButton=button("",()=>{choose("select");selectLayer(layer.id);},"zp-layer-choice");
+   chooseButton.title="Sélectionner "+layer.name;
+   const thumb=element("img","zp-layer-thumb");thumb.src=layer.url;thumb.alt="";thumb.draggable=false;
+   chooseButton.append(thumb,element("span","zp-layer-name",layer.name));
+   const actions=element("span","zp-layer-buttons");
+   const eye=button(layer.visible?"◉":"○",()=>toggleLayer(layer.id),"zp-layer-action");
+   eye.title=layer.visible?"Masquer le calque":"Afficher le calque";
+   eye.setAttribute("aria-label",eye.title);
+   const up=button("↑",()=>moveLayer(layer.id,1),"zp-layer-action");
+   up.title="Passer au premier plan";up.setAttribute("aria-label",up.title);
+   up.disabled=layers[layers.length-1]===layer;
+   const down=button("↓",()=>moveLayer(layer.id,-1),"zp-layer-action");
+   down.title="Reculer le calque";down.setAttribute("aria-label",down.title);
+   down.disabled=layers[0]===layer;
+   const remove=button("×",()=>{selectLayer(layer.id);deleteSelected();},"zp-layer-action zp-layer-remove");
+   remove.title="Supprimer "+layer.name;remove.setAttribute("aria-label",remove.title);
+   actions.append(eye,up,down,remove);
+   row.append(chooseButton,actions);layerList.appendChild(row);
+  });
+ }
  function imagePointerDown(ev){
-  if(!placedImage||(ev.pointerType==="mouse"&&ev.button!==0))return;
+  const node=ev.currentTarget,layer=layers.find(l=>l.node===node);
+  if(!layer||tool!=="select"||!layer.visible||(ev.pointerType==="mouse"&&ev.button!==0))return;
   ev.preventDefault();ev.stopPropagation();
-  const layer=placedImage,resize=!!ev.target.closest(".zp-image-resize");
-  const frameRect=canvasFrame.getBoundingClientRect();
-  const xFactor=WIDTH/frameRect.width,yFactor=HEIGHT/frameRect.height;
+  if(layer.id!==selectedLayerId)selectLayer(layer.id);
+  const resize=!!ev.target.closest(".zp-image-resize");
+  const rect=canvasFrame.getBoundingClientRect(),xFactor=WIDTH/rect.width,yFactor=HEIGHT/rect.height;
   const startX=ev.clientX,startY=ev.clientY;
-  const initial={x:layer.x,y:layer.y,w:layer.w,h:layer.h},aspect=layer.w/layer.h;
-  const pid=ev.pointerId;
+  const initial={x:layer.x,y:layer.y,w:layer.w,h:layer.h};
+  const aspect=layer.w/layer.h,pid=ev.pointerId;
+  let recorded=false;
   layer.node.classList.add("zp-image-moving");
   try{layer.node.setPointerCapture(pid);}catch(_){}
   function moving(e){
-   if(e.pointerId!==pid||!placedImage||placedImage!==layer)return;
+   if(e.pointerId!==pid||!active||!layers.includes(layer))return;
    e.preventDefault();
    const dx=(e.clientX-startX)*xFactor,dy=(e.clientY-startY)*yFactor;
+   if(Math.hypot(dx,dy)<.3)return;
+   if(!recorded){record();recorded=true;}
    if(resize){
     const change=Math.abs(dx)>=Math.abs(dy*aspect)?dx:dy*aspect;
     const maxWidth=Math.max(1,Math.min(WIDTH-initial.x,(HEIGHT-initial.y)*aspect));
@@ -261,7 +316,7 @@ function mount(root){
     layer.x=clamp(initial.x+dx,0,WIDTH-layer.w);
     layer.y=clamp(initial.y+dy,0,HEIGHT-layer.h);
    }
-   updatePlacedImage();
+   updatePlacedImage(layer);
   }
   function finish(e){
    if(e.pointerId!==pid)return;
@@ -269,6 +324,7 @@ function mount(root){
    window.removeEventListener("pointermove",moving);
    window.removeEventListener("pointerup",finish);
    window.removeEventListener("pointercancel",finish);
+   if(recorded)renderLayers();
   }
   window.addEventListener("pointermove",moving,{passive:false});
   window.addEventListener("pointerup",finish);
@@ -276,28 +332,30 @@ function mount(root){
  }
  function importImage(file){
   if(!file||!file.type.startsWith("image/")){notice("Fichier image non reconnu.");return;}
+  if(layers.length>=24){notice("Maximum de 24 calques. Supprime un ancien calque.");return;}
   const url=URL.createObjectURL(file),img=new Image();
+  imageUrls.add(url);
   img.onload=()=>{
-   if(!active){URL.revokeObjectURL(url);return;}
-   discardImport();
+   if(!active){URL.revokeObjectURL(url);imageUrls.delete(url);return;}
+   record();
    const scale=Math.min(WIDTH*.82/img.width,HEIGHT*.8/img.height,1);
-   // Un fichier énorme ou vertical tient entièrement sur le plan de travail.
    const w=Math.max(1,img.width*scale),h=Math.max(1,img.height*scale);
-   const layer=element("div","zp-imported-image");
-   layer.setAttribute("aria-label","Image déplaçable — glisser pour déplacer");
+   const node=element("div","zp-imported-image");
    const visual=element("img","zp-image-visual");
-   visual.src=url;visual.alt="Image importée : "+file.name;visual.draggable=false;
+   visual.src=url;visual.alt=file.name;visual.draggable=false;
    const handle=element("button","zp-image-resize","⤡");
    handle.type="button";handle.title="Redimensionner l’image";
    handle.setAttribute("aria-label","Redimensionner l’image");
-   layer.append(visual,handle);
-   canvasFrame.appendChild(layer);
-   placedImage={img,url,node:layer,x:(WIDTH-w)/2,y:(HEIGHT-h)/2,w,h};
-   layer.addEventListener("pointerdown",imagePointerDown);
-   updatePlacedImage();importControls.hidden=false;
-   notice("Glisse l’image pour la déplacer · ⤡ pour changer la taille · Appliquer pour dessiner");
+   node.append(visual,handle);
+   const layer={id:nextLayerId++,name:file.name.slice(0,70),img,url,node,
+    x:(WIDTH-w)/2,y:(HEIGHT-h)/2,w,h,visible:true};
+   layerRegistry.set(layer.id,layer);
+   layers.push(layer);selectedLayerId=layer.id;
+   node.addEventListener("pointerdown",imagePointerDown);
+   choose("select");
+   notice("Image ajoutée en calque · "+layers.length+" image(s) · déplacer ou redimensionner");
   };
-  img.onerror=()=>{URL.revokeObjectURL(url);notice("Impossible d’ouvrir cette image.");};
+  img.onerror=()=>{URL.revokeObjectURL(url);imageUrls.delete(url);notice("Impossible d’ouvrir cette image.");};
   img.src=url;
  }
  input.onchange=()=>{let f=input.files?.[0];input.value="";if(f)importImage(f);};
@@ -314,7 +372,7 @@ function mount(root){
  }
  document.addEventListener("keydown",key);
  clearCanvas();choose("pencil");updateHistory();
- function dispose(){active=false;discardImport();document.removeEventListener("keydown",key);canvas.removeEventListener("pointerdown",onDown);canvas.removeEventListener("pointermove",onMove);canvas.removeEventListener("pointerup",onUp);canvas.removeEventListener("pointercancel",onUp);}
+ function dispose(){active=false;imageUrls.forEach(url=>URL.revokeObjectURL(url));imageUrls.clear();document.removeEventListener("keydown",key);canvas.removeEventListener("pointerdown",onDown);canvas.removeEventListener("pointermove",onMove);canvas.removeEventListener("pointerup",onUp);canvas.removeEventListener("pointercancel",onUp);}
  root._zebraDispose=dispose;
  return dispose;
 }
