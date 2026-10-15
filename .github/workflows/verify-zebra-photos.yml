@@ -31,7 +31,7 @@ jobs:
           window.addEventListener("load",async()=>{
             const report={},sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
             try{
-              const win=document.createElement("div");win.className="window focused";
+              const win=document.createElement("div");win.className="window focused window-pending";
               win.style.cssText="position:relative;width:min(560px,calc(100vw - 12px));height:560px;left:0;top:0;";
               win.appendChild(document.createElement("div")).className="windowtitle";
               const host=document.createElement("div");host.className="window-body zpic-window-body";
@@ -49,8 +49,21 @@ jobs:
               ];
               const opts={source:f=>f.name==="photoA.png"?red:blue,sizeText:n=>n+" o"};
               window.ZebraPhotos.mount(host,files[0],files,opts);
-              await sleep(140);
               const $=q=>host.querySelector(q);
+              report.startupHidden=$(".zpic").classList.contains("zpic-initializing")
+                &&getComputedStyle($(".zpic")).visibility==="hidden";
+              await sleep(140);
+              report.windowAnimationGuard=win.classList.contains("window-pending")
+                &&$(".zpic").classList.contains("zpic-initializing")
+                &&!!$(".zpic-image").naturalWidth;
+              // Simule la disparition du contour animé ZebraOS.
+              win.classList.remove("window-pending");
+              await sleep(145);
+              report.revealTogether=!$(".zpic").classList.contains("zpic-initializing")
+                &&getComputedStyle($(".zpic")).visibility==="visible"
+                &&getComputedStyle($(".zpic-toolbar")).visibility==="visible"
+                &&$(".zpic-stage").clientWidth>0
+                &&$(".zpic-image").style.visibility==="visible";
               report.mount=!!$(".zpic")&&!!$(".zpic-image")&&host.querySelectorAll("a").length===0;
               report.loaded=!!$(".zpic-image").naturalWidth
                 &&$(".zpic-metadata").textContent.includes("3 × 2")&&$(".zpic-wait").hidden;
