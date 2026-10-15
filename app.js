@@ -330,18 +330,24 @@ function desk(){
  var root=$("desktop-icons");
  root.innerHTML="";
  var epoch=++bureauEpoch,currentSession=session;
- function shortcut(title,symbol,action,userFile){
+ if(window.ZebraDesktop)window.ZebraDesktop.setup(session,
+   function(){if(bureauRepaint)bureauRepaint();},
+   function(){openDesktopTrash();},osIcon);
+ function shortcut(title,symbol,action,userFile,path){
   var b=el("button","desk-icon"+(userFile?" desk-user-file":""));
   b.type="button";b.title=title;
+  if(path)b.dataset.path=path;
+  b._zebraOpen=action;
   b.innerHTML='<span class="desk-symbol"></span><span class="desk-caption"></span>';
   b.children[0].appendChild(symbol);
   b.children[1].textContent=title;
   b.onclick=function(e){
    document.querySelectorAll(".desk-icon").forEach(function(x){x.classList.remove("selected")});
    b.classList.add("selected");
+   if(Date.now()<(b._zebraDragUntil||0))return;
    if(isTouchOpen(e)||e.detail===0)action();
   };
-  b.ondblclick=function(e){if(!isTouchOpen(e))action();};
+  b.ondblclick=function(e){if(!isTouchOpen(e)&&Date.now()>=(b._zebraDragUntil||0))action();};
   root.appendChild(b);return b;
  }
  function renderUserFiles(){
@@ -349,12 +355,17 @@ function desk(){
   Array.prototype.forEach.call(root.querySelectorAll(".desk-user-file"),function(b){b.remove();});
   var lib=window.ZebraGitFiles;
   if(!lib)return;
-  lib.list(lib.root).filter(function(item){return !item.sessions||item.sessions.includes(session);}).forEach(function(item){
+  lib.list(lib.root).filter(function(item){
+   return (!item.sessions||item.sessions.includes(session))
+     &&item.app!=="explorer:recycle"
+     &&(!window.ZebraDesktop||!window.ZebraDesktop.isTrashed(session,item.path));
+  }).forEach(function(item){
     shortcut(item.name,lib.icon(item,osIcon,40),function(){
       if(item.type==="dir")explorer("github:"+item.path);
       else lib.openFile(item,{windowBox:windowBox,openApp:open,openAudio:function(file){if(window.ZebraAMP){window.ZebraAMPConfig={windowBox:windowBox};window.ZebraAMP.openPublic(file);}}});
-    },true);
+    },true,item.path);
   });
+  if(window.ZebraDesktop)window.ZebraDesktop.bind();
  }
  bureauRepaint=renderUserFiles;
  if(window.ZebraGitFiles){
@@ -365,7 +376,7 @@ function desk(){
   window.ZebraGitFiles.load().then(function(){renderUserFiles();});
  }
 }
-function closeAll(){Object.keys(opened).forEach(function(k){var body=opened[k].w.querySelector(".window-body");if(body&&body._zebraDispose)body._zebraDispose();opened[k].w.remove()});opened={};var layer=$("desktop-screen").querySelector(".zu-sticky-layer");if(layer)layer.remove();$("task-items").innerHTML="";$("start-menu").classList.add("hidden")}
+function closeAll(){if(window.ZebraDesktop)window.ZebraDesktop.dispose();Object.keys(opened).forEach(function(k){var body=opened[k].w.querySelector(".window-body");if(body&&body._zebraDispose)body._zebraDispose();opened[k].w.remove()});opened={};var layer=$("desktop-screen").querySelector(".zu-sticky-layer");if(layer)layer.remove();$("task-items").innerHTML="";$("start-menu").classList.add("hidden")}
 function task(){var r=$("task-items");r.innerHTML="";Object.keys(opened).forEach(function(k){var p=opened[k],b=el("button","win-button",p.title);b.onclick=function(){if(p.w.classList.contains("minimized")){p.w.classList.remove("minimized");focus(k);sfx("restore")}else{p.w.classList.add("minimized");sfx("minimize")}};r.appendChild(b)})}
 function focus(id){if(opened[id]){opened[id].w.style.zIndex=++z;Object.keys(opened).forEach(function(k){opened[k].w.classList.toggle("focused",k===id)})}}
 /* Old-school wireframe animation: the outline travels first, the actual window snaps in after it. */
@@ -599,6 +610,12 @@ function explorer(id){
    openAudio:function(file){if(window.ZebraAMP){window.ZebraAMPConfig={windowBox:windowBox};window.ZebraAMP.openPublic(file);}}
   });
  }else body.appendChild(el("p","github-drive-error","Le bureau n'a pas pu être chargé."));
+}
+/* Corbeille du bureau : objets GitHub simplement masqués localement,
+   avec accès à l'ancienne corbeille des fichiers personnels en Admin. */
+function openDesktopTrash(){
+ var body=windowBox("desktop-trash","Corbeille — ZebraOS",Math.min(490,innerWidth-16),Math.min(415,innerHeight-54));
+ if(window.ZebraDesktop)window.ZebraDesktop.showTrash(body,session,session==="admin"?function(){explorer("recycle");}:null);
 }
 function msg(title,message){if(/unavailable|denied/i.test(title))sfx("error");var r=windowBox("msg-"+(++seq),title,375,180);r.appendChild(el("p","app-message",message));r.appendChild(button("OK",function(){r.parentNode.remove();Object.keys(opened).forEach(function(k){if(!document.body.contains(opened[k].w))delete opened[k]});task()}))}
 function notepad(id){var name=id==="notes"?"MES_NOTES.TXT":id==="readme"?"LISEZMOI.TXT":(id||"LISEZMOI").toUpperCase()+".TXT";var r=windowBox("note-"+id,name+" — Bloc-notes",480,380);r.innerHTML="";var wrap=el("div","note-editor");var ta=el("textarea");ta.value=id==="notes"?(getStore("zebra.note."+session)||""):docs[id]||"";if(id!=="notes")ta.readOnly=true;wrap.appendChild(ta);if(id==="notes")wrap.appendChild(button("Fichier > Enregistrer",function(){setStore("zebra.note."+session,ta.value);msg("Bloc-notes","Enregistré dans ton navigateur.")}));else wrap.appendChild(el("div","desktop-note","Fichier en lecture seule"));r.appendChild(wrap)}
