@@ -520,7 +520,7 @@ function windowBox(id,title,width,height){
  var offset=seq++*23;
  w.style.left=Math.max(0,Math.min(115+offset,area.width-parseFloat(w.style.width)))+"px";
  w.style.top=Math.max(0,Math.min(55+offset,area.height-parseFloat(w.style.height)))+"px";
- w.innerHTML='<div class="titlebar"><span>▣</span><span class="windowtitle"></span><div class="titlebuttons"><button data-min title="Réduire" aria-label="Réduire la fenêtre">_</button><button data-max title="Agrandir" aria-label="Agrandir la fenêtre">□</button><button data-close title="Fermer" aria-label="Fermer la fenêtre">×</button></div></div><div class="window-body"></div><div class="window-status">ZebraOS 2.0 / ORDINATEUR DU STUDIO</div>';
+ w.innerHTML='<div class="titlebar"><span>▣</span><span class="windowtitle"></span><div class="titlebuttons"><button data-min title="Réduire" aria-label="Réduire la fenêtre">_</button><button data-max title="Agrandir" aria-label="Agrandir la fenêtre">□</button><button data-close title="Fermer" aria-label="Fermer la fenêtre">×</button></div></div><div class="window-body"></div>';
  w.querySelector(".windowtitle").textContent=title;
  var symbol=w.querySelector(".titlebar > span:first-child");
  symbol.textContent="";
