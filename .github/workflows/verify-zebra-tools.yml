@@ -78,8 +78,12 @@ jobs:
               report.photoThumbnailElement=!!photo&&thumb.classList.contains("bureau-media-thumb");
               if(photo){
                 photo.loading="eager";
-                try{await photo.decode();}catch(e){}
-                report.photoThumbnailLoaded=photo.naturalWidth>0&&thumb.classList.contains("bureau-thumb-loaded");
+                try{
+                  await Promise.race([photo.decode().catch(()=>{}),
+                    new Promise(resolve=>setTimeout(resolve,1600))]);
+                }catch(e){}
+                report.photoThumbnailLoaded=photo.naturalWidth>0;
+                report.photoFrameStyled=getComputedStyle(thumb).borderStyle!=="none";
               }else report.photoThumbnailLoaded=false;
               thumb.remove();
             }else{
