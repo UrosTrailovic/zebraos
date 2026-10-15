@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T08:11:06.059724+00:00",
+  "generatedAt": "2026-10-15T08:11:25.379540+00:00",
   "desktopOrder": [
     "Panneau de configuration",
     "Poste de travail",
@@ -105,6 +105,10 @@
     },
     {
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Les copains et tous",
+      "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu",
       "type": "dir"
     },
     {
