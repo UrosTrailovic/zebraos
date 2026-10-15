@@ -26,12 +26,45 @@ jobs:
 
           root = Path("STUDIO/BUREAU")
           entries = []
+          # Les *.zebraos.json sont de VRAIS fichiers GitHub servant de raccourcis.
+          # L'index publie leurs noms et IDs d'app, sans les traiter comme du texte.
+          apps = {
+              "explorer:root", "explorer:recycle", "studio-manager",
+              "amp", "settings", "tetris", "snake", "paint", "calc",
+              "sticky", "planner", "notepad"
+          }
+          icons = {
+              "computer", "recycle-bin", "zebraamp", "control-panel",
+              "tetris", "snake", "paint", "calc", "sticky", "planner",
+              "txt", "folder"
+          }
           for path in sorted(root.rglob("*")):
               if path.name.startswith("."):
                   continue
               if any(part.startswith(".") for part in path.parts):
                   continue
-              if path.name == ".gitkeep":
+              if path.is_file() and path.name.endswith(".zebraos.json"):
+                  config = json.loads(path.read_text(encoding="utf-8"))
+                  if config.get("app") not in apps:
+                      raise ValueError(f"Raccourci inconnu : {path}")
+                  title = config.get("name", path.name[:-13])
+                  if not isinstance(title, str) or not title.strip():
+                      raise ValueError(f"Nom de raccourci invalide : {path}")
+                  item = {
+                      "path": path.as_posix(),
+                      "type": "app",
+                      "name": title[:90],
+                      "app": config["app"],
+                      "icon": config.get("icon") if config.get("icon") in icons else "txt",
+                  }
+                  if "sessions" in config:
+                      if not isinstance(config["sessions"], list):
+                          raise ValueError(f"Sessions invalides : {path}")
+                      item["sessions"] = [
+                          entry for entry in config["sessions"]
+                          if entry in {"admin", "visitor", "zebra", "daniel"}
+                      ]
+                  entries.append(item)
                   continue
               entries.append({
                   "path": path.as_posix(),
