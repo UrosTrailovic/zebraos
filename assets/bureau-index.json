@@ -1,6 +1,15 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T07:47:47.619456+00:00",
+  "generatedAt": "2026-10-15T08:02:18.619530+00:00",
+  "desktopOrder": [
+    "Panneau de configuration",
+    "Poste de travail",
+    "ZebraAMP.exe",
+    "JEUX",
+    "OUTILS",
+    "Zebra Tape 2",
+    "sadate"
+  ],
   "entries": [
     {
       "path": "STUDIO/BUREAU/Gestionnaire Studio.zebraos.json",
@@ -207,14 +216,5 @@
       "type": "file",
       "size": 24476
     }
-  ],
-  "desktopOrder": [
-    "Panneau de configuration",
-    "Poste de travail",
-    "ZebraAMP.exe",
-    "JEUX",
-    "OUTILS",
-    "Zebra Tape 2",
-    "sadate"
   ]
 }
