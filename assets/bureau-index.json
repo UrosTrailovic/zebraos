@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T07:43:34.733151+00:00",
+  "generatedAt": "2026-10-15T07:47:47.619456+00:00",
   "entries": [
     {
       "path": "STUDIO/BUREAU/Gestionnaire Studio.zebraos.json",
@@ -89,6 +89,10 @@
       "name": "Panneau de configuration",
       "app": "settings",
       "icon": "control-panel"
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et images cool",
+      "type": "dir"
     },
     {
       "path": "STUDIO/BUREAU/Poste de travail.zebraos.json",
