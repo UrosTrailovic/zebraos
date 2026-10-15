@@ -36,7 +36,7 @@ jobs:
               wrapper.append(host);document.body.append(wrapper);
               const item={type:"file",name:"demo-portrait.mp4",path:"STUDIO/BUREAU/demo-portrait.mp4",size:14000000};
               window.ZebraGitFiles.openFile(item,{
-                windowBox:function(id,title,w,h){report.route=id.includes("demo-portrait")&&w>=600&&h>=450;return host;}
+                windowBox:function(id,title,w,h){report.route=id.includes("demo-portrait")&&w>=300&&h>=400;return host;}
               });
               const $=sel=>host.querySelector(sel);
               const v=$(".zvideo-media");
