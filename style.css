@@ -1982,3 +1982,81 @@
   transform:none;box-shadow:none!important;filter:none;
  }
 }
+
+/* Zebra Tetris 6.1 — les trois boutons Windows/arcade sont AU-DESSUS
+   de la plaque illustrée. Les 7 sprites gardent leurs vrais inputs. */
+@media (hover:none),(pointer:coarse){
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready{
+  --zt-panel-top:36px;
+  background:none!important;
+  border:0;box-shadow:none;border-radius:0;
+  overflow:visible;isolation:isolate;
+ }
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready::before{
+  content:"";
+  position:absolute;left:0;right:0;top:var(--zt-panel-top);bottom:0;
+  background:url("assets/games/tetris-controls/interfaceTetris.png") center/100% 100% no-repeat;
+  image-rendering:pixelated;
+  pointer-events:none;z-index:0;
+ }
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready > .zg-buttons,
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready > .zt-dpad,
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready > .zt-action-side{
+  position:relative;z-index:1;
+ }
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zg-buttons.zt-buttons{
+  align-self:start;
+  margin-top:0;
+ }
+ /* Carré directionnel réellement centré et avec du jeu sous la bordure basse */
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-cross{
+  width:min(100%,116px);
+  height:min(100%,109px);
+  max-height:109px;
+  transform:none!important;
+ }
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-dir{
+  width:36%;height:36%;
+ }
+ /* A et B restent en diagonale, sans empiéter sur les rebords de la plaque */
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-a{
+  top:7%;
+  right:7%;
+ }
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-b{
+  bottom:8%;
+  left:7%;
+ }
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select{
+  transform:translateY(-7px)!important;
+ }
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select:active{
+  transform:translateY(-7px)!important;
+ }
+}
+@media(max-width:370px) and (pointer:coarse){
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready{
+  --zt-panel-top:32px;
+ }
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-cross{
+  width:min(100%,105px);
+  height:min(100%,99px);
+  max-height:99px;
+ }
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-dir{
+  width:37%;height:37%;
+ }
+}
+@media(max-height:650px) and (pointer:coarse){
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready{
+  --zt-panel-top:26px;
+ }
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-cross{
+  width:min(100%,94px);
+  height:min(100%,87px);
+  max-height:87px;
+ }
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select{
+  transform:translateY(-3px)!important;
+ }
+}
