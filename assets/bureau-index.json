@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T08:12:57.534398+00:00",
+  "generatedAt": "2026-10-15T08:13:25.091288+00:00",
   "desktopOrder": [
     "Panneau de configuration",
     "Poste de travail",
@@ -116,6 +116,10 @@
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Les copains et tous/IMG_20241224_154903.jpg",
       "type": "file",
       "size": 338713
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi",
+      "type": "dir"
     },
     {
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu",
