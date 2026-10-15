@@ -55,7 +55,7 @@ jobs:
                 &&getComputedStyle($(".zvideo-loading")).visibility!=="hidden"
                 &&$(".zvideo-loading-title").textContent.includes("CHARGEMENT");
               report.verticalFit=getComputedStyle(v).objectFit==="contain"
-                &&getComputedStyle($(".zvideo-screen")).backgroundImage!=="none";
+                &&getComputedStyle($(".zvideo-screen")).backgroundColor!=="rgba(0, 0, 0, 0)";
               report.mobileFit=$(".zvideo-console").getBoundingClientRect().width<=host.clientWidth+2;
               report.controls=!v.controls&&!!$(".zvideo-seek")&&!!$(".zvideo-volume")
                 &&!!$(".zvideo-full")&&!!$(".zvideo-rate");
