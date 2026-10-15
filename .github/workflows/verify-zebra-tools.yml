@@ -5,6 +5,7 @@ on:
       - 'zebra-tools.js'
       - 'zebra-tools.css'
       - 'github-files.js'
+      - 'media-thumbnails.css'
       - 'desktop-layout.js'
       - 'desktop-layout.css'
       - 'app.js'
@@ -66,6 +67,28 @@ jobs:
             document.getElementById("skip-session-boot").click();
             var result=await lib.load();
             report.indexLoaded=result.ok&&lib.list(lib.root).some(x=>x.name==="OUTILS");
+            var existingPhoto=lib.allFiles().find(x=>x.type==="file"&&/\\.(jpg|png|webp)$/i.test(x.name)
+              &&x.path.includes("Photo et vidéo cool/")&&!x.name.includes("icone."));
+            report.photoInRepo=!!existingPhoto;
+            if(existingPhoto){
+              var thumb=lib.icon(existingPhoto,function(){return document.createElement("i");},32);
+              thumb.style.position="absolute";thumb.style.left="4px";thumb.style.top="4px";
+              document.getElementById("desktop-screen").appendChild(thumb);
+              var photo=thumb.querySelector(".bureau-media-image");
+              report.photoThumbnailElement=!!photo&&thumb.classList.contains("bureau-media-thumb");
+              if(photo){
+                photo.loading="eager";
+                try{await photo.decode();}catch(e){}
+                report.photoThumbnailLoaded=photo.naturalWidth>0&&thumb.classList.contains("bureau-thumb-loaded");
+              }else report.photoThumbnailLoaded=false;
+              thumb.remove();
+            }else{
+              report.photoThumbnailElement=false;report.photoThumbnailLoaded=false;
+            }
+            var demoVideo={type:"file",path:"STUDIO/BUREAU/Photo et vidéo cool/Vidéo/demo.mp4",name:"demo.mp4",size:50000000};
+            var videoThumb=lib.icon(demoVideo,function(){return document.createElement("i");},32);
+            report.videoThumbnail=!!videoThumb.querySelector(".bureau-video-play")
+              &&videoThumb.classList.contains("bureau-video-thumb");
             report.configOrder=lib.list(lib.root).slice(0,3).map(e=>e.name).join("|")
               ==="Panneau de configuration|Poste de travail|ZebraAMP.exe";
             await new Promise(resolve=>setTimeout(resolve,160));
