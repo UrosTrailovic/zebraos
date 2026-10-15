@@ -20,7 +20,7 @@ jobs:
       - name: Tester la manette et les interactions dans Chromium
         run: |
           # Toutes les fenêtres partagent windowBox(): la barre décorative a disparu.
-          ! grep -q 'class=\\"window-status\\"' app.js
+          ! grep -q 'window-status' app.js
           grep -q 'window > .window-status{display:none!important}' style.css
           cat > _verify_tetris_controls.html <<'HTML'
           <!doctype html><html lang="fr"><head><meta charset="utf-8">
