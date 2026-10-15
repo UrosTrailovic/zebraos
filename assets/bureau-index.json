@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T07:28:20.975702+00:00",
+  "generatedAt": "2026-10-15T07:28:59.766204+00:00",
   "entries": [
     {
       "path": "STUDIO/BUREAU/Corbeille.zebraos.json",
@@ -39,6 +39,10 @@
       "name": "Tetris.exe",
       "app": "tetris",
       "icon": "tetris"
+    },
+    {
+      "path": "STUDIO/BUREAU/Les copains !!",
+      "type": "dir"
     },
     {
       "path": "STUDIO/BUREAU/OUTILS",
