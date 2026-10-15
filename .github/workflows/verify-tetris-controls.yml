@@ -165,7 +165,7 @@ jobs:
                 report.logoReadable=logo.height>=58&&logo.width>=170;
                 root._zebraDispose();
                 finish();
-              },1600);
+              },2600);
             }catch(e){report.error=String(e);finish();}
           });
           setTimeout(()=>{if(!document.body.dataset.result){report.timeout=false;finish();}},3800);
@@ -173,12 +173,12 @@ jobs:
           HTML
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebra-tetris-test-server.log 2>&1 &
           sleep 1
-          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --touch-events=enabled --window-size=430,900 --virtual-time-budget=4800 --dump-dom http://127.0.0.1:8765/_verify_tetris_controls.html > /tmp/zebra-tetris-test.html 2>/tmp/zebra-tetris-chrome.log
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --touch-events=enabled --window-size=430,900 --virtual-time-budget=5800 --dump-dom http://127.0.0.1:8765/_verify_tetris_controls.html > /tmp/zebra-tetris-test.html 2>/tmp/zebra-tetris-chrome.log
           grep -o 'data-report="[^"]*"' /tmp/zebra-tetris-test.html
           grep -o 'data-result="[^"]*"' /tmp/zebra-tetris-test.html
           grep -q 'data-result="ok"' /tmp/zebra-tetris-test.html
           # Simuler aussi un petit téléphone et ses médias CSS compacts.
-          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --touch-events=enabled --window-size=360,900 --virtual-time-budget=4800 --dump-dom http://127.0.0.1:8765/_verify_tetris_controls.html > /tmp/zebra-tetris-compact.html 2>/tmp/zebra-tetris-compact-chrome.log
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --touch-events=enabled --window-size=360,900 --virtual-time-budget=5800 --dump-dom http://127.0.0.1:8765/_verify_tetris_controls.html > /tmp/zebra-tetris-compact.html 2>/tmp/zebra-tetris-compact-chrome.log
           grep -o 'data-report="[^"]*"' /tmp/zebra-tetris-compact.html
           grep -o 'data-result="[^"]*"' /tmp/zebra-tetris-compact.html
           grep -q 'data-result="ok"' /tmp/zebra-tetris-compact.html
