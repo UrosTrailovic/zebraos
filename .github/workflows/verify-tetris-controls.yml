@@ -52,6 +52,19 @@ jobs:
               report.buttons=!!$(".zt-play")&&!!$(".zt-restart")&&!!$(".zt-menu");
               $(".zt-play").click();
               report.start=$(".zg-state").textContent==="EN COURS";
+              function keyboard(k,repeat){
+                const ev=new KeyboardEvent("keydown",{key:k,bubbles:true,cancelable:true,repeat:!!repeat});
+                document.dispatchEvent(ev);
+                return ev.defaultPrevented;
+              }
+              report.wasd=keyboard("w")&&keyboard("a")&&keyboard("s")&&keyboard("d");
+              report.keyQ=keyboard("q");
+              report.spaceHardDrop=keyboard(" ")&&Number($(".zg-stat strong").textContent)>0;
+              report.keyP=keyboard("p")&&$(".zg-state").textContent==="PAUSE";
+              report.keyResume=keyboard("p")&&$(".zg-state").textContent==="EN COURS";
+              report.keyNoOldHold=!keyboard("c");
+              report.keyboardGuide=!!$(".zt-keyboard-guide")
+                &&Array.from(root.querySelectorAll(".zt-guide-key")).map(e=>e.textContent).join(",")==="W,A,D,S,Q,SPACE,P";
               pointer($(".zt-dir-left"));
               pointer($(".zt-dir-up"));
               pointer($(".zt-dir-down"));
@@ -158,3 +171,39 @@ jobs:
           grep -o 'data-report="[^"]*"' /tmp/zebra-tetris-compact.html
           grep -o 'data-result="[^"]*"' /tmp/zebra-tetris-compact.html
           grep -q 'data-result="ok"' /tmp/zebra-tetris-compact.html
+          # Contrôler le panneau COMMANDES réellement visible en mode ordinateur.
+          cat > _verify_tetris_desktop.html <<'HTML'
+          <!doctype html><html lang="fr"><head><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <link rel="stylesheet" href="/style.css"></head><body>
+          <div class="window focused" style="width:880px;height:790px;position:relative">
+            <div id="desktop-game" class="window-body zebra-game-body" style="width:100%;height:100%"></div>
+          </div>
+          <script src="/tetris-artwork.js"></script><script src="/tetris.js"></script>
+          <script>
+          window.addEventListener("load",()=>{
+           const root=document.getElementById("desktop-game");
+           window.ZebraTetris.mount(root);
+           const panel=root.querySelector(".zt-keyboard-guide");
+           const preview=root.querySelector(".zg-preview-wrap:last-of-type");
+           const rect=panel.getBoundingClientRect();
+           const pane=root.querySelector(".zg-side-previews").getBoundingClientRect();
+           const score=root.querySelector(".zg-side-stats").getBoundingClientRect();
+           const main=root.querySelector(".zg-game-layout").getBoundingClientRect();
+           const board=root.querySelector(".zg-tetris-stage").getBoundingClientRect();
+           const ok=getComputedStyle(panel).display!=="none"
+             &&rect.height>130&&rect.width>90
+             &&rect.bottom<=pane.bottom+3
+             &&rect.left>=pane.left&&rect.right<=pane.right
+             &&score.right<board.left&&board.right<pane.left
+             &&Math.abs((board.left+board.right)/2-(main.left+main.right)/2)<3;
+           document.body.dataset.desktop=ok?"ok":"failed";
+           document.body.dataset.layout=JSON.stringify({panelHeight:Math.round(rect.height),visible:getComputedStyle(panel).display,
+             paneBottom:Math.round(pane.bottom),panelBottom:Math.round(rect.bottom)});
+          });
+          </script></body></html>
+          HTML
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=900,900 --virtual-time-budget=1800 --dump-dom http://127.0.0.1:8765/_verify_tetris_desktop.html > /tmp/zebra-tetris-desktop-result.html 2>/tmp/zebra-tetris-desktop-chrome.log
+          grep -o 'data-layout="[^"]*"' /tmp/zebra-tetris-desktop-result.html
+          grep -o 'data-desktop="[^"]*"' /tmp/zebra-tetris-desktop-result.html
+          grep -q 'data-desktop="ok"' /tmp/zebra-tetris-desktop-result.html
