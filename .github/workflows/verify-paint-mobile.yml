@@ -109,6 +109,16 @@ jobs:
               // Le dessin conserve son fond blanc : seules les images sont des calques.
               const base=canvas.getContext("2d").getImageData(320,200,1,1).data;
               report.nondestructive=base[3]===0;
+              // Un trait dessiné sur la zone image doit rester visible AU-DESSUS.
+              Array.from(host.querySelectorAll(".zp-tool")).find(b=>b.title==="Crayon").click();
+              const framePos=frame.getBoundingClientRect();
+              const dx=framePos.left+framePos.width*.5,dy=framePos.top+framePos.height*.5;
+              canvas.dispatchEvent(event("pointerdown",dx,dy));
+              canvas.dispatchEvent(event("pointermove",dx+10,dy));
+              canvas.dispatchEvent(event("pointerup",dx+10,dy));
+              const stroke=canvas.getContext("2d").getImageData(328,200,1,1).data;
+              report.paintOnTop=stroke[3]>180&&stroke[0]<90&&stroke[1]<90&&stroke[2]<90;
+              report.layersAfterPainting=host.querySelectorAll(".zp-imported-image").length===2;
               let exportData="";
               function capture(e){
                 const a=e.target.closest("a[download]");
@@ -132,7 +142,9 @@ jobs:
                   if(pix[i]<30&&pix[i+1]<30&&pix[i+2]>235)blue++;
                 }
                 report.exportBoth=red>30&&blue>30;
-              }else report.exportBoth=false;
+                const p=(200*check.width+328)*4;
+                report.exportStroke=pix[p]<90&&pix[p+1]<90&&pix[p+2]<90&&pix[p+3]===255;
+              }else{report.exportBoth=false;report.exportStroke=false;}
             }catch(e){report.error=String(e.stack||e);}
             document.documentElement.dataset.paintReport=JSON.stringify(report);
             document.documentElement.dataset.paintStatus=Object.values(report).every(v=>v===true)?"ok":"failed";
