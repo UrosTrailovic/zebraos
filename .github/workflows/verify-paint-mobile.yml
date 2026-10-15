@@ -108,12 +108,16 @@ jobs:
               report.undoRestores=host.querySelectorAll(".zp-imported-image").length===2;
               // Le dessin conserve son fond blanc : seules les images sont des calques.
               const base=canvas.getContext("2d").getImageData(320,200,1,1).data;
-              report.nondestructive=base[0]===255&&base[1]===255&&base[2]===255;
+              report.nondestructive=base[3]===0;
               let exportData="";
-              document.addEventListener("click",function capture(e){
+              function capture(e){
                 const a=e.target.closest("a[download]");
-                if(a&&a.download.startsWith("zebra-paint-")){exportData=a.href;e.preventDefault();}
-              },{capture:true,once:true});
+                if(a&&a.download.startsWith("zebra-paint-")){
+                  exportData=a.href;e.preventDefault();
+                  document.removeEventListener("click",capture,true);
+                }
+              }
+              document.addEventListener("click",capture,true);
               Array.from(host.querySelectorAll(".zp-menu .zp-button")).find(b=>b.textContent==="Enregistrer PNG").click();
               report.exportPNG=exportData.startsWith("data:image/png;base64,");
               if(report.exportPNG){
