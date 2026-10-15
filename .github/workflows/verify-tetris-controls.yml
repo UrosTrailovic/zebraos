@@ -199,7 +199,12 @@ jobs:
              &&Math.abs((board.left+board.right)/2-(main.left+main.right)/2)<3;
            document.body.dataset.desktop=ok?"ok":"failed";
            document.body.dataset.layout=JSON.stringify({panelHeight:Math.round(rect.height),visible:getComputedStyle(panel).display,
-             paneBottom:Math.round(pane.bottom),panelBottom:Math.round(rect.bottom)});
+             paneBottom:Math.round(pane.bottom),panelBottom:Math.round(rect.bottom),
+             panelLeft:Math.round(rect.left),paneLeft:Math.round(pane.left),
+             panelRight:Math.round(rect.right),paneRight:Math.round(pane.right),
+             scoreRight:Math.round(score.right),boardLeft:Math.round(board.left),
+             boardRight:Math.round(board.right),boardMid:Math.round((board.left+board.right)/2),
+             mainMid:Math.round((main.left+main.right)/2)});
           });
           </script></body></html>
           HTML
