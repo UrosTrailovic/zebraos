@@ -67,7 +67,7 @@ jobs:
             document.getElementById("skip-session-boot").click();
             var result=await lib.load();
             report.indexLoaded=result.ok&&lib.list(lib.root).some(x=>x.name==="OUTILS");
-            var existingPhoto=lib.allFiles().find(x=>x.type==="file"&&/\\.(jpg|png|webp)$/i.test(x.name)
+            var existingPhoto=lib.allFiles().find(x=>x.type==="file"&&/\.(jpg|png|webp)$/i.test(x.name)
               &&x.path.includes("Photo et vidéo cool/")&&!x.name.includes("icone."));
             report.photoInRepo=!!existingPhoto;
             if(existingPhoto){
