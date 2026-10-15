@@ -11,11 +11,19 @@
 <link rel="stylesheet" href="zebra-tools.css?v=1.0">
 <link rel="stylesheet" href="desktop-layout.css?v=1.0">
 <link rel="stylesheet" href="media-thumbnails.css?v=1.0">
+<link rel="stylesheet" href="paint-responsive.css?v=1.0">
 </head>
 <body>
 <div id="power-screen" class="screen active">
   <button id="power-btn" class="zboot-power" aria-label="Allumer ZebraOS">
-    <span class="zboot-power-symbol" aria-hidden="true">⏻</span>
+    <span class="zboot-power-symbol" aria-hidden="true">
+      <svg class="zboot-power-svg" viewBox="0 0 64 64" width="64" height="64"
+           xmlns="http://www.w3.org/2000/svg" fill="none">
+        <path d="M20 14 A23 23 0 1 0 44 14" stroke="currentColor" stroke-width="6"
+              stroke-linecap="round"/>
+        <path d="M32 5 V30" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+      </svg>
+    </span>
     <span class="zboot-power-label">ALLUMER</span>
   </button>
 </div>
@@ -68,7 +76,7 @@
 <script src="tetris.js?v=2.2"></script>
 <script src="snake-assets.js?v=1.0"></script>
 <script src="snake.js?v=2.0"></script>
-<script src="paint.js?v=1.0"></script>
+<script src="paint.js?v=1.1"></script>
 <script src="zebra-tools.js?v=1.1"></script>
 <script src="desktop-layout.js?v=1.0"></script>
 <script src="app.js?v=6.2"></script>
