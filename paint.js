@@ -465,9 +465,10 @@ function mount(root){
    currentErase={diameter:size*2/l.w,pts:[erasePoint(l,p)]};
    l.erase.push(currentErase);redrawImage(l);drawing=true;drawingId=l.id;last=p;
   }else{
+   record();
    const l=captureDrawingLayer();
    if(!l)return;
-   record();drawingId=l.id;
+   drawingId=l.id;
    const ctx=l.surface.getContext("2d",{willReadFrequently:true});
    if(tool==="fill"){flood(ctx,p.x,p.y);drawing=false;render();return;}
    drawing=true;last=p;start=p;
