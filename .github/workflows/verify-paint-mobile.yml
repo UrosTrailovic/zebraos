@@ -180,7 +180,7 @@ jobs:
               test.opacity=getComputedStyle(image).opacity==="0.5";
               const selectedRow=Array.from(host.querySelectorAll(".zp-layer-entry")).find(r=>r.textContent.includes("photo-bleue"));
               host.querySelector(".zp-transform-buttons button").click();
-              test.mirror=/scale\(-1,1\)/.test(image.style.transform);
+              test.mirror=/scale\(-1,\s*1\)/.test(image.style.transform);
               const turn=image.querySelector(".zp-image-rotate");
               test.rotationHandle=!!turn&&getComputedStyle(turn).display!=="none";
 
