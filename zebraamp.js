@@ -323,6 +323,13 @@ function renderProgress(){
  if(!view||!view.isConnected)return;
  var item=getTrack(),progress=view.querySelector("[data-amp-progress]");
  view.querySelector("[data-amp-now]").textContent=item?item.name:"AUCUN MORCEAU CHARGÉ";
+ // La pochette du disque apparaît uniquement pour Zebra Tape 2, et ne
+ // prétend pas être la cover d'un son importé depuis l'appareil.
+ var cover=view.querySelector(".amp3-cover"),art=view.querySelector(".amp3-cover-image");
+ if(cover){
+  var isTape=!!(item&&item.kind==="public"&&item.path&&item.path.startsWith("STUDIO/BUREAU/Zebra Tape 2/"));
+  cover.classList.toggle("amp3-cover-empty",!isTape||!!(art&&art.dataset.failed==="1"));
+ }
  view.querySelector("[data-amp-time]").textContent=format(audio.currentTime)+" / "+format(audio.duration);
  view.querySelector("[data-amp-play]").textContent=audio.paused?"▶":"Ⅱ";
  var led=view.querySelector("[data-amp-led]");
@@ -455,7 +462,8 @@ function open(){
  art.src="/STUDIO/BUREAU/Zebra%20Tape%202/Cover/front%202.webp";
  cover.appendChild(art);
  cover.appendChild(el("span","amp3-cover-fallback","Z  /  R"));
- art.onerror=function(){cover.classList.add("amp3-cover-empty");};
+ art.onerror=function(){art.dataset.failed="1";cover.classList.add("amp3-cover-empty");};
+ art.onload=function(){art.dataset.failed="0";renderProgress();};
  var readout=el("div","amp3-readout");
  var meta=el("div","amp3-screen-label");
  meta.appendChild(el("span","","● AUDIO DECK"));
