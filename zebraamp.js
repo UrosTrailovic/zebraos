@@ -325,6 +325,8 @@ function renderProgress(){
  view.querySelector("[data-amp-now]").textContent=item?item.name:"AUCUN MORCEAU CHARGÉ";
  view.querySelector("[data-amp-time]").textContent=format(audio.currentTime)+" / "+format(audio.duration);
  view.querySelector("[data-amp-play]").textContent=audio.paused?"▶":"Ⅱ";
+ var led=view.querySelector("[data-amp-led]");
+ if(led){led.textContent=audio.paused?"● VEILLE":"● LECTURE";led.classList.toggle("amp3-led-active",!audio.paused);}
  if(progress)progress.value=audio.duration&&Number.isFinite(audio.duration)?Math.round(1000*audio.currentTime/audio.duration):0;
 }
 function renderEq(){
@@ -435,27 +437,49 @@ function visualize(){
 function open(){
  init();
  if(!window.ZebraAMPConfig||typeof window.ZebraAMPConfig.windowBox!=="function")return;
- var w=window.ZebraAMPConfig.windowBox("amp","ZebraAMP.exe — Lecteur du studio",630,590);
+ var w=window.ZebraAMPConfig.windowBox("amp","ZebraAMP.exe — Lecteur du studio",660,635);
  view=w;
  w.innerHTML="";
  var root=el("div","amp3");
- var top=el("div","amp3-head");top.appendChild(el("strong","","ZEBRAAMP 3.0"));top.appendChild(el("span","","● STÉRÉO // 5 BANDES"));root.appendChild(top);
+ var top=el("div","amp3-head");top.appendChild(el("strong","","ZEBRAAMP 3.1"));top.appendChild(el("span","","STUDIO DECK // STÉRÉO // 5 BANDES"));root.appendChild(top);
+ var stripe=el("div","amp3-zebra-plate");
+ stripe.setAttribute("aria-hidden","true");
+ stripe.appendChild(el("span","amp3-zebra-rivet amp3-zebra-rivet-left"));
+ stripe.appendChild(el("span","amp3-zebra-rivet amp3-zebra-rivet-right"));
+ root.appendChild(stripe);
  var screen=el("div","amp3-screen");
- screen.appendChild(el("div","amp3-marquee","AUCUN MORCEAU CHARGÉ")).setAttribute("data-amp-now","");
- screen.appendChild(el("div","amp3-time","00:00 / 00:00")).setAttribute("data-amp-time","");
+ var displayRow=el("div","amp3-display-row");
+ var cover=el("div","amp3-cover");
+ var art=el("img","amp3-cover-image");
+ art.alt="Pochette de l'album Zebra Tape 2";art.loading="lazy";
+ art.src="/STUDIO/BUREAU/Zebra%20Tape%202/Cover/front%202.webp";
+ cover.appendChild(art);
+ cover.appendChild(el("span","amp3-cover-fallback","Z  /  R"));
+ art.onerror=function(){cover.classList.add("amp3-cover-empty");};
+ var readout=el("div","amp3-readout");
+ var meta=el("div","amp3-screen-label");
+ meta.appendChild(el("span","","● AUDIO DECK"));
+ var led=el("span","amp3-led","● VEILLE");led.setAttribute("data-amp-led","");
+ meta.appendChild(led);
+ readout.appendChild(meta);
+ readout.appendChild(el("div","amp3-marquee","AUCUN MORCEAU CHARGÉ")).setAttribute("data-amp-now","");
+ readout.appendChild(el("div","amp3-time","00:00 / 00:00")).setAttribute("data-amp-time","");
+ displayRow.append(cover,readout);
+ screen.appendChild(displayRow);
  var seek=el("input");seek.type="range";seek.min="0";seek.max="1000";seek.value="0";seek.setAttribute("data-amp-progress","");
  seek.oninput=function(){if(Number.isFinite(audio.duration)&&audio.duration)audio.currentTime=Number(seek.value)*audio.duration/1000;};
  screen.appendChild(seek);root.appendChild(screen);
  var canvas=el("canvas","amp3-spectrum");root.appendChild(canvas);
  var controls=el("div","amp3-controls");
- controls.appendChild(b("Ⅰ◀",prev,"amp3-btn"));
+ var prevBtn=b("Ⅰ◀",prev,"amp3-btn amp3-transport");prevBtn.title="Morceau précédent";controls.appendChild(prevBtn);
  var playBtn=b("▶",function(){
    if(audio.paused){var t=getTrack();if(t){if(audio.src)play();else pick(t.id,true);}else{var p=getList();if(p.tracks.length)pick(p.tracks[0].id,true);}}
    else audio.pause();
- },"amp3-btn amp3-play");
+ },"amp3-btn amp3-play amp3-transport");
  playBtn.setAttribute("data-amp-play","");controls.appendChild(playBtn);
- controls.appendChild(b("■",function(){audio.pause();audio.currentTime=0;renderProgress();},"amp3-btn"));
- controls.appendChild(b("▶Ⅰ",function(){next(true);},"amp3-btn"));
+ var stopBtn=b("■",function(){audio.pause();audio.currentTime=0;renderProgress();},"amp3-btn amp3-transport");
+ stopBtn.title="Arrêter";controls.appendChild(stopBtn);
+ var nextBtn=b("▶Ⅰ",function(){next(true);},"amp3-btn amp3-transport");nextBtn.title="Morceau suivant";controls.appendChild(nextBtn);
  var shuffleBtn=b("ALÉATOIRE",function(){shuffle=!shuffle;store();render();},"amp3-btn");
  shuffleBtn.setAttribute("data-amp-shuffle","");controls.appendChild(shuffleBtn);
  var repeatBtn=b("RÉPÉTER : TOUS",function(){repeat=repeat==="tout"?"un":repeat==="un"?"aucun":"tout";store();render();},"amp3-btn");
