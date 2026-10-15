@@ -101,6 +101,39 @@ function fallbackIcon(item){
 /* Les documents photo affichent leur vraie miniature dans un cadre d'icône
    Windows rétro. Le choix explicite .icone.png reste prioritaire. */
 var VIDEO_POSTERS=new Map();
+function videoPoster(item){
+ if(VIDEO_POSTERS.has(item.path))return VIDEO_POSTERS.get(item.path);
+ var promise=new Promise(function(resolve){
+  var v=document.createElement("video"),settled=false;
+  v.muted=true;v.playsInline=true;v.preload="metadata";
+  function done(poster){
+   if(settled)return;settled=true;clearTimeout(timeout);
+   v.removeAttribute("src");try{v.load();}catch(_){}
+   resolve(poster);
+  }
+  var timeout=setTimeout(function(){done(null);},8000);
+  function capture(){
+   if(settled||!v.videoWidth||!v.videoHeight)return;
+   try{
+    var c=document.createElement("canvas"),w=Math.min(192,v.videoWidth);
+    c.width=Math.round(w);c.height=Math.max(1,Math.round(w*v.videoHeight/v.videoWidth));
+    c.getContext("2d").drawImage(v,0,0,c.width,c.height);
+    done(c.toDataURL("image/jpeg",.7));
+   }catch(_){done(null);}
+  }
+  v.addEventListener("loadeddata",capture,{once:true});
+  v.addEventListener("seeked",capture,{once:true});
+  v.addEventListener("loadedmetadata",function(){
+   try{v.currentTime=Number.isFinite(v.duration)&&v.duration>1?Math.min(.6,v.duration*.1):0;}
+   catch(_){}
+  },{once:true});
+  v.addEventListener("error",function(){done(null);},{once:true});
+  // Même origine : évite le canvas tainted et préserve la lecture en aperçu.
+  v.src=site(item.path);
+ });
+ VIDEO_POSTERS.set(item.path,promise);
+ return promise;
+}
 function thumbnail(item,osIcon,size){
  var isVideo=kinds.video.test(item.name);
  var box=node("span","bureau-item-symbol bureau-media-thumb "+(isVideo?"bureau-video-thumb":"bureau-photo-thumb"));
@@ -121,50 +154,15 @@ function thumbnail(item,osIcon,size){
   };
   img.src=site(item.path);
  }else{
-  box.classList.add("bureau-video-loading");
   var overlay=node("span","bureau-video-play","▶");overlay.setAttribute("aria-hidden","true");box.appendChild(overlay);
-  // Le navigateur extrait une seule image sans lancer la lecture.
-  // Grand fichier : on ne déclenche pas automatiquement un téléchargement lourd.
-  if(VIDEO_POSTERS.has(item.path)){
-   var previous=VIDEO_POSTERS.get(item.path);
-   if(previous)img.src=previous;
-  }else if(item.size>0&&item.size<45000000){
-   var start=function(){
-    if(VIDEO_POSTERS.has(item.path))return;
-    VIDEO_POSTERS.set(item.path,null);
-    var video=document.createElement("video");
-    video.crossOrigin="anonymous";video.muted=true;video.playsInline=true;video.preload="metadata";
-    var finished=false;
-    function cleanup(){
-     video.removeAttribute("src");
-     try{video.load();}catch(_){}
-    }
-    function capture(){
-     if(finished||!video.videoWidth||!video.videoHeight)return;
-     try{
-      var c=document.createElement("canvas"),w=Math.min(192,video.videoWidth);
-      c.width=Math.round(w);c.height=Math.max(1,Math.round(w*video.videoHeight/video.videoWidth));
-      c.getContext("2d").drawImage(video,0,0,c.width,c.height);
-      var poster=c.toDataURL("image/jpeg",.7);
-      VIDEO_POSTERS.set(item.path,poster);
-      if(box.isConnected)img.src=poster;
-      finished=true;cleanup();
-     }catch(_){finished=true;cleanup();}
-    }
-    video.addEventListener("loadeddata",capture,{once:true});
-    video.addEventListener("seeked",capture,{once:true});
-    video.addEventListener("loadedmetadata",function(){
-     try{video.currentTime=Number.isFinite(video.duration)&&video.duration>1?Math.min(.6,video.duration*.1):0;}
-     catch(_){}
-    },{once:true});
-    video.addEventListener("error",function(){finished=true;cleanup();},{once:true});
-    video.src=site(item.path);
-   };
-   // Une vidéo n'est inspectée que lorsque sa miniature devient visible.
+  // Uniquement si visible, pour éviter de charger toutes les vidéos du dossier.
+  // Un grand fichier reste sur l'icône de secours (pas de téléchargement massif).
+  if(!(item.size>45000000)){
+   var start=function(){videoPoster(item).then(function(poster){if(poster&&box.isConnected)img.src=poster;});};
    if("IntersectionObserver"in window){
     var observer=new IntersectionObserver(function(entries){
      if(entries.some(function(e){return e.isIntersecting;})){observer.disconnect();start();}
-    },{rootMargin:"100px"});
+    },{rootMargin:"120px"});
     observer.observe(box);
    }else start();
   }
