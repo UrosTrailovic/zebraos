@@ -8,6 +8,11 @@
 "use strict";
 var ROOT="STUDIO/BUREAU", REPO="UrosTrailovic/zebraos", BRANCH="main";
 var INDEX="assets/bureau-index.json";
+var APP_IDS={
+ "explorer:root":true,"explorer:recycle":true,"studio-manager":true,
+ amp:true,settings:true,tetris:true,snake:true,paint:true,
+ calc:true,sticky:true,planner:true,notepad:true
+};
 var known=null,stamp="",loading=null,listeners=[];
 var kinds={
   image:/\.(png|jpe?g|gif|webp|bmp)$/i,
@@ -41,12 +46,17 @@ function valid(entries){
  if(!Array.isArray(entries))throw Error("Index invalide");
  var seen={};
  return entries.filter(function(it){
-  if(!it||typeof it.path!=="string"||it.path.length>1200||(it.type!=="dir"&&it.type!=="file"))return false;
+  if(!it||typeof it.path!=="string"||it.path.length>1200||(it.type!=="dir"&&it.type!=="file"&&it.type!=="app"))return false;
+  if(it.type==="app"&&!APP_IDS[it.app])return false;
   var p=safe(it.path);
   if(p!==it.path||p===ROOT||/(^|\/)\.gitkeep$/.test(p)||p.split("/").some(function(x){return x.startsWith(".");}))return false;
   if(seen[p])return false;seen[p]=true;return true;
  }).map(function(it){
-  return {path:it.path,name:fileName(it.path),type:it.type,size:Number(it.size)||0};
+  return {path:it.path,name:it.type==="app"&&typeof it.name==="string"?it.name.slice(0,90):fileName(it.path),
+   type:it.type,size:Number(it.size)||0,
+   app:it.type==="app"?it.app:null,
+   icon:it.type==="app"&&typeof it.icon==="string"?it.icon.slice(0,40):null,
+   sessions:it.type==="app"&&Array.isArray(it.sessions)?it.sessions.filter(function(id){return ["admin","zebra","visitor","daniel"].includes(id);}):null};
  });
 }
 function visible(item){
@@ -72,6 +82,7 @@ function iconPath(item){
  return null;
 }
 function fallbackIcon(item){
+ if(item.type==="app")return item.icon||"txt";
  if(item.type==="dir")return "folder";
  if(kinds.image.test(item.name))return "jpg";
  if(kinds.audio.test(item.name))return "mp3";
@@ -128,6 +139,10 @@ function sizeText(bytes){
  return bytes+" o";
 }
 function preview(item,opts){
+ if(item.type==="app"){
+  if(APP_IDS[item.app]&&opts&&typeof opts.openApp==="function")opts.openApp(item.app);
+  return;
+ }
  if(kinds.audio.test(item.name)&&opts&&typeof opts.openAudio==="function"){
   opts.openAudio(item);return;
  }
@@ -167,6 +182,7 @@ function mount(host,path,opts){
  var ticket=(host._zebraPublicTicket||0)+1;
  host._zebraPublicTicket=ticket;
  var admin=!!opts.canUpload;
+ var account=typeof opts.session==="string"?opts.session:"visitor";
  var place=path===ROOT?"Bureau":path.slice(ROOT.length+1).replace(/\//g," \\ ");
  var w=host.closest(".window");
  if(w){var title=w.querySelector(".windowtitle");if(title)title.textContent="Poste de travail — "+place;}
@@ -190,7 +206,7 @@ function mount(host,path,opts){
  function render(){
   if(!isCurrent())return;
   files.innerHTML="";
-  var items=children(path);
+  var items=children(path).filter(function(item){return !item.sessions||item.sessions.includes(account);});
   msg.style.display=items.length?"none":"";
   msg.className="github-drive-empty";
   msg.textContent="Ce dossier est vide.";
@@ -198,7 +214,7 @@ function mount(host,path,opts){
    var b=node("button","file-entry github-file-entry");b.type="button";b.title=item.name;
    b.appendChild(icon(item,opts.osIcon,32));
    b.appendChild(node("span","github-file-name",item.name));
-   b.appendChild(node("small","github-file-size",item.type==="dir"?"Dossier":sizeText(item.size)));
+   b.appendChild(node("small","github-file-size",item.type==="dir"?"Dossier":item.type==="app"?"Application":sizeText(item.size)));
    b.onclick=function(){if(item.type==="dir")mount(host,item.path,opts);else preview(item,opts);};
    files.appendChild(b);
   });
