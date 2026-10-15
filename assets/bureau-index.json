@@ -1,17 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T07:37:04.284433+00:00",
+  "generatedAt": "2026-10-15T07:43:34.733151+00:00",
   "entries": [
-    {
-      "path": "STUDIO/BUREAU/Corbeille.zebraos.json",
-      "type": "app",
-      "name": "Corbeille",
-      "app": "explorer:recycle",
-      "icon": "recycle-bin",
-      "sessions": [
-        "admin"
-      ]
-    },
     {
       "path": "STUDIO/BUREAU/Gestionnaire Studio.zebraos.json",
       "type": "app",
