@@ -64,3 +64,13 @@
   right:-11px;bottom:-11px;
  }
 }
+
+/* Bouton Allumer : SVG vectoriel indépendant des glyphes Android. */
+.zboot-power-symbol{display:grid;place-items:center;line-height:1}
+.zboot-power-symbol .zboot-power-svg{
+ display:block;width:64px;height:64px;color:#e8e8e8;
+ stroke:currentColor;overflow:visible;flex:none;
+}
+@media(max-width:700px){
+ .zboot-power-symbol .zboot-power-svg{width:60px;height:60px}
+}
