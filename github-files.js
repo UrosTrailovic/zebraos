@@ -112,8 +112,8 @@ function notify(){listeners.slice().forEach(function(fn){try{fn();}catch(e){}});
 function load(){
  if(loading)return loading;
  var q=Date.now();
- loading=read(raw(INDEX)+"?v="+q)
-  .catch(function(){return read(site(INDEX)+"?v="+q);})
+ loading=read(site(INDEX)+"?v="+q)
+  .catch(function(){return read(raw(INDEX)+"?v="+q);})
   .then(function(result){
     known=result.entries;stamp=result.stamp;notify();
     return {ok:true,entries:known};
