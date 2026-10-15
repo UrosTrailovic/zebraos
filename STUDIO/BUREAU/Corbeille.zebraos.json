@@ -1,8 +1,0 @@
-{
-  "name": "Corbeille",
-  "app": "explorer:recycle",
-  "icon": "recycle-bin",
-  "sessions": [
-    "admin"
-  ]
-}
