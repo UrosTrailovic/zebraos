@@ -238,9 +238,26 @@ function preview(item,opts){
   openExternal(fileLink(item.path));return;
  }
  if(kinds.text.test(item.name)&&item.size>512000){openExternal(fileLink(item.path));return;}
+ var isVideo=kinds.video.test(item.name);
  var body=opts.windowBox("public-file-"+item.path,item.name+" — ZebraOS",
-   Math.min(630,innerWidth-28),Math.min(480,innerHeight-65));
+   Math.min(isVideo?840:630,innerWidth-28),Math.min(isVideo?600:480,innerHeight-65));
+ if(body._zebraDispose)body._zebraDispose();
+ body.classList.remove("zvideo-window-body");
  body.innerHTML="";
+ // Lecteur vidéo dédié, sans toucher aux images, textes et audios.
+ if(isVideo){
+  body.classList.add("zvideo-window-body");
+  if(window.ZebraVideoPlayer){
+   window.ZebraVideoPlayer.mount(body,item,{
+    primary:site(item.path),backup:raw(item.path),sizeText:sizeText
+   });
+  }else{
+   var fallback=node("video","github-video-preview");
+   fallback.controls=true;fallback.preload="metadata";fallback.playsInline=true;
+   fallback.src=site(item.path);body.appendChild(fallback);
+  }
+  return;
+ }
  var bar=node("div","github-preview-toolbar");
  var a=node("a","classic-button github-download","Ouvrir le fichier ↗");
  a.href=raw(item.path);a.target="_blank";a.rel="noopener noreferrer";bar.appendChild(a);
@@ -253,9 +270,6 @@ function preview(item,opts){
  }else if(kinds.audio.test(item.name)){
   var audio=node("audio","github-audio-preview");audio.controls=true;audio.preload="metadata";audio.src=raw(item.path);
   body.appendChild(audio);
- }else if(kinds.video.test(item.name)){
-  var video=node("video","github-video-preview");video.controls=true;video.preload="metadata";video.playsInline=true;video.src=raw(item.path);
-  body.appendChild(video);
  }else{
   var pre=node("pre","github-text-preview","Chargement…");body.appendChild(pre);
   fetch(raw(item.path)).then(function(r){if(!r.ok)throw Error();return r.text();})
