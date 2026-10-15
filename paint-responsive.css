@@ -316,3 +316,16 @@
  .zp-transform-buttons{gap:3px}
  .zp-transform-buttons .zp-button{padding:5px 6px;min-height:27px}
 }
+
+/* Poignée tactile de rotation ; apparaît seulement en sélection. */
+.zp-canvas-frame .zp-image-rotate{
+ display:none;position:absolute;left:50%;top:-42px;transform:translateX(-50%);
+ min-width:32px;width:32px;height:32px;
+ border:3px outset #fff;background:#27539d;color:#fff;
+ padding:0;box-shadow:1px 2px 0 #111a;
+ font:700 23px/1 Arial,sans-serif;place-items:center;
+ border-radius:50%;touch-action:none;cursor:grab;
+}
+.zp-canvas-frame.zp-select-mode .zp-image-selected .zp-image-rotate{display:grid}
+.zp-canvas-frame:not(.zp-select-mode) .zp-image-rotate{display:none!important}
+.zp-canvas-frame .zp-layer-stage>.zp-imported-image{will-change:auto}
