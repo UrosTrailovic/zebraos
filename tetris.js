@@ -24,7 +24,7 @@ function mount(root){
  let active=true,paused=true,over=false,lines=0,score=0,level=1,records=best(),held=null,holdUsed=false;
  let grid,upcoming=[],bag=[],current=null,clock=null,observer=null;
  let clearRows=[],clearDeadline=0,audioContext=null,lastSound={};
- let wrap=make("div","zg zg-tetris zg-retro");
+ let wrap=make("div","zg zg-tetris zg-retro zt-assembling");
  let bar=make("div","zg-topline");
  let logo=make("img","zt-logo");
  logo.alt="Zebra Tetris";
@@ -165,18 +165,51 @@ function mount(root){
  }));
  Promise.all(spriteLoads).then(function(){
   if(active&&pad.isConnected)pad.classList.add("zt-skin-ready");
- }).catch(function(){/* Images indisponibles : ancienne manette CSS conservée. */});
+ }).catch(function(){/* Manette CSS de secours conservée. */}).then(function(){
+  startupSkinReady=true;
+  revealTogether();
+ });
  wrap.appendChild(pad);
  wrap.appendChild(make("div","zg-help","WASD : tourner / bouger / descendre · Q : réserve · ESPACE : poser · P : pause"));
  root.appendChild(wrap);
- // Les textures viennent de la planche fournie par l'auteur. Aucun asset généré à l'exécution.
- let atlasReady=false;
+ // Tous les éléments visuels doivent se révéler ENSEMBLE après l'ouverture
+ // Windows 95, et non le logo / PAUSE avant les panneaux et le plateau.
+ const startupLoader=make("div","zt-startup-loader","CHARGEMENT DE ZEBRA TETRIS…");
+ startupLoader.setAttribute("role","status");
+ startupLoader.setAttribute("aria-live","polite");
+ root.appendChild(startupLoader);
+ let atlasReady=false,startupArtworkReady=false,startupSkinReady=false;
+ let startupBoardReady=false,startupShown=false,startupFrame=0,startupFrame2=0;
+ let startupWatchdog=setTimeout(function(){
+  // Réseau lent : préserver un Tetris jouable au lieu de rester bloqué.
+  startupArtworkReady=true;startupSkinReady=true;startupBoardReady=true;
+  revealTogether();
+ },3500);
+ function revealTogether(){
+  if(!active||startupShown||!startupArtworkReady||!startupSkinReady||!startupBoardReady)return;
+  startupShown=true;
+  clearTimeout(startupWatchdog);
+  // Deux frames pour que la mise en page, les tailles du plateau et
+  // les textures soient composées avant le premier pixel visible.
+  startupFrame=requestAnimationFrame(function(){
+   startupFrame2=requestAnimationFrame(function(){
+    if(!active||!wrap.isConnected)return;
+    wrap.classList.remove("zt-assembling");
+    startupLoader.remove();
+   });
+  });
+ }
+ // Les textures viennent de la planche fournie par l'auteur.
  if(window.ZebraTetrisArtwork){
   window.ZebraTetrisArtwork.apply({
    wrap:wrap,logo:logo,overlay:overlayArt,start:start,restart:restart,menu:menu,
-   onReady:function(){atlasReady=true;render();updateStatus();}
+   onReady:function(){
+    atlasReady=true;render();updateStatus();
+    startupArtworkReady=true;revealTogether();
+   },
+   onError:function(){startupArtworkReady=true;revealTogether();}
   });
- }
+ }else{startupArtworkReady=true;}
  let ctx=canvas.getContext("2d"),nextCtx=next.getContext("2d"),holdCtx=hold.getContext("2d");
  // Petits sons arcade synthétisés localement, sans musique ni lecture automatique.
  // AudioContext n'est créé qu'après une interaction (tactile, souris ou clavier).
@@ -385,9 +418,14 @@ function mount(root){
   if(stage.style.width!==pixels+"px"){
    stage.style.width=pixels+"px";stage.style.height=(pixels*2)+"px";
   }
+  if(!startupBoardReady&&main.clientWidth>0&&main.clientHeight>0){
+   startupBoardReady=true;revealTogether();
+  }
  }
  function dispose(){
-  active=false;clearHeld();clearInterval(clock);document.removeEventListener("keydown",key);
+  active=false;clearHeld();clearInterval(clock);clearTimeout(startupWatchdog);
+  cancelAnimationFrame(startupFrame);cancelAnimationFrame(startupFrame2);
+  document.removeEventListener("keydown",key);
   if(audioContext){audioContext.close().catch(()=>{});audioContext=null;}
   window.removeEventListener("resize",fitBoard);
   if(observer){observer.disconnect();observer=null;}
