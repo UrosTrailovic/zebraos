@@ -164,7 +164,7 @@ jobs:
               select("photo-bleue");
               const rowLocked=Array.from(host.querySelectorAll(".zp-layer-entry")).find(r=>r.textContent.includes("photo-bleue"));
               rowLocked.querySelector('[aria-label="Verrouiller"]').click();
-              test.lock=!!rowLocked.parentElement.querySelector('[aria-label="Déverrouiller"]');
+              test.lock=!!host.querySelector('[aria-label="Déverrouiller"]');
               Array.from(host.querySelectorAll(".zp-layer-entry")).find(r=>r.textContent.includes("photo-bleue")).querySelector('[aria-label="Déverrouiller"]').click();
 
               select("photo-bleue");
