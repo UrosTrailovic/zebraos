@@ -195,3 +195,69 @@
  .zvideo-loading-ring,.zvideo-loading-pulse{animation:none}
  .zvideo-loading{transition:none}
 }
+
+/* ZebraVideo 1.1 : finition volontairement sobre — la vidéo prime sur le décor. */
+.window .window-body.zvideo-window-body,
+.zvideo{
+ user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+}
+.zvideo{background:#0d1016}
+.zvideo-screen{background:#0a0d14}
+.zvideo-screen::after{opacity:.12}
+.zvideo-console{
+ padding:7px 10px 7px;gap:5px;
+ background:linear-gradient(#bec7d2,#aebac6);
+ border-top:2px ridge #e5eaf0;
+ box-shadow:inset 0 1px #f1f4f8;
+}
+.zvideo-info{
+ position:relative;padding-right:82px;min-height:30px;
+ gap:2px;
+}
+.zvideo-filename{font-size:11px;line-height:1.3}
+.zvideo-meta{font-size:9px;line-height:1.2}
+.zvideo-led{
+ position:absolute;right:0;top:4px;
+ font:700 9px "Courier New",monospace;
+ color:#476070;
+ padding:4px 5px;
+ background:#d2dae2;border:1px inset #e3e8ed;
+}
+.zvideo[data-status="ready"] .zvideo-led,
+.zvideo[data-status="playing"] .zvideo-led{color:#206652}
+.zvideo[data-status="error"] .zvideo-led{color:#a32d39}
+.zvideo-loading{
+ background:#0c1018e8;gap:9px;
+}
+.zvideo-loading-ring{width:34px;height:34px;border-width:3px}
+.zvideo-loading-title{font-size:11px;letter-spacing:.9px}
+.zvideo-loading-detail{font-size:10px;color:#8ea5ba}
+.zvideo-loading-track{height:7px;width:min(170px,75%)}
+.zvideo-center-play{
+ width:54px;height:54px;font-size:23px;
+ border-width:2px;background:#1b3449b8;box-shadow:0 4px 14px #0007;
+}
+.zvideo-center-play:hover{background:#294b68ca}
+.zvideo-buttons{gap:5px}
+.zvideo-button,.zvideo-rate{
+ min-height:29px;padding:4px 8px;
+ border:2px outset #edf3f9;
+ background:#cbd5df;
+ font-size:11px!important;color:#263c52;
+}
+.zvideo-primary{min-width:40px;font-size:13px!important;background:#c0d5d9}
+.zvideo-button:hover{background:#dae3e9}
+.zvideo-full{font-size:17px!important;min-width:33px}
+.zvideo-timeline{gap:0}
+.zvideo-seek{height:15px}
+.zvideo-time{font-size:9px}
+.zvideo-footer,.zvideo-header{display:none!important}
+.zvideo button,.zvideo select,.zvideo video{-webkit-touch-callout:none}
+@media(max-width:700px){
+ .zvideo-console{padding:7px 7px;gap:5px}
+ .zvideo-info{min-height:30px;padding-right:75px}
+ .zvideo-buttons{gap:3px}
+ .zvideo-button,.zvideo-rate{min-height:34px;padding:5px 6px;font-size:10px!important}
+ .zvideo-volume{max-width:60px;min-width:18px}
+ .zvideo-full{min-width:31px}
+}
