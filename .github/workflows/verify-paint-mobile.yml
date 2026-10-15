@@ -136,7 +136,7 @@ jobs:
                 const off=document.createElement("canvas");off.width=640;off.height=400;
                 const out=off.getContext("2d");out.drawImage(res,0,0);
                 const px=(x,y)=>Array.from(out.getImageData(x,y,1,1).data);
-                const bottom=px(30,30),photo=px(285,170),strokePx=px(320,170),erased=px(320,200);
+                const bottom=px(30,30),photo=px(205,140),strokePx=px(320,170),erased=px(320,200);
                 test.exportSamples={bottom,photo,strokePx,erased};
                 test.exportOrder=bottom[0]>200&&bottom[2]<30
                   &&photo[2]>200&&photo[0]<30
