@@ -160,7 +160,7 @@ function windowIcon(id){
   return "txt";
 }
 function decorateSystemMenus(){
-  var mappings={amp:"zebraamp",explorer:"computer",notepad:"txt",viewer:"jpg",settings:"control-panel",about:"zebraos",tetris:"tetris",snake:"snake",paint:"paint","folder:games":"folder","folder:atelier":"folder",calc:"calc",sticky:"sticky",planner:"planner"};
+  var mappings={amp:"zebraamp",explorer:"computer",notepad:"txt",viewer:"jpg",settings:"control-panel",about:"zebraos",tetris:"tetris",snake:"snake",paint:"paint","folder:games":"folder","folder:tools":"folder","folder:atelier":"folder",calc:"calc",sticky:"sticky",planner:"planner"};
   document.querySelectorAll("#start-menu [data-start]").forEach(function(b){
     Array.prototype.slice.call(b.childNodes).forEach(function(n){if(n.nodeType===3)n.remove()});
     b.insertBefore(osIcon(mappings[b.dataset.start]||"folder",20),b.firstChild);
@@ -324,22 +324,12 @@ function getStore(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function setStore(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 function setWall(name,custom){var w=$("wallpaper");w.className="wallpaper wallpaper-"+name;w.style.backgroundImage=custom?'url("'+custom+'")':"";w.style.backgroundSize=custom?"cover":"";if(session&&!custom)setStore("zebra.wall."+session,name)}
 function isTouchOpen(e){return (e && e.pointerType==="touch") || (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) || window.innerWidth<701;}
-/* Les applications système restent fixes ; le contenu de STUDIO/BUREAU vient de GitHub. */
+/* Le bureau entier vient de STUDIO/BUREAU : dossiers, fichiers et raccourcis .zebraos.json. */
 var bureauRepaint=null,bureauListenerSet=false,bureauEpoch=0;
 function desk(){
  var root=$("desktop-icons");
  root.innerHTML="";
  var epoch=++bureauEpoch,currentSession=session;
- var apps=[
-  ["Poste de travail","computer","explorer:root"],
-  ["ZebraAMP.exe","zebraamp","amp"],
-  ["JEUX","folder","folder:games"],
-  ["ATELIER","folder","folder:atelier"]
- ];
- if(session==="admin"){
-  apps.push(["Corbeille","recycle-bin","explorer:recycle"]);
-  apps.push(["Gestionnaire Studio","computer","studio-manager"]);
- }
  function shortcut(title,symbol,action,userFile){
   var b=el("button","desk-icon"+(userFile?" desk-user-file":""));
   b.type="button";b.title=title;
@@ -360,10 +350,10 @@ function desk(){
   Array.prototype.forEach.call(root.querySelectorAll(".desk-user-file"),function(b){b.remove();});
   var lib=window.ZebraGitFiles;
   if(!lib)return;
-  lib.list(lib.root).forEach(function(item){
+  lib.list(lib.root).filter(function(item){return !item.sessions||item.sessions.includes(session);}).forEach(function(item){
     shortcut(item.name,lib.icon(item,osIcon,40),function(){
       if(item.type==="dir")explorer("github:"+item.path);
-      else lib.openFile(item,{windowBox:windowBox,openAudio:function(file){if(window.ZebraAMP){window.ZebraAMPConfig={windowBox:windowBox};window.ZebraAMP.openPublic(file);}}});
+      else lib.openFile(item,{windowBox:windowBox,openApp:open,openAudio:function(file){if(window.ZebraAMP){window.ZebraAMPConfig={windowBox:windowBox};window.ZebraAMP.openPublic(file);}}});
     },true);
   });
  }
@@ -606,7 +596,7 @@ function explorer(id){
  var path=id.indexOf("github:")===0?id.slice(7):"STUDIO/BUREAU";
  if(window.ZebraGitFiles){
   window.ZebraGitFiles.mount(body,path,{
-   explorer:explorer,osIcon:osIcon,windowBox:windowBox,canUpload:session==="admin",
+   explorer:explorer,osIcon:osIcon,windowBox:windowBox,canUpload:session==="admin",session:session,openApp:open,
    openAudio:function(file){if(window.ZebraAMP){window.ZebraAMPConfig={windowBox:windowBox};window.ZebraAMP.openPublic(file);}}
   });
  }else body.appendChild(el("p","github-drive-error","Le bureau n'a pas pu être chargé."));
@@ -643,30 +633,9 @@ function player(){
  window.ZebraAMPConfig={windowBox:windowBox};
  window.ZebraAMP.open();
 }
-/* Dossiers de raccourcis : aucun fichier STUDIO/BUREAU n'est déplacé. */
+/* Dossiers réels : le même contenu depuis le Bureau et Poste de travail. */
 function appFolder(type){
- var games=type==="games",id=games?"folder-games":"folder-atelier";
- var body=windowBox(id,games?"JEUX — ZebraOS":"ATELIER — ZebraOS",Math.min(560,innerWidth-14),Math.min(460,innerHeight-56));
- body.innerHTML="";
- var wrap=el("div","zu-folder");
- wrap.appendChild(el("div","zu-folder-heading",games?"C:\\ZEBRAOS\\JEUX":"C:\\ZEBRAOS\\ATELIER"));
- var grid=el("div","zu-folder-items");
- var items=games?[
-  ["Zebra Tetris","tetris","tetris"],["Zebra Snake","snake","snake"]
- ]:[
-  ["ZebraCalc","calc","calc"],["ZebraSticky","sticky","sticky"],
-  ["ZebraPlanner","planner","planner"],["ZebraPaint","paint","paint"],
-  ["Bloc-notes","txt","notepad"],["Configuration","control-panel","settings"]
- ];
- items.forEach(function(item){
-  var b=el("button","zu-folder-item");b.type="button";
-  var graphic=el("span","zu-folder-item-symbol");graphic.appendChild(osIcon(item[1],40));
-  b.appendChild(graphic);b.appendChild(el("span","",item[0]));
-  b.onclick=function(e){if(isTouchOpen(e)||e.detail===0)open(item[2]);};
-  b.ondblclick=function(e){if(!isTouchOpen(e))open(item[2]);};
-  grid.appendChild(b);
- });
- wrap.appendChild(grid);body.appendChild(wrap);
+ explorer("github:STUDIO/BUREAU/"+(type==="games"?"JEUX":"OUTILS"));
 }
 function openUtility(name){
  var tools=window.ZebraTools;if(!tools)return;
@@ -692,7 +661,7 @@ function openGame(name){
  root._zebraApp=name;
  entry[0].mount(root);
 }
-function open(code){$("start-menu").classList.add("hidden");if(code==="tetris"||code==="snake"||code==="paint")openGame(code);else if(code==="folder:games"||code==="folder:atelier")appFolder(code.split(":")[1]);else if(code==="calc"||code==="sticky"||code==="planner")openUtility(code);else if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="datetime")dateTime();else if(code==="welcome")welcome();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
+function open(code){$("start-menu").classList.add("hidden");if(code==="tetris"||code==="snake"||code==="paint")openGame(code);else if(code==="folder:games"||code==="folder:tools"||code==="folder:atelier")appFolder(code.split(":")[1]);else if(code==="calc"||code==="sticky"||code==="planner")openUtility(code);else if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="datetime")dateTime();else if(code==="welcome")welcome();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
 decorateSystemMenus();
 $("power-btn").onclick=powerOn;$("skip-boot").onclick=finishBoot;$("skip-session-boot").onclick=finishSessionBoot;$("restart-login").onclick=restartLogin;$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
 $("start-button").onclick=function(e){e.stopPropagation();$("start-menu").classList.toggle("hidden")};document.querySelectorAll("[data-start]").forEach(function(b){b.onclick=function(){open(b.dataset.start)}});document.addEventListener("pointerdown",function(e){if(!e.target.closest("#start-menu")&&!e.target.closest("#start-button"))$("start-menu").classList.add("hidden")});
