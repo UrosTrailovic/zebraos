@@ -329,3 +329,18 @@
 .zp-canvas-frame.zp-select-mode .zp-image-selected .zp-image-rotate{display:grid}
 .zp-canvas-frame:not(.zp-select-mode) .zp-image-rotate{display:none!important}
 .zp-canvas-frame .zp-layer-stage>.zp-imported-image{will-change:auto}
+
+/* Accès aux réglages avancés sans masquer le plan de travail mobile. */
+.zp-transform-details{display:block;border-top:1px solid #989898}
+.zp-transform-details[hidden]{display:none!important}
+.zp-transform-details>summary{
+ cursor:pointer;display:list-item;list-style:disclosure-closed;
+ padding:6px 5px 5px;margin-left:10px;
+ color:#213d80;font:700 10px "Courier New",monospace;
+}
+.zp-transform-details[open]>summary{list-style:disclosure-open}
+.zp-transform-details>.zp-transform-panel{border-top:0}
+.zp-layer-panel{overflow-y:auto;scrollbar-width:thin}
+@media(max-width:700px){
+ .zp-transform-details>summary{padding:5px 4px;font-size:10px}
+}
