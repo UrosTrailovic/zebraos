@@ -208,7 +208,7 @@ function stickyManager(root,session,desktopRefresh){
 
 /* ZEBRAPLANNER — agenda mensuel + tâches datées, vérification locale. */
 function planner(root,session){
- root.innerHTML="";root.classList.add("zu-root zu-planner");
+ root.innerHTML="";root.classList.add("zu-root","zu-planner");
  var data=read("planner",session,[]);if(!Array.isArray(data))data=[];
  data=data.filter(function(t){return t&&typeof t.id==="string"&&/^\d{4}-\d\d-\d\d$/.test(t.date);}).slice(0,600);
  var today=new Date(),view=new Date(today.getFullYear(),today.getMonth(),1),selected=dateId(today);
