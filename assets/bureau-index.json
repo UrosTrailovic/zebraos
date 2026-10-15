@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T11:32:17.544665+00:00",
+  "generatedAt": "2026-10-15T11:35:36.463937+00:00",
   "desktopOrder": [
     "Panneau de configuration",
     "Poste de travail",
@@ -281,6 +281,11 @@
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/20250902_205511.jpg",
       "type": "file",
       "size": 270239
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/20251207_223656 (1).mp4",
+      "type": "file",
+      "size": 15624361
     },
     {
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/20260512_114008.mp4",
