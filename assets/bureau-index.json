@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T08:14:23.778202+00:00",
+  "generatedAt": "2026-10-15T08:14:53.034394+00:00",
   "desktopOrder": [
     "Panneau de configuration",
     "Poste de travail",
@@ -209,6 +209,11 @@
     {
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Vidéo",
       "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/icone.png",
+      "type": "file",
+      "size": 19000
     },
     {
       "path": "STUDIO/BUREAU/Poste de travail.zebraos.json",
