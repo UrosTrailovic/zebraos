@@ -13,7 +13,7 @@ var APP_IDS={
  amp:true,settings:true,tetris:true,snake:true,paint:true,
  calc:true,sticky:true,planner:true,notepad:true
 };
-var known=null,stamp="",loading=null,listeners=[];
+var known=null,stamp="",desktopOrder=[],loading=null,listeners=[];
 var kinds={
   image:/\.(png|jpe?g|gif|webp|bmp)$/i,
   audio:/\.(mp3|wav|ogg|m4a|flac)$/i,
@@ -64,9 +64,18 @@ function visible(item){
 }
 function children(path){
  path=safe(path);
+ // Le fichier STUDIO/BUREAU/.ordre-bureau.json définit uniquement
+ // l'ordre initial du bureau, sans toucher aux positions locales.
+ var rank={};
+ if(path===ROOT)desktopOrder.forEach(function(name,index){rank[name.toLocaleLowerCase("fr")]=index;});
  return (known||[]).filter(function(item){
   return visible(item)&&item.path.slice(0,item.path.lastIndexOf("/"))===path;
  }).sort(function(a,b){
+  if(path===ROOT){
+   var ai=rank[a.name.toLocaleLowerCase("fr")],bi=rank[b.name.toLocaleLowerCase("fr")];
+   var as=ai===undefined?Infinity:ai,bs=bi===undefined?Infinity:bi;
+   if(as!==bs)return as-bs;
+  }
   if(a.type!==b.type)return a.type==="dir"?-1:1;
   return a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:"base"});
  });
@@ -105,7 +114,12 @@ function read(url){
   return r.json();
  }).then(function(data){
   if(!data||!Array.isArray(data.entries))throw Error("Format d'index invalide");
-  return {entries:valid(data.entries),stamp:data.generatedAt||""};
+  return {
+   entries:valid(data.entries),stamp:data.generatedAt||"",
+   desktopOrder:Array.isArray(data.desktopOrder)?data.desktopOrder.filter(function(name){
+    return typeof name==="string"&&name.length>0&&name.length<=120;
+   }).slice(0,150):[]
+  };
  });
 }
 function notify(){listeners.slice().forEach(function(fn){try{fn();}catch(e){}});}
@@ -115,7 +129,7 @@ function load(){
  loading=read(site(INDEX)+"?v="+q)
   .catch(function(){return read(raw(INDEX)+"?v="+q);})
   .then(function(result){
-    known=result.entries;stamp=result.stamp;notify();
+    known=result.entries;stamp=result.stamp;desktopOrder=result.desktopOrder;notify();
     return {ok:true,entries:known};
   })
   .catch(function(err){
