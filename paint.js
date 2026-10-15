@@ -1,4 +1,4 @@
-/* ZebraPaint 1.3 — miniature éditeur graphique à calques, local et sans serveur. */
+/* ZebraPaint 1.4 — calques, transformations et projets éditables, sans dépendances. */
 (function(){
 "use strict";
 const W=640,H=400,UNDO_LIMIT=12,MAX_LAYERS=25;
@@ -31,12 +31,13 @@ const toolDefs=[
 function mount(root){
  if(root._zebraDispose)root._zebraDispose();
  root.replaceChildren();
- let active=true,tool="select",color="#000000",size=6,selected=null,nextId=1;
+ let active=true,tool="select",color="#000000",size=6,selected=null,paintTarget=null,nextId=1;
  let layers=[],history=[],redo=[],drawing=false,drawingId=null,last=null,start=null,beforeShape=null,currentErase=null,draggingCleanup=null;
  const registry=new Map(),urls=new Set();
  const panel=el("div","zp");
  const bar=el("div","zp-menu");
  const upload=el("input");upload.type="file";upload.accept="image/*";upload.hidden=true;
+ const projectInput=el("input");projectInput.type="file";projectInput.accept=".zpaint,application/json";projectInput.hidden=true;
  const message=el("div","zp-status","640 × 400 · ZebraPaint");
  const canvasFrame=el("div","zp-canvas-frame");
  const layerStage=el("div","zp-layer-stage");
@@ -59,7 +60,26 @@ function mount(root){
  const scaleValue=el("output","","100 %");
  const resetScale=btn("100 %",()=>changeScale(100),"zp-button");
  scaleRow.append(scaleLabel,scale,scaleValue,resetScale);
- panelLayers.append(panelHeader,layerList,scaleRow);
+ const transformPanel=el("div","zp-transform-panel");
+ function transformSlider(name,cls,min,max,step,initial){
+  const row=el("label","zp-transform-row");
+  const label=el("span","",name);
+  const input=el("input",cls);input.type="range";input.min=String(min);input.max=String(max);input.step=String(step);input.value=String(initial);
+  const output=el("output","",String(initial));
+  row.append(label,input,output);transformPanel.append(row);
+  return {input,output};
+ }
+ const rotateControl=transformSlider("ROTATION","zp-angle-input",-180,180,5,0);
+ const skewControl=transformSlider("DÉFORMER","zp-skew-input",-45,45,5,0);
+ const opacityControl=transformSlider("OPACITÉ","zp-opacity-input",0,100,5,100);
+ const transformButtons=el("div","zp-transform-buttons");
+ transformButtons.append(
+   btn("↔ Miroir H",()=>flipSelected("flipX"),"zp-button"),
+   btn("↕ Miroir V",()=>flipSelected("flipY"),"zp-button"),
+   btn("⊕ Centrer",centerSelected,"zp-button"),
+   btn("⟳ Réinit.",resetTransform,"zp-button"));
+ transformPanel.append(transformButtons);
+ panelLayers.append(panelHeader,layerList,scaleRow,transformPanel);
  const options=el("div","zp-options");
  const currentColor=btn("","", "zp-active-color");currentColor.type="button";currentColor.title="Couleur actuelle";currentColor.style.background=color;
  const pick=el("input");pick.type="color";pick.value=color;pick.setAttribute("aria-label","Choisir la couleur");
@@ -76,7 +96,8 @@ function mount(root){
  const undoBtn=btn("↶ Annuler",undo),redoBtn=btn("↷ Rétablir",redoAction);
  const actions=el("div","zp-edits");actions.append(undoBtn,redoBtn);options.append(actions);
  const saveBtn=btn("💾 Enregistrer PNG",download);
- bar.append(btn("Nouveau",newDocument),btn("＋ Importer photo",()=>upload.click()),btn("＋ Calque dessin",()=>addRaster(true)),saveBtn,upload);
+ bar.append(btn("Nouveau",newDocument),btn("＋ Importer photo",()=>upload.click()),btn("＋ Calque dessin",()=>addRaster(true)),
+   saveBtn,btn("💾 Projet .zpaint",saveProject),btn("📂 Ouvrir projet",()=>projectInput.click()),upload,projectInput);
  const changeControls=el("div","zp-import-controls");
  changeControls.append(btn("✓ Terminer",()=>{select(null);choose("select");notice("Placement terminé : les calques restent modifiables.");},"zp-button zp-apply-image"),
    btn("× Supprimer",()=>removeLayer(selected),"zp-button"));
@@ -110,12 +131,12 @@ function mount(root){
  function createRaster(name,fill){
   const surface=paintSurface(fill);
   const node=surface;node.className="zp-raster-layer";node.style.touchAction="none";
-  const layer={id:nextId++,type:"raster",name,surface,node,visible:true};
+  const layer={id:nextId++,type:"raster",name,surface,node,visible:true,opacity:1,locked:false};
   registry.set(layer.id,layer);return layer;
  }
  function bootLayers(){
   const background=createRaster("Fond","#ffffff"),drawingLayer=createRaster("Dessin 1");
-  layers=[background,drawingLayer];selected=drawingLayer.id;
+  layers=[background,drawingLayer];selected=drawingLayer.id;paintTarget=drawingLayer.id;
  }
  function newDocument(){
   if(!confirm("Créer un nouveau dessin et effacer les calques actuels ?"))return;
@@ -127,16 +148,17 @@ function mount(root){
   const layer=createRaster("Dessin "+nextId);
   const index=above==null?layers.findIndex(l=>l.id===selected):above;
   layers.splice(index<0?layers.length:index+1,0,layer);
-  selected=layer.id;
+  selected=layer.id;paintTarget=layer.id;
   render();
   if(userTriggered)notice("Nouveau calque de dessin : "+layer.name);
   return layer;
  }
  function cloneStrokes(strokes){return strokes.map(s=>({diameter:s.diameter,pts:s.pts.map(p=>p.slice())}));}
  function snapshot(){
-  return {sel:selected,
-   list:layers.map(l=>({id:l.id,type:l.type,name:l.name,visible:l.visible,
-     x:l.x,y:l.y,w:l.w,h:l.h,erase:l.type==="image"?cloneStrokes(l.erase):null,
+  return {sel:selected,paint:paintTarget,
+   list:layers.map(l=>({id:l.id,type:l.type,name:l.name,visible:l.visible,locked:!!l.locked,opacity:l.opacity??1,
+     x:l.x,y:l.y,w:l.w,h:l.h,angle:l.angle||0,skew:l.skew||0,flipX:l.flipX||1,flipY:l.flipY||1,
+     erase:l.type==="image"?cloneStrokes(l.erase):null,
      pixels:l.type==="raster"?l.surface.getContext("2d").getImageData(0,0,W,H):null}))};
  }
  function record(){
@@ -147,12 +169,13 @@ function mount(root){
  function restore(state){
   layers=state.list.map(d=>{
    const l=registry.get(d.id);
-   l.visible=d.visible;l.name=d.name;
+   l.visible=d.visible;l.name=d.name;l.locked=!!d.locked;l.opacity=d.opacity??1;
    if(l.type==="raster")l.surface.getContext("2d").putImageData(d.pixels,0,0);
-   else{l.x=d.x;l.y=d.y;l.w=d.w;l.h=d.h;l.erase=cloneStrokes(d.erase);redrawImage(l);}
+   else{l.x=d.x;l.y=d.y;l.w=d.w;l.h=d.h;l.angle=d.angle||0;l.skew=d.skew||0;l.flipX=d.flipX||1;l.flipY=d.flipY||1;l.erase=cloneStrokes(d.erase);redrawImage(l);}
    return l;
   });
   selected=layers.some(l=>l.id===state.sel)?state.sel:null;
+  paintTarget=layers.some(l=>l.id===state.paint&&l.type==="raster")?state.paint:null;
   render();updateHistory();
  }
  function undo(){if(!history.length)return;redo.push(snapshot());restore(history.pop());notice("Annulé.");}
@@ -160,6 +183,7 @@ function mount(root){
  function getSelected(){return layers.find(l=>l.id===selected)||null;}
  function select(id){
   selected=layers.some(l=>l.id===id)?id:null;
+  if(getSelected()?.type==="raster")paintTarget=selected;
   render();
   const layer=getSelected();
   if(layer)notice(layer.type==="image"?"Photo sélectionnée · glisser ou redimensionner / gomme":"Calque dessin sélectionné · peinture / remplissage");
@@ -167,7 +191,8 @@ function mount(root){
  function removeLayer(id){
   if(layers.length<=1){notice("Il faut conserver au moins un calque.");return;}
   const i=layers.findIndex(l=>l.id===id);if(i<0)return;
-  record();layers.splice(i,1);selected=layers[Math.max(0,i-1)].id;render();
+  record();layers.splice(i,1);selected=layers[Math.max(0,i-1)].id;
+  if(paintTarget===id)paintTarget=null;render();
   notice("Calque supprimé. Annuler pour restaurer.");
  }
  function moveLayer(id,dir){
