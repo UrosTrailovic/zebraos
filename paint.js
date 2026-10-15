@@ -380,7 +380,8 @@ function mount(root){
    const surface=photoSurface(img);
    surface.className="zp-image-visual";
    const handle=btn("⤡",()=>{},"zp-image-resize");handle.title="Redimensionner";handle.setAttribute("aria-label","Redimensionner l’image");
-   container.append(surface,handle);
+   const turn=btn("↻",()=>{},"zp-image-rotate");turn.title="Tourner librement";turn.setAttribute("aria-label","Tourner l’image");
+   container.append(surface,handle,turn);
    const l={id:nextId++,type:"image",name:file.name.slice(0,65),img,url,
     surface,node:container,x:(W-w)/2,y:(H-h)/2,w,h,baseW:w,aspect:w/h,erase:[],
     visible:true,locked:false,opacity:1,angle:0,skew:0,flipX:1,flipY:1};
@@ -508,8 +509,11 @@ function mount(root){
   e.preventDefault();e.stopPropagation();
   if(selected!==l.id)select(l.id);
   const resized=!!e.target.closest(".zp-image-resize");
-  const startPos={x:e.clientX,y:e.clientY},initial={x:l.x,y:l.y,w:l.w,h:l.h};
+  const rotating=!!e.target.closest(".zp-image-rotate");
+  const startPos={x:e.clientX,y:e.clientY},initial={x:l.x,y:l.y,w:l.w,h:l.h,angle:l.angle||0};
   const r=canvasFrame.getBoundingClientRect(),sx=W/r.width,sy=H/r.height;
+  const cx=r.left+(l.x+l.w/2)/W*r.width,cy=r.top+(l.y+l.h/2)/H*r.height;
+  const startAngle=Math.atan2(e.clientY-cy,e.clientX-cx);
   const pid=e.pointerId;
   let changed=false;
   l.node.classList.add("zp-image-moving");
@@ -520,7 +524,12 @@ function mount(root){
    const dx=(ev.clientX-startPos.x)*sx,dy=(ev.clientY-startPos.y)*sy;
    if(Math.abs(dx)+Math.abs(dy)<.5)return;
    if(!changed){record();changed=true;}
-   if(resized){
+   if(rotating){
+    const angle=(Math.atan2(ev.clientY-cy,ev.clientX-cx)-startAngle)*180/Math.PI;
+    const raw=initial.angle+angle;
+    l.angle=((raw+540)%360)-180;
+    if(ev.shiftKey)l.angle=Math.round(l.angle/15)*15;
+   }else if(resized){
     const d=Math.abs(dx)>=Math.abs(dy*l.aspect)?dx:dy*l.aspect;
     l.w=clamp(initial.w+d,l.baseW*.1,l.baseW*5);l.h=l.w/l.aspect;
    }else{
