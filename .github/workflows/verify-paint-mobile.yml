@@ -143,6 +143,89 @@ jobs:
                   &&strokePx[0]<50&&strokePx[1]<50&&strokePx[2]<50;
                 test.exportErasure=erased[0]>200&&erased[2]<30;
               }else{test.exportOrder=false;test.exportErasure=false;}
+              // Dessiner quand une PHOTO est sélectionnée doit viser un calque
+              // Dessin situé au-dessus et pas bloquer ni masquer le dessin.
+              select("photo-bleue");
+              test.selectedImageKeepsStack=getComputedStyle(host.querySelector(".zp-imported-image")).zIndex==="auto";
+              tool("Crayon");
+              const countBeforePaint=labels().length;
+              color.value="#00ff00";color.dispatchEvent(new Event("input",{bubbles:true}));
+              stroke(340,235,355,235);
+              const drawRasters=Array.from(host.querySelectorAll(".zp-raster-layer"));
+              const green=drawRasters[drawRasters.length-1].getContext("2d").getImageData(348,235,1,1).data;
+              test.paintOnExistingUpperLayer=countBeforePaint===labels().length&&green[1]>200&&green[3]>50;
+
+              select("photo-bleue");
+              const rowForImage=Array.from(host.querySelectorAll(".zp-layer-entry")).find(r=>r.textContent.includes("photo-bleue"));
+              rowForImage.querySelector('[aria-label="Dupliquer le calque"]').click();
+              test.duplicate=labels().length===4;
+              host.querySelector(".zp-edits button").click();
+              test.duplicateUndo=labels().length===3;
+              select("photo-bleue");
+              const rowLocked=Array.from(host.querySelectorAll(".zp-layer-entry")).find(r=>r.textContent.includes("photo-bleue"));
+              rowLocked.querySelector('[aria-label="Verrouiller"]').click();
+              test.lock=!!rowLocked.parentElement.querySelector('[aria-label="Déverrouiller"]');
+              Array.from(host.querySelectorAll(".zp-layer-entry")).find(r=>r.textContent.includes("photo-bleue")).querySelector('[aria-label="Déverrouiller"]').click();
+
+              select("photo-bleue");
+              const angle=host.querySelector(".zp-angle-input");
+              angle.value="90";angle.dispatchEvent(new Event("change",{bubbles:true}));
+              test.rotation=Math.abs(parseFloat(image.style.transform.match(/rotate\(([-\d.]+)deg/)[1])-90)<1;
+              const skew=host.querySelector(".zp-skew-input");
+              skew.value="20";skew.dispatchEvent(new Event("change",{bubbles:true}));
+              test.skew=/skewX\(20deg\)/.test(image.style.transform);
+              skew.value="0";skew.dispatchEvent(new Event("change",{bubbles:true}));
+              const opacity=host.querySelector(".zp-opacity-input");
+              opacity.value="50";opacity.dispatchEvent(new Event("change",{bubbles:true}));
+              test.opacity=getComputedStyle(image).opacity==="0.5";
+              const selectedRow=Array.from(host.querySelectorAll(".zp-layer-entry")).find(r=>r.textContent.includes("photo-bleue"));
+              host.querySelector(".zp-transform-buttons button").click();
+              test.mirror=/scale\(-1,1\)/.test(image.style.transform);
+              const turn=image.querySelector(".zp-image-rotate");
+              test.rotationHandle=!!turn&&getComputedStyle(turn).display!=="none";
+
+              // Vérifier des vrais pixels dans le PNG, pas juste une classe CSS.
+              let transformedPNG="";
+              const saveCapture=e=>{
+                const a=e.target.closest("a[download]");
+                if(a&&a.download.endsWith(".png")){transformedPNG=a.href;e.preventDefault();}
+              };
+              document.addEventListener("click",saveCapture,true);
+              Array.from(host.querySelectorAll(".zp-menu button")).find(b=>b.textContent.includes("PNG")).click();
+              document.removeEventListener("click",saveCapture,true);
+              test.transformExport=transformedPNG.startsWith("data:image/png;base64,");
+              if(test.transformExport){
+                const rendered=new Image();
+                await new Promise(resolve=>{rendered.onload=resolve;rendered.onerror=resolve;rendered.src=transformedPNG;});
+                const c=document.createElement("canvas");c.width=640;c.height=400;
+                const x=c.getContext("2d");x.drawImage(rendered,0,0);
+                // Bleu + fond rouge mélangés (50 %) sur la partie
+                // visible après rotation à 90° en dehors de l'image originale.
+                const p=x.getImageData(320,75,1,1).data;
+                test.importIncludedInTransformedExport=p[2]>75&&p[0]>75&&p[3]===255;
+              }else test.importIncludedInTransformedExport=false;
+
+              // Sauvegarder un projet .zpaint avec les calques ET les transformations.
+              let projectText="";
+              const projectCapture=e=>{
+                const a=e.target.closest('a[download$=".zpaint"]');
+                if(a){e.preventDefault();projectText=a.href;}
+              };
+              document.addEventListener("click",projectCapture,true);
+              Array.from(host.querySelectorAll(".zp-menu button")).find(b=>b.textContent.includes("Projet .zpaint")).click();
+              document.removeEventListener("click",projectCapture,true);
+              test.projectSave=projectText.startsWith("blob:");
+              if(test.projectSave){
+                const project=await (await fetch(projectText)).text();
+                const data=JSON.parse(project);
+                test.projectLayers=data.layers.length===3&&data.layers.some(l=>l.type==="image"&&l.angle===90&&l.opacity===0.5);
+                const projectInput=host.querySelector('input[accept^=".zpaint"]');
+                Object.defineProperty(projectInput,"files",{configurable:true,value:[new File([project],"retour.zpaint",{type:"application/json"})]});
+                projectInput.dispatchEvent(new Event("change",{bubbles:true}));
+                await sleep(240);
+                test.projectReload=labels().length===3&&Array.from(host.querySelectorAll(".zp-layer-entry")).some(r=>r.textContent.includes("photo-bleue"))
+                  &&Array.from(host.querySelectorAll(".zp-imported-image")).some(n=>/rotate\(90deg\)/.test(n.style.transform));
+              }else{test.projectLayers=false;test.projectReload=false;}
             }catch(e){test.error=String(e.stack||e);}
             document.documentElement.dataset.paintReport=JSON.stringify(test);
             document.documentElement.dataset.paintStatus=Object.values(test).every(v=>v===true||typeof v==="object")?"ok":"failed";
