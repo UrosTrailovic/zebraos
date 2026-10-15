@@ -563,6 +563,94 @@ function mount(root){
   });
   return output;
  }
+ /* Format ZebraPaint : image raster par calque + métadonnées.
+    Sauvegarde uniquement sur l'appareil de l'utilisateur. */
+ function saveProject(){
+  try{
+   const project={format:"zebrapaint",version:1,width:W,height:H,
+    layers:layers.map(l=>({
+     type:l.type,name:l.name,visible:l.visible,locked:!!l.locked,opacity:l.opacity??1,
+     x:l.x,y:l.y,w:l.w,h:l.h,baseW:l.baseW,aspect:l.aspect,
+     angle:l.angle||0,skew:l.skew||0,flipX:l.flipX||1,flipY:l.flipY||1,
+     image:l.surface.toDataURL("image/png")
+    }))};
+   const encoded=JSON.stringify(project);
+   const blob=new Blob([encoded],{type:"application/json"});
+   const url=URL.createObjectURL(blob);
+   const a=document.createElement("a");
+   a.href=url;a.download="zebra-paint-"+new Date().toISOString().slice(0,10)+".zpaint";
+   document.body.append(a);a.click();a.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),2000);
+   notice("Projet .zpaint enregistré · "+layers.length+" calques rééditables.");
+  }catch(err){notice("Impossible d'enregistrer le projet : "+err.message);}
+ }
+ async function loadProject(file){
+  if(!file)return;
+  if(file.size>35*1024*1024){notice("Projet trop volumineux (>35 Mo).");return;}
+  try{
+   const data=JSON.parse(await file.text());
+   if(data.format!=="zebrapaint"||data.version!==1||data.width!==W||data.height!==H
+      ||!Array.isArray(data.layers)||data.layers.length<1||data.layers.length>MAX_LAYERS)
+      throw new Error("Format de projet invalide ou incompatible");
+   const prepared=[];
+   for(const item of data.layers){
+    if(!["raster","image"].includes(item.type)||typeof item.image!=="string"
+       ||!item.image.startsWith("data:image/png;base64,")
+       ||item.image.length>23e6)throw new Error("Calque image incorrect");
+    const image=new Image();
+    await new Promise((resolve,reject)=>{
+     image.onload=resolve;image.onerror=()=>reject(new Error("Image interne incorrecte"));
+     image.src=item.image;
+    });
+    if(image.width>4096||image.height>4096)throw new Error("Image trop grande");
+    prepared.push({item,image});
+   }
+   if(!active)return;
+   record();
+   const rebuilt=[];
+   prepared.forEach(({item,image})=>{
+    let layer;
+    if(item.type==="raster"){
+     layer=createRaster(String(item.name||"Dessin").slice(0,70));
+     layer.surface.getContext("2d").drawImage(image,0,0,W,H);
+    }else{
+     const node=el("div","zp-imported-image");
+     const surface=document.createElement("canvas");
+     surface.width=image.width;surface.height=image.height;
+     surface.getContext("2d").drawImage(image,0,0);
+     surface.className="zp-image-visual";
+     const handle=btn("⤡",()=>{},"zp-image-resize");
+     handle.title="Redimensionner";handle.setAttribute("aria-label","Redimensionner l’image");
+     node.append(surface,handle);
+     layer={id:nextId++,type:"image",name:String(item.name||"Image").slice(0,70),
+      img:image,url:item.image,surface,node,erase:[],
+      x:Number(item.x)||0,y:Number(item.y)||0,w:Number(item.w)||100,h:Number(item.h)||100,
+      baseW:Number(item.baseW)||100,aspect:Number(item.aspect)||1,visible:true};
+     node.addEventListener("pointerdown",imagePointerDown);
+     registry.set(layer.id,layer);
+    }
+    layer.visible=item.visible!==false;layer.locked=!!item.locked;
+    layer.opacity=clamp(Number(item.opacity??1),0,1);
+    if(layer.type==="image"){
+     layer.angle=clamp(Number(item.angle)||0,-180,180);
+     layer.skew=clamp(Number(item.skew)||0,-45,45);
+     layer.flipX=item.flipX===-1?-1:1;layer.flipY=item.flipY===-1?-1:1;
+     layer.w=clamp(layer.w,1,3200);layer.h=clamp(layer.h,1,3200);
+     layer.x=clamp(layer.x,-3200,3200);layer.y=clamp(layer.y,-3200,3200);
+    }
+    rebuilt.push(layer);
+   });
+   layers=rebuilt;
+   const frontRaster=layers.slice().reverse().find(l=>l.type==="raster");
+   selected=frontRaster?.id||layers[layers.length-1].id;paintTarget=frontRaster?.id||null;
+   render();choose("select");notice("Projet ouvert : "+layers.length+" calques modifiables.");
+  }catch(err){notice("Impossible d'ouvrir le projet : "+err.message);}
+ }
+ projectInput.onchange=()=>{
+  const file=projectInput.files?.[0];projectInput.value="";
+  if(file)loadProject(file);
+ };
+
  function download(){
   const a=document.createElement("a");
   a.href=merged().toDataURL("image/png");
