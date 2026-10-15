@@ -1,0 +1,101 @@
+/* ZebraPhotos — galerie sobre dans une vraie fenêtre ZebraOS. */
+.window .window-body.zpic-window-body{
+ padding:0!important;min-width:0;min-height:0;overflow:hidden!important;
+ background:#0b0d12;color:#d7dce3;display:flex;flex-direction:column;
+}
+.zpic,.zpic *{box-sizing:border-box}
+.zpic{display:flex;flex-direction:column;height:100%;width:100%;min-height:0;
+ background:#0c0f14;color:#d9dde5;font:11px Tahoma,Arial,sans-serif;
+ user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+}
+.zpic [hidden]{display:none!important}
+.zpic button,.zpic input{font:inherit}
+.zpic-stage{
+ position:relative;flex:1 1 auto;min-height:100px;overflow:hidden;
+ background:#0c1016;cursor:default;touch-action:pan-y;
+}
+.zpic-stage.zpic-panning{cursor:grabbing;touch-action:none}
+.zpic-image{
+ position:absolute;left:50%;top:50%;max-width:none;max-height:none;
+ display:block;transform-origin:center center;
+ object-fit:fill;image-rendering:auto;
+ pointer-events:none;
+ -webkit-user-drag:none;
+ will-change:transform;
+}
+.zpic-wait{
+ position:absolute;inset:0;z-index:2;
+ display:flex;align-items:center;justify-content:center;flex-direction:column;
+ gap:14px;color:#d9e4e7;background:#0c1016;
+ font:bold 11px "Courier New",monospace;letter-spacing:1px;
+}
+.zpic-wait-wheel{
+ width:30px;height:30px;display:block;border:3px solid #49576a;
+ border-top-color:#b2e1db;border-radius:50%;
+ animation:zpic-spin 950ms steps(16,end) infinite;
+}
+@keyframes zpic-spin{to{transform:rotate(360deg)}}
+.zpic-stage-arrow{
+ position:absolute;z-index:4;top:50%;transform:translateY(-50%);
+ width:37px;height:57px;border:1px solid #ffffff30;
+ background:#111825b0;color:#e3eeff;border-radius:1px;
+ display:grid;place-items:center;padding:0;
+ font:bold 20px/1 "Courier New",monospace;cursor:pointer;
+ opacity:.75;transition:opacity 100ms linear,background 100ms linear;
+}
+.zpic-stage-arrow:hover{opacity:1;background:#1c3858e3}
+.zpic-stage-arrow:focus-visible{opacity:1;outline:2px solid #9ac5dd}
+.zpic-prev{left:9px}
+.zpic-next{right:9px}
+.zpic-toolbar{
+ flex:0 0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+ padding:8px 10px;
+ min-height:59px;background:linear-gradient(#c4cad3,#a5afbc);
+ border-top:3px ridge #e7edf3;color:#28384a;
+ box-shadow:inset 0 1px #fcffff;
+}
+.zpic-details{
+ flex:1 1 165px;min-width:90px;max-width:300px;
+ display:flex;flex-direction:column;gap:5px;overflow:hidden;
+}
+.zpic-filename{font:700 11px Tahoma,Arial,sans-serif;white-space:nowrap;
+ overflow:hidden;text-overflow:ellipsis;color:#1c2940}
+.zpic-metadata{font:10px "Courier New",monospace;color:#47566a;white-space:nowrap}
+.zpic-nav,.zpic-adjustments{display:flex;align-items:center;gap:5px;flex:none;min-width:0}
+.zpic-nav{margin-left:auto}
+.zpic-tool{
+ border:2px outset #e5eaf0;border-radius:0;
+ background:linear-gradient(#e6e9ee,#bdc7d2);
+ color:#20334d;padding:4px 7px;min-width:29px;min-height:29px;
+ line-height:1;cursor:pointer;font-weight:bold!important;
+}
+.zpic-tool:active{border-style:inset}
+.zpic-tool:hover{background:#dfe8f4}
+.zpic-tool.selected{background:#adc6d3;border-style:inset}
+.zpic-counter{font:bold 10px "Courier New",monospace;color:#394a63;min-width:36px;text-align:center}
+.zpic-adjustments{border-left:1px solid #728195;padding-left:9px}
+.zpic-fit{font:700 9px "Courier New",monospace!important;padding:4px 5px}
+.zpic-slider{width:75px;height:19px;accent-color:#3a6d9d;cursor:pointer}
+.zpic-zoom-button{font-size:17px!important}
+.zpic-amount{font:bold 10px "Courier New",monospace;min-width:46px;text-align:right;white-space:nowrap}
+.zpic-full{font-size:17px!important;min-width:32px}
+.zpic:fullscreen{width:100vw;height:100vh}
+@media(max-width:700px){
+ .zpic-toolbar{gap:6px;padding:6px 7px}
+ .zpic-details{flex:1 1 calc(100% - 98px);max-width:none}
+ .zpic-nav{margin-left:auto}
+ .zpic-adjustments{width:100%;justify-content:flex-end;
+  border-left:0;border-top:1px solid #8792a1;padding:5px 0 0;margin-top:1px}
+ .zpic-slider{flex:1 1 60px;max-width:180px}
+ .zpic-tool{min-height:32px;min-width:32px}
+ .zpic-stage-arrow{width:31px;height:52px;opacity:.85}
+ .zpic-metadata{font-size:9px}
+}
+@media(max-width:370px){
+ .zpic-toolbar{gap:4px}
+ .zpic-fit{font-size:8px!important}
+ .zpic-slider{max-width:95px}
+ .zpic-amount{min-width:39px;font-size:9px}
+ .zpic-stage-arrow{width:28px;height:46px}
+}
+@media(prefers-reduced-motion:reduce){.zpic-wait-wheel{animation:none}}
