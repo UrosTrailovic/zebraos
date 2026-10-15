@@ -79,7 +79,10 @@ function mount(root){
    btn("⊕ Centrer",centerSelected,"zp-button"),
    btn("⟳ Réinit.",resetTransform,"zp-button"));
  transformPanel.append(transformButtons);
- panelLayers.append(panelHeader,layerList,scaleRow,transformPanel);
+ const transformDetails=el("details","zp-transform-details");
+ const transformSummary=el("summary","","↻ TRANSFORMER · ANGLE / INCLINAISON / OPACITÉ");
+ transformDetails.append(transformSummary,transformPanel);
+ panelLayers.append(panelHeader,layerList,scaleRow,transformDetails);
  const options=el("div","zp-options");
  const currentColor=btn("","", "zp-active-color");currentColor.type="button";currentColor.title="Couleur actuelle";currentColor.style.background=color;
  const pick=el("input");pick.type="color";pick.value=color;pick.setAttribute("aria-label","Choisir la couleur");
@@ -224,7 +227,8 @@ function mount(root){
   changeControls.hidden=!getSelected();
   const image=getSelected()?.type==="image"?getSelected():null;
   scaleRow.hidden=!image;
-  transformPanel.hidden=!getSelected();
+  transformDetails.hidden=!getSelected();
+  transformSummary.textContent=image?"↻ TRANSFORMER · ANGLE / DÉFORMER / OPACITÉ":"◌ OPACITÉ DU CALQUE";
   rotateControl.input.parentNode.hidden=!image;
   skewControl.input.parentNode.hidden=!image;
   if(image){
