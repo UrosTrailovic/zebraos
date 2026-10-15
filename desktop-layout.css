@@ -1,0 +1,65 @@
+/* ZebraOS — bureau déplaçable + Corbeille physique en bas à droite. */
+#desktop-icons.desktop-icons{
+ position:absolute;inset:0 0 36px 0;
+ left:0;top:0;right:0;bottom:36px;
+ width:auto;height:auto;max-width:none;
+ display:block;overflow:visible;
+ pointer-events:none;z-index:3;
+}
+#desktop-icons .desk-icon{
+ position:absolute;pointer-events:auto;cursor:grab;
+ width:94px;height:91px;min-height:0;
+ margin:0;touch-action:none;user-select:none;-webkit-user-select:none;
+}
+#desktop-icons .desk-icon:active{cursor:grabbing}
+#desktop-icons .desk-user-file{height:91px;min-height:0}
+#desktop-icons .desk-icon.zu-icon-dragging{
+ z-index:100!important;opacity:.88;
+ background:rgba(37,77,175,.26);border:1px dashed #fff;
+ filter:drop-shadow(2px 3px 3px #0007);
+}
+.zu-trash-icon.desk-icon{
+ position:absolute;bottom:45px;right:13px;left:auto;top:auto;
+ width:88px;height:90px;z-index:18;
+ cursor:pointer;touch-action:manipulation;
+}
+.zu-trash-icon.zu-drop-target{
+ background:rgba(255,222,74,.24);
+ outline:2px dashed #fdec82;outline-offset:2px;
+}
+.zu-desktop-menu{
+ position:absolute;z-index:10000;
+ display:flex;flex-direction:column;
+ min-width:176px;max-width:225px;
+ padding:3px;background:#c8c8c8;
+ border:2px outset #fff;box-shadow:3px 4px #1616168c;
+}
+.zu-desktop-menu-item{
+ background:#c8c8c8;color:#141414;border:0;
+ padding:8px 12px;text-align:left;font:12px Tahoma,Arial,sans-serif;
+}
+.zu-desktop-menu-item:hover,.zu-desktop-menu-item:focus{
+ background:#183486;color:#fff;
+}
+.zu-trash-body{background:#c6c6c6;padding:10px;overflow:auto}
+.zu-trash-header{
+ display:flex;justify-content:space-between;align-items:center;
+ gap:8px;background:#263886;color:#fff;border:2px inset #f6f6f6;
+ padding:8px 10px;font:700 13px "Courier New",monospace;
+}
+.zu-trash-header span{font-size:9px;font-weight:normal}
+.zu-trash-description{padding:3px 5px;font-size:11px;line-height:1.5}
+.zu-trash-tools{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.zu-trash-list{background:#fff;min-height:130px;border:2px inset #eee}
+.zu-trash-item{
+ display:flex;justify-content:space-between;align-items:center;
+ gap:8px;padding:9px 10px;border-bottom:1px solid #d8d8d8;
+ overflow-wrap:anywhere;
+}
+.zu-trash-item span{min-width:0;flex:1}
+.zu-trash-item .classic-button{font-size:10px;padding:5px 6px}
+.zu-trash-empty{text-align:center;padding:30px 10px;color:#666}
+@media(max-width:700px){
+ #desktop-icons .desk-icon,#desktop-icons .desk-user-file{width:84px;height:87px}
+ .zu-trash-icon.desk-icon{right:8px;bottom:43px;width:84px;height:88px}
+}
