@@ -362,7 +362,7 @@ function desk(){
   }).forEach(function(item){
     shortcut(item.name,lib.icon(item,osIcon,40),function(){
       if(item.type==="dir")explorer("github:"+item.path);
-      else lib.openFile(item,{windowBox:windowBox,openApp:open,openAudio:function(file){if(window.ZebraAMP){window.ZebraAMPConfig={windowBox:windowBox};window.ZebraAMP.openPublic(file);}}});
+      else lib.openFile(item,{windowBox:windowBox,session:session,openApp:open,openAudio:function(file){if(window.ZebraAMP){window.ZebraAMPConfig={windowBox:windowBox};window.ZebraAMP.openPublic(file);}}});
     },true,item.path);
   });
   if(window.ZebraDesktop)window.ZebraDesktop.bind();
