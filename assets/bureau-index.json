@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T08:09:33.318318+00:00",
+  "generatedAt": "2026-10-15T08:09:49.002662+00:00",
   "desktopOrder": [
     "Panneau de configuration",
     "Poste de travail",
@@ -48,10 +48,6 @@
       "path": "STUDIO/BUREAU/JEUX/icone.png",
       "type": "file",
       "size": 18083
-    },
-    {
-      "path": "STUDIO/BUREAU/Les copains !!",
-      "type": "dir"
     },
     {
       "path": "STUDIO/BUREAU/OUTILS",
