@@ -5,6 +5,8 @@ on:
       - 'zebra-tools.js'
       - 'zebra-tools.css'
       - 'github-files.js'
+      - 'desktop-layout.js'
+      - 'desktop-layout.css'
       - 'app.js'
       - 'index.html'
       - 'STUDIO/BUREAU/**'
@@ -22,6 +24,7 @@ jobs:
         run: |
           node --check zebra-tools.js
           node --check github-files.js
+          node --check desktop-layout.js
           node --check app.js
           python3 - <<'PY'
           import json
@@ -63,10 +66,36 @@ jobs:
             var icons=Array.from(document.querySelectorAll(".desk-icon .desk-caption")).map(e=>e.textContent);
             report.desktop=["JEUX","OUTILS","Zebra Tape 2","sadate","Poste de travail","ZebraAMP.exe","Panneau de configuration"].every(n=>icons.includes(n))
               &&!icons.includes("ATELIER")&&!icons.includes("Tetris.exe")&&!icons.includes("Snake.exe")
-              &&!icons.includes("Corbeille")&&!icons.includes("Gestionnaire Studio");
+              &&icons.includes("Corbeille")&&!icons.includes("Gestionnaire Studio");
             function desk(label){return Array.from(document.querySelectorAll(".desk-icon")).find(e=>e.querySelector(".desk-caption")?.textContent===label);}
             function entry(label){return Array.from(document.querySelectorAll(".github-file-entry")).find(e=>e.querySelector(".github-file-name")?.textContent===label);}
             function button(label,element){return Array.from(element.querySelectorAll("button")).find(e=>e.textContent.trim().includes(label));}
+            var bin=document.querySelector(".zu-trash-icon");
+            var binRect=bin.getBoundingClientRect();
+            report.fixedTrash=binRect.right>=innerWidth-25&&binRect.bottom<=innerHeight-34
+              &&binRect.bottom>=innerHeight-55;
+            report.onlyOneBin=document.querySelectorAll(".zu-trash-icon").length===1;
+            function dragIcon(node,targetX,targetY){
+              var r=node.getBoundingClientRect(),x=r.left+15,y=r.top+15;
+              function ev(type,cx,cy){return new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:101,pointerType:"touch",isPrimary:true,button:0,clientX:cx,clientY:cy});}
+              node.dispatchEvent(ev("pointerdown",x,y));
+              window.dispatchEvent(ev("pointermove",targetX,targetY));
+              window.dispatchEvent(ev("pointerup",targetX,targetY));
+            }
+            var movable=desk("ZebraAMP.exe"),originalLeft=parseFloat(movable.style.left)||0;
+            dragIcon(movable,movable.getBoundingClientRect().left+65,movable.getBoundingClientRect().top+70);
+            report.iconMove=Math.abs(parseFloat(movable.style.left)-originalLeft)>=20;
+            var positionData=JSON.parse(localStorage.getItem("zebra.desktop.v1.visitor"));
+            report.iconSave=!!positionData.positions.narrow["STUDIO/BUREAU/ZebraAMP.exe.zebraos.json"];
+            var trashRect=bin.getBoundingClientRect();
+            dragIcon(movable,(trashRect.left+trashRect.right)/2,(trashRect.top+trashRect.bottom)/2);
+            report.trashPersist=JSON.parse(localStorage.getItem("zebra.desktop.v1.visitor")).trash.includes("STUDIO/BUREAU/ZebraAMP.exe.zebraos.json");
+            report.trashHides=!desk("ZebraAMP.exe");
+            bin.click();
+            report.trashWindow=!!document.querySelector(".zu-trash-list");
+            var restore=Array.from(document.querySelectorAll(".zu-trash-item button")).find(e=>e.textContent.includes("RESTAURER"));
+            restore.click();
+            report.trashRestore=!!desk("ZebraAMP.exe")&&JSON.parse(localStorage.getItem("zebra.desktop.v1.visitor")).trash.length===0;
             desk("JEUX").click();
             await new Promise(resolve=>setTimeout(resolve,150));
             report.gamesFolder=!!entry("Tetris.exe")&&!!entry("Snake.exe")
