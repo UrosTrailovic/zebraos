@@ -148,16 +148,13 @@ function mount(root,initial,collection,options){
    loaded=true;naturalWidth=image.naturalWidth;naturalHeight=image.naturalHeight;
    metadata.textContent=(file.name.split(".").pop()||"IMAGE").toUpperCase()+"  |  "+naturalWidth+" × "+naturalHeight+"  |  "+(opts.sizeText?opts.sizeText(file.size):"");
    image.alt=file.name;
+   // Pas de decode() asynchrone ici : certains navigateurs mobiles le
+   // retardent et laissent une photo pourtant chargée invisible.
+   // Le masquage COMPOSITE de la fenêtre pendant l'animation suffit.
    layout();
-   // Attendre aussi le décodage du JPEG pour éviter le flash d'une
-   // image brute avant la composition du panneau inférieur.
-   var decoding=typeof image.decode==="function"?image.decode():Promise.resolve();
-   decoding.catch(function(){}).then(function(){
-    if(!active||thisRequest!==requestId)return;
-    image.style.visibility="visible";
-    frame.dataset.loading="false";wait.hidden=true;layout();
-    revealTogether();
-   });
+   image.style.visibility="visible";
+   frame.dataset.loading="false";wait.hidden=true;
+   revealTogether();
   };
   image.onerror=function(){
    if(!active||thisRequest!==requestId)return;
