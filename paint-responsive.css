@@ -150,3 +150,6 @@
 .zp-canvas-frame.zp-select-mode .zp-canvas{pointer-events:none}
 .zp-canvas-frame.zp-select-mode .zp-layer-stage .zp-imported-image{pointer-events:auto}
 .zp-canvas-frame .zp-image-resize{z-index:6}
+
+/* Poignée de transformation visible uniquement dans l'outil Sélection. */
+.zp-canvas-frame:not(.zp-select-mode) .zp-imported-image .zp-image-resize{display:none!important}
