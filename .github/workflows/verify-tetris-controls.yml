@@ -7,6 +7,7 @@ on:
       - 'tetris-artwork.js'
       - 'style.css'
       - 'app.js'
+      - 'index.html'
       - 'assets/games/zebra-tetris-ui.png'
       - 'assets/games/tetris-controls/**'
   workflow_dispatch:
@@ -48,6 +49,10 @@ jobs:
               window.ZebraTetris.mount(root);
               const $=selector=>root.querySelector(selector);
               report.mount=!!$(".zt-dpad")&&!!$(".zt-a")&&!!$(".zt-b")&&!!$(".zt-select");
+              report.initiallyHidden=$(".zg-retro").classList.contains("zt-assembling")
+                &&getComputedStyle($(".zg-retro")).visibility==="hidden"
+                &&!!$(".zt-startup-loader");
+
               report.assets=!!$(".zt-logo");
               report.buttons=!!$(".zt-play")&&!!$(".zt-restart")&&!!$(".zt-menu");
               $(".zt-play").click();
@@ -85,6 +90,12 @@ jobs:
               report.exitMenu=$(".zg-state").textContent==="EN COURS";
               setTimeout(()=>{
                 report.loadedTextures=$(".zt-logo").naturalWidth>0&&root.querySelector(".zt-art-loaded")!==null;
+                report.readyTogether=!$(".zg-retro").classList.contains("zt-assembling")
+                  &&!$(".zt-startup-loader")
+                  &&getComputedStyle($(".zg-retro")).visibility==="visible"
+                  &&$(".zg-tetris-stage").style.width.endsWith("px")
+                  &&$(".zg-tetris-stage").getBoundingClientRect().width>60;
+
                 const skin=$(".zt-handheld");
                 const sprites=Array.from(root.querySelectorAll(".zt-control-sprite"));
                 report.customPanel=skin.classList.contains("zt-skin-ready");
