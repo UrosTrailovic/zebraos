@@ -11,17 +11,39 @@ function mount(root){
  const panel=element("div","zp");
  const toolbar=element("div","zp-menu");
  const input=element("input");input.type="file";input.accept="image/*";input.hidden=true;
- const download=()=>{let a=document.createElement("a");a.download="zebra-paint-"+new Date().toISOString().slice(0,10)+".png";a.href=canvas.toDataURL("image/png");document.body.appendChild(a);a.click();a.remove();notice("Image exportée en PNG.");};
- toolbar.append(button("Nouveau",()=>{if(confirm("Effacer le dessin actuel ?")){record();clearCanvas();notice("Nouvelle image.");}}),button("Ouvrir une image",()=>input.click()),button("Enregistrer PNG",download));
+ const download=()=>{
+   // Les transformations non encore validées doivent aussi être exportées.
+   const exportCanvas=document.createElement("canvas");
+   exportCanvas.width=WIDTH;exportCanvas.height=HEIGHT;
+   const ec=exportCanvas.getContext("2d");
+   ec.drawImage(canvas,0,0);
+   if(placedImage)ec.drawImage(placedImage.img,placedImage.x,placedImage.y,placedImage.w,placedImage.h);
+   let a=document.createElement("a");
+   a.download="zebra-paint-"+new Date().toISOString().slice(0,10)+".png";
+   a.href=exportCanvas.toDataURL("image/png");
+   document.body.appendChild(a);a.click();a.remove();notice("Image exportée en PNG.");
+  };
+ toolbar.append(button("Nouveau",()=>{if(confirm("Effacer le dessin actuel ?")){discardImport();record();clearCanvas();notice("Nouvelle image.");}}),button("Ouvrir une image",()=>input.click()),button("Enregistrer PNG",download));
  toolbar.appendChild(input);
  panel.appendChild(toolbar);
  const body=element("div","zp-body"),tools=element("div","zp-tools"),stage=element("div","zp-stage");
- const canvas=element("canvas","zp-canvas");canvas.width=WIDTH;canvas.height=HEIGHT;canvas.setAttribute("aria-label","Zone de dessin ZebraPaint");stage.appendChild(canvas);
+ const canvas=element("canvas","zp-canvas");canvas.width=WIDTH;canvas.height=HEIGHT;
+ canvas.setAttribute("aria-label","Zone de dessin ZebraPaint");
+ const canvasFrame=element("div","zp-canvas-frame");
+ canvasFrame.appendChild(canvas);
+ stage.appendChild(canvasFrame);
  const work=element("div","zp-work");work.appendChild(stage);
  const paletteBar=element("div","zp-colors");
  let currentColor="#000000",brush=4,tool="pencil",fillTolerance=12;
  let status=element("div","zp-status","640 × 400 px · Crayon");
  let history=[],redoHistory=[],drawing=false,start=null,beforeShape=null,last=null,active=true;
+ let placedImage=null;
+ const importControls=element("div","zp-import-controls");
+ const applyImageButton=button("✓ Appliquer l’image",()=>applyImport(),"zp-button zp-apply-image");
+ const cancelImageButton=button("× Annuler",()=>{discardImport();notice("Importation annulée.");},"zp-button");
+ importControls.append(applyImageButton,cancelImageButton);
+ importControls.hidden=true;
+ toolbar.appendChild(importControls);
  const ctx=canvas.getContext("2d",{willReadFrequently:true});
  ctx.lineCap="round";ctx.lineJoin="round";
  const toolsDef=[
@@ -73,6 +95,7 @@ function mount(root){
  }
  function updateHistory(){undoBtn.disabled=!history.length;redoBtn.disabled=!redoHistory.length;}
  function undo(){
+  if(placedImage){discardImport();notice("Importation annulée.");return;}
   if(!history.length)return;
   redoHistory.push(ctx.getImageData(0,0,WIDTH,HEIGHT));
   ctx.putImageData(history.pop(),0,0);updateHistory();notice("Modification annulée.");
@@ -132,6 +155,7 @@ function mount(root){
  }
  function onDown(ev){
   if(!active||ev.button!==0)return;
+  if(placedImage)applyImport(true);
   ev.preventDefault();
   const p=point(ev);
   if(tool==="picker"){
@@ -158,15 +182,91 @@ function mount(root){
   drawing=false;beforeShape=null;last=null;
   notice("Image modifiée · "+WIDTH+" × "+HEIGHT+" px");
  }
+ /* Image importée = calque temporaire redimensionnable, en coordonnées
+    640×400. Sur mobile, le canvas ET le calque sont réduits ensemble. */
+ function discardImport(){
+  if(!placedImage)return;
+  const old=placedImage;placedImage=null;
+  if(old.url)URL.revokeObjectURL(old.url);
+  old.node.remove();
+  importControls.hidden=true;
+ }
+ function applyImport(silent){
+  if(!placedImage)return;
+  const layer=placedImage;
+  record();clearCanvas();
+  ctx.drawImage(layer.img,layer.x,layer.y,layer.w,layer.h);
+  discardImport();
+  if(!silent)notice("Image placée sur le dessin · 640 × 400 px");
+ }
+ function updatePlacedImage(){
+  if(!placedImage)return;
+  const o=placedImage;
+  o.node.style.left=o.x/WIDTH*100+"%";
+  o.node.style.top=o.y/HEIGHT*100+"%";
+  o.node.style.width=o.w/WIDTH*100+"%";
+  o.node.style.height=o.h/HEIGHT*100+"%";
+ }
+ function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+ function imagePointerDown(ev){
+  if(!placedImage||(ev.pointerType==="mouse"&&ev.button!==0))return;
+  ev.preventDefault();ev.stopPropagation();
+  const layer=placedImage,resize=!!ev.target.closest(".zp-image-resize");
+  const frameRect=canvasFrame.getBoundingClientRect();
+  const xFactor=WIDTH/frameRect.width,yFactor=HEIGHT/frameRect.height;
+  const startX=ev.clientX,startY=ev.clientY;
+  const initial={x:layer.x,y:layer.y,w:layer.w,h:layer.h},aspect=layer.w/layer.h;
+  const pid=ev.pointerId;
+  layer.node.classList.add("zp-image-moving");
+  try{layer.node.setPointerCapture(pid);}catch(_){}
+  function moving(e){
+   if(e.pointerId!==pid||!placedImage||placedImage!==layer)return;
+   e.preventDefault();
+   const dx=(e.clientX-startX)*xFactor,dy=(e.clientY-startY)*yFactor;
+   if(resize){
+    const change=Math.abs(dx)>=Math.abs(dy*aspect)?dx:dy*aspect;
+    const maxWidth=Math.max(1,Math.min(WIDTH-initial.x,(HEIGHT-initial.y)*aspect));
+    layer.w=clamp(initial.w+change,Math.min(24,maxWidth),maxWidth);
+    layer.h=layer.w/aspect;
+   }else{
+    layer.x=clamp(initial.x+dx,0,WIDTH-layer.w);
+    layer.y=clamp(initial.y+dy,0,HEIGHT-layer.h);
+   }
+   updatePlacedImage();
+  }
+  function finish(e){
+   if(e.pointerId!==pid)return;
+   layer.node.classList.remove("zp-image-moving");
+   window.removeEventListener("pointermove",moving);
+   window.removeEventListener("pointerup",finish);
+   window.removeEventListener("pointercancel",finish);
+  }
+  window.addEventListener("pointermove",moving,{passive:false});
+  window.addEventListener("pointerup",finish);
+  window.addEventListener("pointercancel",finish);
+ }
  function importImage(file){
   if(!file||!file.type.startsWith("image/")){notice("Fichier image non reconnu.");return;}
   const url=URL.createObjectURL(file),img=new Image();
   img.onload=()=>{
-    if(!active){URL.revokeObjectURL(url);return;}
-    record();clearCanvas();
-    const scale=Math.min(WIDTH/img.width,HEIGHT/img.height);
-    ctx.drawImage(img,(WIDTH-img.width*scale)/2,(HEIGHT-img.height*scale)/2,img.width*scale,img.height*scale);
-    URL.revokeObjectURL(url);notice("Image importée : "+file.name);
+   if(!active){URL.revokeObjectURL(url);return;}
+   discardImport();
+   const scale=Math.min(WIDTH/img.width,HEIGHT/img.height,1);
+   // Un fichier énorme ou vertical tient entièrement sur le plan de travail.
+   const w=Math.max(1,img.width*scale),h=Math.max(1,img.height*scale);
+   const layer=element("div","zp-imported-image");
+   layer.setAttribute("aria-label","Image déplaçable — glisser pour déplacer");
+   const visual=element("img","zp-image-visual");
+   visual.src=url;visual.alt="Image importée : "+file.name;visual.draggable=false;
+   const handle=element("button","zp-image-resize","⤡");
+   handle.type="button";handle.title="Redimensionner l’image";
+   handle.setAttribute("aria-label","Redimensionner l’image");
+   layer.append(visual,handle);
+   canvasFrame.appendChild(layer);
+   placedImage={img,url,node:layer,x:(WIDTH-w)/2,y:(HEIGHT-h)/2,w,h};
+   layer.addEventListener("pointerdown",imagePointerDown);
+   updatePlacedImage();importControls.hidden=false;
+   notice("Glisse l’image pour la déplacer · ⤡ pour changer la taille · Appliquer pour dessiner");
   };
   img.onerror=()=>{URL.revokeObjectURL(url);notice("Impossible d’ouvrir cette image.");};
   img.src=url;
@@ -185,7 +285,7 @@ function mount(root){
  }
  document.addEventListener("keydown",key);
  clearCanvas();choose("pencil");updateHistory();
- function dispose(){active=false;document.removeEventListener("keydown",key);canvas.removeEventListener("pointerdown",onDown);canvas.removeEventListener("pointermove",onMove);canvas.removeEventListener("pointerup",onUp);canvas.removeEventListener("pointercancel",onUp);}
+ function dispose(){active=false;discardImport();document.removeEventListener("keydown",key);canvas.removeEventListener("pointerdown",onDown);canvas.removeEventListener("pointermove",onMove);canvas.removeEventListener("pointerup",onUp);canvas.removeEventListener("pointercancel",onUp);}
  root._zebraDispose=dispose;
  return dispose;
 }
