@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T11:00:10.870486+00:00",
+  "generatedAt": "2026-10-15T11:00:29.637313+00:00",
   "desktopOrder": [
     "Panneau de configuration",
     "Poste de travail",
@@ -221,6 +221,46 @@
     {
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu",
       "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/WhatsApp Image 2026-10-15 at 12.53.05 (10).jpeg",
+      "type": "file",
+      "size": 113846
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/WhatsApp Image 2026-10-15 at 12.53.05 (11).jpeg",
+      "type": "file",
+      "size": 173651
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/WhatsApp Image 2026-10-15 at 12.53.05 (12).jpeg",
+      "type": "file",
+      "size": 174131
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/WhatsApp Image 2026-10-15 at 12.53.05 (3).jpeg",
+      "type": "file",
+      "size": 107153
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/WhatsApp Image 2026-10-15 at 12.53.05 (5).jpeg",
+      "type": "file",
+      "size": 141032
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/WhatsApp Image 2026-10-15 at 12.53.05 (6).jpeg",
+      "type": "file",
+      "size": 124734
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/WhatsApp Image 2026-10-15 at 12.53.05 (7).jpeg",
+      "type": "file",
+      "size": 177292
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/WhatsApp Image 2026-10-15 at 12.53.05 (9).jpeg",
+      "type": "file",
+      "size": 104397
     },
     {
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Vidéo",
