@@ -251,7 +251,7 @@ function mount(root){
   img.onload=()=>{
    if(!active){URL.revokeObjectURL(url);return;}
    discardImport();
-   const scale=Math.min(WIDTH/img.width,HEIGHT/img.height,1);
+   const scale=Math.min(WIDTH*.82/img.width,HEIGHT*.8/img.height,1);
    // Un fichier énorme ou vertical tient entièrement sur le plan de travail.
    const w=Math.max(1,img.width*scale),h=Math.max(1,img.height*scale);
    const layer=element("div","zp-imported-image");
