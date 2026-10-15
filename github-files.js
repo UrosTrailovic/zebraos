@@ -238,13 +238,34 @@ function preview(item,opts){
   openExternal(fileLink(item.path));return;
  }
  if(kinds.text.test(item.name)&&item.size>512000){openExternal(fileLink(item.path));return;}
- var isVideo=kinds.video.test(item.name);
+ var isVideo=kinds.video.test(item.name),isImage=kinds.image.test(item.name);
  var body=opts.windowBox("public-file-"+item.path,item.name+" — ZebraOS",
-   Math.min(isVideo?840:630,innerWidth-28),Math.min(isVideo?600:480,innerHeight-65));
+   Math.min(isVideo?840:isImage?900:630,innerWidth-28),
+   Math.min(isVideo?600:isImage?650:480,innerHeight-65));
  if(body._zebraDispose)body._zebraDispose();
- body.classList.remove("zvideo-window-body");
+ body.classList.remove("zvideo-window-body","zpic-window-body","image-viewer-body");
  body.innerHTML="";
- // Lecteur vidéo dédié, sans toucher aux images, textes et audios.
+ // Galerie photo : uniquement les images voisines dans le même dossier.
+ if(isImage){
+  body.classList.add("zpic-window-body");
+  if(window.ZebraPhotos){
+   var parent=item.path.slice(0,item.path.lastIndexOf("/"));
+   var account=opts&&opts.session||"visitor";
+   var gallery=children(parent).filter(function(other){
+    return other.type==="file"&&kinds.image.test(other.name)&&
+      (!other.sessions||other.sessions.includes(account));
+   });
+   window.ZebraPhotos.mount(body,item,gallery,{
+    sizeText:sizeText,source:function(file){return site(file.path);},
+    fallback:function(file){return raw(file.path);}
+   });
+  }else{
+   var simple=node("img","github-image-preview");simple.src=site(item.path);
+   simple.alt=item.name;body.appendChild(simple);
+  }
+  return;
+ }
+ // Lecteur vidéo dédié, sans toucher aux audios et aux textes.
  if(isVideo){
   body.classList.add("zvideo-window-body");
   if(window.ZebraVideoPlayer){
@@ -258,16 +279,8 @@ function preview(item,opts){
   }
   return;
  }
- var bar=node("div","github-preview-toolbar");
- var a=node("a","classic-button github-download","Ouvrir le fichier ↗");
- a.href=raw(item.path);a.target="_blank";a.rel="noopener noreferrer";bar.appendChild(a);
- body.appendChild(bar);
- if(kinds.image.test(item.name)){
-  body.classList.add("image-viewer-body");
-  var image=node("img","github-image-preview");image.src=raw(item.path);image.alt=item.name;
-  image.onerror=function(){image.onerror=function(){image.replaceWith(node("p","github-drive-error","Impossible de charger cette image."));};image.src=site(item.path);};
-  body.appendChild(image);
- }else if(kinds.audio.test(item.name)){
+ // Pas de bouton lien direct, ni de téléchargement dans les visionneuses.
+ if(kinds.audio.test(item.name)){
   var audio=node("audio","github-audio-preview");audio.controls=true;audio.preload="metadata";audio.src=raw(item.path);
   body.appendChild(audio);
  }else{
