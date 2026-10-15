@@ -111,6 +111,7 @@ jobs:
               // Ramener à 100% pour valider ensuite l'empilement et la peinture.
               scaler.value="100";scaler.dispatchEvent(new Event("change",{bubbles:true}));
               select("Dessin");
+              color.value="#000000";color.dispatchEvent(new Event("input",{bubbles:true}));
               tool("Crayon");
               const sizeSmall=host.querySelector(".zp-size input");sizeSmall.value="20";
               sizeSmall.dispatchEvent(new Event("input",{bubbles:true}));
