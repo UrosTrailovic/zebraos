@@ -54,28 +54,34 @@ function mount(root,initial,collection,options){
  // en place. Pour un chargement lent, révéler le loader avec la fenêtre.
  var openingWindow=root.closest(".window");
  var startupObserver=null,startupRaf1=0,startupRaf2=0,startupTimer=0;
- var startupScheduled=false,startupComplete=false;
+ var startupFallback=0,startupScheduled=false,startupComplete=false;
+ function finishOpening(){
+  if(!active||startupComplete)return;
+  if(openingWindow&&openingWindow.classList.contains("window-pending"))return;
+  if(!frame.isConnected||stage.clientWidth<1||toolbar.clientHeight<1){
+   startupScheduled=false;
+   startupTimer=setTimeout(revealTogether,35);
+   return;
+  }
+  startupComplete=true;
+  if(startupObserver)startupObserver.disconnect();
+  clearTimeout(startupTimer);clearTimeout(startupFallback);
+  if(loaded)layout();
+  // L'image ET la barre deviennent visibles simultanément.
+  frame.classList.remove("zpic-initializing");
+ }
  function revealTogether(){
   if(!active||startupComplete||startupScheduled)return;
   if(openingWindow&&openingWindow.classList.contains("window-pending"))return;
   startupScheduled=true;
+  // Si le navigateur suspend les animations de frame, ne pas laisser
+  // la visionneuse invisible indéfiniment.
+  startupFallback=setTimeout(function(){
+   startupScheduled=false;finishOpening();
+  },90);
   startupRaf1=requestAnimationFrame(function(){
    startupRaf2=requestAnimationFrame(function(){
-    startupScheduled=false;
-    if(!active||startupComplete)return;
-    if(openingWindow&&openingWindow.classList.contains("window-pending"))return;
-    if(!frame.isConnected||stage.clientWidth<1||toolbar.clientHeight<1){
-     // Les dimensions peuvent arriver une frame après la restauration.
-     startupTimer=setTimeout(revealTogether,35);
-     return;
-    }
-    startupComplete=true;
-    if(startupObserver)startupObserver.disconnect();
-    clearTimeout(startupTimer);
-    // Les métadonnées, l'image (ou son loader) et les contrôles sont
-    // présentés dans une seule frame, après calcul de l'ajustement.
-    if(loaded)layout();
-    frame.classList.remove("zpic-initializing");
+    startupScheduled=false;finishOpening();
    });
   });
  }
@@ -223,7 +229,7 @@ function mount(root,initial,collection,options){
   cleanups.forEach(function(fn){fn();});
   if(observer)observer.disconnect();
   if(startupObserver)startupObserver.disconnect();
-  clearTimeout(startupTimer);
+  clearTimeout(startupTimer);clearTimeout(startupFallback);
   cancelAnimationFrame(startupRaf1);cancelAnimationFrame(startupRaf2);
   image.onload=null;image.onerror=null;image.removeAttribute("src");
   if(root._zebraDispose===dispose)root._zebraDispose=null;
