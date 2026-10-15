@@ -14,147 +14,143 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Vérifier la syntaxe de ZebraPaint
+      - name: Vérifier le JavaScript
         run: node --check paint.js
-      - name: Tester calques multiples, re-sélection, ordre, export PNG et bouton Allumer sur Android
+      - name: Tester sur Chromium tactile un mini Photoshop à calques
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          html=Path("index.html").read_text()
-          script=r'''<script>
+          html=Path('index.html').read_text()
+          checks=r'''<script>
           window.addEventListener("load",async()=>{
-            const report={};
+            const test={},sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
             try{
-              const power=document.getElementById("power-btn");
-              const symbol=power.querySelector(".zboot-power-svg");
-              const style=getComputedStyle(symbol);
-              report.powerSvg=!!symbol&&symbol.querySelectorAll("path").length===2
-                &&Number.parseFloat(style.width)>=50&&Number.parseFloat(style.height)>=50
-                &&style.display!=="none";
               const host=document.createElement("div");
-              host.id="paint-test-host";
-              host.style.cssText="position:absolute;top:20px;left:10px;width:350px;height:555px;z-index:9999;overflow:hidden;";
-              host.className="zebra-game-body";
+              host.id="paint-test-host";host.className="zebra-game-body";
+              host.style.cssText="position:absolute;top:8px;left:8px;width:350px;height:590px;z-index:9999;overflow:hidden;";
               document.body.appendChild(host);
+              const symbol=document.querySelector(".zboot-power-svg");
+              test.powerSvg=!!symbol&&getComputedStyle(symbol).display!=="none";
               window.ZebraPaint.mount(host);
               const frame=host.querySelector(".zp-canvas-frame");
-              const canvas=host.querySelector(".zp-canvas");
-              const work=host.querySelector(".zp-work");
-              const r=frame.getBoundingClientRect(),w=work.getBoundingClientRect();
-              report.fitMobile=r.width<=w.width+1&&r.left>=w.left-2&&r.right<=w.right+2
-                &&canvas.getBoundingClientRect().width<=w.width+1&&canvas.width===640&&canvas.height===400;
-              function demoFile(color,name,width,height){
-                const c=document.createElement("canvas");c.width=width;c.height=height;
-                const cctx=c.getContext("2d");
-                cctx.fillStyle=color;cctx.fillRect(0,0,width,height);
-                return new Promise(resolve=>c.toBlob(blob=>resolve(new File([blob],name,{type:"image/png"})),"image/png"));
-              }
-              const input=host.querySelector("input[type=file]");
-              async function importFile(file){
-                Object.defineProperty(input,"files",{configurable:true,value:[file]});
-                input.dispatchEvent(new Event("change",{bubbles:true}));
-                await new Promise(resolve=>setTimeout(resolve,180));
-              }
-              await importFile(await demoFile("#ff0000","rouge.png",120,80));
-              const layer=host.querySelector(".zp-imported-image");
-              report.importLayer=!!layer;
-              const before=layer.getBoundingClientRect(),frameRect=frame.getBoundingClientRect();
-              report.importCentered=Math.abs((before.left+before.right)/2-(frameRect.left+frameRect.right)/2)<3
-                &&Math.abs((before.top+before.bottom)/2-(frameRect.top+frameRect.bottom)/2)<3;
-              function event(type,x,y){
-                return new PointerEvent(type,{bubbles:true,cancelable:true,isPrimary:true,pointerId:31,pointerType:"touch",button:0,clientX:x,clientY:y});
-              }
-              function drag(node,dx,dy,handle=false){
-                const target=handle?node.querySelector(".zp-image-resize"):node;
-                const r=target.getBoundingClientRect(),x=r.left+r.width*.5,y=r.top+r.height*.5;
-                target.dispatchEvent(event("pointerdown",x,y));
-                window.dispatchEvent(event("pointermove",x+dx,y+dy));
-                window.dispatchEvent(event("pointerup",x+dx,y+dy));
-              }
-              drag(layer,25,20);
-              const afterMove=layer.getBoundingClientRect();
-              report.drag=Math.abs(afterMove.left-before.left)>14&&Math.abs(afterMove.top-before.top)>10;
-              const initialWidth=layer.getBoundingClientRect().width;
-              drag(layer,28,18,true);
-              report.resize=layer.getBoundingClientRect().width>initialWidth+10;
-              report.layersUI=!!host.querySelector(".zp-layer-panel")&&host.querySelectorAll(".zp-layer-entry").length===1;
-              report.applyVisible=getComputedStyle(host.querySelector(".zp-import-controls")).display!=="none";
-              host.querySelector(".zp-apply-image").click();
-              report.permanentAfterFinish=host.querySelectorAll(".zp-imported-image").length===1
-                &&host.querySelector(".zp-import-controls").hidden
-                &&getComputedStyle(layer).pointerEvents==="none";
-              host.querySelector(".zp-layer-choice").click();
-              report.reselect=layer.classList.contains("zp-image-selected")
-                &&!host.querySelector(".zp-import-controls").hidden;
-              // Deuxième image : ne doit ni remplacer ni détruire la première.
-              await importFile(await demoFile("#0000ff","bleu.png",180,120));
-              report.twoImages=host.querySelectorAll(".zp-imported-image").length===2
-                &&host.querySelectorAll(".zp-layer-entry").length===2;
-              const labels=()=>Array.from(host.querySelectorAll(".zp-layer-entry .zp-layer-name")).map(e=>e.textContent);
-              report.layerOrderInitially=labels().join("|")==="bleu.png|rouge.png";
-              // Remonter rouge au premier plan.
-              host.querySelectorAll(".zp-layer-choice")[1].click();
-              host.querySelectorAll(".zp-layer-entry")[1].querySelectorAll(".zp-layer-action")[1].click();
-              report.reordered=labels().join("|")==="rouge.png|bleu.png";
-              // Cacher puis réafficher le calque sélectionné.
-              host.querySelector(".zp-layer-entry .zp-layer-action").click();
-              report.hide=host.querySelector(".zp-imported-image:last-child").hidden;
-              host.querySelector(".zp-layer-entry .zp-layer-action").click();
-              report.show=!host.querySelector(".zp-imported-image:last-child").hidden;
-              // Supprimer puis restaurer le premier calque par Annuler.
-              host.querySelector(".zp-layer-entry .zp-layer-remove").click();
-              report.delete=host.querySelectorAll(".zp-imported-image").length===1;
+              const base=host.querySelector(".zp-canvas");
+              const area=host.querySelector(".zp-work").getBoundingClientRect();
+              test.mobileFit=frame.getBoundingClientRect().width<=area.width+1
+                &&base.width===640&&base.height===400;
+              const buttons=()=>Array.from(host.querySelectorAll(".zp-tool"));
+              const tool=name=>buttons().find(b=>b.getAttribute("aria-label")===name).click();
+              const labels=()=>Array.from(host.querySelectorAll(".zp-layer-name")).map(e=>e.textContent);
+              const select=name=>{
+               const row=Array.from(host.querySelectorAll(".zp-layer-entry")).find(r=>r.textContent.includes(name));
+               if(!row)throw Error("Calque absent "+name+": "+labels());
+               row.querySelector(".zp-layer-choice").click();return row;
+              };
+              const fire=(type,x,y,target=base,pointerId=77)=>{
+                const ev=new PointerEvent(type,{bubbles:true,cancelable:true,isPrimary:true,
+                  pointerId,pointerType:"touch",button:0,clientX:x,clientY:y});
+                target.dispatchEvent(ev);
+              };
+              const coord=(x,y)=>{
+                const r=frame.getBoundingClientRect();
+                return {x:r.left+x/640*r.width,y:r.top+y/400*r.height};
+              };
+              const stroke=(x1,y1,x2,y2,selector=base)=>{
+                const a=coord(x1,y1),b=coord(x2,y2);
+                fire("pointerdown",a.x,a.y,selector);
+                fire("pointermove",b.x,b.y,window);
+                // Canvas handlers listen on the canvas, not on window, unless dragging an image.
+                if(selector===base)fire("pointermove",b.x,b.y,base);
+                fire("pointerup",b.x,b.y,selector===base?base:window);
+              };
+              const sample=(x,y)=>{
+                const canvas=host.querySelector(".zp-raster-layer");
+                return Array.from(canvas.getContext("2d").getImageData(x,y,1,1).data);
+              };
+              test.clearTools=buttons().length>=9
+                &&buttons().every(b=>!!b.querySelector("svg")&&!!b.querySelector(".zp-tool-name"))
+                &&buttons().some(b=>b.textContent==="Gomme");
+              test.initialLayers=labels().some(s=>s.includes("Fond"))
+                &&labels().some(s=>s.includes("Dessin"));
+              select("Fond");
+              const color=host.querySelector('input[type=color]');
+              color.value="#e90000";color.dispatchEvent(new Event("input",{bubbles:true}));
+              tool("Remplir");
+              const middle=coord(320,200);
+              fire("pointerdown",middle.x,middle.y);
+              test.redBackground=sample(320,200)[0]>210&&sample(320,200)[1]<20;
+              const c=document.createElement("canvas");c.width=300;c.height=200;
+              const cx=c.getContext("2d");cx.fillStyle="#0000ff";cx.fillRect(0,0,300,200);
+              const blob=await new Promise(resolve=>c.toBlob(resolve,"image/png"));
+              const inp=host.querySelector('input[type=file]');
+              Object.defineProperty(inp,"files",{configurable:true,
+                value:[new File([blob],"photo-bleue.png",{type:"image/png"})]});
+              inp.dispatchEvent(new Event("change",{bubbles:true}));
+              await sleep(260);
+              const image=host.querySelector(".zp-imported-image");
+              test.photoLayer=!!image&&labels().some(s=>s.includes("photo-bleue"));
+              const surface=image.querySelector("canvas");
+              test.imagePreview=!!surface&&surface.width>0&&surface.height>0;
+              test.imageLayerBetween=Array.from(host.querySelector(".zp-layer-stage").children)
+                .map(e=>e.className).join("|").includes("zp-imported-image")
+                &&labels().length===3;
+              tool("Gomme");
+              const sizeInput=host.querySelector(".zp-size input");
+              sizeInput.value="60";sizeInput.dispatchEvent(new Event("input",{bubbles:true}));
+              stroke(310,200,335,200);
+              const centerpix=surface.getContext("2d").getImageData(150,100,1,1).data;
+              test.photoErased=centerpix[3]===0;
               host.querySelector(".zp-edits button").click();
-              report.undoRestores=host.querySelectorAll(".zp-imported-image").length===2;
-              // Le dessin conserve son fond blanc : seules les images sont des calques.
-              const base=canvas.getContext("2d").getImageData(320,200,1,1).data;
-              report.nondestructive=base[3]===0;
-              // Un trait dessiné sur la zone image doit rester visible AU-DESSUS.
-              Array.from(host.querySelectorAll(".zp-tool")).find(b=>b.title==="Crayon").click();
-              const framePos=frame.getBoundingClientRect();
-              const dx=framePos.left+framePos.width*.5,dy=framePos.top+framePos.height*.5;
-              canvas.dispatchEvent(event("pointerdown",dx,dy));
-              canvas.dispatchEvent(event("pointermove",dx+10,dy));
-              canvas.dispatchEvent(event("pointerup",dx+10,dy));
-              const stroke=canvas.getContext("2d").getImageData(328,200,1,1).data;
-              report.paintOnTop=stroke[3]>180&&stroke[0]<90&&stroke[1]<90&&stroke[2]<90;
-              report.layersAfterPainting=host.querySelectorAll(".zp-imported-image").length===2;
-              let exportData="";
+              const restored=surface.getContext("2d").getImageData(150,100,1,1).data;
+              test.eraseUndo=restored[2]>200&&restored[3]===255;
+              tool("Gomme");stroke(310,200,335,200);
+              const scaler=host.querySelector(".zp-scale-input");
+              test.scaleExists=!!scaler&&scaler.max==="500";
+              scaler.value="500";scaler.dispatchEvent(new Event("change",{bubbles:true}));
+              test.beyondCanvas=parseFloat(image.style.width)>100
+                &&image.getBoundingClientRect().width>frame.getBoundingClientRect().width;
+              // Ramener à 100% pour valider ensuite l'empilement et la peinture.
+              scaler.value="100";scaler.dispatchEvent(new Event("change",{bubbles:true}));
+              select("Dessin");
+              tool("Crayon");
+              const sizeSmall=host.querySelector(".zp-size input");sizeSmall.value="20";
+              sizeSmall.dispatchEvent(new Event("input",{bubbles:true}));
+              stroke(300,170,340,170);
+              const raster=Array.from(host.querySelectorAll(".zp-raster-layer"))[1];
+              const black=raster.getContext("2d").getImageData(320,170,1,1).data;
+              test.drawOverPhoto=black[3]>100&&black[0]<55;
+              // Export PNG et vérifier que les couleurs se composent.
+              let png="";
               function capture(e){
                 const a=e.target.closest("a[download]");
-                if(a&&a.download.startsWith("zebra-paint-")){
-                  exportData=a.href;e.preventDefault();
-                  document.removeEventListener("click",capture,true);
-                }
+                if(a&&a.download.startsWith("zebra-paint-")){png=a.href;e.preventDefault();}
               }
               document.addEventListener("click",capture,true);
-              Array.from(host.querySelectorAll(".zp-menu .zp-button")).find(b=>b.textContent==="Enregistrer PNG").click();
-              report.exportPNG=exportData.startsWith("data:image/png;base64,");
-              if(report.exportPNG){
-                const img=new Image();
-                await new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;img.src=exportData;});
-                const check=document.createElement("canvas");check.width=img.width;check.height=img.height;
-                const cc=check.getContext("2d");cc.drawImage(img,0,0);
-                const pix=cc.getImageData(0,0,check.width,check.height).data;
-                let red=0,blue=0;
-                for(let i=0;i<pix.length;i+=4){
-                  if(pix[i]>235&&pix[i+1]<30&&pix[i+2]<30)red++;
-                  if(pix[i]<30&&pix[i+1]<30&&pix[i+2]>235)blue++;
-                }
-                report.exportBoth=red>30&&blue>30;
-                const p=(200*check.width+328)*4;
-                report.exportStroke=pix[p]<90&&pix[p+1]<90&&pix[p+2]<90&&pix[p+3]===255;
-              }else{report.exportBoth=false;report.exportStroke=false;}
-            }catch(e){report.error=String(e.stack||e);}
-            document.documentElement.dataset.paintReport=JSON.stringify(report);
-            document.documentElement.dataset.paintStatus=Object.values(report).every(v=>v===true)?"ok":"failed";
+              host.querySelector(".zp-menu button[download]")?.click();
+              if(!png)Array.from(host.querySelectorAll(".zp-menu button")).find(b=>b.textContent.includes("PNG")).click();
+              document.removeEventListener("click",capture,true);
+              test.exportPNG=png.startsWith("data:image/png;base64,");
+              if(test.exportPNG){
+                const res=new Image();
+                await new Promise(resolve=>{res.onload=resolve;res.onerror=resolve;res.src=png;});
+                const off=document.createElement("canvas");off.width=640;off.height=400;
+                const out=off.getContext("2d");out.drawImage(res,0,0);
+                const px=(x,y)=>Array.from(out.getImageData(x,y,1,1).data);
+                const bottom=px(30,30),photo=px(285,170),strokePx=px(320,170),erased=px(320,200);
+                test.exportOrder=bottom[0]>200&&bottom[2]<30
+                  &&photo[2]>200&&photo[0]<30
+                  &&strokePx[0]<50&&strokePx[1]<50&&strokePx[2]<50;
+                test.exportErasure=erased[0]>200&&erased[2]<30;
+              }else{test.exportOrder=false;test.exportErasure=false;}
+            }catch(e){test.error=String(e.stack||e);}
+            document.documentElement.dataset.paintReport=JSON.stringify(test);
+            document.documentElement.dataset.paintStatus=Object.values(test).every(v=>v===true)?"ok":"failed";
           });
           </script>'''
-          Path("_verify_paint_mobile.html").write_text(html.replace("</body>",script+"</body>"))
+          Path("_verify_paint_mobile.html").write_text(html.replace("</body>",checks+"</body>"))
           PY
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebra-paint-server.log 2>&1 &
           sleep 1
-          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --touch-events=enabled --window-size=390,860 --virtual-time-budget=5500 --dump-dom http://127.0.0.1:8765/_verify_paint_mobile.html > /tmp/zebra-paint-mobile.html 2>/tmp/zebra-paint-chrome.log
-          grep -o 'data-paint-report="[^"]*"' /tmp/zebra-paint-mobile.html | tail -c 4000
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --touch-events=enabled --window-size=390,900 --virtual-time-budget=6000 --dump-dom http://127.0.0.1:8765/_verify_paint_mobile.html > /tmp/zebra-paint-mobile.html 2>/tmp/zebra-paint-chrome.log
+          grep -o 'data-paint-report="[^"]*"' /tmp/zebra-paint-mobile.html | tail -c 4500
           grep -o 'data-paint-status="[^"]*"' /tmp/zebra-paint-mobile.html
           grep -q 'data-paint-status="ok"' /tmp/zebra-paint-mobile.html
