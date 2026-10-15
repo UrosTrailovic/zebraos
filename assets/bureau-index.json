@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T11:36:01.780658+00:00",
+  "generatedAt": "2026-10-15T11:46:11.500332+00:00",
   "desktopOrder": [
     "Panneau de configuration",
     "Poste de travail",
@@ -269,9 +269,24 @@
       "size": 12755
     },
     {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/WhatsApp Image 2026-08-26 at 14.47.12.jpeg",
+      "type": "file",
+      "size": 140318
+    },
+    {
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/c6cefd2ed203cddaf533f4ab8f34c2f8.jpg",
       "type": "file",
       "size": 16433
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/image (2).png",
+      "type": "file",
+      "size": 694962
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/image (5).png",
+      "type": "file",
+      "size": 616463
     },
     {
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/zebra-paint-2026-10-14.png",
