@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T08:13:25.091288+00:00",
+  "generatedAt": "2026-10-15T08:14:02.253044+00:00",
   "desktopOrder": [
     "Panneau de configuration",
     "Poste de travail",
@@ -120,6 +120,91 @@
     {
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi",
       "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/20250902_205511.jpg",
+      "type": "file",
+      "size": 270239
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/20250920_163445.jpg",
+      "type": "file",
+      "size": 538757
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/20260315_192426.jpg",
+      "type": "file",
+      "size": 475871
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/20260315_194039.jpg",
+      "type": "file",
+      "size": 300589
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/20260919_155903.jpg",
+      "type": "file",
+      "size": 374160
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/20261003_182753.jpg",
+      "type": "file",
+      "size": 496169
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/20261003_210153.jpg",
+      "type": "file",
+      "size": 354233
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/Screenshot_20250908_222615_Chrome.jpg",
+      "type": "file",
+      "size": 93647
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/Screenshot_20250922_161302_Instagram.jpg",
+      "type": "file",
+      "size": 65792
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/Screenshot_20250926_113851_Instagram.jpg",
+      "type": "file",
+      "size": 116981
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/Screenshot_20251005_002643_Instagram.jpg",
+      "type": "file",
+      "size": 163948
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/Screenshot_20251024_013415_Instagram.jpg",
+      "type": "file",
+      "size": 144819
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/Screenshot_20251024_113431_Instagram.jpg",
+      "type": "file",
+      "size": 36343
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/Screenshot_20251114_172621_Instagram.jpg",
+      "type": "file",
+      "size": 45085
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/Screenshot_20260127_124556_Gallery.jpg",
+      "type": "file",
+      "size": 247839
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/Screenshot_20260918_122836_Photos.jpg",
+      "type": "file",
+      "size": 58515
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/Snapchat-1992015946.jpg",
+      "type": "file",
+      "size": 106182
     },
     {
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu",
