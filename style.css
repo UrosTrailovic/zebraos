@@ -2191,3 +2191,55 @@
   transform:translateY(-9px)!important;
  }
 }
+
+/* Zebra Tetris 6.5 — légende physique du clavier, incrustée dans
+   la colonne SUIVANT/RÉSERVE comme un module d'arcade Windows 95. */
+.zebra-game-body .zg-retro .zt-keyboard-guide{
+ display:flex;flex-direction:column;flex:0 0 auto;gap:4px;
+ margin-top:7px;padding:7px 6px 8px;
+ border:2px inset #fff;
+ background:linear-gradient(110deg,#bdbdbd 0%,#e0e0e0 20%,#b9b9b9 86%,#979797 100%);
+ box-shadow:1px 2px 0 #444;
+ color:#111;
+}
+.zebra-game-body .zg-retro .zt-guide-title{
+ background:linear-gradient(90deg,#0e216f,#315bb2);
+ color:#fff;text-shadow:1px 1px #040d28;
+ text-align:center;padding:5px 2px;
+ font:bold 12px/1 "Courier New",monospace;
+ letter-spacing:.4px;border:2px outset #a3bcf4;
+}
+.zebra-game-body .zg-retro .zt-guide-subtitle{
+ font:bold 8px/1.2 "Courier New",monospace;color:#47517a;
+ text-align:center;letter-spacing:.2px;
+}
+.zebra-game-body .zg-retro .zt-guide-row{
+ display:flex;align-items:center;justify-content:space-between;
+ min-height:25px;padding:2px 0 3px;gap:4px;
+ border-bottom:1px groove #eee;
+}
+.zebra-game-body .zg-retro .zt-guide-row:last-child{border-bottom:0;padding-bottom:0}
+.zebra-game-body .zg-retro .zt-guide-keys{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.zebra-game-body .zg-retro .zt-guide-key{
+ display:flex;align-items:center;justify-content:center;
+ height:22px;min-width:20px;padding:1px 3px;
+ border:2px outset #fff;background:#f0f0e9;
+ color:#172d86;font:bold 13px/1 "Courier New",monospace;
+ box-shadow:1px 2px 0 #626262;
+}
+.zebra-game-body .zg-retro .zt-guide-key.wide{font-size:8px;min-width:43px;padding:0 2px}
+.zebra-game-body .zg-retro .zt-guide-label{
+ font:bold 8px/1 "Courier New",monospace;letter-spacing:-.35px;
+ text-align:right;color:#212121;
+}
+.zebra-game-body .zg-retro .zg-help{display:none!important}
+/* La manette 8 bits occupe la hauteur sur écran tactile. */
+@media(max-width:700px),(hover:none),(pointer:coarse){
+ .zebra-game-body .zg-retro .zt-keyboard-guide{display:none!important}
+}
+@media(min-width:701px) and (max-height:735px){
+ .zebra-game-body .zg-retro .zt-keyboard-guide{gap:2px;padding:4px 5px;margin-top:4px}
+ .zebra-game-body .zg-retro .zt-guide-row{min-height:21px}
+ .zebra-game-body .zg-retro .zt-guide-key{min-width:18px;height:19px;font-size:11px}
+ .zebra-game-body .zg-retro .zt-guide-key.wide{font-size:7px}
+}
