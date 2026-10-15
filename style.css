@@ -2127,7 +2127,7 @@
  }
 }
 
-/* Zebra Tetris 6.3 — redistribution de hauteur plutôt qu'écraser les sprites.
+/* Zebra Tetris 6.4 — redistribution de hauteur plutôt qu'écraser les sprites.
    On laisse le plateau garder ses proportions 10×20 : il se réduit
    automatiquement quand le panneau tactile gagne 38-42px.
    Les touches ont enfin de la marge dans le cadre chromé. */
@@ -2149,14 +2149,14 @@
   justify-content:center;
  }
  .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-a{
-  top:9%;right:9%;
+  top:17%;right:9%;
  }
  .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-b{
-  bottom:15%;left:9%;
+  bottom:22%;left:9%;
  }
  .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select,
  .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select:active{
-  transform:translateY(-11px)!important;
+  transform:translateY(-16px)!important;
  }
 }
 @media(max-width:370px) and (pointer:coarse){
@@ -2188,6 +2188,6 @@
  }
  .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select,
  .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select:active{
-  transform:translateY(-5px)!important;
+  transform:translateY(-9px)!important;
  }
 }
