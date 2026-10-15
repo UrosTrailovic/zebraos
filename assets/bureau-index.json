@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T10:47:50.540996+00:00",
+  "generatedAt": "2026-10-15T11:00:10.870486+00:00",
   "desktopOrder": [
     "Panneau de configuration",
     "Poste de travail",
@@ -128,20 +128,6 @@
     {
       "path": "STUDIO/BUREAU/Photo et vidéo cool",
       "type": "dir"
-    },
-    {
-      "path": "STUDIO/BUREAU/Photo et vidéo cool/Les copains et tous",
-      "type": "dir"
-    },
-    {
-      "path": "STUDIO/BUREAU/Photo et vidéo cool/Les copains et tous/IMG_20241224_154834.jpg",
-      "type": "file",
-      "size": 281387
-    },
-    {
-      "path": "STUDIO/BUREAU/Photo et vidéo cool/Les copains et tous/IMG_20241224_154903.jpg",
-      "type": "file",
-      "size": 338713
     },
     {
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi",
