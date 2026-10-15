@@ -344,7 +344,6 @@ function desk(){
   b.ondblclick=function(e){if(!isTouchOpen(e))action();};
   root.appendChild(b);return b;
  }
- apps.forEach(function(app){shortcut(app[0],osIcon(app[1],40),function(){open(app[2]);},false);});
  function renderUserFiles(){
   if(epoch!==bureauEpoch||currentSession!==session)return;
   Array.prototype.forEach.call(root.querySelectorAll(".desk-user-file"),function(b){b.remove();});
