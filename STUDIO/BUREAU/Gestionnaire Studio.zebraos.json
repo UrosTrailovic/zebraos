@@ -1,0 +1,8 @@
+{
+  "name": "Gestionnaire Studio",
+  "app": "studio-manager",
+  "icon": "computer",
+  "sessions": [
+    "admin"
+  ]
+}
