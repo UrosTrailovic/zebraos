@@ -262,3 +262,57 @@
  .zp-import-controls{width:auto;margin-left:0}
  .zp-import-controls .zp-button{min-height:28px}
 }
+
+/* ZebraPaint 1.4 — interface des transformations et ordre réel des couches. */
+.zp-canvas-frame .zp-layer-stage > .zp-raster-layer,
+.zp-canvas-frame .zp-layer-stage > .zp-imported-image{
+ z-index:auto!important;
+}
+.zp-canvas-frame .zp-imported-image{
+ transform-origin:50% 50%;
+}
+.zp-layer-entry.zp-paint-target .zp-layer-name{font-weight:bold}
+.zp-layer-entry.zp-paint-target{box-shadow:inset 3px 0 0 #a840b2}
+.zp-layer-buttons{flex:none;gap:1px}
+.zp-layer-entry{max-width:none;min-width:218px}
+.zp-layer-entry .zp-layer-name{max-width:95px;font-size:10px}
+.zp-layer-action{min-width:24px;width:24px;height:28px}
+.zp-layer-panel{max-height:235px;overflow:hidden}
+.zp-transform-panel{
+ display:flex;flex-direction:column;flex:none;gap:5px;
+ border-top:1px solid #9ea3ab;padding-top:6px;
+}
+.zp-transform-panel[hidden]{display:none!important}
+.zp-transform-row{
+ display:flex;align-items:center;gap:8px;
+ min-height:22px;
+ font:700 10px "Courier New",monospace;
+}
+.zp-transform-row[hidden]{display:none!important}
+.zp-transform-row span{
+ width:80px;min-width:80px;color:#263d73;
+}
+.zp-transform-row input{
+ flex:1;min-width:50px;max-width:270px;accent-color:#355bba;
+}
+.zp-transform-row output{
+ min-width:42px;text-align:right;color:#222;
+ font-size:10px;
+}
+.zp-transform-buttons{
+ display:flex;flex-wrap:wrap;gap:4px;align-items:center;
+}
+.zp-transform-buttons[hidden]{display:none!important}
+.zp-transform-buttons .zp-button{
+ padding:4px 6px;font:10px Tahoma,Arial,sans-serif;
+}
+@media(max-width:700px){
+ .zp-layer-panel{max-height:215px}
+ .zp-layer-entry{min-width:227px;height:45px}
+ .zp-layer-action{min-width:25px;width:25px;height:30px}
+ .zp-transform-panel{gap:3px;padding-top:4px}
+ .zp-transform-row{min-height:20px;gap:5px}
+ .zp-transform-row span{width:74px;min-width:74px;font-size:9px}
+ .zp-transform-buttons{gap:3px}
+ .zp-transform-buttons .zp-button{padding:5px 6px;min-height:27px}
+}
