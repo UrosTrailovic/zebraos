@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T11:26:02.750038+00:00",
+  "generatedAt": "2026-10-15T11:28:53.091230+00:00",
   "desktopOrder": [
     "Panneau de configuration",
     "Poste de travail",
@@ -283,6 +283,11 @@
       "size": 270239
     },
     {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/20260512_114008.mp4",
+      "type": "file",
+      "size": 4359093
+    },
+    {
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/20260513_205538.jpg",
       "type": "file",
       "size": 537551
@@ -316,6 +321,11 @@
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/Screenshot_20260830_162526_Photos.jpg",
       "type": "file",
       "size": 76954
+    },
+    {
+      "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/VID-20250828-WA0189_1.mp4",
+      "type": "file",
+      "size": 4281537
     },
     {
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Stuuuu/WhatsApp Image 2026-10-15 at 12.53.05 (10).jpeg",
