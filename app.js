@@ -382,6 +382,9 @@ function focus(id){if(opened[id]){opened[id].w.style.zIndex=++z;Object.keys(open
 /* Old-school wireframe animation: the outline travels first, the actual window snaps in after it. */
 function animateWindowOpen(w,launcher){
   if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  // Cache le rendu COMPOSÉ de toute la fenêtre (même si un logo/image
+  // interne force visibility:visible). L'animation ne montre que le contour.
+  w.style.opacity="0";
   var screen=$("desktop-screen").getBoundingClientRect();
   var target=w.getBoundingClientRect();
   var origin=launcher&&launcher.getBoundingClientRect?launcher.getBoundingClientRect():null;
@@ -411,6 +414,7 @@ function animateWindowOpen(w,launcher){
     clearTimeout(timer);
     ghost.remove();
     w.classList.remove("window-pending");
+    w.style.removeProperty("opacity");
   }
   ghost.addEventListener("transitionend",function(e){if(e.propertyName==="width")reveal()});
   timer=setTimeout(reveal,700);
