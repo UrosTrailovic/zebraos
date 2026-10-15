@@ -116,7 +116,12 @@ function osIcon(name,size){
     retro.style.fontSize=Math.round(size*.63)+"px";
     retro.setAttribute("aria-hidden","true");return retro;
   }
-  var pack=window.ZebraIconPack, i=pack&&pack.names?pack.names.indexOf(name):-1;
+  if(name==="calc"||name==="sticky"||name==="planner"){
+   var mini=el("span","zu-app-icon "+name,name==="calc"?"＋":name==="sticky"?"✎":"31");
+   mini.style.width=size+"px";mini.style.height=size+"px";mini.style.fontSize=Math.max(10,Math.round(size*.46))+"px";
+   mini.setAttribute("aria-hidden","true");return mini;
+ }
+ var pack=window.ZebraIconPack, i=pack&&pack.names?pack.names.indexOf(name):-1;
   var node=el("span","os-icon-graphic");
   node.setAttribute("aria-hidden","true");
   if(i<0){node.textContent="▣";return node;}
@@ -145,7 +150,7 @@ function fileIcon(f){
 }
 function windowIcon(id){
   if(id==="amp")return "zebraamp";
-  if(id==="tetris"||id==="snake"||id==="paint")return id;
+  if(id==="tetris"||id==="snake"||id==="paint"||id==="calc"||id==="sticky"||id==="planner")return id;
   if(id==="explorer")return "computer";
   if(id==="settings")return "control-panel";
   if(id==="manager")return "computer";
@@ -155,7 +160,7 @@ function windowIcon(id){
   return "txt";
 }
 function decorateSystemMenus(){
-  var mappings={amp:"zebraamp",explorer:"computer",notepad:"txt",viewer:"jpg",settings:"control-panel",about:"zebraos",tetris:"tetris",snake:"snake",paint:"paint"};
+  var mappings={amp:"zebraamp",explorer:"computer",notepad:"txt",viewer:"jpg",settings:"control-panel",about:"zebraos",tetris:"tetris",snake:"snake",paint:"paint","folder:games":"folder","folder:atelier":"folder",calc:"calc",sticky:"sticky",planner:"planner"};
   document.querySelectorAll("#start-menu [data-start]").forEach(function(b){
     Array.prototype.slice.call(b.childNodes).forEach(function(n){if(n.nodeType===3)n.remove()});
     b.insertBefore(osIcon(mappings[b.dataset.start]||"folder",20),b.firstChild);
@@ -201,7 +206,7 @@ function finishSessionBoot(){
   sessionBooting=false;clearTimeout(sessionTimer);sessionAudio.pause();
   session=pendingSession;pendingSession=null;
   adminApproved=false;closeAll();
-  if(window.ZebraWallpaper)window.ZebraWallpaper.apply(session);else setWall(getStore("zebra.wall."+session)||session);desk();show("desktop-screen");
+  if(window.ZebraWallpaper)window.ZebraWallpaper.apply(session);else setWall(getStore("zebra.wall."+session)||session);desk();if(window.ZebraTools)window.ZebraTools.stickyDesktop(session);show("desktop-screen");
 }
 function beginSessionBoot(id){
   if(sessionBooting)return;
@@ -328,10 +333,8 @@ function desk(){
  var apps=[
   ["Poste de travail","computer","explorer:root"],
   ["ZebraAMP.exe","zebraamp","amp"],
-  ["Panneau de configuration","control-panel","settings"],
-  ["Tetris.exe","tetris","tetris"],
-  ["Snake.exe","snake","snake"],
-  ["ZebraPaint.exe","paint","paint"]
+  ["JEUX","folder","folder:games"],
+  ["ATELIER","folder","folder:atelier"]
  ];
  if(session==="admin"){
   apps.push(["Corbeille","recycle-bin","explorer:recycle"]);
@@ -373,7 +376,7 @@ function desk(){
   window.ZebraGitFiles.load().then(function(){renderUserFiles();});
  }
 }
-function closeAll(){Object.keys(opened).forEach(function(k){var body=opened[k].w.querySelector(".window-body");if(body&&body._zebraDispose)body._zebraDispose();opened[k].w.remove()});opened={};$("task-items").innerHTML="";$("start-menu").classList.add("hidden")}
+function closeAll(){Object.keys(opened).forEach(function(k){var body=opened[k].w.querySelector(".window-body");if(body&&body._zebraDispose)body._zebraDispose();opened[k].w.remove()});opened={};var layer=$("desktop-screen").querySelector(".zu-sticky-layer");if(layer)layer.remove();$("task-items").innerHTML="";$("start-menu").classList.add("hidden")}
 function task(){var r=$("task-items");r.innerHTML="";Object.keys(opened).forEach(function(k){var p=opened[k],b=el("button","win-button",p.title);b.onclick=function(){if(p.w.classList.contains("minimized")){p.w.classList.remove("minimized");focus(k);sfx("restore")}else{p.w.classList.add("minimized");sfx("minimize")}};r.appendChild(b)})}
 function focus(id){if(opened[id]){opened[id].w.style.zIndex=++z;Object.keys(opened).forEach(function(k){opened[k].w.classList.toggle("focused",k===id)})}}
 /* Old-school wireframe animation: the outline travels first, the actual window snaps in after it. */
@@ -640,6 +643,41 @@ function player(){
  window.ZebraAMPConfig={windowBox:windowBox};
  window.ZebraAMP.open();
 }
+/* Dossiers de raccourcis : aucun fichier STUDIO/BUREAU n'est déplacé. */
+function appFolder(type){
+ var games=type==="games",id=games?"folder-games":"folder-atelier";
+ var body=windowBox(id,games?"JEUX — ZebraOS":"ATELIER — ZebraOS",Math.min(560,innerWidth-14),Math.min(460,innerHeight-56));
+ body.innerHTML="";
+ var wrap=el("div","zu-folder");
+ wrap.appendChild(el("div","zu-folder-heading",games?"C:\ZEBRAOS\JEUX":"C:\ZEBRAOS\ATELIER"));
+ var grid=el("div","zu-folder-items");
+ var items=games?[
+  ["Zebra Tetris","tetris","tetris"],["Zebra Snake","snake","snake"]
+ ]:[
+  ["ZebraCalc","calc","calc"],["ZebraSticky","sticky","sticky"],
+  ["ZebraPlanner","planner","planner"],["ZebraPaint","paint","paint"],
+  ["Bloc-notes","txt","notepad"],["Configuration","control-panel","settings"]
+ ];
+ items.forEach(function(item){
+  var b=el("button","zu-folder-item");b.type="button";
+  var graphic=el("span","zu-folder-item-symbol");graphic.appendChild(osIcon(item[1],40));
+  b.appendChild(graphic);b.appendChild(el("span","",item[0]));
+  b.onclick=function(e){if(isTouchOpen(e)||e.detail===0)open(item[2]);};
+  b.ondblclick=function(e){if(!isTouchOpen(e))open(item[2]);};
+  grid.appendChild(b);
+ });
+ wrap.appendChild(grid);body.appendChild(wrap);
+}
+function openUtility(name){
+ var tools=window.ZebraTools;if(!tools)return;
+ var config={calc:["ZebraCalc.exe",410,580,"calculator"],sticky:["ZebraSticky.exe",640,510,"stickyManager"],planner:["ZebraPlanner.exe",690,680,"planner"]}[name];
+ if(!config)return;
+ var body=windowBox(name,config[0],Math.min(config[1],innerWidth-12),Math.min(config[2],innerHeight-48));
+ if(body._zebraApp===name)return;
+ body._zebraApp=name;
+ if(name==="sticky")tools.stickyManager(body,session,function(){tools.stickyDesktop(session);});
+ else tools[config[3]](body,session);
+}
 function openGame(name){
  var apps={
   tetris:[window.ZebraTetris,"Tetris.exe",735,770],
@@ -654,7 +692,7 @@ function openGame(name){
  root._zebraApp=name;
  entry[0].mount(root);
 }
-function open(code){$("start-menu").classList.add("hidden");if(code==="tetris"||code==="snake"||code==="paint")openGame(code);else if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="datetime")dateTime();else if(code==="welcome")welcome();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
+function open(code){$("start-menu").classList.add("hidden");if(code==="tetris"||code==="snake"||code==="paint")openGame(code);else if(code==="folder:games"||code==="folder:atelier")appFolder(code.split(":")[1]);else if(code==="calc"||code==="sticky"||code==="planner")openUtility(code);else if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="datetime")dateTime();else if(code==="welcome")welcome();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
 decorateSystemMenus();
 $("power-btn").onclick=powerOn;$("skip-boot").onclick=finishBoot;$("skip-session-boot").onclick=finishSessionBoot;$("restart-login").onclick=restartLogin;$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
 $("start-button").onclick=function(e){e.stopPropagation();$("start-menu").classList.toggle("hidden")};document.querySelectorAll("[data-start]").forEach(function(b){b.onclick=function(){open(b.dataset.start)}});document.addEventListener("pointerdown",function(e){if(!e.target.closest("#start-menu")&&!e.target.closest("#start-button"))$("start-menu").classList.add("hidden")});
