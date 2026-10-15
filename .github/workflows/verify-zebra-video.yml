@@ -4,6 +4,8 @@ on:
     paths:
       - 'zebra-video.js'
       - 'zebra-video.css'
+      - 'zebra-photos.js'
+      - 'zebra-photos.css'
       - 'github-files.js'
       - 'index.html'
       - '.github/workflows/verify-zebra-video.yml'
@@ -41,7 +43,13 @@ jobs:
               const $=sel=>host.querySelector(sel);
               const v=$(".zvideo-media");
               report.player=!!v&&host.classList.contains("zvideo-window-body")
-                &&!!$(".zvideo-console")&&!!$(".zvideo-header");
+                &&!!$(".zvideo-console")&&!$(".zvideo-header")
+                &&!$(".zvideo-footer")&&!$(".zvideo-open")
+                &&!host.querySelector('a[href]');
+              const clickRight=new MouseEvent("contextmenu",{bubbles:true,cancelable:true});
+              host.querySelector(".zvideo").dispatchEvent(clickRight);
+              report.contextDisabled=clickRight.defaultPrevented
+                &&getComputedStyle($(".zvideo")).userSelect==="none";
               report.screenLoading=host.querySelector(".zvideo").dataset.status==="loading"
                 &&!!$(".zvideo-loading-ring")
                 &&getComputedStyle($(".zvideo-loading")).visibility!=="hidden"
