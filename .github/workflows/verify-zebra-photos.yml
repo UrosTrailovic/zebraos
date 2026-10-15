@@ -1,0 +1,99 @@
+name: Vérifier ZebraPhotos
+on:
+  push:
+    paths:
+      - 'zebra-photos.js'
+      - 'zebra-photos.css'
+      - 'github-files.js'
+      - 'index.html'
+      - '.github/workflows/verify-zebra-photos.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  galerie:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: JavaScript et absence de liens de fichier directs
+        run: |
+          node --check zebra-photos.js
+          node --check github-files.js
+          ! grep -q 'Ouvrir le fichier ↗' github-files.js
+          ! grep -q 'github-download' github-files.js
+          grep -q 'var gallery=children(parent)' github-files.js
+      - name: Tester galerie dans Chromium en format PC et mobile
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path("index.html").read_text()
+          script=r'''<script>
+          window.addEventListener("load",async()=>{
+            const report={},sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+            try{
+              const win=document.createElement("div");win.className="window focused";
+              win.style.cssText="position:relative;width:min(560px,calc(100vw - 12px));height:560px;left:0;top:0;";
+              win.appendChild(document.createElement("div")).className="windowtitle";
+              const host=document.createElement("div");host.className="window-body zpic-window-body";
+              host.style.cssText="height:100%;width:100%";
+              win.append(host);document.body.append(win);
+              const make=color=>{
+                const c=document.createElement("canvas");c.width=3;c.height=2;
+                c.getContext("2d").fillStyle=color;c.getContext("2d").fillRect(0,0,3,2);
+                return c.toDataURL("image/png");
+              };
+              const red=make("#ff0000"),blue=make("#0000ff");
+              const files=[
+                {type:"file",name:"photoA.png",path:"STUDIO/BUREAU/Photos/photoA.png",size:133700},
+                {type:"file",name:"photoB.png",path:"STUDIO/BUREAU/Photos/photoB.png",size:290000}
+              ];
+              const opts={source:f=>f.name==="photoA.png"?red:blue,sizeText:n=>n+" o"};
+              window.ZebraPhotos.mount(host,files[0],files,opts);
+              await sleep(140);
+              const $=q=>host.querySelector(q);
+              report.mount=!!$(".zpic")&&!!$(".zpic-image")&&host.querySelectorAll("a").length===0;
+              report.loaded=!!$(".zpic-image").naturalWidth
+                &&$(".zpic-metadata").textContent.includes("3 × 2")&&$(".zpic-wait").hidden;
+              report.gallery=$(".zpic-counter").textContent==="1 / 2"
+                &&host.querySelectorAll(".zpic-stage-arrow").length===2;
+              $(".zpic-next").click();await sleep(120);
+              report.next=$(".zpic-filename").textContent==="photoB.png"
+                &&$(".zpic-counter").textContent==="2 / 2"
+                &&win.querySelector(".windowtitle").textContent.includes("photoB.png");
+              $(".zpic-next").click();await sleep(120);
+              report.wrap=$(".zpic-counter").textContent==="1 / 2";
+              $(".zpic-slider").value="200";
+              $(".zpic-slider").dispatchEvent(new Event("input",{bubbles:true}));
+              report.zoom=$(".zpic-amount").textContent==="200 %"
+                &&$(".zpic-image").style.transform.includes("scale(2)");
+              $(".zpic-fit").click();
+              report.fit=$(".zpic-amount").textContent==="AJUSTÉ";
+              const arrow=new KeyboardEvent("keydown",{bubbles:true,cancelable:true,key:"ArrowRight"});
+              document.dispatchEvent(arrow);await sleep(80);
+              report.keyboard=arrow.defaultPrevented&&$(".zpic-counter").textContent==="2 / 2";
+              const blocked=new MouseEvent("contextmenu",{bubbles:true,cancelable:true});
+              $(".zpic-image").dispatchEvent(blocked);
+              report.noContext=blocked.defaultPrevented&&getComputedStyle($(".zpic")).userSelect==="none";
+              report.fullscreenControl=!!$(".zpic-full")
+                &&$(".zpic-full").getAttribute("aria-label")==="Plein écran";
+              report.mobileFit=host.querySelector(".zpic-toolbar").getBoundingClientRect().width<=host.clientWidth+2
+                &&$(".zpic-stage").getBoundingClientRect().height>80;
+              const dispose=host._zebraDispose;
+              report.cleanup=typeof dispose==="function";
+              dispose();
+              report.cleaned=host._zebraDispose===null;
+            }catch(e){report.error=String(e.stack||e);}
+            document.documentElement.dataset.galleryReport=JSON.stringify(report);
+            document.documentElement.dataset.galleryResult=Object.values(report).every(v=>v===true)?"ok":"failed";
+          });
+          </script>'''
+          Path("_verify_zebra_photos.html").write_text(html.replace("</body>",script+"</body>"))
+          PY
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebra-photos-server.log 2>&1 &
+          sleep 1
+          for width in 390 1040; do
+            google-chrome --headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu --window-size=$width,900 --virtual-time-budget=2500 --dump-dom http://127.0.0.1:8765/_verify_zebra_photos.html > /tmp/zebra-photos-$width.html 2>/tmp/zebra-photos-$width.log
+            grep -o 'data-gallery-report="[^"]*"' /tmp/zebra-photos-$width.html | tail -c 5500
+            grep -o 'data-gallery-result="[^"]*"' /tmp/zebra-photos-$width.html
+            grep -q 'data-gallery-result="ok"' /tmp/zebra-photos-$width.html
+          done
