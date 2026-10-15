@@ -48,8 +48,29 @@ function mount(root){
  let scoreEl=stat("SCORE"),levelEl=stat("NIVEAU"),linesEl=stat("LIGNES"),bestEl=stat("RECORD");
  let nextBox=make("div","zg-preview-wrap");nextBox.appendChild(make("small","","SUIVANT"));
  let next=make("canvas","zg-mini");next.width=96;next.height=96;nextBox.appendChild(next);previewPanel.appendChild(nextBox);
- let holdBox=make("div","zg-preview-wrap");holdBox.appendChild(make("small","","RÉSERVE (C)"));
+ let holdBox=make("div","zg-preview-wrap");holdBox.appendChild(make("small","","RÉSERVE (Q)"));
  let hold=make("canvas","zg-mini");hold.width=96;hold.height=96;holdBox.appendChild(hold);previewPanel.appendChild(holdBox);
+ // Vrai panneau DESKTOP, assorti aux cadres SCORE et SUIVANT.
+ // Sur téléphone la manette illustrée reste prioritaire.
+ let legend=make("section","zt-keyboard-guide");
+ legend.setAttribute("aria-label","Commandes clavier Zebra Tetris");
+ legend.appendChild(make("div","zt-guide-title","COMMANDES"));
+ legend.appendChild(make("span","zt-guide-subtitle","CLAVIER · JOUEUR 1"));
+ const keyRows=[
+  [["W"],"TOURNER"],
+  [["A","D"],"DÉPLACER"],
+  [["S"],"DESCENDRE"],
+  [["Q"],"RÉSERVE"],
+  [["SPACE"],"POSER"],
+  [["P"],"PAUSE"]
+ ];
+ keyRows.forEach(function(entry){
+  let row=make("div","zt-guide-row"),keys=make("div","zt-guide-keys");
+  entry[0].forEach(function(k){keys.appendChild(make("kbd","zt-guide-key"+(k==="SPACE"?" wide":""),k));});
+  row.appendChild(keys);row.appendChild(make("span","zt-guide-label",entry[1]));
+  legend.appendChild(row);
+ });
+ previewPanel.appendChild(legend);
  // Le plateau reste centré, avec les scores à gauche et les pièces à droite.
  main.insertBefore(statsPanel,stage);
  main.appendChild(previewPanel);
@@ -146,7 +167,7 @@ function mount(root){
   if(active&&pad.isConnected)pad.classList.add("zt-skin-ready");
  }).catch(function(){/* Images indisponibles : ancienne manette CSS conservée. */});
  wrap.appendChild(pad);
- wrap.appendChild(make("div","zg-help","← → déplacer · ↑ tourner · ↓ descendre · Espace poser · C réserve · P pause"));
+ wrap.appendChild(make("div","zg-help","WASD : tourner / bouger / descendre · Q : réserve · ESPACE : poser · P : pause"));
  root.appendChild(wrap);
  // Les textures viennent de la planche fournie par l'auteur. Aucun asset généré à l'exécution.
  let atlasReady=false;
@@ -275,7 +296,7 @@ function mount(root){
   overlay.dataset.state=over?"gameover":menuOpen?"menu":"pause";
   overlayArt.style.display=menuOpen?"none":"block";
   overlay.lastChild.textContent=over?"Recommencer pour rejouer":
-    menuOpen?"P : pause · C : réserve · Espace : poser":
+    menuOpen?"P : pause · Q : réserve · ESPACE : poser":
     (!current?"Appuie sur Jouer pour commencer":"Appuie sur Jouer pour continuer");
   if(window.ZebraTetrisArtwork&&atlasReady)
    window.ZebraTetrisArtwork.setState(overlayArt,start,over?"gameover":menuOpen?"menu":"pause",!paused);
@@ -323,8 +344,20 @@ function mount(root){
   if(!active||root.closest(".window")?.classList.contains("minimized"))return;
   if(!root.closest(".window")?.classList.contains("focused"))return;
   if(["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName))return;
-  const action={"ArrowLeft":()=>move(-1,0),"ArrowRight":()=>move(1,0),"ArrowDown":soft,"ArrowUp":rotate," ":hardDrop,"c":holdPiece,"C":holdPiece,"p":()=>{if(!over){menuOpen=false;paused=!paused;updateStatus();}},"P":()=>{if(!over){menuOpen=false;paused=!paused;updateStatus();}}};
-  if(action[e.key]){e.preventDefault();action[e.key]();}
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const action={
+   a:()=>move(-1,0),d:()=>move(1,0),s:soft,w:rotate,
+   q:holdPiece," ":hardDrop,
+   p:()=>{if(!over){menuOpen=false;paused=!paused;updateStatus();}},
+   // Les flèches restent disponibles pour les habitués.
+   arrowleft:()=>move(-1,0),arrowright:()=>move(1,0),
+   arrowdown:soft,arrowup:rotate
+  };
+  const pressed=e.key===" "?" ":e.key.toLowerCase();
+  if(!action[pressed])return;
+  e.preventDefault();
+  if(e.repeat&&[" ","q","w","p","arrowup"].includes(pressed))return;
+  action[pressed]();
  }
  function tick(){
   if(!active)return;
