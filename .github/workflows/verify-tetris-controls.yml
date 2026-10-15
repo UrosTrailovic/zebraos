@@ -175,8 +175,8 @@ jobs:
           cat > _verify_tetris_desktop.html <<'HTML'
           <!doctype html><html lang="fr"><head><meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
-          <link rel="stylesheet" href="/style.css"></head><body>
-          <div class="window focused" style="width:880px;height:790px;position:relative">
+          <link rel="stylesheet" href="/style.css"><style>.zt-test-desktop .zg-retro .zt-keyboard-guide{display:flex!important}</style></head><body>
+          <div class="window focused zt-test-desktop" style="width:880px;height:790px;position:relative">
             <div id="desktop-game" class="window-body zebra-game-body" style="width:100%;height:100%"></div>
           </div>
           <script src="/tetris-artwork.js"></script><script src="/tetris.js"></script>
