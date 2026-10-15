@@ -1,0 +1,109 @@
+name: Vérifier ZebraAMP et thanks.txt
+on:
+  push:
+    paths:
+      - 'zebraamp.js'
+      - 'zebra-hardware.css'
+      - 'zebra-notes.js'
+      - 'zebra-notes.css'
+      - 'github-files.js'
+      - 'app.js'
+      - 'index.html'
+      - 'STUDIO/BUREAU/thanks.txt'
+      - '.github/workflows/verify-studio-polish.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  studio:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier JavaScript et fichier bureau
+        run: |
+          node --check zebraamp.js
+          node --check zebra-notes.js
+          node --check github-files.js
+          node --check app.js
+          test -f STUDIO/BUREAU/thanks.txt
+      - name: Essai de ZebraAMP, ZebraVIS et des notes en navigateur
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          page=Path("index.html").read_text()
+          script=r'''<script>
+          window.addEventListener("load",async function(){
+           const out={},wait=ms=>new Promise(r=>setTimeout(r,ms));
+           try{
+            const mount=document.createElement("div");
+            mount.id="studio-test";mount.style.cssText="position:fixed;left:0;top:0;width:min(650px,96vw);height:630px;z-index:9000;";
+            mount.className="window";
+            document.body.appendChild(mount);
+            const host=document.createElement("div");
+            host.className="window-body";host.style.cssText="height:100%;width:100%;";
+            mount.append(host);
+            window.ZebraAMPConfig={windowBox:function(id,title,w,h){return host;}};
+            window.ZebraAMP.open();
+            await wait(140);
+            const $=q=>host.querySelector(q);
+            out.amp=!!$(".amp3")&&!!$(".amp3-head")&&!!$(".amp3-zebra-plate");
+            out.plate=getComputedStyle($(".amp3-zebra-plate")).backgroundImage.includes("repeating-linear-gradient")
+              &&$(".amp3-zebra-plate").querySelectorAll(".amp3-zebra-rivet").length===2;
+            out.screen=!!$(".amp3-display-row")&&!!$(".amp3-cover-image")
+              &&!!$("[data-amp-time]")&&!!$("[data-amp-led]")
+              &&getComputedStyle($(".amp3-screen")).backgroundImage.includes("gradient");
+            out.transport=host.querySelectorAll(".amp3-transport").length===4
+              &&$(".amp3-play").getBoundingClientRect().height>=35;
+            out.playlists=!!host.querySelector("[data-amp-rows]")&&!!host.querySelector("[data-amp-select]")
+              &&!!host.querySelector("[data-amp-eq]")&&!!host.querySelector("[data-amp-progress]");
+            out.visualizerCode=typeof window.ZebraVisualizer.mount==="function";
+            const mediaHost=document.createElement("div");
+            mediaHost.className="window-body";mediaHost.style.cssText="height:310px;width:340px";
+            document.body.append(mediaHost);
+            window.ZebraVisualizer.mount(mediaHost,window.ZebraAMP.media,{analyser:null});
+            out.vis=!!mediaHost.querySelector(".zviz-canvas")
+              &&getComputedStyle(mediaHost.querySelector(".zviz")).backgroundImage.includes("gradient");
+            const txt={type:"file",name:"thanks.txt",path:"STUDIO/BUREAU/thanks.txt",size:99};
+            const noteHost=document.createElement("div");
+            noteHost.className="window-body";noteHost.style.cssText="height:300px;width:330px";
+            document.body.append(noteHost);
+            const key="zebra.text.v1.zebra."+txt.path;
+            localStorage.removeItem(key);
+            window.ZebraGitFiles.openFile(txt,{session:"zebra",windowBox:function(){return noteHost;}});
+            await wait(500);
+            const input=noteHost.querySelector("textarea");
+            out.txtRoute=!!input&&noteHost.classList.contains("ztext-window-body")&&!input.disabled;
+            out.txtInitial=input.value.includes("THANKS");
+            input.value="Merci aux copains !\nZebra Tape 2";
+            input.dispatchEvent(new Event("input",{bubbles:true}));
+            await wait(510);
+            out.txtAutosave=localStorage.getItem(key)==="Merci aux copains !\nZebra Tape 2"
+              &&noteHost.querySelector(".ztext-saved").textContent.includes("ENREGISTRÉ");
+            const cleanup=noteHost._zebraDispose;
+            out.dispose=typeof cleanup==="function";
+            cleanup();
+            window.ZebraTextEditor.mount(noteHost,txt,{
+              session:"zebra",source:function(){return "/STUDIO/BUREAU/thanks.txt";}
+            });
+            await wait(500);
+            out.txtReload=noteHost.querySelector("textarea").value==="Merci aux copains !\nZebra Tape 2";
+            out.txtNoGithubMutation=noteHost.querySelector(".ztext-hint").textContent.includes("pas sur GitHub");
+            localStorage.removeItem(key);
+            noteHost._zebraDispose();
+            out.noHeavyLib=!document.querySelector('script[src*="react"]')
+               &&!document.querySelector('script[src*="jquery"]');
+           }catch(err){out.exception=String(err.stack||err);}
+           document.documentElement.dataset.studioReport=JSON.stringify(out);
+           document.documentElement.dataset.studioStatus=Object.values(out).every(v=>v===true)?"ok":"failed";
+          });
+          </script>'''
+          Path("_verify_studio_polish.html").write_text(page.replace("</body>",script+"</body>"))
+          PY
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebra-studio-server.log 2>&1 &
+          sleep 1
+          for width in 390 1160; do
+            google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=$width,900 --virtual-time-budget=4800 --dump-dom http://127.0.0.1:8765/_verify_studio_polish.html > /tmp/zebra-studio-$width.html 2>/tmp/zebra-studio-$width.log
+            grep -o 'data-studio-report="[^"]*"' /tmp/zebra-studio-$width.html | tail -c 7000
+            grep -o 'data-studio-status="[^"]*"' /tmp/zebra-studio-$width.html
+            grep -q 'data-studio-status="ok"' /tmp/zebra-studio-$width.html
+          done
