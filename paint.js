@@ -13,8 +13,10 @@ function mount(root){
  const input=element("input");input.type="file";input.accept="image/*";input.hidden=true;
  const mergedCanvas=()=>{
   const out=document.createElement("canvas");out.width=WIDTH;out.height=HEIGHT;
-  const c=out.getContext("2d");c.drawImage(canvas,0,0);
+  const c=out.getContext("2d");
+  c.fillStyle="#ffffff";c.fillRect(0,0,WIDTH,HEIGHT);
   layers.forEach(layer=>{if(layer.visible)c.drawImage(layer.img,layer.x,layer.y,layer.w,layer.h);});
+  c.drawImage(canvas,0,0);
   return out;
  };
  const download=()=>{
@@ -31,9 +33,9 @@ function mount(root){
  const canvas=element("canvas","zp-canvas");canvas.width=WIDTH;canvas.height=HEIGHT;
  canvas.setAttribute("aria-label","Zone de dessin ZebraPaint");
  const canvasFrame=element("div","zp-canvas-frame");
- canvasFrame.appendChild(canvas);
  const layerHost=element("div","zp-layer-stage");
  canvasFrame.appendChild(layerHost);
+ canvasFrame.appendChild(canvas);
  stage.appendChild(canvasFrame);
  const work=element("div","zp-work");work.appendChild(stage);
  const paletteBar=element("div","zp-colors");
@@ -101,7 +103,9 @@ function mount(root){
  root.appendChild(panel);
  function setColor(c){currentColor=c;front.style.background=c;pickerInput.value=c;}
  function clearCanvas(){
-  ctx.fillStyle="#ffffff";ctx.fillRect(0,0,WIDTH,HEIGHT);
+  // Transparent = vraie couche de dessin au-dessus des photos.
+  // Le fond blanc est fourni par le plan de travail et l'export PNG.
+  ctx.clearRect(0,0,WIDTH,HEIGHT);
   ctx.lineCap="round";ctx.lineJoin="round";
  }
  function snapshot(){
@@ -141,7 +145,8 @@ function mount(root){
  }
  function paintLine(a,b,erase){
   ctx.save();
-  ctx.strokeStyle=erase?"#ffffff":currentColor;
+  ctx.globalCompositeOperation=erase?"destination-out":"source-over";
+  ctx.strokeStyle=erase?"#000000":currentColor;
   ctx.lineWidth=erase?Math.max(10,brush*3):brush;
   ctx.lineCap="round";ctx.lineJoin="round";
   ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
@@ -188,7 +193,7 @@ function mount(root){
   if(tool==="select"){selectLayer(null);return;}
   const p=point(ev);
   if(tool==="picker"){
-    let rgb=ctx.getImageData(Math.floor(p.x),Math.floor(p.y),1,1).data;
+    let rgb=mergedCanvas().getContext("2d").getImageData(Math.floor(p.x),Math.floor(p.y),1,1).data;
     setColor("#"+Array.from(rgb.slice(0,3)).map(v=>v.toString(16).padStart(2,"0")).join(""));
     choose("pencil");return;
   }
@@ -359,6 +364,9 @@ function mount(root){
   img.src=url;
  }
  input.onchange=()=>{let f=input.files?.[0];input.value="";if(f)importImage(f);};
+ canvasFrame.addEventListener("pointerdown",e=>{
+  if(tool==="select"&&(e.target===canvasFrame||e.target===layerHost))selectLayer(null);
+ });
  canvas.addEventListener("pointerdown",onDown);
  canvas.addEventListener("pointermove",onMove);
  canvas.addEventListener("pointerup",onUp);
