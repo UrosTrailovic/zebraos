@@ -71,7 +71,7 @@ function setState(overlay,start,state,playing){
  applyImage(start,playing?"pausebtn":"play","background");
  start.dataset.label=playing?"PAUSE":"JOUER";
 }
-function apply({wrap,logo,overlay,start,restart,menu,onReady}){
+function apply({wrap,logo,overlay,start,restart,menu,onReady,onError}){
  logo.style.visibility="hidden";
  overlay.style.visibility="hidden";
  load().then(function(){
@@ -102,6 +102,7 @@ function apply({wrap,logo,overlay,start,restart,menu,onReady}){
   fallback.textContent="ZEBRA TETRIS";
   logo.parentNode.appendChild(fallback);
   overlay.style.visibility="hidden";
+  if(onError)onError(err);
  });
 }
 window.ZebraTetrisArtwork={apply,setState};
