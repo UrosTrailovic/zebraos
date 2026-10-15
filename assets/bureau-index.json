@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T08:14:53.034394+00:00",
+  "generatedAt": "2026-10-15T10:40:14.993605+00:00",
   "desktopOrder": [
     "Panneau de configuration",
     "Poste de travail",
@@ -87,6 +87,11 @@
       "name": "ZebraSticky.exe",
       "app": "sticky",
       "icon": "sticky"
+    },
+    {
+      "path": "STUDIO/BUREAU/OUTILS/icone.png",
+      "type": "file",
+      "size": 20631
     },
     {
       "path": "STUDIO/BUREAU/Panneau de configuration.zebraos.json",
