@@ -310,8 +310,8 @@ function coverBlob(file){
 }
 function applyCoverImage(art,cover,src){
  cover.classList.add("amp3-cover-empty");
- art.onload=function(){if(art.src===src)cover.classList.remove("amp3-cover-empty");};
- art.onerror=function(){if(art.src===src)cover.classList.add("amp3-cover-empty");};
+ art.onload=function(){if(art.getAttribute("src")===src)cover.classList.remove("amp3-cover-empty");};
+ art.onerror=function(){if(art.getAttribute("src")===src)cover.classList.add("amp3-cover-empty");};
  art.alt="Pochette de la playlist "+getList().name;
  art.src=src;
 }
