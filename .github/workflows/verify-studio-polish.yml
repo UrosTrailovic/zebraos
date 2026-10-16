@@ -4,6 +4,8 @@ on:
     paths:
       - 'zebraamp.js'
       - 'zebraamp-compact.css'
+      - 'zebraamp-skin.css'
+      - 'assets/zebraamp/**'
       - 'zebra-hardware.css'
       - 'zebra-notes.js'
       - 'zebra-notes.css'
@@ -48,8 +50,18 @@ jobs:
             await wait(140);
             const $=q=>host.querySelector(q);
             out.amp=!!$(".amp3")&&!!$(".amp3-head")&&!!$(".amp3-zebra-plate");
-            out.plate=getComputedStyle($(".amp3-zebra-plate")).backgroundImage.includes("repeating-linear-gradient")
-              &&$(".amp3-zebra-plate").querySelectorAll(".amp3-zebra-rivet").length===2;
+            const textile=new Image();
+            await new Promise((resolve,reject)=>{
+              textile.onload=resolve;textile.onerror=()=>reject(Error("Texture zébrée introuvable"));
+              textile.src="/assets/zebraamp/textile.png";
+            });
+            const plateStyle=getComputedStyle($(".amp3-zebra-plate"));
+            out.plate=plateStyle.backgroundImage.includes("/assets/zebraamp/textile.png")
+              &&plateStyle.backgroundRepeat==="repeat-x"
+              &&parseFloat(plateStyle.borderRadius)>0
+              &&textile.naturalWidth===192&&textile.naturalHeight===64;
+            out.skinMaterials=getComputedStyle($(".amp3")).backgroundImage.includes("/assets/zebraamp/ampbg.png")
+              &&getComputedStyle($(".amp3"),"::before").backgroundImage.includes("/assets/zebraamp/vis.png");
             out.screen=!!$(".amp3-display-row")&&!!$(".amp3-cover-image")
               &&!!$("[data-amp-time]")&&!!$("[data-amp-led]")
               &&getComputedStyle($(".amp3-screen")).backgroundImage.includes("gradient");
