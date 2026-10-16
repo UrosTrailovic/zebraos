@@ -1,0 +1,76 @@
+/* Studio faders: horizontal counterparts to the FL-style raised caps.
+   Native range inputs retain pointer, touch and keyboard behaviour. */
+.amp3 input[type=range],.zviz .zviz-zoom-range{
+ --fader-top:#dde7e1;--fader-face:#a9bbb0;--fader-bottom:#748c7d;
+ --fader-mark:#3d5c47;
+ -webkit-appearance:none;appearance:none;
+ height:26px;min-height:24px;padding:0;border:0;border-radius:0;
+ background:repeating-linear-gradient(90deg,#9ebfa845 0 1px,transparent 1px 12px) center / calc(100% - 18px) 11px no-repeat;
+ box-shadow:none;outline:none;vertical-align:middle;
+}
+.amp3-screen>input[type=range]{height:24px;min-height:24px;filter:none}
+.amp3 [data-amp-volume]{
+ --fader-top:#dcf8b2;--fader-face:#a4cf70;--fader-bottom:#6e984d;--fader-mark:#35512c;
+}
+.amp3 [data-amp-progress]{
+ --fader-top:#d5ffe1;--fader-face:#a2d7b7;--fader-bottom:#658d76;
+}
+.amp3 input[type=range]::-webkit-slider-runnable-track,.zviz .zviz-zoom-range::-webkit-slider-runnable-track{
+ height:6px;border:1px solid #09140e;border-radius:2px;
+ background:linear-gradient(180deg,#030c07,#183525);
+ box-shadow:inset 0 1px 2px #000,0 1px 0 #9cb2a166;
+}
+.amp3 input[type=range]::-moz-range-track,.zviz .zviz-zoom-range::-moz-range-track{
+ height:4px;border:1px solid #09140e;border-radius:2px;
+ background:linear-gradient(180deg,#030c07,#183525);
+ box-shadow:inset 0 1px 2px #000,0 1px 0 #9cb2a166;
+}
+.amp3 input[type=range]::-moz-range-progress,.zviz .zviz-zoom-range::-moz-range-progress{background:transparent}
+.amp3 input[type=range]::-webkit-slider-thumb,.zviz .zviz-zoom-range::-webkit-slider-thumb{
+ -webkit-appearance:none;appearance:none;box-sizing:border-box;
+ width:23px;height:20px;margin-top:-8px;border-radius:3px;
+ border:1px solid;border-color:#e3efe5 #6f8d79 #354e3d #b7cbbe;
+ background:
+  linear-gradient(90deg,transparent 41%,#223d294d 42% 45%,var(--fader-mark) 46% 51%,#f3fff6d9 52% 57%,transparent 58%),
+  linear-gradient(180deg,var(--fader-top) 0% 9%,var(--fader-face) 14% 44%,var(--fader-bottom) 49% 54%,var(--fader-face) 60% 85%,var(--fader-bottom) 100%);
+ box-shadow:inset 0 1px 0 #ffffffd9,inset 0 -2px 0 #203d2b44,0 2px 1px #06110c,1px 3px 4px #0009;
+ cursor:grab;
+}
+.amp3 input[type=range]::-moz-range-thumb,.zviz .zviz-zoom-range::-moz-range-thumb{
+ box-sizing:border-box;width:23px;height:20px;border-radius:3px;
+ border:1px solid;border-color:#e3efe5 #6f8d79 #354e3d #b7cbbe;
+ background:
+  linear-gradient(90deg,transparent 41%,#223d294d 42% 45%,var(--fader-mark) 46% 51%,#f3fff6d9 52% 57%,transparent 58%),
+  linear-gradient(180deg,var(--fader-top) 0% 9%,var(--fader-face) 14% 44%,var(--fader-bottom) 49% 54%,var(--fader-face) 60% 85%,var(--fader-bottom) 100%);
+ box-shadow:inset 0 1px 0 #ffffffd9,inset 0 -2px 0 #203d2b44,0 2px 1px #06110c,1px 3px 4px #0009;
+ cursor:grab;
+}
+.amp3 input[type=range]:active::-webkit-slider-thumb,.zviz .zviz-zoom-range:active::-webkit-slider-thumb{cursor:grabbing;filter:brightness(1.1);box-shadow:inset 0 1px 0 #fff,0 1px 2px #000b,0 0 5px #8fffb966}
+.amp3 input[type=range]:active::-moz-range-thumb,.zviz .zviz-zoom-range:active::-moz-range-thumb{cursor:grabbing;filter:brightness(1.1);box-shadow:inset 0 1px 0 #fff,0 1px 2px #000b,0 0 5px #8fffb966}
+.amp3 input[type=range]:focus-visible,.zviz .zviz-zoom-range:focus-visible{outline:1px solid #b3e6c3;outline-offset:2px}
+.amp3-eq-band input[type=range]{height:28px}
+/* Small physical details give the player its own studio-rack character. */
+.amp3-extras{box-shadow:inset 0 1px 0 #bdd4c022}
+.amp3-eq-panel{box-shadow:inset 1px 1px 3px #010a0666,0 1px 0 #afc6b52b}
+.amp3-eq-panel>summary::after{
+ content:"";float:right;width:26px;height:9px;margin:1px 0 0 5px;border:1px solid #687e6c;
+ border-radius:1px;opacity:.85;
+ background:#b8c8b9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 52 18'%3E%3Cpath fill='%230e1b13' d='M0 0h9C2 7 14 9 4 18H0c9-8-3-11 0-18M18 0h8c-9 6-2 7-9 11l-3 7H8c9-9 0-9 10-18M36 0h7c-12 8-1 10-12 18h-8c13-8 0-11 13-18M50 0h2v18h-10c12-7 1-10 8-18'/%3E%3C/svg%3E") center / cover;
+ box-shadow:inset 0 1px 1px #fff5,0 1px 1px #0007;
+ pointer-events:none;
+}
+.amp3 .amp3-play::after,.amp3 .amp3-btn.enabled::after,
+.amp3 .amp3-speed-btn[aria-expanded=true]::after,.amp3 .amp3-reverb-btn[aria-expanded=true]::after{
+ content:"";position:absolute;right:4px;bottom:4px;width:3px;height:3px;
+ border-radius:50%;background:#517457;box-shadow:0 1px 0 #e4ffe655;
+ pointer-events:none;
+}
+.amp3 .amp3-play.amp3-playing::after,.amp3 .amp3-btn.enabled::after,
+.amp3 .amp3-speed-btn[aria-expanded=true]::after,.amp3 .amp3-reverb-btn[aria-expanded=true]::after{
+ background:#d5ff9a;box-shadow:0 0 3px #adff6e,0 0 7px #73ff8588;
+}
+@media(max-width:700px){
+ .amp3 input[type=range],.zviz .zviz-zoom-range{background-size:calc(100% - 16px) 10px}
+ .amp3 input[type=range]::-webkit-slider-thumb,.zviz .zviz-zoom-range::-webkit-slider-thumb{width:21px}
+ .amp3 input[type=range]::-moz-range-thumb,.zviz .zviz-zoom-range::-moz-range-thumb{width:21px}
+}

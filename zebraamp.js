@@ -578,7 +578,9 @@ function renderProgress(){
  // Pochette de la PLAYLIST, et non du morceau ; asynchrone et mise en cache.
  renderCover();
  view.querySelector("[data-amp-time]").textContent=format(audio.currentTime)+" / "+format(audio.duration);
- view.querySelector("[data-amp-play]").textContent=audio.paused?"▶":"Ⅱ";
+ var playControl=view.querySelector("[data-amp-play]");
+ playControl.textContent=audio.paused?"▶":"Ⅱ";
+ playControl.classList.toggle("amp3-playing",!audio.paused&&!audio.ended);
  var led=view.querySelector("[data-amp-led]");
  if(led){led.textContent=audio.paused?"● VEILLE":"● LECTURE";led.classList.toggle("amp3-led-active",!audio.paused);}
  if(progress)progress.value=audio.duration&&Number.isFinite(audio.duration)?Math.round(1000*audio.currentTime/audio.duration):0;
