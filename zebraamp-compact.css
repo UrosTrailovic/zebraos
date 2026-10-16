@@ -1,0 +1,190 @@
+/* ZebraAMP 3.4 — fenêtre compacte Winamp, plein écran mobile sans scroll de page.
+   Seule la LISTE des pistes défile, la barre Importer reste visible. */
+.window-body:has(>.amp3){
+ display:flex;flex-direction:column;
+ min-height:0;min-width:0;overflow:hidden;padding:0;
+ background:#252e2a;
+}
+.window-body>.amp3{
+ flex:1 1 auto;width:100%;height:100%;min-height:0;min-width:0;
+ overflow:hidden;gap:5px;padding:7px 9px 8px;
+}
+.amp3-head{flex:0 0 auto;min-height:30px;padding:5px 8px;line-height:1}
+.amp3-head strong{font-size:12px;letter-spacing:2px}
+.amp3-head span{font-size:8px;letter-spacing:1px;opacity:.7}
+.amp3-zebra-plate{
+ display:block;flex:0 0 9px;position:relative;
+ height:9px;overflow:hidden;
+ border:2px ridge #9eb5a6;
+ background:repeating-linear-gradient(135deg,#111d17 0 13px,#a7b9b0 13px 21px,#41594e 21px 33px);
+}
+.amp3-zebra-rivet{position:absolute;top:0;width:5px;height:5px;border-radius:50%;background:#d2e7d7;border:1px solid #506c5a}
+.amp3-zebra-rivet-left{left:6px}.amp3-zebra-rivet-right{right:6px}
+.amp3-screen{
+ flex:0 0 auto;min-height:0;padding:6px 8px 7px;
+ gap:6px;border:3px ridge #69947b;
+ background:#03180e;
+}
+.amp3-display-row{display:flex;align-items:center;gap:8px;min-height:57px;min-width:0}
+.amp3-cover{
+ flex:0 0 55px;width:55px;height:55px;
+ position:relative;overflow:hidden;display:grid;place-items:center;
+ border:3px ridge #92c6a9;background:#062618;
+}
+.amp3-cover-image{width:100%;height:100%;object-fit:cover;display:block}
+.amp3-cover-fallback{
+ display:none;position:absolute;inset:0;align-items:center;justify-content:center;
+ color:#71c99f;font:bold 16px "Courier New",monospace;
+ letter-spacing:2px;background:linear-gradient(125deg,#042014,#163e30 45%,#06170c);
+}
+.amp3-cover.amp3-cover-empty .amp3-cover-image{display:none}
+.amp3-cover.amp3-cover-empty .amp3-cover-fallback{display:flex}
+.amp3-mini-visual{
+ flex:0 0 98px;width:98px;height:55px;
+ display:flex;align-items:stretch;overflow:hidden;
+ border:2px ridge #72ab83;background:#03150b;
+}
+.amp3-mini-visual .amp3-spectrum{
+ display:block;flex:1;width:100%;height:100%;
+ border:0;background:#05140e;
+}
+.amp3-readout{
+ flex:1 1 0;min-width:0;min-height:53px;
+ display:flex;flex-direction:column;justify-content:space-around;
+ gap:4px;overflow:hidden;
+}
+.amp3-screen-label{display:flex;justify-content:flex-end;align-items:center}
+.amp3-led{font:9px "Courier New",monospace;color:#668571;white-space:nowrap;letter-spacing:.5px}
+.amp3-led-active{color:#81eeb0}
+.amp3-marquee{max-width:100%;font-size:12px;letter-spacing:.3px}
+.amp3-time{font:bold 13px "Courier New",monospace;letter-spacing:1px}
+.amp3-screen>input[type=range]{height:13px;min-height:13px;display:block;margin:0}
+.amp3-controls{
+ flex:0 0 auto;display:flex;flex-direction:column;gap:4px;
+ min-width:0;flex-wrap:nowrap;
+}
+.amp3-transports,.amp3-modes{display:flex;gap:5px;align-items:stretch;min-width:0}
+.amp3-transports .amp3-btn{
+ display:flex;align-items:center;justify-content:center;
+ flex:1 1 0;min-width:0;min-height:35px;font-size:17px;padding:3px 4px;
+}
+.amp3-transports .amp3-play{
+ color:#063923;background:linear-gradient(#d0f9d8,#81d8ad);
+ font-size:19px;font-weight:bold;
+}
+.amp3-modes .amp3-btn{
+ flex:1 1 0;min-width:0;padding:5px 7px;min-height:29px;
+ font-size:10px;letter-spacing:.3px;white-space:nowrap;
+}
+.amp3-extras{
+ flex:0 0 auto;position:relative;
+ display:flex;align-items:center;flex-wrap:nowrap;gap:9px;
+ min-width:0;padding:3px 0;
+ border-top:1px solid #537260;
+}
+.amp3-extras>label{
+ flex:1 1 auto;min-width:0;
+ display:flex;align-items:center;gap:8px;
+ font-weight:bold;font-size:10px;white-space:nowrap;
+}
+.amp3-extras>label input{flex:1 1 0;min-width:0;max-width:100%;height:22px}
+.amp3-speed-group{position:relative;flex:0 0 auto}
+.amp3-speed-btn{min-height:31px;white-space:nowrap;font-weight:bold;letter-spacing:.4px}
+.amp3-speed-panel{
+ position:absolute;z-index:20;right:0;bottom:calc(100% + 8px);
+ box-sizing:border-box;
+ width:min(280px,calc(100vw - 27px));padding:11px;
+ border:3px ridge #c9dfce;
+ background:linear-gradient(140deg,#0d2c1d,#071c13);
+ box-shadow:3px 6px 16px #000b;
+ color:#a4ebba;
+}
+.amp3-speed-panel[hidden]{display:none!important}
+.amp3-speed-header{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:10px;letter-spacing:.8px}
+.amp3-speed-header strong{font-size:14px;color:#ceffe0}
+.amp3-speed-range{width:100%;height:28px;margin:8px 0 0;touch-action:pan-x}
+.amp3-speed-ticks{display:flex;justify-content:space-between;gap:5px;color:#7acda0;font-size:10px}
+.amp3-speed-reset{display:block;margin:9px 0 0 auto;min-height:28px;padding:4px 8px}
+.amp3-eq-panel{flex:0 0 auto;padding:7px 8px}
+.amp3-eq-panel>summary{font-size:10px;letter-spacing:.7px}
+.amp3-eq-panel:not([open]){max-height:32px}
+.amp3-playlist-tools{
+ flex:0 0 auto;display:flex;align-items:center;gap:5px;
+ flex-wrap:nowrap;min-width:0;padding:5px 0 0;
+}
+.amp3-playlist-tools>span{font-size:10px;letter-spacing:.5px}
+.amp3-playlist-tools>.amp3-select{
+ min-width:0;flex:1 1 0;max-width:none;
+ height:31px;min-height:31px;padding:3px 5px;
+}
+.amp3-playlist-tools>.amp3-btn{min-height:31px;padding:5px 7px;white-space:nowrap}
+.amp3-list{
+ flex:1 1 0;min-height:38px;max-height:none;
+ overflow-y:auto;overflow-x:hidden;
+ overscroll-behavior:contain;scrollbar-width:thin;
+}
+.amp3-track{min-height:34px}
+.amp3-bottom{
+ display:grid;grid-template-columns:minmax(0,1.18fr) minmax(0,1fr);
+ gap:6px;flex:0 0 auto;min-width:0;
+ padding:0;
+}
+.amp3-bottom>.amp3-btn{
+ display:block;min-width:0;min-height:33px;padding:5px 6px;
+ font-size:10px;line-height:1.2;white-space:normal;
+}
+.amp3-status{
+ flex:0 0 auto;min-height:0;max-height:32px;
+ line-height:1.2;overflow:hidden;
+ font-size:9px;
+}
+.amp3-status:empty{display:none}
+@media(max-width:700px){
+ .window-body:has(>.amp3){padding:0!important;overflow:hidden!important}
+ .window-body>.amp3{padding:5px 6px 6px;gap:4px}
+ .amp3-head{min-height:26px;padding:4px 7px}
+ .amp3-head strong{font-size:12px}
+ .amp3-head>span{display:none}
+ .amp3-zebra-plate{flex-basis:6px;height:6px}
+ .amp3-screen{padding:5px;gap:4px}
+ .amp3-display-row{gap:5px;min-height:49px}
+ .amp3-cover{width:47px;height:47px;flex-basis:47px}
+ .amp3-mini-visual{width:74px;height:47px;flex-basis:74px}
+ .amp3-readout{min-height:45px;gap:3px}
+ .amp3-marquee{font-size:11px}
+ .amp3-time{font-size:12px;letter-spacing:.2px}
+ .amp3-led{font-size:8px}
+ .amp3-screen>input[type=range]{height:13px}
+ .amp3-transports,.amp3-modes{gap:4px}
+ .amp3-transports .amp3-btn{min-height:35px;padding:3px}
+ .amp3-modes .amp3-btn{min-height:29px;padding:4px;font-size:9px}
+ .amp3-extras{padding:3px 0;gap:7px}
+ .amp3-extras>label{font-size:9px;gap:5px}
+ .amp3-speed-btn{padding:5px 6px;min-height:30px;font-size:9px}
+ .amp3-playlist-tools{gap:3px;padding-top:4px}
+ .amp3-playlist-tools>span{font-size:9px}
+ .amp3-playlist-tools>.amp3-select{min-width:0;min-height:28px;height:28px;padding:3px}
+ .amp3-playlist-tools>.amp3-btn{min-height:28px;padding:4px;font-size:9px}
+ .amp3-eq-panel{padding:6px}
+ .amp3-list{min-height:36px}
+ .amp3-bottom{gap:4px}
+ .amp3-bottom>.amp3-btn{min-height:34px;font-size:9px;padding:4px 3px}
+}
+@media(max-width:350px){
+ .amp3-mini-visual{width:59px;flex-basis:59px}
+ .amp3-cover{width:43px;height:43px;flex-basis:43px}
+ .amp3-playlist-tools{flex-wrap:wrap}
+ .amp3-playlist-tools>.amp3-select{flex-basis:calc(100% - 70px)}
+ .amp3-playlist-tools>.amp3-btn{flex:1 0 auto}
+}
+@media(max-height:690px) and (max-width:700px){
+ .window-body>.amp3{gap:3px;padding:4px}
+ .amp3-head{min-height:23px;padding:3px 6px}
+ .amp3-screen{padding:4px}
+ .amp3-cover{height:42px;width:42px;flex-basis:42px}
+ .amp3-mini-visual{height:42px}
+ .amp3-transports .amp3-btn{min-height:31px}
+ .amp3-modes .amp3-btn{min-height:26px}
+ .amp3-eq-panel{padding:5px}
+ .amp3-bottom>.amp3-btn{min-height:29px}
+}
