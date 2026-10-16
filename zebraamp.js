@@ -52,7 +52,8 @@ function restore(){
   if(!Number.isNaN(Number(d.volume)))volume=Math.max(0,Math.min(1,Number(d.volume)));
   shuffle=!!d.shuffle;repeat=["aucun","tout","un"].includes(d.repeat)?d.repeat:"tout";
   speed=Number.isFinite(Number(d.speed))?Math.max(.5,Math.min(1.5,Math.round(Number(d.speed)*20)/20)):1;
-  preservePitch=d.pitchMode==="constant";
+  // L’ancien mode « tonalité stable » est ignoré : vinyle en permanence.
+  preservePitch=false;
   reverb=Number.isFinite(Number(d.reverb))?Math.max(0,Math.min(100,Math.round(Number(d.reverb)/5)*5)):0;
   if(Array.isArray(d.eq)&&d.eq.length===5)eq=d.eq.map(function(x){return Math.max(-12,Math.min(12,Number(x)||0));});
   if(typeof d.preset==="string")preset=d.preset;
@@ -67,23 +68,6 @@ function applyPitchMode(){
  try{audio.preservesPitch=preservePitch;}catch(e){}
  try{if("mozPreservesPitch" in audio)audio.mozPreservesPitch=preservePitch;}catch(e){}
  try{if("webkitPreservesPitch" in audio)audio.webkitPreservesPitch=preservePitch;}catch(e){}
-}
-function setPitchMode(mode){
- preservePitch=mode==="constant";
- applyPitchMode();store();renderPitchMode();
-}
-function renderPitchMode(){
- if(!view||!view.isConnected)return;
- var buttons=view.querySelectorAll("[data-amp-pitch-mode]");
- Array.prototype.forEach.call(buttons,function(button){
-  var selected=button.getAttribute("data-amp-pitch-mode")===(preservePitch?"constant":"vinyl");
-  button.classList.toggle("enabled",selected);
-  button.setAttribute("aria-pressed",String(selected));
- });
- var info=view.querySelector("[data-amp-pitch-explain]");
- if(info)info.textContent=preservePitch?
- "TONALITÉ CONSERVÉE · peut créer des artefacts à basse vitesse.":
- "VINYLE · vitesse et tonalité baissent ensemble, sans étirement artificiel.";
 }
 function db(){
  if(dbPromise)return dbPromise;
@@ -528,7 +512,6 @@ function render(){
  if(speedInput)speedInput.value=String(Math.round(speed*100));
  var speedValue=view.querySelector("[data-amp-speed-value]");
  if(speedValue)speedValue.textContent=Math.round(speed*100)+" %";
- renderPitchMode();
  view.querySelector("[data-amp-volume]").value=String(Math.round(volume*100));
  rows.scrollTop=oldListScroll;
  renderProgress();renderStatus();
@@ -727,28 +710,13 @@ function open(){
  var ticks=el("div","amp3-speed-ticks");
  ticks.append(el("span","","50 %"),el("span","","100 %"),el("span","","150 %"));
  speedPanel.appendChild(ticks);
- var speedReset=b("1× NORMAL",function(){
+ // Un seul curseur, aucun preset ou choix de tonalité.
+ // La vitesse ralentit naturellement la hauteur (vinyle).
+ var speedReset=b("↺ 1×",function(){
   rate.value="100";rate.oninput();
  },"amp3-btn amp3-speed-reset");
+ speedReset.title="Rétablir la vitesse normale (100 %)";
  speedPanel.appendChild(speedReset);
- var pitchModeBox=el("div","amp3-pitch-mode");
- var vinylMode=b("♫ VINYLE · GRAVE",function(){setPitchMode("vinyl");},"amp3-btn amp3-pitch-choice");
- vinylMode.setAttribute("data-amp-pitch-mode","vinyl");
- vinylMode.title="Vitesse et tonalité baissent ensemble, comme une bande magnétique.";
- var fixedMode=b("TONALITÉ STABLE",function(){setPitchMode("constant");},"amp3-btn amp3-pitch-choice");
- fixedMode.setAttribute("data-amp-pitch-mode","constant");
- fixedMode.title="Conserve la tonalité, mais le ralentissement peut être moins naturel.";
- pitchModeBox.append(vinylMode,fixedMode);
- var pitchInfo=el("div","amp3-pitch-description");
- pitchInfo.setAttribute("data-amp-pitch-explain","");
- speedPanel.append(pitchModeBox,pitchInfo);
- var speedPresets=el("div","amp3-speed-presets");
- [["NORMAL",100],["SLOWED",85],["DEEP",75]].forEach(function(item){
-  speedPresets.appendChild(b(item[0],function(){
-   rate.value=String(item[1]);rate.oninput();
-  },"amp3-btn amp3-speed-preset"));
- });
- speedPanel.appendChild(speedPresets);
  speedGroup.append(speedBtn,speedPanel);
  extra.appendChild(speedGroup);
  // Réverb indépendante de la vitesse, panneau aussi compact que VITESSE.
