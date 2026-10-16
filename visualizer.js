@@ -157,15 +157,26 @@ function drawSpectrum(ctx,w,h,m){
   for(var i=0;i<count;i++){
     var value=m.levels[i],x=margin+i*step;
     var lit=Math.floor(value*segments);
-    for(var k=0;k<segments;k++){
-      ctx.shadowBlur=k<lit?(lowPower?0:2):0;
-      ctx.fillStyle=k<lit?(k>segments*.83?"#f4e997":k>segments*.62?"#b7f7a4":"#72e9ac"):"rgba(83,168,117,.065)";
-      ctx.fillRect(x,base-(k+1)*sh,bw,Math.max(1,sh-1.3));
+    // One broad phosphor halo per lit column, then sharp luminous cells.
+    // This keeps the bloom visible on mobile without blurring every cell.
+    if(lit>0){
+      ctx.shadowColor="#43ffa0";ctx.shadowBlur=lowPower?9:19;
+      ctx.fillStyle="rgba(66,255,151,"+(.13+value*.18)+")";
+      ctx.fillRect(x,base-lit*sh,bw,lit*sh);
     }
-    ctx.shadowBlur=lowPower?2:6;
-    if(m.peaks[i]>.015){ctx.fillStyle="rgba(221,255,220,.9)";ctx.fillRect(x,base-m.peaks[i]*cap-2,bw,1.5);}
     ctx.shadowBlur=0;
-    ctx.fillStyle="rgba(86,239,161,"+(value*.09)+")";
+    for(var k=0;k<segments;k++){
+      ctx.fillStyle=k<lit?(k>segments*.83?"#fff6bd":k>segments*.62?"#dcffcc":"#adffcf"):"rgba(83,168,117,.065)";
+      ctx.fillRect(x,base-(k+1)*sh,bw,Math.max(1,sh-1.3));
+      if(k<lit){
+        ctx.fillStyle="rgba(235,255,242,.6)";
+        ctx.fillRect(x,base-(k+1)*sh,bw,Math.max(.6,(sh-1.3)*.24));
+      }
+    }
+    ctx.shadowColor="#7affb5";ctx.shadowBlur=lowPower?6:13;
+    if(m.peaks[i]>.015){ctx.fillStyle="#e6ffed";ctx.fillRect(x,base-m.peaks[i]*cap-2,bw,1.8);}
+    ctx.shadowBlur=0;
+    ctx.fillStyle="rgba(101,255,177,"+(value*.18)+")";
     ctx.fillRect(x,base+5,bw,value*h*.075);
   }
   ctx.shadowBlur=0;

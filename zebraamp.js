@@ -745,7 +745,7 @@ function loadVisualizer(){
  if(visualizerPromise)return visualizerPromise;
  visualizerPromise=new Promise(function(resolve,reject){
   var script=document.createElement("script");
-  script.src="/visualizer.js?v=4.0";script.async=true;
+  script.src="/visualizer.js?v=4.1";script.async=true;
   script.onload=function(){
    if(window.ZebraVisualizer)resolve(window.ZebraVisualizer);
    else reject(Error("Module ZebraVIS introuvable."));
