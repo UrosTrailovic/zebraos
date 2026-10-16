@@ -31,6 +31,7 @@ jobs:
               document.body.appendChild(host);
               const symbol=document.querySelector(".zboot-power-svg");
               test.powerSvg=!!symbol&&getComputedStyle(symbol).display!=="none";
+              await window.ZebraLazyApps.load("paint");
               window.ZebraPaint.mount(host);
               const frame=host.querySelector(".zp-canvas-frame");
               const base=host.querySelector(".zp-canvas");
