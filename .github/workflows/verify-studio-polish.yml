@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - 'zebraamp.js'
+      - 'zebraamp-compact.css'
       - 'zebra-hardware.css'
       - 'zebra-notes.js'
       - 'zebra-notes.css'
