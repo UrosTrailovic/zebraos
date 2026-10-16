@@ -48,3 +48,19 @@
  .github-file-entry>.bureau-media-thumb{width:72px;height:57px}
  .github-file-entry:has(>.bureau-media-thumb){min-height:125px}
 }
+
+/* Icône vidéo fixe : aucune requête MP4, aucune capture noire. */
+.bureau-video-static{
+ background:linear-gradient(135deg,#394e67,#152437);
+ border:3px ridge #d0d5da;
+}
+.bureau-video-static .bureau-video-reel{
+ display:grid;place-items:center;
+ width:100%;height:100%;
+ color:#dbe7f0;font:700 34px/1 "Courier New",monospace;
+ text-shadow:1px 1px 0 #000;
+}
+.bureau-video-static .bureau-video-play{
+ background:#1c4352;border:1px solid #fff9;
+}
+.desk-icon .bureau-video-static .bureau-video-reel{font-size:25px}
