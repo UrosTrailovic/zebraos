@@ -21,7 +21,7 @@ var presetValues={
  "Voix":[-4,-2,3,5,2]
 };
 var eqFreq=[70,250,1000,3500,11000],eqNames=["GRAVES","BAS-MÉD.","MÉDIUMS","PRÉSENCE","AIGUS"];
-var animation=null,loadingId=0,notifyText="",initDone=false,albumChecked=false;
+var animation=null,spectrumRefresh=null,loadingId=0,notifyText="",initDone=false,albumChecked=false;
 var visualizerPromise=null;
 function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
 function b(label,action,cls){var x=el("button",cls||"amp3-btn",label);x.type="button";x.onclick=action;return x;}
@@ -135,7 +135,7 @@ function init(){
  }
  audio.addEventListener("ended",nextAfterEnd);
  ["play","pause","timeupdate","loadedmetadata","durationchange","ratechange","volumechange","waiting","canplay"].forEach(function(k){
-  audio.addEventListener(k,function(){renderProgress();if(k==="play"||k==="pause")render();});
+  audio.addEventListener(k,function(){renderProgress();if(k==="play"||k==="pause"){render();if(spectrumRefresh)spectrumRefresh();}});
  });
  audio.addEventListener("error",function(){status("Impossible de lire ce fichier audio. Vérifie son format et son accès.");});
 }
@@ -437,11 +437,13 @@ function visualize(){
  // L'analyseur audio est créé au premier clic ▶, APRES l'ouverture de
  // ZebraAMP. Ne surtout pas figer bins=null à l'ouverture de la fenêtre.
  var bins=null;
- var last=0,pausedFramePainted=false,previousLink=false;
- function frame(now){
+ var last=0,pausedFramePainted=false;
+ function frame(now,force){
   if(!view||!view.isConnected)return;
-  animation=requestAnimationFrame(frame);
-  if(document.hidden||now-last<33)return;
+  // Un appel direct par l'événement play/pause n'ajoute pas une 2e
+  // boucle requestAnimationFrame (économie batterie mobile).
+  if(!force)animation=requestAnimationFrame(frame);
+  if(document.hidden||(!force&&now-last<33))return;
   last=now;
   // Ne pas redessiner indéfiniment le spectre noir en pause (batterie mobile).
   if(analyser&&(!bins||bins.length!==analyser.frequencyBinCount)){
@@ -482,6 +484,10 @@ function visualize(){
   var signal=view&&view.querySelector("[data-amp-spectrum-status]");
   if(signal)signal.textContent=audio.paused?"VEILLE":analyser&&bassEnergy>.02?"SIGNAL":"ANALYSE…";
  }
+ spectrumRefresh=function(){
+  pausedFramePainted=false;
+  frame(performance.now(),true);
+ };
  animation=requestAnimationFrame(frame);
 }
 function loadVisualizer(){
@@ -664,7 +670,11 @@ function open(){
    }else if(current===ALBUM)status("Mise à jour indisponible : "+result.error);
  });
 }
-function stop(){audio.pause();if(animation){cancelAnimationFrame(animation);animation=null;}view=null;}
+function stop(){
+ audio.pause();
+ if(animation){cancelAnimationFrame(animation);animation=null;}
+ spectrumRefresh=null;view=null;
+}
 window.ZebraAMP={
  open:open,init:init,stop:stop,importFiles:importFiles,openPublic:openPublic,openBlob:openBlob,
  pick:pick,play:play,updatePublic:updatePublic,media:audio,analyser:function(){return analyser;},
