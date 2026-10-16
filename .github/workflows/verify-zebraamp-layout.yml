@@ -1,0 +1,136 @@
+name: Vérifier ZebraAMP compact sur mobile
+on:
+  push:
+    paths:
+      - 'zebraamp.js'
+      - 'zebraamp-compact.css'
+      - 'index.html'
+      - '.github/workflows/verify-zebraamp-layout.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  layout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntaxe JavaScript
+        run: node --check zebraamp.js
+      - name: Tester le lecteur sous Chromium mobile
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path('index.html').read_text()
+          extra=r'''<script>
+          window.addEventListener("load",async()=>{
+            const report={},sleep=n=>new Promise(r=>setTimeout(r,n));
+            try{
+              const outer=document.createElement("div");
+              outer.className="window focused";
+              outer.style.cssText="position:absolute;left:4px;top:3px;width:calc(100vw - 8px);height:calc(100dvh - 45px);";
+              const titlebar=document.createElement("div");
+              titlebar.className="titlebar";
+              titlebar.textContent="ZebraAMP.exe";
+              const host=document.createElement("div");host.className="window-body";
+              outer.append(titlebar,host);document.body.append(outer);
+              window.ZebraGitFiles={
+                subscribe(){},
+                load(){return Promise.resolve({ok:true,entries:[]});},
+                allFiles(){return []}
+              };
+              window.ZebraAMPConfig={windowBox(id,title){
+                if(id==="amp")return host;
+                const visualizerHost=document.createElement("div");
+                document.body.append(visualizerHost);
+                report.visualizerWindow=id==="visualizer";
+                return visualizerHost;
+              }};
+              window.ZebraAMP.open();
+              await sleep(300);
+              const root=host.querySelector(".amp3");
+              const rect=n=>n.getBoundingClientRect();
+              const cover=root.querySelector(".amp3-cover");
+              const mini=root.querySelector(".amp3-mini-visual");
+              const time=root.querySelector(".amp3-readout");
+              const canvas=root.querySelector(".amp3-spectrum");
+              const controls=root.querySelector(".amp3-controls");
+              const rows=root.querySelector(".amp3-list");
+              const bottom=root.querySelector(".amp3-bottom");
+              report.rendered=!!root&&!!canvas&&!!rows;
+              report.compact=rect(root.querySelector(".amp3-screen")).height<125
+                &&rect(controls).height<95;
+              report.visualizerNextCover=mini.contains(canvas)
+                &&Math.abs(rect(mini).top-rect(cover).top)<3
+                &&Math.abs(rect(time).top-rect(cover).top)<10
+                &&rect(mini).width>40;
+              report.noBigSpectrum=root.querySelectorAll(".amp3-spectrum").length===1
+                &&root.querySelector(".amp3-screen").contains(canvas)
+                &&!root.textContent.includes("ZEBRA SPECTRE");
+              const repeat=root.querySelector("[data-amp-repeat]");
+              const vis=root.querySelector(".amp3-visual-btn");
+              const shuffle=root.querySelector("[data-amp-shuffle]");
+              report.modesTogether=vis.parentElement===repeat.parentElement
+                &&shuffle.parentElement===repeat.parentElement;
+              const group=root.querySelector(".amp3-speed-group");
+              const speedButton=group.querySelector("[data-amp-speed]");
+              const slider=group.querySelector("[data-amp-speed-input]");
+              const panel=group.querySelector(".amp3-speed-panel");
+              report.speedClosed=panel.hidden;
+              speedButton.click();
+              report.speedOpens=!panel.hidden&&speedButton.getAttribute("aria-expanded")==="true";
+              report.speedSteps=slider.min==="50"&&slider.max==="150"&&slider.step==="5";
+              slider.value="135";slider.dispatchEvent(new Event("input",{bubbles:true}));
+              report.speedApplied=Math.abs(window.ZebraAMP.media.playbackRate-1.35)<.0001
+                &&speedButton.textContent.includes("135 %")
+                &&JSON.parse(localStorage.getItem("zebraamp-v3")).speed===1.35;
+              group.querySelector(".amp3-speed-reset").click();
+              report.speedReset=window.ZebraAMP.media.playbackRate===1;
+              speedButton.click();
+              report.speedClose=panel.hidden;
+              for(let i=0;i<65;i++){
+                const row=document.createElement("div");
+                row.className="amp3-track";
+                row.textContent="Morceau long "+i;
+                rows.append(row);
+              }
+              const bounds=rect(root),foot=rect(bottom),list=rect(rows),outerBound=rect(host);
+              report.footerInside=foot.bottom<=bounds.bottom+2
+                &&foot.bottom<=outerBound.bottom+2
+                &&foot.top>=list.top&&foot.height>20;
+              report.onlyListScrolls=rows.scrollHeight>rows.clientHeight+60
+                &&root.scrollHeight<=root.clientHeight+3
+                &&host.scrollHeight<=host.clientHeight+3;
+              rows.scrollTop=150;
+              report.playlistScroll=rows.scrollTop>90;
+              report.buttonNoWrap=bottom.children.length===2
+                &&Math.abs(rect(bottom.children[0]).top-rect(bottom.children[1]).top)<3;
+              report.layout={viewport:window.innerWidth,windowH:host.clientHeight,
+                pageH:root.clientHeight,pageScrollH:root.scrollHeight,
+                listHeight:rows.clientHeight,listScrollH:rows.scrollHeight,
+                footerY:Math.round(foot.top),footerBottom:Math.round(foot.bottom),
+                hostBottom:Math.round(outerBound.bottom)};
+              const wasAbsent=!window.ZebraVisualizer;
+              vis.click();
+              await sleep(400);
+              report.visualizerLazy=wasAbsent&&!!window.ZebraVisualizer
+                &&report.visualizerWindow===true;
+            }catch(e){report.error=String(e.stack||e);}
+            document.documentElement.dataset.ampReport=JSON.stringify(report);
+            document.documentElement.dataset.ampStatus=Object.entries(report).every(([k,v])=>k==="layout"||v===true)?"ok":"failed";
+          });
+          </script>'''
+          Path('_verify_amp_mobile.html').write_text(html.replace("</body>",extra+"</body>"))
+          PY
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebra-amp-server.log 2>&1 &
+          sleep 1
+          for size in 390,760 340,660; do
+            echo "Checking mobile viewport $size..."
+            google-chrome --headless=new --no-sandbox --disable-gpu \
+              --disable-dev-shm-usage --touch-events=enabled \
+              --window-size="$size" --virtual-time-budget=4800 \
+              --dump-dom http://127.0.0.1:8765/_verify_amp_mobile.html \
+              > /tmp/zebra-amp-test.html 2>/tmp/zebra-amp-chrome.log
+            grep -o 'data-amp-report="[^"]*"' /tmp/zebra-amp-test.html | tail -c 3000
+            grep -o 'data-amp-status="[^"]*"' /tmp/zebra-amp-test.html
+            grep -q 'data-amp-status="ok"' /tmp/zebra-amp-test.html
+          done
