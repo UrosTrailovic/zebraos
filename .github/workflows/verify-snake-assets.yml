@@ -5,6 +5,7 @@ on:
       - snake.js
       - snake.css
       - assets/games/snake/**
+      - assets/fonts/zebra-videotex.woff
       - tests/snake.test.cjs
       - .github/workflows/verify-snake-assets.yml
   workflow_dispatch:
@@ -31,6 +32,11 @@ jobs:
             out.fits=bounds.width>100&&bounds.height>90&&bounds.left>=0&&bounds.right<=innerWidth&&consoleBounds.bottom<=innerHeight+1;
             const ctx=$('canvas').getContext('2d');out.drawn=ctx.getImageData(160,160,1,1).data[3]===255;
             const image=new Image();image.src='/assets/games/snake/tileSnake.png';await image.decode();out.tile=image.naturalWidth===32&&getComputedStyle($('.zs-machine')).backgroundImage.includes('tileSnake');
+            await document.fonts.load('16px "Zebra Videotex"');
+            out.font=document.fonts.check('16px "Zebra Videotex"');
+            const clean=e=>{const s=getComputedStyle(e);return s.backgroundColor==='rgba(0, 0, 0, 0)'&&s.backgroundImage==='none'&&s.boxShadow==='none'&&s.borderTopWidth==='0px'};
+            out.bare=!$('.zs-header')&&!$('.zs-logo')&&clean($('.zs-hud'))&&clean($('.zs-console'))&&clean(stage)&&clean($('.zs-overlay'));
+            out.noBricks=$('canvas').width===384&&$('canvas').height===320;
             out.ready=$('.zs-state').textContent==='PRÊT';$('.zs-play').click();out.play=$('.zs-state').textContent==='EN JEU'&&$('.zs-overlay').hidden;
             $('.zs-play').click();out.pause=$('.zs-state').textContent==='PAUSE'&&!$('.zs-overlay').hidden;
             $('.zs-menu').click();$('.zs-up').dispatchEvent(new PointerEvent('pointerdown',{button:0,bubbles:true}));out.direction=$('.zs-state').textContent==='EN JEU';

@@ -1,7 +1,7 @@
 /* Zebra Snake — classic grid rules, self-contained pixel artwork. */
 (function(){
 'use strict';
-const W=24,H=20,C=16,B=16,CW=W*C+B*2,CH=H*C+B*2;
+const W=24,H=20,C=16,B=0,CW=W*C+B*2,CH=H*C+B*2;
 const DIR={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
 function createGame(random=Math.random){
  const g={snake:[],queue:[],direction:'right',food:null,score:0,state:'ready'};
@@ -33,17 +33,15 @@ function createGame(random=Math.random){
 function make(tag,cls,text){const e=document.createElement(tag);e.className=cls||'';if(text!==undefined)e.textContent=text;return e;}
 function draw(ctx,g){
  ctx.imageSmoothingEnabled=false;
- ctx.fillStyle='#071d30';ctx.fillRect(0,0,CW,CH);
- for(let y=0;y<CH;y+=8)for(let x=0;x<CW;x+=8){ctx.fillStyle=(x+y)%16?'#1435a1':'#204bc4';ctx.fillRect(x+1,y+1,6,6);}
  ctx.fillStyle='#55523c';ctx.fillRect(B,B,W*C,H*C);
  for(let y=0;y<H*C;y+=4)for(let x=0;x<W*C;x+=4){const n=(x*31+y*17+(x*y)%71)%29;ctx.fillStyle=n<3?'#626047':n<6?'#494c38':'#55563d';ctx.fillRect(B+x,B+y,2,2);}
  // Dry leaves, scattered sparsely enough to keep the food and ribbon clear.
  for(let i=0;i<30;i++){const x=B+8+(i*79)%(W*C-16),y=B+8+(i*47)%(H*C-16);ctx.fillStyle=i%3?'#956538':'#b78a49';ctx.fillRect(x,y,3,2);}
- // Tiny scenery stays outside the playable grid; nothing invisible blocks movement.
+ // Background scenery only: the classic playfield has no extra obstacles.
  function tree(x,y){ctx.fillStyle='#101e24';ctx.fillRect(x+3,y+6,3,5);ctx.fillStyle='#9b6036';ctx.fillRect(x+1,y+2,7,6);ctx.fillRect(x+3,y,3,2);ctx.fillStyle='#d59b4a';ctx.fillRect(x+2,y+2,2,3);}
  function rock(x,y){ctx.fillStyle='#111d29';ctx.fillRect(x,y+3,10,5);ctx.fillStyle='#74888b';ctx.fillRect(x+2,y+1,6,5);ctx.fillStyle='#acb2a1';ctx.fillRect(x+3,y+1,3,2);}
- for(let i=0;i<9;i++){const x=24+i*44;(i%3?tree:rock)(x,2);(i%3?rock:tree)(x,CH-13);}
- for(let i=0;i<7;i++){(i%2?tree:rock)(3,30+i*44);(i%2?rock:tree)(CW-13,30+i*44);}
+ for(const [x,y] of [[28,24],[312,42],[54,266],[338,278]])tree(x,y);
+ for(const [x,y] of [[74,52],[270,284],[18,172],[352,136]])rock(x,y);
  if(g.food){const x=B+g.food.x*C,y=B+g.food.y*C;ctx.fillStyle='#123021';ctx.fillRect(x+3,y+13,11,2);ctx.fillStyle='#fe7552';ctx.fillRect(x+3,y+5,10,8);ctx.fillRect(x+5,y+3,6,2);ctx.fillStyle='#ffce79';ctx.fillRect(x+4,y+5,3,3);ctx.fillStyle='#a5cf59';ctx.fillRect(x+8,y+1,4,2);}
  // Draw one connected ribbon, then a narrow highlight. Corners stay joined.
  const points=g.snake.map(p=>({x:B+p.x*C+8,y:B+p.y*C+8}));
@@ -64,7 +62,7 @@ function mount(root){
  const g=createGame();let alive=true,best=0,observer;
  try{best=Number(localStorage.getItem('zebra.snake.best'))||0;}catch(_){}
  const wrap=make('div','zs-machine');
- wrap.innerHTML='<header class="zs-header"><strong class="zs-logo">ZEBRA <span>SNAKE</span></strong><span class="zs-state">PRÊT</span></header><div class="zs-hud"><div>SCORE <b class="zs-score">0000</b></div><div>RECORD <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Snake : manger les pommes, éviter les murs et sa queue"></canvas><div class="zs-overlay"><strong></strong><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console"><div class="zs-toolbar"></div><div class="zs-handheld"><div class="zs-dpad" aria-label="Direction"></div><div class="zs-ab"></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
+ wrap.innerHTML='<div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div>SCORE <b class="zs-score">0000</b></div><div>RECORD <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Snake : manger les pommes, éviter les murs et sa queue"></canvas><div class="zs-overlay"><strong></strong><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console"><div class="zs-toolbar"></div><div class="zs-handheld"><div class="zs-dpad" aria-label="Direction"></div><div class="zs-ab"></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
  root.appendChild(wrap);
  const $=s=>wrap.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d');canvas.width=CW;canvas.height=CH;
  const stage=$('.zs-stage'),arena=$('.zs-arena'),overlay=$('.zs-overlay'),status=$('.zs-state');
