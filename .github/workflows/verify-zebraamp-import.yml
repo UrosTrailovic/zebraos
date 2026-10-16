@@ -1,0 +1,77 @@
+name: Vérifier import ZebraAMP sans lecture
+on:
+  push:
+    paths:
+      - 'zebraamp.js'
+      - 'index.html'
+      - '.github/workflows/verify-zebraamp-import.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  import-silent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntaxe et comportement du lecteur
+        run: |
+          node --check zebraamp.js
+          node <<'JS'
+          const vm = require("node:vm");
+          const fs = require("node:fs");
+          const assert = require("node:assert/strict");
+          let playCount = 0;
+          const stored = new Map();
+          class FakeAudio {
+            constructor(){this.volume=1;this.src="";this.paused=true;}
+            addEventListener(){}
+            pause(){this.paused=true;}
+            load(){}
+            removeAttribute(k){if(k==="src")this.src="";}
+            play(){playCount++;this.paused=false;return Promise.resolve();}
+          }
+          function asyncRequest(value){
+            const req={};
+            queueMicrotask(()=>{req.result=value;req.onsuccess?.();});
+            return req;
+          }
+          const fakeDB={
+            open(){
+              const req={};
+              queueMicrotask(()=>{
+                req.result={
+                  transaction(){
+                    return {objectStore(){
+                      return {
+                        put(item){stored.set(item.id,item);return asyncRequest(item);},
+                        get(id){return asyncRequest(stored.get(id));},
+                        delete(id){stored.delete(id);return asyncRequest(undefined);}
+                      };
+                    }};
+                  }
+                };
+                req.onsuccess?.();
+              });
+              return req;
+            }
+          };
+          const window={indexedDB:fakeDB};
+          const env={
+            window,Audio:FakeAudio,indexedDB:fakeDB,
+            localStorage:{getItem(){return null;},setItem(){}},
+            URL:{createObjectURL(){return "blob:zebra-test";},revokeObjectURL(){}},
+            console,Date,Math,Promise,setTimeout,clearTimeout
+          };
+          vm.runInNewContext(fs.readFileSync("zebraamp.js","utf8"),env);
+          (async()=>{
+            const amp=window.ZebraAMP;
+            await amp.importFiles([{name:"premier.mp3",type:"audio/mpeg"},{name:"second.wav",type:"audio/wav"}]);
+            assert.equal(playCount,0,"Importer un son ne doit jamais démarrer la lecture");
+            assert.equal(stored.size,2,"Les deux fichiers doivent être sauvegardés");
+            assert.equal(amp.debug().playlists[0].count,2,"Les morceaux doivent apparaître en playlist");
+            const id=Array.from(stored.keys())[0];
+            await amp.pick(id,true);
+            assert.equal(playCount,1,"Le clic volontaire pour jouer doit toujours fonctionner");
+            console.log("ZebraAMP : import de 2 sons silencieux puis lecture manuelle OK");
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+          JS
