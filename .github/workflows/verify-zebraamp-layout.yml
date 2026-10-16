@@ -59,12 +59,24 @@ jobs:
               const rows=root.querySelector(".amp3-list");
               const bottom=root.querySelector(".amp3-bottom");
               report.rendered=!!root&&!!canvas&&!!rows;
-              report.compact=rect(root.querySelector(".amp3-screen")).height<125
-                &&rect(controls).height<95;
-              report.visualizerNextCover=mini.contains(canvas)
-                &&Math.abs(rect(mini).top-rect(cover).top)<3
-                &&Math.abs(rect(time).top-rect(cover).top)<10
-                &&rect(mini).width>40;
+              const info=root.querySelector(".amp3-info-screen");
+              const transport=root.querySelector(".amp3-transports");
+              const modes=root.querySelector(".amp3-modes");
+              report.compact=rect(root.querySelector(".amp3-screen")).height<155
+                &&rect(controls).height<52;
+              report.separateScreens=mini.contains(canvas)
+                &&info.contains(cover)&&info.contains(time)
+                &&rect(mini).right<rect(info).left
+                &&Math.abs(rect(mini).top-rect(info).top)<3
+                &&Math.abs(rect(mini).height-rect(info).height)<3
+                &&rect(mini).width>55&&rect(info).width>120;
+              report.transportSameLine=Math.abs(rect(transport).top-rect(modes).top)<3
+                &&rect(modes).left>rect(transport).right
+                &&Math.abs(rect(modes).height-rect(transport).height)<3;
+              report.transportLeftAligned=Math.abs(rect(controls).left-rect(transport).left)<10;
+              report.visualizerHasScreen=!!mini.querySelector('[data-amp-spectrum-status]')
+                &&!!mini.querySelector('.amp3-viz-label')
+                &&getComputedStyle(canvas).height!=="0px";
               report.noBigSpectrum=root.querySelectorAll(".amp3-spectrum").length===1
                 &&root.querySelector(".amp3-screen").contains(canvas)
                 &&!root.textContent.includes("ZEBRA SPECTRE");
@@ -72,7 +84,17 @@ jobs:
               const vis=root.querySelector(".amp3-visual-btn");
               const shuffle=root.querySelector("[data-amp-shuffle]");
               report.modesTogether=vis.parentElement===repeat.parentElement
-                &&shuffle.parentElement===repeat.parentElement;
+                &&shuffle.parentElement===repeat.parentElement
+                &&repeat.textContent.trim().length<=4;
+              report.repeatCycle=repeat.textContent.includes("∞");
+              repeat.click();
+              report.repeatCycle=report.repeatCycle&&repeat.textContent.includes("1");
+              repeat.click();
+              report.repeatCycle=report.repeatCycle&&repeat.textContent.includes("×");
+              repeat.click();
+              report.repeatCycle=report.repeatCycle&&repeat.textContent.includes("∞");
+              report.spectrumNotBlank=canvas.width>0&&canvas.height>0
+                &&canvas.getContext("2d").getImageData(5,5,1,1).data[3]>0;
               const group=root.querySelector(".amp3-speed-group");
               const speedButton=group.querySelector("[data-amp-speed]");
               const slider=group.querySelector("[data-amp-speed-input]");
@@ -111,6 +133,28 @@ jobs:
                 listHeight:rows.clientHeight,listScrollH:rows.scrollHeight,
                 footerY:Math.round(foot.top),footerBottom:Math.round(foot.bottom),
                 hostBottom:Math.round(outerBound.bottom)};
+              // Graphe audio créé après ouverture : les fréquences doivent
+              // être associées au canvas après le premier ▶, jamais figées à null.
+              const originalAudioContext=window.AudioContext;
+              class AudioContextFake {
+                constructor(){this.state="running";this.destination={};}
+                createMediaElementSource(){return {connect(){}};}
+                createBiquadFilter(){return {frequency:{value:0},gain:{value:0},Q:{value:0},connect(){}};}
+                createAnalyser(){return {fftSize:1024,frequencyBinCount:512,
+                  smoothingTimeConstant:0,connect(){},
+                  getByteFrequencyData(target){target.fill(0);for(let i=0;i<target.length;i++)target[i]=140;},
+                  getByteTimeDomainData(target){target.fill(128);}};}
+                resume(){return Promise.resolve();}
+              }
+              window.AudioContext=AudioContextFake;
+              // Déclenche le graphe de l'égaliseur via l'action de lecture.
+              const originalPlay=window.ZebraAMP.media.play;
+              window.ZebraAMP.media.play=function(){return Promise.resolve();};
+              root.querySelector("[data-amp-play]").click();
+              report.analyserAfterPlay=!!window.ZebraAMP.analyser()
+                &&window.ZebraAMP.analyser().frequencyBinCount===512;
+              window.ZebraAMP.media.play=originalPlay;
+              window.AudioContext=originalAudioContext;
               const wasAbsent=!window.ZebraVisualizer;
               vis.click();
               await sleep(400);
