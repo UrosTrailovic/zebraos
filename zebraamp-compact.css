@@ -23,7 +23,7 @@
 .amp3-screen{
  flex:0 0 auto;min-height:0;padding:6px 8px 7px;
  gap:6px;border:3px ridge #69947b;
- background:#03180e;
+ background:linear-gradient(180deg,#041b10 0%,#03140c 100%);
 }
 .amp3-display-row{display:flex;align-items:center;gap:8px;min-height:57px;min-width:0}
 .amp3-cover{
