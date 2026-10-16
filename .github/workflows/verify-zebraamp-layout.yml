@@ -167,6 +167,12 @@ jobs:
                 if(vizStatus==="SIGNAL")break;
               }
               report.spectrumReconnect=vizStatus==="SIGNAL";
+              report.signalDebug={
+                targetWidth,visibility:document.visibilityState,
+                paused:window.ZebraAMP.media.paused,
+                canvasWidth:canvas.width,canvasHeight:canvas.height,
+                status:vizStatus
+              };
               delete window.ZebraAMP.media.paused;
               window.ZebraAMP.media.play=originalPlay;
               window.AudioContext=originalAudioContext;
@@ -176,7 +182,7 @@ jobs:
               report.visualizerLazy=!!window.ZebraVisualizer&&report.visualizerWindow===true;
             }catch(e){report.error=String(e.stack||e);}
             document.documentElement.dataset.ampReport=JSON.stringify(report);
-            document.documentElement.dataset.ampStatus=Object.entries(report).every(([k,v])=>k==="layout"||v===true)?"ok":"failed";
+            document.documentElement.dataset.ampStatus=Object.entries(report).every(([k,v])=>k==="layout"||k==="signalDebug"||v===true)?"ok":"failed";
           });
           </script>'''
           Path('_verify_amp_mobile.html').write_text(html.replace("</body>",extra+"</body>"))
