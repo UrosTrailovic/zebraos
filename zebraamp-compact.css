@@ -188,3 +188,114 @@
  .amp3-eq-panel{padding:5px}
  .amp3-bottom>.amp3-btn{min-height:29px}
 }
+
+
+/* ZebraAMP 3.5 — deux vrais écrans et barre de commandes sur UNE ligne.
+   Dernier CSS chargé : neutralise les anciennes règles mobiles en colonnes. */
+.amp3-screen{padding:7px;gap:7px;overflow:visible}
+.amp3-display-row{
+ display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);
+ align-items:stretch;gap:7px;min-height:99px;
+}
+.amp3-mini-visual{
+ display:block;position:relative;flex:none;
+ width:auto;height:100px;min-width:0;min-height:100px;
+ background:#03150b;border:3px ridge #88af96;
+ box-shadow:inset 0 0 0 1px #06190c,inset 0 0 15px #000;
+ overflow:hidden;
+}
+.amp3-mini-visual .amp3-spectrum{
+ position:absolute;inset:0;width:100%!important;height:100%!important;
+ min-height:0!important;display:block;background:#03150b;border:0;
+}
+.amp3-viz-label,.amp3-viz-state{
+ position:absolute;left:6px;right:6px;pointer-events:none;
+ font:700 9px "Courier New",monospace;letter-spacing:.6px;
+ color:#8cd6a8;text-shadow:0 1px 2px #000;
+}
+.amp3-viz-label{top:6px;opacity:.72}
+.amp3-viz-state{bottom:6px;left:auto;text-align:right;font-size:8px;color:#b1e9c1}
+.amp3-info-screen{
+ display:flex;gap:9px;align-items:center;
+ height:100px;min-width:0;min-height:100px;
+ padding:8px;background:linear-gradient(170deg,#07251a,#02140d);
+ border:3px ridge #7bad8b;
+ box-shadow:inset 0 0 8px #020c07;
+}
+.amp3-info-screen .amp3-cover{
+ flex:0 0 74px;width:74px;height:74px;display:grid;place-items:center;
+}
+.amp3-info-screen .amp3-readout{
+ flex:1 1 0;min-width:0;min-height:66px;
+ justify-content:center;gap:8px;
+}
+.amp3-info-screen .amp3-marquee{
+ font-size:12px;letter-spacing:.15px;line-height:1.2;
+ overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+}
+.amp3-info-screen .amp3-time{font-size:13px;letter-spacing:.6px;white-space:nowrap}
+.amp3-info-screen .amp3-screen-label{justify-content:flex-start}
+.amp3-controls{
+ display:flex;flex-direction:row;flex-wrap:nowrap;
+ align-items:center;justify-content:flex-start;
+ gap:7px;padding:5px 2px 6px;overflow-x:auto;
+ overscroll-behavior-x:contain;scrollbar-width:thin;
+ border-bottom:1px solid #52695b;
+}
+.amp3-transports,.amp3-modes{
+ display:flex;flex:0 0 auto;align-items:stretch;
+ justify-content:flex-start;gap:4px;min-width:0;
+}
+.amp3-transports .amp3-btn{
+ flex:0 0 43px;width:43px;min-width:43px;
+ min-height:39px;height:39px;max-height:39px;
+ padding:3px 5px;font-size:16px;
+}
+.amp3-transports .amp3-play{
+ flex-basis:47px;width:47px;min-width:47px;
+ font-size:19px;
+}
+.amp3-modes .amp3-btn,
+.amp3-controls .amp3-modes .amp3-btn:not(.amp3-transport){
+ flex:0 0 auto;display:grid;place-items:center;
+ min-width:47px;width:47px;height:39px;min-height:39px;
+ padding:3px 4px;white-space:nowrap;line-height:1;
+ font:bold 15px "Courier New",monospace;
+}
+.amp3-modes .amp3-visual-btn{font-size:12px!important;letter-spacing:.1px}
+.amp3-modes .amp3-mode-repeat{font-size:15px!important}
+.amp3-controls .amp3-btn:focus-visible{outline:2px solid #a0ffc1;outline-offset:-2px}
+@media(max-width:700px){
+ .amp3-screen{padding:5px;gap:5px}
+ .amp3-display-row{grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:5px;min-height:84px}
+ .amp3-mini-visual{width:auto;flex:none;height:86px;min-height:86px}
+ .amp3-info-screen{height:86px;min-height:86px;padding:5px;gap:6px}
+ .amp3-info-screen .amp3-cover{display:grid;flex:0 0 53px;width:53px;height:53px}
+ .amp3-info-screen .amp3-readout{min-height:53px;gap:5px}
+ .amp3-info-screen .amp3-marquee{font-size:10px;letter-spacing:0}
+ .amp3-info-screen .amp3-time{font-size:11px;letter-spacing:0}
+ .amp3-info-screen .amp3-led{font-size:8px}
+ .amp3-viz-label{font-size:8px;top:4px;left:4px}
+ .amp3-viz-state{bottom:4px;right:4px;font-size:8px}
+ .amp3-controls{flex-direction:row;flex-wrap:nowrap;gap:5px;padding:3px 0 4px}
+ .amp3-transports,.amp3-modes{gap:3px;flex-wrap:nowrap}
+ .amp3-transports .amp3-btn{
+  flex:0 0 35px;min-width:35px;width:35px;
+  min-height:36px;height:36px;font-size:15px;
+ }
+ .amp3-transports .amp3-play{
+  flex:0 0 40px;min-width:40px;width:40px;
+  height:36px;font-size:18px;
+ }
+ .amp3-modes .amp3-btn,.amp3-controls .amp3-modes .amp3-btn:not(.amp3-transport){
+  flex:0 0 41px;min-width:41px;width:41px;
+  height:36px;min-height:36px;
+  padding:2px 3px;font-size:14px;
+ }
+ .amp3-modes .amp3-visual-btn{font-size:11px!important}
+}
+@media(max-width:350px){
+ .amp3-info-screen .amp3-cover{display:grid;flex:0 0 45px;width:45px;height:45px}
+ .amp3-mini-visual{width:auto}
+ .amp3-modes .amp3-btn,.amp3-controls .amp3-modes .amp3-btn:not(.amp3-transport){flex-basis:39px;min-width:39px;width:39px}
+}
