@@ -450,6 +450,13 @@ function setSource(src,isBlob){
  if(isBlob)loadedBlob=src;
  audio.pause();audio.src=src;audio.load();renderProgress();
 }
+function togglePlayback(){
+ if(audio.paused){
+  var t=getTrack();
+  if(t){if(audio.src)play();else pick(t.id,true);}
+  else{var p=getList();if(p.tracks.length)pick(p.tracks[0].id,true);}
+ }else audio.pause();
+}
 function play(){
  resumeGraph();
  var res=audio.play();if(res&&res.catch)res.catch(function(err){
@@ -674,7 +681,7 @@ function visualize(){
  if(animation)cancelAnimationFrame(animation);
  // L'analyseur audio est créé au premier clic ▶, APRES l'ouverture de
  // ZebraAMP. Ne surtout pas figer bins=null à l'ouverture de la fenêtre.
- var bins=null;
+ var bins=null,miniBands=new Float32Array(32),miniLevels=new Float32Array(32);
  var last=0,pausedFramePainted=false;
  function frame(now,force){
   if(!view||!view.isConnected)return;
@@ -682,6 +689,7 @@ function visualize(){
   // boucle requestAnimationFrame (économie batterie mobile).
   if(!force)animation=requestAnimationFrame(frame);
   if(document.hidden||(!force&&now-last<33))return;
+  var elapsed=Math.max(.001,Math.min(.1,(now-last)/1000));
   last=now;
   // Ne pas redessiner indéfiniment le spectre noir en pause (batterie mobile).
   if(analyser&&(!bins||bins.length!==analyser.frequencyBinCount)){
@@ -707,9 +715,13 @@ function visualize(){
   if(analyser&&bins&&!audio.paused){
    try{analyser.getByteFrequencyData(bins);}catch(e){}
   }
+  if(analyser&&bins&&window.ZebraVisualizer&&window.ZebraVisualizer.sampleBands){
+   window.ZebraVisualizer.sampleBands(bins,analyser,bars,miniBands);
+  }else miniBands.fill(0);
   for(var i=0;i<bars;i++){
-   var idx=Math.min(bins?bins.length-1:0,Math.floor(Math.pow(i/bars,1.55)*Math.min(400,bins?bins.length-1:0)));
-   var v=bins&&!audio.paused?bins[idx]/255:0;
+   var target=bins&&!audio.paused?miniBands[i]:0;
+   miniLevels[i]=audio.paused?0:miniLevels[i]+(target-miniLevels[i])*(1-Math.exp(-elapsed/(target>miniLevels[i]?.025:.15)));
+   var v=miniLevels[i];
    bassEnergy+=v;
    var hh=Math.max(2,v*(height*.68));
    var x=margin+i*(bw+gap);
@@ -733,7 +745,7 @@ function loadVisualizer(){
  if(visualizerPromise)return visualizerPromise;
  visualizerPromise=new Promise(function(resolve,reject){
   var script=document.createElement("script");
-  script.src="/visualizer.js?v=3.1";script.async=true;
+  script.src="/visualizer.js?v=4.0";script.async=true;
   script.onload=function(){
    if(window.ZebraVisualizer)resolve(window.ZebraVisualizer);
    else reject(Error("Module ZebraVIS introuvable."));
@@ -750,7 +762,7 @@ function openVisualizer(){
   var config=window.ZebraAMPConfig;
   if(!config||typeof config.windowBox!=="function")return;
   var box=config.windowBox("visualizer","ZebraVIS.exe — Visualiseur",650,500);
-  module.mount(box,audio,{analyser:analyser});
+  module.mount(box,audio,{analyser:analyser,previous:prev,next:function(){next(true);},toggle:togglePlayback});
  }).catch(function(err){status(err.message||"Visualiseur indisponible.");});
 }
 function open(){
@@ -801,8 +813,7 @@ function open(){
  var transports=el("div","amp3-transports");
  var prevBtn=b("Ⅰ◀",prev,"amp3-btn amp3-transport");prevBtn.title="Morceau précédent";transports.appendChild(prevBtn);
  var playBtn=b("▶",function(){
-   if(audio.paused){var t=getTrack();if(t){if(audio.src)play();else pick(t.id,true);}else{var p=getList();if(p.tracks.length)pick(p.tracks[0].id,true);}}
-   else audio.pause();
+   togglePlayback();
  },"amp3-btn amp3-play amp3-transport");
  playBtn.setAttribute("data-amp-play","");playBtn.title="Lecture / Pause";transports.appendChild(playBtn);
  var stopBtn=b("■",function(){audio.pause();audio.currentTime=0;renderProgress();},"amp3-btn amp3-transport");

@@ -1,0 +1,23 @@
+name: Vérifier ZebraVIS audio et commandes
+on:
+  push:
+    paths:
+      - visualizer.js
+      - zebraamp.js
+      - zebravis-controls.css
+      - tests/zebravis.test.cjs
+      - .github/workflows/verify-zebravis.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signal-and-controls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check visualizer.js
+      - run: node --check zebraamp.js
+      - run: node --test tests/zebravis.test.cjs
