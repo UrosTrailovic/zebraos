@@ -348,3 +348,94 @@
  .amp3-speed-panel{width:min(294px,calc(100vw - 22px));}
  .amp3-reverb-description{font-size:9px}
 }
+
+
+/* ZebraAMP 4.0 — pochettes personnelles + éditeur local de playlist.
+   L'espace vide reçoit un vinyle rétro neutre (aucun Z / R). */
+.amp3{position:relative}
+.amp3-cover-fallback{
+ display:none;position:absolute;inset:0;
+ align-items:center;justify-content:center;
+ background:radial-gradient(ellipse at 45% 36%,#193d31 0%,#08271b 55%,#02160c 100%);
+ color:transparent;pointer-events:none;
+}
+.amp3-cover.amp3-cover-empty .amp3-cover-fallback{display:flex}
+.amp3-cover-fallback::before{
+ content:"";width:76%;height:76%;border-radius:50%;
+ background:
+  radial-gradient(circle at 50% 50%,#07180f 0 4%,#9dd8b0 4.5% 6%,#244938 6.5% 14%,#092016 15% 25%,transparent 25.5%),
+  repeating-radial-gradient(circle at 50% 50%,#152b21 0 2px,#04120e 3px 5px,#234335 6px 6.5px,#020b07 7px 9px);
+ border:1px solid #739682;
+ box-shadow:0 2px 7px #000c,inset 0 0 6px #000c;
+}
+.amp3-edit-overlay{
+ position:absolute;inset:0;z-index:70;
+ display:flex;align-items:center;justify-content:center;
+ padding:12px;
+ background:#020906d9;
+}
+.amp3-edit-dialog{
+ display:flex;flex-direction:column;align-items:stretch;gap:10px;
+ width:min(100%,345px);max-height:100%;overflow-y:auto;
+ padding:14px;border:3px ridge #c6e1cd;
+ background:linear-gradient(165deg,#113528,#061a12 78%);
+ box-shadow:2px 6px 18px #000d;
+ color:#a8e8c1;
+}
+.amp3-edit-title{
+ display:block;padding-bottom:8px;border-bottom:1px solid #57836b;
+ font:bold 13px "Courier New",monospace;letter-spacing:1.3px;
+ text-shadow:0 0 6px #51ec962c;
+}
+.amp3-edit-name{
+ display:flex;flex-direction:column;gap:6px;
+ font:bold 10px "Courier New",monospace;
+ letter-spacing:.6px;
+}
+.amp3-edit-input{
+ display:block;width:100%;min-height:36px;
+ padding:7px 9px;background:#021a12;
+ border:2px inset #a0cfb2;color:#d8ffde;
+ outline-color:#91fbb6;font:13px Tahoma,Arial,sans-serif;
+}
+.amp3-edit-cover-preview{
+ display:grid;place-items:center;
+ position:relative;align-self:center;overflow:hidden;
+ width:110px;height:110px;
+ border:4px ridge #a4cdb3;
+ box-shadow:0 4px 14px #0009;
+ background:linear-gradient(120deg,#02180f,#1b4936);
+}
+.amp3-edit-cover-preview .amp3-edit-cover-image{
+ display:block;width:100%;height:100%;object-fit:cover;
+}
+.amp3-edit-cover-preview .amp3-edit-empty{
+ display:none;font:48px "Courier New",monospace;color:#93cba9;
+}
+.amp3-edit-cover-preview.amp3-edit-preview-empty .amp3-edit-cover-image{display:none}
+.amp3-edit-cover-preview.amp3-edit-preview-empty .amp3-edit-empty{display:block}
+.amp3-edit-cover-actions,.amp3-edit-actions{
+ display:flex;gap:6px;flex-wrap:wrap;justify-content:center;
+}
+.amp3-edit-cover-actions>.amp3-btn{flex:1 1 auto;padding:7px 5px;min-height:34px;font-size:10px}
+.amp3-edit-remove{color:#8b2525}
+.amp3-edit-note{
+ color:#82b698;font:10px/1.35 Tahoma,Arial,sans-serif;
+ text-align:center;
+}
+.amp3-edit-actions{
+ padding-top:9px;border-top:1px solid #456f54;
+ justify-content:flex-end;
+}
+.amp3-edit-actions>.amp3-btn{min-height:36px;padding:8px 11px;font-weight:bold;font-size:10px}
+.amp3-edit-save{background:linear-gradient(#d1fbdf,#7ad4a2);color:#074322}
+.amp3-edit-actions>.amp3-btn:disabled,
+.amp3-edit-cover-actions>.amp3-btn:disabled{opacity:.55}
+@media(max-width:700px){
+ .amp3-edit-overlay{padding:8px}
+ .amp3-edit-dialog{gap:8px;padding:11px;width:min(100%,328px)}
+ .amp3-edit-cover-preview{width:96px;height:96px}
+ .amp3-edit-title{font-size:12px}
+ .amp3-edit-cover-actions>.amp3-btn{font-size:9px}
+ .amp3-edit-note{font-size:9px}
+}
