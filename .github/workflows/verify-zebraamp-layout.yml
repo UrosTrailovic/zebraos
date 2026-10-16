@@ -109,18 +109,15 @@ jobs:
                 &&JSON.parse(localStorage.getItem("zebraamp-v3")).speed===1.35;
               report.pitchModeDefault=window.ZebraAMP.debug().pitchMode==="vinyl"
                 &&window.ZebraAMP.media.preservesPitch===false;
-              const fixedPitch=group.querySelector('[data-amp-pitch-mode="constant"]');
-              const vinylPitch=group.querySelector('[data-amp-pitch-mode="vinyl"]');
-              fixedPitch.click();
-              report.pitchPreserved=window.ZebraAMP.debug().pitchMode==="constant"
-                &&window.ZebraAMP.media.preservesPitch===true
-                &&JSON.parse(localStorage.getItem("zebraamp-v3")).pitchMode==="constant";
-              vinylPitch.click();
-              report.pitchNatural=window.ZebraAMP.media.preservesPitch===false
-                &&vinylPitch.getAttribute("aria-pressed")==="true";
-              const deepPreset=group.querySelector(".amp3-speed-presets button:last-child");
-              deepPreset.click();
-              report.deepSlow=window.ZebraAMP.media.playbackRate===.75;
+              report.noPitchSelector=group.querySelectorAll("[data-amp-pitch-mode]").length===0
+                &&!group.textContent.includes("TONALITÉ STABLE")
+                &&!group.textContent.includes("VINYLE · GRAVE");
+              report.vinylAlwaysOn=window.ZebraAMP.debug().pitchMode==="vinyl"
+                &&window.ZebraAMP.media.preservesPitch===false
+                &&JSON.parse(localStorage.getItem("zebraamp-v3")).pitchMode==="vinyl";
+              report.noSpeedPresets=!group.querySelector(".amp3-speed-presets")
+                &&!group.textContent.includes("SLOWED")
+                &&!group.textContent.includes("DEEP");
               group.querySelector(".amp3-speed-reset").click();
               report.speedReset=window.ZebraAMP.media.playbackRate===1;
               speedButton.click();
