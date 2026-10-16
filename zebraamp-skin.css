@@ -3,25 +3,29 @@
 @media(min-width:701px){
  .window.amp-window.maximized{left:max(0px,calc((100% - 960px)/2))!important}
 }
-.window-body>.amp3{
+.window-body:has(>.zviz){
+ display:flex;flex-direction:column;min-height:0;padding:0;overflow:hidden;background:#26372e;
+}
+.window-body>.zviz{flex:1 1 auto;min-width:0}
+.window-body>.amp3,.zviz{
  --amp-screw:14px;
  padding:17px 18px;gap:6px;
  background-color:#26372e;
  background-image:url('/assets/zebraamp/ampbg.png');
  background-size:256px 256px;background-repeat:repeat;
 }
-.amp3::before,.amp3::after{
+.amp3::before,.amp3::after,.zviz::before,.zviz::after{
  content:"";position:absolute;left:3px;right:3px;height:var(--amp-screw);
  z-index:2;pointer-events:none;
  background-image:url('/assets/zebraamp/vis.png'),url('/assets/zebraamp/vis.png');
  background-repeat:no-repeat;background-position:left center,right center;
  background-size:var(--amp-screw) var(--amp-screw);
 }
-.amp3::before{top:2px}.amp3::after{bottom:2px}
+.amp3::before,.zviz::before{top:2px}.amp3::after,.zviz::after{bottom:2px}
 .amp3-zebra-plate{
  flex:0 0 32px;height:32px;min-height:32px;
  border:2px solid #0c1b12;border-radius:10px;
- background:#10150f url('/assets/zebraamp/textile.png') repeat-x center / 96px 32px;
+ background:#10150f url('/assets/zebraamp/textile.png') repeat-x center / 144px 48px;
  box-shadow:inset 0 2px 2px #ffffff54,inset 0 -3px 4px #0008,0 1px 0 #b9c6b966,0 3px 4px #0008;
 }
 .amp3-zebra-plate::after{
@@ -30,10 +34,10 @@
 }
 .amp3-zebra-rivet{display:none}
 @media(max-width:700px){
- .window-body>.amp3{--amp-screw:11px;padding:13px;gap:4px}
- .amp3::before,.amp3::after{left:2px;right:2px}
+ .window-body>.amp3,.zviz{--amp-screw:11px;padding:13px;gap:4px}
+ .amp3::before,.amp3::after,.zviz::before,.zviz::after{left:2px;right:2px}
  .amp3-zebra-plate{flex-basis:24px;height:24px;min-height:24px;border-radius:8px}
 }
 @media(max-height:690px) and (max-width:700px){
- .window-body>.amp3{--amp-screw:9px;padding:11px;gap:3px}
+ .window-body>.amp3,.zviz{--amp-screw:9px;padding:11px;gap:3px}
 }

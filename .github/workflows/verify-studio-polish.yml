@@ -75,7 +75,8 @@ jobs:
             document.body.append(mediaHost);
             window.ZebraVisualizer.mount(mediaHost,window.ZebraAMP.media,{analyser:null});
             out.vis=!!mediaHost.querySelector(".zviz-canvas")
-              &&getComputedStyle(mediaHost.querySelector(".zviz")).backgroundImage.includes("gradient");
+              &&getComputedStyle(mediaHost.querySelector(".zviz")).backgroundImage.includes("/assets/zebraamp/ampbg.png")
+              &&getComputedStyle(mediaHost.querySelector(".zviz"),"::before").backgroundImage.includes("/assets/zebraamp/vis.png");
             const txt={type:"file",name:"thanks.txt",path:"STUDIO/BUREAU/thanks.txt",size:99};
             const noteHost=document.createElement("div");
             noteHost.className="window-body";noteHost.style.cssText="height:300px;width:330px";
