@@ -50,7 +50,7 @@ function restore(){
   // Le changement de playlist reste possible ensuite pendant la session.
   if(!Number.isNaN(Number(d.volume)))volume=Math.max(0,Math.min(1,Number(d.volume)));
   shuffle=!!d.shuffle;repeat=["aucun","tout","un"].includes(d.repeat)?d.repeat:"tout";
-  speed=[.75,1,1.25,1.5].includes(d.speed)?d.speed:1;
+  speed=Number.isFinite(Number(d.speed))?Math.max(.5,Math.min(1.5,Math.round(Number(d.speed)*20)/20)):1;
   if(Array.isArray(d.eq)&&d.eq.length===5)eq=d.eq.map(function(x){return Math.max(-12,Math.min(12,Number(x)||0));});
   if(typeof d.preset==="string")preset=d.preset;
  }catch(e){}
@@ -409,13 +409,17 @@ function render(){
  }
  view.querySelector("[data-amp-shuffle]").classList.toggle("enabled",shuffle);
  view.querySelector("[data-amp-repeat]").textContent=repeat==="aucun"?"RÉPÉTER : NON":repeat==="un"?"RÉPÉTER : 1":"RÉPÉTER : TOUS";
- view.querySelector("[data-amp-speed]").textContent="VITESSE : "+speed+"×";
+ view.querySelector("[data-amp-speed]").textContent="VITESSE "+Math.round(speed*100)+" %";
+ var speedInput=view.querySelector("[data-amp-speed-input]");
+ if(speedInput)speedInput.value=String(Math.round(speed*100));
+ var speedValue=view.querySelector("[data-amp-speed-value]");
+ if(speedValue)speedValue.textContent=Math.round(speed*100)+" %";
  view.querySelector("[data-amp-volume]").value=String(Math.round(volume*100));
  renderProgress();renderStatus();
 }
 function visualize(){
  if(!view||!view.isConnected)return;
- var canvas=view.querySelector("canvas"),c=canvas&&canvas.getContext("2d");
+ var canvas=view.querySelector("canvas.amp3-spectrum"),c=canvas&&canvas.getContext("2d");
  if(!c)return;
  if(animation)cancelAnimationFrame(animation);
  var bins=analyser?new Uint8Array(analyser.frequencyBinCount):null;
@@ -425,12 +429,12 @@ function visualize(){
   animation=requestAnimationFrame(frame);
   if(document.hidden||now-last<33)return;
   last=now;
-  var width=canvas.clientWidth||400,height=canvas.clientHeight||70;
+  var width=canvas.clientWidth||125,height=canvas.clientHeight||58;
   var dpr=Math.min(window.devicePixelRatio||1,1.5),w=Math.round(width*dpr),h=Math.round(height*dpr);
   if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
   c.setTransform(dpr,0,0,dpr,0,0);
   c.fillStyle="#04140d";c.fillRect(0,0,width,height);
-  var bars=46,gap=3,bw=(width-gap*bars)/bars;
+  var bars=22,gap=2,bw=Math.max(1,(width-gap*bars)/bars);
   if(analyser&&bins)analyser.getByteFrequencyData(bins);
   for(var i=0;i<bars;i++){
    var idx=Math.min(bins?bins.length-1:0,Math.floor(Math.pow(i/bars,1.4)*320));
@@ -439,7 +443,7 @@ function visualize(){
    c.fillStyle=i<12?"#6cbb85":i<32?"#98d8a8":"#c8edb9";
    c.fillRect(i*(bw+gap),height-hh,bw,hh);
   }
-  c.fillStyle="#71977a";c.font="10px monospace";c.fillText("ZEBRA SPECTRE // DIRECT",8,11);
+  // Affichage minimal façon Winamp : seulement les barres, sans texte inutile.
  }
  animation=requestAnimationFrame(frame);
 }
@@ -450,7 +454,7 @@ function open(){
  view=w;
  w.innerHTML="";
  var root=el("div","amp3");
- var top=el("div","amp3-head");top.appendChild(el("strong","","ZEBRAAMP 3.1"));top.appendChild(el("span","","STUDIO DECK // STÉRÉO // 5 BANDES"));root.appendChild(top);
+ var top=el("div","amp3-head");top.appendChild(el("strong","","ZEBRAAMP 3.4"));top.appendChild(el("span","","STUDIO PLAYER"));root.appendChild(top);
  var stripe=el("div","amp3-zebra-plate");
  stripe.setAttribute("aria-hidden","true");
  stripe.appendChild(el("span","amp3-zebra-rivet amp3-zebra-rivet-left"));
@@ -468,50 +472,94 @@ function open(){
  art.onload=function(){art.dataset.failed="0";renderProgress();};
  var readout=el("div","amp3-readout");
  var meta=el("div","amp3-screen-label");
- meta.appendChild(el("span","","● AUDIO DECK"));
+ // La piste et le statut suffisent : on retire les étiquettes décoratives.
  var led=el("span","amp3-led","● VEILLE");led.setAttribute("data-amp-led","");
  meta.appendChild(led);
  readout.appendChild(meta);
  readout.appendChild(el("div","amp3-marquee","AUCUN MORCEAU CHARGÉ")).setAttribute("data-amp-now","");
  readout.appendChild(el("div","amp3-time","00:00 / 00:00")).setAttribute("data-amp-time","");
- displayRow.append(cover,readout);
+ var spectrumBox=el("div","amp3-mini-visual");
+ var canvas=el("canvas","amp3-spectrum");
+ canvas.setAttribute("aria-label","Spectre audio");
+ spectrumBox.appendChild(canvas);
+ displayRow.append(cover,spectrumBox,readout);
  screen.appendChild(displayRow);
  var seek=el("input");seek.type="range";seek.min="0";seek.max="1000";seek.value="0";seek.setAttribute("data-amp-progress","");
  seek.oninput=function(){if(Number.isFinite(audio.duration)&&audio.duration)audio.currentTime=Number(seek.value)*audio.duration/1000;};
  screen.appendChild(seek);root.appendChild(screen);
- var canvas=el("canvas","amp3-spectrum");root.appendChild(canvas);
  var controls=el("div","amp3-controls");
- var prevBtn=b("Ⅰ◀",prev,"amp3-btn amp3-transport");prevBtn.title="Morceau précédent";controls.appendChild(prevBtn);
+ var transports=el("div","amp3-transports");
+ var prevBtn=b("Ⅰ◀",prev,"amp3-btn amp3-transport");prevBtn.title="Morceau précédent";transports.appendChild(prevBtn);
  var playBtn=b("▶",function(){
    if(audio.paused){var t=getTrack();if(t){if(audio.src)play();else pick(t.id,true);}else{var p=getList();if(p.tracks.length)pick(p.tracks[0].id,true);}}
    else audio.pause();
  },"amp3-btn amp3-play amp3-transport");
- playBtn.setAttribute("data-amp-play","");controls.appendChild(playBtn);
+ playBtn.setAttribute("data-amp-play","");transports.appendChild(playBtn);
  var stopBtn=b("■",function(){audio.pause();audio.currentTime=0;renderProgress();},"amp3-btn amp3-transport");
- stopBtn.title="Arrêter";controls.appendChild(stopBtn);
- var nextBtn=b("▶Ⅰ",function(){next(true);},"amp3-btn amp3-transport");nextBtn.title="Morceau suivant";controls.appendChild(nextBtn);
+ stopBtn.title="Arrêter";transports.appendChild(stopBtn);
+ var nextBtn=b("▶Ⅰ",function(){next(true);},"amp3-btn amp3-transport");nextBtn.title="Morceau suivant";transports.appendChild(nextBtn);
+ controls.appendChild(transports);
+ var modes=el("div","amp3-modes");
  var shuffleBtn=b("ALÉATOIRE",function(){shuffle=!shuffle;store();render();},"amp3-btn");
- shuffleBtn.setAttribute("data-amp-shuffle","");controls.appendChild(shuffleBtn);
+ shuffleBtn.setAttribute("data-amp-shuffle","");modes.appendChild(shuffleBtn);
  var repeatBtn=b("RÉPÉTER : TOUS",function(){repeat=repeat==="tout"?"un":repeat==="un"?"aucun":"tout";store();render();},"amp3-btn");
- repeatBtn.setAttribute("data-amp-repeat","");controls.appendChild(repeatBtn);
+ repeatBtn.setAttribute("data-amp-repeat","");modes.appendChild(repeatBtn);
+ var visualButton=b("VISUEL",function(){
+  resumeGraph();
+  if(!window.ZebraVisualizer){status("Visualiseur indisponible.");return;}
+  var config=window.ZebraAMPConfig;
+  var box=config.windowBox("visualizer","ZebraVIS.exe — Visualiseur",650,500);
+  window.ZebraVisualizer.mount(box,audio,{analyser:analyser});
+ },"amp3-btn amp3-visual-btn");
+ modes.appendChild(visualButton);
+ controls.appendChild(modes);
  root.appendChild(controls);
  var extra=el("div","amp3-extras");
  var volumeGroup=el("label","","VOL.");
  var vol=el("input");vol.type="range";vol.min="0";vol.max="100";vol.setAttribute("data-amp-volume","");
  vol.oninput=function(){volume=Number(vol.value)/100;audio.volume=volume;store();};
  volumeGroup.appendChild(vol);extra.appendChild(volumeGroup);
- var speedBtn=b("VITESSE : 1×",function(){var arr=[.75,1,1.25,1.5];speed=arr[(arr.indexOf(speed)+1)%arr.length];audio.playbackRate=speed;store();render();},"amp3-btn");
- speedBtn.setAttribute("data-amp-speed","");extra.appendChild(speedBtn);
- extra.appendChild(b("VISUALISEUR",function(){
-  resumeGraph();
-  if(!window.ZebraVisualizer){status("Visualiseur indisponible.");return;}
-  var config=window.ZebraAMPConfig;
-  var box=config.windowBox("visualizer","ZebraVIS.exe — Visualiseur",650,500);
-  window.ZebraVisualizer.mount(box,audio,{analyser:analyser});
- },"amp3-btn"));
+ var speedGroup=el("div","amp3-speed-group");
+ var speedBtn=b("VITESSE 100 %",function(){
+  var wasOpen=!speedPanel.hidden;
+  speedPanel.hidden=wasOpen;
+  speedBtn.setAttribute("aria-expanded",String(!wasOpen));
+ },"amp3-btn amp3-speed-btn");
+ speedBtn.setAttribute("data-amp-speed","");
+ speedBtn.setAttribute("aria-expanded","false");
+ var speedPanel=el("div","amp3-speed-panel");
+ speedPanel.hidden=true;
+ var speedHeader=el("div","amp3-speed-header");
+ speedHeader.appendChild(el("span","","VITESSE DE LECTURE"));
+ var currentSpeed=el("strong","","100 %");
+ currentSpeed.setAttribute("data-amp-speed-value","");
+ speedHeader.appendChild(currentSpeed);
+ speedPanel.appendChild(speedHeader);
+ var rate=el("input","amp3-speed-range");
+ rate.type="range";rate.min="50";rate.max="150";rate.step="5";rate.value="100";
+ rate.setAttribute("aria-label","Vitesse de lecture de 50 à 150 pour cent");
+ rate.setAttribute("data-amp-speed-input","");
+ rate.oninput=function(){
+  var pct=Number(rate.value);
+  speed=pct/100;
+  audio.playbackRate=speed;
+  speedBtn.textContent="VITESSE "+pct+" %";
+  currentSpeed.textContent=pct+" %";
+  store();
+ };
+ speedPanel.appendChild(rate);
+ var ticks=el("div","amp3-speed-ticks");
+ ticks.append(el("span","","50 %"),el("span","","100 %"),el("span","","150 %"));
+ speedPanel.appendChild(ticks);
+ var speedReset=b("1× NORMAL",function(){
+  rate.value="100";rate.oninput();
+ },"amp3-btn amp3-speed-reset");
+ speedPanel.appendChild(speedReset);
+ speedGroup.append(speedBtn,speedPanel);
+ extra.appendChild(speedGroup);
  root.appendChild(extra);
  var eqBlock=el("details","amp3-eq-panel");
- var summary=el("summary","","ÉGALISEUR 5 BANDES · PRÉRÉGLAGES");eqBlock.appendChild(summary);
+ var summary=el("summary","","▸ ÉGALISEUR · 5 BANDES");eqBlock.appendChild(summary);
  var presets=el("div","amp3-preset-row");presets.appendChild(el("span","","SON"));
  var presetSelect=el("select");presetSelect.setAttribute("data-amp-preset","");
  Object.keys(presetValues).concat(["Personnalisé"]).forEach(function(name){
@@ -535,7 +583,7 @@ function open(){
  var rows=el("div","amp3-list");rows.setAttribute("data-amp-rows","");root.appendChild(rows);
  var actions=el("div","amp3-bottom");
  actions.appendChild(b("＋ IMPORTER DES SONS",function(){var input=document.getElementById("file-music");if(input)input.click();},"amp3-btn amp3-import")).setAttribute("data-amp-import","");
- actions.appendChild(b("↻ ACTUALISER LA TAPE",function(){
+ actions.appendChild(b("↻ ACTUALISER",function(){
   status("Recherche des morceaux dans Zebra Tape 2…");
   updatePublic().then(function(result){
    if(result.ok)status(result.count+" morceau(x) trouvé(s) dans Zebra Tape 2.");
