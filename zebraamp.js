@@ -191,34 +191,44 @@ function ensureGraph(){
   return false;
  }
 }
-/* Réverbération à convolution générée localement au PREMIER usage.
-   Aucun son téléchargé, aucun MP3 copié, aucun DSP au démarrage.
-   Le graphe standard reste EQ -> analyseur -> haut-parleur à 0 %. */
+/* Réverbération studio : longue impulsion stéréo diffuse, couleur chaude,
+   préréverbération et protection des crêtes. Générée seulement sur demande.
+   Pas de MP3 externe, pas de DSP/AudioWorklet au démarrage de ZebraOS. */
 function ensureReverb(){
  if(!ctx||!analyser)return false;
  if(reverbGraph)return true;
  try{
-  var length=Math.round(ctx.sampleRate*1.4);
+  // Avant : queue de seulement 1,4 s. Maintenant une vraie pièce de ~3,4 s.
+  var seconds=3.4,length=Math.round(ctx.sampleRate*seconds);
   var impulse=ctx.createBuffer(2,length,ctx.sampleRate);
   for(var ch=0;ch<2;ch++){
-   var data=impulse.getChannelData(ch),last=0;
+   var data=impulse.getChannelData(ch),smooth=0;
    for(var i=0;i<length;i++){
-    last=last*.48+(Math.random()*2-1)*.52;
-    var t=1-i/length;
-    data[i]=last*Math.pow(t,2.6);
+    // Diffusion corrélée à court terme, mais décors stéréo indépendants.
+    smooth=smooth*.58+(Math.random()*2-1)*.42;
+    var t=i/length;
+    // Entrée progressive + chute exponentielle plus lente que l'ancien effet.
+    var bloom=.20+.80*Math.min(1,t/.035);
+    data[i]=smooth*bloom*Math.exp(-4.7*t);
    }
   }
-  var convolver=ctx.createConvolver();convolver.buffer=impulse;
-  var preDelay=ctx.createDelay(.1);preDelay.delayTime.value=.028;
-  var tone=ctx.createBiquadFilter();tone.type="lowpass";tone.frequency.value=5400;
+  var convolver=ctx.createConvolver();
+  convolver.normalize=true;convolver.buffer=impulse;
+  var preDelay=ctx.createDelay(.15);preDelay.delayTime.value=.052;
+  var highpass=ctx.createBiquadFilter();highpass.type="highpass";highpass.frequency.value=165;
+  var tone=ctx.createBiquadFilter();tone.type="lowpass";tone.frequency.value=5200;
   var dry=ctx.createGain(),wet=ctx.createGain();
   dry.gain.value=1;wet.gain.value=0;
-  // Construire le circuit avant de débrancher la sortie d'origine.
-  preDelay.connect(convolver);convolver.connect(tone);tone.connect(wet);
-  wet.connect(ctx.destination);dry.connect(ctx.destination);
+  var limiter=ctx.createDynamicsCompressor();
+  limiter.threshold.value=-5;limiter.knee.value=18;
+  limiter.ratio.value=5;limiter.attack.value=.003;limiter.release.value=.22;
+  preDelay.connect(convolver);
+  convolver.connect(highpass);highpass.connect(tone);tone.connect(wet);
+  dry.connect(limiter);wet.connect(limiter);limiter.connect(ctx.destination);
+  // Brancher les deux chemins en une fois. Les gains sont nuls au départ.
   analyser.disconnect();
   analyser.connect(dry);analyser.connect(preDelay);
-  reverbGraph={dry:dry,wet:wet,preDelay:preDelay,convolver:convolver,connected:true};
+  reverbGraph={dry:dry,wet:wet,preDelay:preDelay,convolver:convolver,limiter:limiter,connected:true,seconds:seconds};
   return true;
  }catch(err){
   status("Réverbération indisponible sur ce navigateur.");
@@ -229,16 +239,15 @@ function applyReverb(){
  if(!ctx||!analyser)return;
  if(reverb===0&&!reverbGraph)return;
  if(!ensureReverb())return;
- var state=reverbGraph;
- var t=reverb/100;
+ var state=reverbGraph,t=reverb/100;
  if(t>0&&!state.connected){analyser.connect(state.preDelay);state.connected=true;}
- // Interpolation évite les clics quand on déplace la jauge.
  var now=ctx.currentTime||0;
- state.dry.gain.setTargetAtTime(1-.18*t,now,.02);
- state.wet.gain.setTargetAtTime(.72*t,now,.02);
+ // L'effet augmente vraiment : moins de son sec, davantage de résonance
+ // spatiale. Le compresseur adoucit les crêtes lorsque les deux s'additionnent.
+ state.dry.gain.setTargetAtTime(1-.40*t,now,.035);
+ state.wet.gain.setTargetAtTime(1.30*Math.pow(t,.82),now,.035);
  if(t===0&&state.connected){
-  analyser.disconnect(state.preDelay);
-  state.connected=false;
+  analyser.disconnect(state.preDelay);state.connected=false;
  }
 }
 function setReverb(value){
