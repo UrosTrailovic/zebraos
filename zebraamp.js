@@ -528,6 +528,7 @@ function render(){
  if(speedInput)speedInput.value=String(Math.round(speed*100));
  var speedValue=view.querySelector("[data-amp-speed-value]");
  if(speedValue)speedValue.textContent=Math.round(speed*100)+" %";
+ renderPitchMode();
  view.querySelector("[data-amp-volume]").value=String(Math.round(volume*100));
  rows.scrollTop=oldListScroll;
  renderProgress();renderStatus();
@@ -730,6 +731,24 @@ function open(){
   rate.value="100";rate.oninput();
  },"amp3-btn amp3-speed-reset");
  speedPanel.appendChild(speedReset);
+ var pitchModeBox=el("div","amp3-pitch-mode");
+ var vinylMode=b("♫ VINYLE · GRAVE",function(){setPitchMode("vinyl");},"amp3-btn amp3-pitch-choice");
+ vinylMode.setAttribute("data-amp-pitch-mode","vinyl");
+ vinylMode.title="Vitesse et tonalité baissent ensemble, comme une bande magnétique.";
+ var fixedMode=b("TONALITÉ STABLE",function(){setPitchMode("constant");},"amp3-btn amp3-pitch-choice");
+ fixedMode.setAttribute("data-amp-pitch-mode","constant");
+ fixedMode.title="Conserve la tonalité, mais le ralentissement peut être moins naturel.";
+ pitchModeBox.append(vinylMode,fixedMode);
+ var pitchInfo=el("div","amp3-pitch-description");
+ pitchInfo.setAttribute("data-amp-pitch-explain","");
+ speedPanel.append(pitchModeBox,pitchInfo);
+ var speedPresets=el("div","amp3-speed-presets");
+ [["NORMAL",100],["SLOWED",85],["DEEP",75]].forEach(function(item){
+  speedPresets.appendChild(b(item[0],function(){
+   rate.value=String(item[1]);rate.oninput();
+  },"amp3-btn amp3-speed-preset"));
+ });
+ speedPanel.appendChild(speedPresets);
  speedGroup.append(speedBtn,speedPanel);
  extra.appendChild(speedGroup);
  // Réverb indépendante de la vitesse, panneau aussi compact que VITESSE.
@@ -761,13 +780,14 @@ function open(){
  reverbRange.oninput=function(){setReverb(reverbRange.value);};
  reverbPanel.appendChild(reverbRange);
  var reverbTicks=el("div","amp3-reverb-ticks");
- reverbTicks.append(el("span","","SEC"),el("span","","DOUX"),el("span","","SPACIEUX"));
+ reverbTicks.append(el("span","","SEC"),el("span","","BRUME"),el("span","","IMMENSE"));
  reverbPanel.appendChild(reverbTicks);
  var reverbPresets=el("div","amp3-reverb-presets");
- [["SEC",0],["DOUX",30],["RÊVE",65],["SPACIEUX",100]].forEach(function(p){
+ [["SEC",0],["DOUX",30],["RÊVE",65],["IMMENSE",100]].forEach(function(p){
   reverbPresets.appendChild(b(p[0],function(){setReverb(p[1]);},"amp3-btn amp3-reverb-preset"));
  });
  reverbPanel.appendChild(reverbPresets);
+ reverbPanel.appendChild(el("div","amp3-reverb-description","Résonance longue · 3,4 secondes · stéréo chaude. Essaie 70–85 %."));
  reverbGroup.append(reverbBtn,reverbPanel);
  extra.appendChild(reverbGroup);
  root.appendChild(extra);
@@ -822,6 +842,6 @@ function stop(){
 window.ZebraAMP={
  open:open,init:init,stop:stop,importFiles:importFiles,openPublic:openPublic,openBlob:openBlob,
  pick:pick,play:play,updatePublic:updatePublic,media:audio,analyser:function(){return analyser;},
- debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected)};}
+ debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,speed:speed,preservePitch:preservePitch,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected),reverbSeconds:reverbGraph?reverbGraph.seconds:null};}
 };
 }());
