@@ -10,6 +10,7 @@ var ALBUM="zebra-tape-2",OPENED="fichiers-ouverts",KEY="zebraamp-v3",DB="zebraam
 var audio=new Audio();audio.preload="metadata";audio.crossOrigin="anonymous";audio.volume=.7;
 var album={id:ALBUM,name:"Zebra Tape 2",readonly:true,tracks:[]};
 var playlists=[],current=ALBUM,currentId=null,loadedUrl=null,loadedBlob=null,view=null;
+var coverCache=new Map(),coverLoading=new Map(),displayedCover=null;
 var ctx=null,filters=[],analyser=null,graphTried=false,reverbGraph=null;
 var allSounds=[],dbPromise=null,dbAvailable=true,shuffle=false,repeat="tout",speed=1,preservePitch=false,reverb=0,volume=.7,eq=[0,0,0,0,0],preset="Neutre";
 var presetValues={
@@ -45,6 +46,7 @@ function restore(){
    return p&&typeof p.id==="string"&&typeof p.name==="string"&&
     p.id!==ALBUM&&Array.isArray(p.tracks);
   }).map(function(p){return{id:p.id,name:p.name.slice(0,90),readonly:false,
+   coverKey:p.coverKey==="cover:"+p.id?p.coverKey:null,
    tracks:p.tracks.filter(function(t){return t&&typeof t.id==="string"&&
     (t.kind==="blob"||t.kind==="public")&&typeof t.name==="string";}).slice(0,800)};});
   // À chaque nouvel accès au site, la playlist de démarrage est Zebra Tape 2.
@@ -270,17 +272,174 @@ function createPlaylist(name,shouldSwitch){
  playlists.push(p);if(shouldSwitch!==false)setPlaylist(p.id);
  store();render();return p;
 }
-function renameList(){
- var p=getList();if(p.readonly)return;
- var name=prompt("Nouveau nom de la playlist :",p.name);
- if(name===null)return;
- name=name.trim().slice(0,85);if(!name)return;
- p.name=name;store();render();
+/* Les couvertures restent locales comme les sons : un JPG carré compressé
+ * en IndexedDB, jamais dans le JSON localStorage et jamais chargé à l'accueil.
+ * La playlist Zebra Tape 2 demeure strictement non modifiable. */
+function releaseCover(id){
+ var url=coverCache.get(id);
+ if(url){URL.revokeObjectURL(url);coverCache.delete(id);}
+}
+function coverBlob(file){
+ return new Promise(function(resolve,reject){
+  if(!file||!/^(image\/jpeg|image\/png|image\/webp)$/.test(file.type)){
+   reject(Error("Utilise un JPG, PNG ou WebP."));return;
+  }
+  if(file.size>10*1024*1024){reject(Error("Image trop grande (maximum 10 Mo)."));return;}
+  var url=URL.createObjectURL(file),img=new Image(),done=false;
+  function finish(err,blob){
+   if(done)return;done=true;URL.revokeObjectURL(url);
+   if(err)reject(err);else resolve(blob);
+  }
+  img.onerror=function(){finish(Error("Impossible de lire cette image."));};
+  img.onload=function(){
+   try{
+    var c=document.createElement("canvas");c.width=320;c.height=320;
+    var g=c.getContext("2d");
+    g.fillStyle="#061b13";g.fillRect(0,0,320,320);
+    var scale=Math.max(320/img.naturalWidth,320/img.naturalHeight);
+    var w=img.naturalWidth*scale,h=img.naturalHeight*scale;
+    g.drawImage(img,(320-w)/2,(320-h)/2,w,h);
+    c.toBlob(function(blob){
+     if(blob)finish(null,blob);
+     else finish(Error("Compression de la pochette impossible."));
+    },"image/jpeg",.82);
+   }catch(e){finish(Error("Impossible de préparer cette image."));}
+  };
+  img.src=url;
+ });
+}
+function applyCoverImage(art,cover,src){
+ cover.classList.add("amp3-cover-empty");
+ art.onload=function(){if(art.src===src)cover.classList.remove("amp3-cover-empty");};
+ art.onerror=function(){if(art.src===src)cover.classList.add("amp3-cover-empty");};
+ art.alt="Pochette de la playlist "+getList().name;
+ art.src=src;
+}
+function renderCover(){
+ if(!view||!view.isConnected)return;
+ var cover=view.querySelector(".amp3-cover"),art=view.querySelector(".amp3-cover-image");
+ if(!cover||!art)return;
+ var p=getList(),id=p.id;
+ var key=p.readonly?"album":p.coverKey?("custom:"+id+":"+p.coverKey):"empty:"+id;
+ if(displayedCover===key)return;
+ displayedCover=key;
+ if(p.readonly){
+  applyCoverImage(art,cover,"/STUDIO/BUREAU/Zebra%20Tape%202/Cover/front%202.webp");
+  return;
+ }
+ cover.classList.add("amp3-cover-empty");
+ art.removeAttribute("src");
+ if(!p.coverKey)return;
+ if(coverCache.has(id)){
+  applyCoverImage(art,cover,coverCache.get(id));return;
+ }
+ if(coverLoading.has(id))return;
+ var loading=dbOp("get",p.coverKey).then(function(data){
+  if(data&&data.blob){
+   releaseCover(id);
+   coverCache.set(id,URL.createObjectURL(data.blob));
+   if(view&&view.isConnected&&getList().id===id&&getList().coverKey===p.coverKey){
+    displayedCover=null;renderCover();
+   }
+  }else if(view&&getList().id===id)status("Pochette introuvable : importe-la à nouveau.");
+ }).catch(function(){if(view&&getList().id===id)status("Pochette locale indisponible.");})
+ .finally(function(){coverLoading.delete(id);});
+ coverLoading.set(id,loading);
+}
+function editPlaylist(){
+ var p=getList();if(p.readonly||!view)return;
+ var root=view.querySelector(".amp3");
+ if(!root)return;
+ root.querySelector(".amp3-edit-overlay")?.remove();
+ var overlay=el("div","amp3-edit-overlay"),editor=el("div","amp3-edit-dialog");
+ editor.setAttribute("role","dialog");editor.setAttribute("aria-modal","true");
+ editor.setAttribute("aria-label","Modifier la playlist");
+ var title=el("strong","amp3-edit-title","MODIFIER LA PLAYLIST");
+ var nameLabel=el("label","amp3-edit-name","NOM DE LA PLAYLIST");
+ var nameInput=el("input","amp3-edit-input");nameInput.type="text";
+ nameInput.value=p.name;nameInput.maxLength=85;
+ nameLabel.appendChild(nameInput);
+ var preview=el("div","amp3-edit-cover-preview");
+ var previewImage=el("img","amp3-edit-cover-image");
+ previewImage.alt="Aperçu de la pochette";
+ preview.appendChild(previewImage);
+ var empty=el("span","amp3-edit-empty","♪");
+ preview.appendChild(empty);
+ var input=el("input");input.type="file";input.accept="image/png,image/jpeg,image/webp";input.hidden=true;
+ var selectedFile=null,remove=false,previewURL=null;
+ function updatePreview(){
+  var src=previewURL||(remove?null:coverCache.get(p.id));
+  preview.classList.toggle("amp3-edit-preview-empty",!src);
+  if(src)previewImage.src=src;else previewImage.removeAttribute("src");
+ }
+ var pick=b("＋ CHOISIR UNE IMAGE",function(){input.click();},"amp3-btn");
+ var removeBtn=b("× ENLEVER LA COVER",function(){
+  selectedFile=null;remove=true;
+  if(previewURL){URL.revokeObjectURL(previewURL);previewURL=null;}
+  updatePreview();
+ },"amp3-btn amp3-edit-remove");
+ function close(){
+  if(previewURL)URL.revokeObjectURL(previewURL);
+  overlay.remove();
+ }
+ input.onchange=function(){
+  var file=input.files&&input.files[0];input.value="";
+  if(!file)return;
+  if(!/^(image\/jpeg|image\/png|image\/webp)$/.test(file.type)||file.size>10*1024*1024){
+   status("Pochette : JPG, PNG ou WebP, maximum 10 Mo.");return;
+  }
+  if(previewURL)URL.revokeObjectURL(previewURL);
+  selectedFile=file;remove=false;previewURL=URL.createObjectURL(file);
+  updatePreview();
+ };
+ var actions=el("div","amp3-edit-actions");
+ var cancel=b("ANNULER",close,"amp3-btn");
+ var save=b("✓ ENREGISTRER",async function(){
+  var name=nameInput.value.trim().slice(0,85);
+  if(!name){status("Donne un nom à la playlist.");nameInput.focus();return;}
+  save.disabled=true;cancel.disabled=true;pick.disabled=true;removeBtn.disabled=true;
+  try{
+   if(selectedFile){
+    var compressed=await coverBlob(selectedFile);
+    await dbOp("put",null,{id:"cover:"+p.id,blob:compressed,name:selectedFile.name});
+    releaseCover(p.id);
+    coverCache.set(p.id,URL.createObjectURL(compressed));
+    p.coverKey="cover:"+p.id;
+   }else if(remove){
+    if(p.coverKey)await dbOp("delete",p.coverKey);
+    releaseCover(p.id);
+    p.coverKey=null;
+   }
+   p.name=name;store();displayedCover=null;close();render();
+   status(selectedFile?"Pochette enregistrée avec ta playlist.":"Playlist enregistrée.");
+  }catch(e){
+   save.disabled=false;cancel.disabled=false;pick.disabled=false;removeBtn.disabled=false;
+   status("Impossible d'enregistrer la pochette : "+(e.message||"stockage indisponible"));
+  }
+ },"amp3-btn amp3-edit-save");
+ actions.append(cancel,save);
+ var controls=el("div","amp3-edit-cover-actions");
+ controls.append(pick,removeBtn);
+ var note=el("div","amp3-edit-note","Image JPG / PNG / WebP · réduite à 320 × 320 px · stockée sur cet appareil.");
+ editor.append(title,nameLabel,preview,controls,note,actions,input);
+ overlay.appendChild(editor);root.appendChild(overlay);
+ overlay.addEventListener("pointerdown",function(e){if(e.target===overlay)close();});
+ updatePreview();
+ if(p.coverKey&&!coverCache.has(p.id)){
+  dbOp("get",p.coverKey).then(function(record){
+   if(!overlay.isConnected||selectedFile||remove||!record||!record.blob)return;
+   releaseCover(p.id);coverCache.set(p.id,URL.createObjectURL(record.blob));
+   updatePreview();
+  }).catch(function(){});
+ }
+ nameInput.focus();nameInput.select();
 }
 function deleteList(){
  var p=getList();if(p.readonly)return;
  if(!confirm("Supprimer cette playlist ? Les fichiers importés ne seront pas supprimés des autres playlists."))return;
  playlists=playlists.filter(function(q){return q.id!==p.id;});
+ releaseCover(p.id);
+ if(p.coverKey)dbOp("delete",p.coverKey).catch(function(){});
  setPlaylist(ALBUM);store();render();
 }
 function makeOpenedPlaylist(){
@@ -412,13 +571,8 @@ function renderProgress(){
  if(!view||!view.isConnected)return;
  var item=getTrack(),progress=view.querySelector("[data-amp-progress]");
  view.querySelector("[data-amp-now]").textContent=item?item.name:"AUCUN MORCEAU CHARGÉ";
- // La pochette du disque apparaît uniquement pour Zebra Tape 2, et ne
- // prétend pas être la cover d'un son importé depuis l'appareil.
- var cover=view.querySelector(".amp3-cover"),art=view.querySelector(".amp3-cover-image");
- if(cover){
-  var isTape=!!(item&&item.kind==="public"&&item.path&&item.path.startsWith("STUDIO/BUREAU/Zebra Tape 2/"));
-  cover.classList.toggle("amp3-cover-empty",!isTape||!!(art&&art.dataset.failed==="1"));
- }
+ // Pochette de la PLAYLIST, et non du morceau ; asynchrone et mise en cache.
+ renderCover();
  view.querySelector("[data-amp-time]").textContent=format(audio.currentTime)+" / "+format(audio.duration);
  view.querySelector("[data-amp-play]").textContent=audio.paused?"▶":"Ⅱ";
  var led=view.querySelector("[data-amp-led]");
@@ -607,7 +761,7 @@ function open(){
  if(!window.ZebraAMPConfig||typeof window.ZebraAMPConfig.windowBox!=="function")return;
  var w=window.ZebraAMPConfig.windowBox("amp","ZebraAMP.exe — Lecteur du studio",660,635);
  view=w;
- w.innerHTML="";
+ w.innerHTML="";displayedCover=null;
  var root=el("div","amp3");
  var top=el("div","amp3-head");top.appendChild(el("strong","","ZEBRAAMP 3.7"));top.appendChild(el("span","","STUDIO PLAYER"));root.appendChild(top);
  var stripe=el("div","amp3-zebra-plate");
@@ -619,12 +773,10 @@ function open(){
  var displayRow=el("div","amp3-display-row");
  var cover=el("div","amp3-cover");
  var art=el("img","amp3-cover-image");
- art.alt="Pochette de l'album Zebra Tape 2";art.loading="lazy";
- art.src="/STUDIO/BUREAU/Zebra%20Tape%202/Cover/front%202.webp";
+ art.alt="Pochette de la playlist";art.loading="lazy";
+ cover.classList.add("amp3-cover-empty");
  cover.appendChild(art);
- cover.appendChild(el("span","amp3-cover-fallback","Z  /  R"));
- art.onerror=function(){art.dataset.failed="1";cover.classList.add("amp3-cover-empty");};
- art.onload=function(){art.dataset.failed="0";renderProgress();};
+ cover.appendChild(el("span","amp3-cover-fallback"));
  var readout=el("div","amp3-readout");
  var meta=el("div","amp3-screen-label");
  // La piste et le statut suffisent : on retire les étiquettes décoratives.
@@ -778,7 +930,7 @@ function open(){
  select.onchange=function(){setPlaylist(select.value);};
  playlistTools.appendChild(select);
  playlistTools.appendChild(b("＋ NOUVELLE",function(){var name=prompt("Nom de la nouvelle playlist :","Ma playlist");if(name!==null)createPlaylist(name,true);},"amp3-btn"));
- var rename=b("✎",renameList,"amp3-btn");rename.title="Renommer";rename.setAttribute("data-amp-rename","");playlistTools.appendChild(rename);
+ var rename=b("✎",editPlaylist,"amp3-btn");rename.title="Modifier la playlist et sa cover";rename.setAttribute("aria-label",rename.title);rename.setAttribute("data-amp-rename","");playlistTools.appendChild(rename);
  var del=b("×",deleteList,"amp3-btn amp3-danger");del.title="Supprimer la playlist";del.setAttribute("data-amp-delete-list","");playlistTools.appendChild(del);
  root.appendChild(playlistTools);
  var rows=el("div","amp3-list");rows.setAttribute("data-amp-rows","");root.appendChild(rows);
