@@ -10,7 +10,7 @@ var ALBUM="zebra-tape-2",OPENED="fichiers-ouverts",KEY="zebraamp-v3",DB="zebraam
 var audio=new Audio();audio.preload="metadata";audio.crossOrigin="anonymous";audio.volume=.7;
 var album={id:ALBUM,name:"Zebra Tape 2",readonly:true,tracks:[]};
 var playlists=[],current=ALBUM,currentId=null,loadedUrl=null,loadedBlob=null,view=null;
-var coverCache=new Map(),coverLoading=new Map(),displayedCover=null;
+var coverCache=new Map(),displayedCover=null;
 var ctx=null,filters=[],analyser=null,graphTried=false,reverbGraph=null;
 var allSounds=[],dbPromise=null,dbAvailable=true,shuffle=false,repeat="tout",speed=1,preservePitch=false,reverb=0,volume=.7,eq=[0,0,0,0,0],preset="Neutre";
 var presetValues={
@@ -272,38 +272,40 @@ function createPlaylist(name,shouldSwitch){
  playlists.push(p);if(shouldSwitch!==false)setPlaylist(p.id);
  store();render();return p;
 }
-/* Les couvertures restent locales comme les sons : un JPG carré compressé
- * en IndexedDB, jamais dans le JSON localStorage et jamais chargé à l'accueil.
- * La playlist Zebra Tape 2 demeure strictement non modifiable. */
+/* Mini-covers JPEG locales : pas de chargement réseau ni d'attente IndexedDB.
+ * 256 x 256 px et compression forte ; même stockage que les préférences.
+ * Zebra Tape 2 reste publique et non modifiable. */
+function coverStorageKey(id){return "zebraamp-cover-v1-"+id;}
 function releaseCover(id){
  var url=coverCache.get(id);
- if(url){URL.revokeObjectURL(url);coverCache.delete(id);}
+ if(url&&url.startsWith("blob:"))URL.revokeObjectURL(url);
+ coverCache.delete(id);
 }
-function coverBlob(file){
+function coverDataURL(file){
  return new Promise(function(resolve,reject){
   if(!file||!/^(image\/jpeg|image\/png|image\/webp)$/.test(file.type)){
    reject(Error("Utilise un JPG, PNG ou WebP."));return;
   }
   if(file.size>10*1024*1024){reject(Error("Image trop grande (maximum 10 Mo)."));return;}
   var url=URL.createObjectURL(file),img=new Image(),done=false;
-  function finish(err,blob){
+  function finish(err,data){
    if(done)return;done=true;URL.revokeObjectURL(url);
-   if(err)reject(err);else resolve(blob);
+   if(err)reject(err);else resolve(data);
   }
   img.onerror=function(){finish(Error("Impossible de lire cette image."));};
   img.onload=function(){
    try{
-    var c=document.createElement("canvas");c.width=320;c.height=320;
+    var c=document.createElement("canvas");c.width=256;c.height=256;
     var g=c.getContext("2d");
-    g.fillStyle="#061b13";g.fillRect(0,0,320,320);
-    var scale=Math.max(320/img.naturalWidth,320/img.naturalHeight);
+    g.fillStyle="#061b13";g.fillRect(0,0,256,256);
+    var scale=Math.max(256/img.naturalWidth,256/img.naturalHeight);
     var w=img.naturalWidth*scale,h=img.naturalHeight*scale;
-    g.drawImage(img,(320-w)/2,(320-h)/2,w,h);
-    c.toBlob(function(blob){
-     if(blob)finish(null,blob);
-     else finish(Error("Compression de la pochette impossible."));
-    },"image/jpeg",.82);
-   }catch(e){finish(Error("Impossible de préparer cette image."));}
+    g.drawImage(img,(256-w)/2,(256-h)/2,w,h);
+    var data=c.toDataURL("image/jpeg",.76);
+    if(data.length>140000)data=c.toDataURL("image/jpeg",.53);
+    if(data.length>180000)throw Error("Pochette trop complexe à compresser.");
+    finish(null,data);
+   }catch(e){finish(Error(e.message||"Impossible de préparer cette image."));}
   };
   img.src=url;
  });
@@ -330,21 +332,13 @@ function renderCover(){
  cover.classList.add("amp3-cover-empty");
  art.removeAttribute("src");
  if(!p.coverKey)return;
- if(coverCache.has(id)){
-  applyCoverImage(art,cover,coverCache.get(id));return;
+ if(!coverCache.has(id)){
+  try{
+   var data=localStorage.getItem(coverStorageKey(id));
+   if(data&&data.startsWith("data:image/jpeg;base64,"))coverCache.set(id,data);
+  }catch(e){}
  }
- if(coverLoading.has(id))return;
- var loading=dbOp("get",p.coverKey).then(function(data){
-  if(data&&data.blob){
-   releaseCover(id);
-   coverCache.set(id,URL.createObjectURL(data.blob));
-   if(view&&view.isConnected&&getList().id===id&&getList().coverKey===p.coverKey){
-    displayedCover=null;renderCover();
-   }
-  }else if(view&&getList().id===id)status("Pochette introuvable : importe-la à nouveau.");
- }).catch(function(){if(view&&getList().id===id)status("Pochette locale indisponible.");})
- .finally(function(){coverLoading.delete(id);});
- coverLoading.set(id,loading);
+ if(coverCache.has(id))applyCoverImage(art,cover,coverCache.get(id));
 }
 function editPlaylist(){
  var p=getList();if(p.readonly||!view)return;
@@ -401,14 +395,14 @@ function editPlaylist(){
   try{
    if(selectedFile){
     status("Préparation de la pochette…");
-    var compressed=await coverBlob(selectedFile);
+    var compressed=await coverDataURL(selectedFile);
     status("Sauvegarde locale de la pochette…");
-    await dbOp("put",null,{id:"cover:"+p.id,blob:compressed,name:selectedFile.name});
+    localStorage.setItem(coverStorageKey(p.id),compressed);
     releaseCover(p.id);
-    coverCache.set(p.id,URL.createObjectURL(compressed));
+    coverCache.set(p.id,compressed);
     p.coverKey="cover:"+p.id;
    }else if(remove){
-    if(p.coverKey)await dbOp("delete",p.coverKey);
+    localStorage.removeItem(coverStorageKey(p.id));
     releaseCover(p.id);
     p.coverKey=null;
    }
@@ -422,17 +416,18 @@ function editPlaylist(){
  actions.append(cancel,save);
  var controls=el("div","amp3-edit-cover-actions");
  controls.append(pick,removeBtn);
- var note=el("div","amp3-edit-note","Image JPG / PNG / WebP · réduite à 320 × 320 px · stockée sur cet appareil.");
+ var note=el("div","amp3-edit-note","JPG / PNG / WebP · compressée à 256 × 256 px · conservée sur cet appareil.");
  editor.append(title,nameLabel,preview,controls,note,actions,input);
  overlay.appendChild(editor);root.appendChild(overlay);
  overlay.addEventListener("pointerdown",function(e){if(e.target===overlay)close();});
  updatePreview();
  if(p.coverKey&&!coverCache.has(p.id)){
-  dbOp("get",p.coverKey).then(function(record){
-   if(!overlay.isConnected||selectedFile||remove||!record||!record.blob)return;
-   releaseCover(p.id);coverCache.set(p.id,URL.createObjectURL(record.blob));
-   updatePreview();
-  }).catch(function(){});
+  try{
+   var previous=localStorage.getItem(coverStorageKey(p.id));
+   if(previous&&previous.startsWith("data:image/jpeg;base64,")){
+    coverCache.set(p.id,previous);updatePreview();
+   }
+  }catch(e){}
  }
  nameInput.focus();nameInput.select();
 }
@@ -441,7 +436,7 @@ function deleteList(){
  if(!confirm("Supprimer cette playlist ? Les fichiers importés ne seront pas supprimés des autres playlists."))return;
  playlists=playlists.filter(function(q){return q.id!==p.id;});
  releaseCover(p.id);
- if(p.coverKey)dbOp("delete",p.coverKey).catch(function(){});
+ try{localStorage.removeItem(coverStorageKey(p.id));}catch(e){}
  setPlaylist(ALBUM);store();render();
 }
 function makeOpenedPlaylist(){
