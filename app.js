@@ -217,6 +217,16 @@ function beginSessionBoot(id){
   playBootTrack(sessionAudio);
   sessionTimer=setTimeout(finishSessionBoot,3600);
 }
+function skipStartupKey(event){
+  if(event.isComposing||!(event.key==="Escape"||event.key===" "||event.code==="Space"))return;
+  var finish=null;
+  if(booting&&$("boot-screen").classList.contains("active"))finish=finishBoot;
+  else if(sessionBooting&&$("session-boot-screen").classList.contains("active"))finish=finishSessionBoot;
+  if(!finish)return;
+  event.preventDefault();event.stopImmediatePropagation();
+  if(!event.repeat)finish();
+}
+document.addEventListener("keydown",skipStartupKey,true);
 function stopBootSequences(){
   booting=false;sessionBooting=false;pendingSession=null;
   clearTimeout(bootTimer);clearTimeout(sessionTimer);
