@@ -158,14 +158,10 @@ jobs:
               Object.defineProperty(window.ZebraAMP.media,"paused",{
                 configurable:true,value:false
               });
-              // Un petit écran virtuel peut retarder les RAF : attendre le
-              // premier frame réellement peint, plutôt qu'un délai fixe.
-              let vizStatus="";
-              for(let k=0;k<12;k++){
-                await sleep(90);
-                vizStatus=mini.querySelector('[data-amp-spectrum-status]').textContent;
-                if(vizStatus==="SIGNAL")break;
-              }
+              // Comme une lecture audio réelle, l'événement play impose
+              // une image immédiate : test déterministe même sans RAF mobile.
+              window.ZebraAMP.media.dispatchEvent(new Event("play"));
+              const vizStatus=mini.querySelector('[data-amp-spectrum-status]').textContent;
               report.spectrumReconnect=vizStatus==="SIGNAL";
               report.signalDebug={
                 targetWidth,visibility:document.visibilityState,
