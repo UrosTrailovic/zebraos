@@ -1,0 +1,72 @@
+name: Audit du réseau et du poids de ZebraOS
+on:
+  push:
+    paths:
+      - '.github/workflows/audit-zebraos-performance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tester DNS, TLS, HTTP et la redirection
+        shell: bash
+        run: |
+          set +e
+          for name in www.zebratape2.net zebratape2.net urostrailovic.github.io; do
+            echo "===== DNS ${name} ====="
+            getent ahosts "$name" | head -6
+            if command -v dig >/dev/null; then
+              echo "A:"; dig +short A "$name" | head -8
+              echo "AAAA:"; dig +short AAAA "$name" | head -8
+              echo "CNAME:"; dig +short CNAME "$name" | head -5
+            fi
+          done
+          for url in https://www.zebratape2.net/ https://zebratape2.net/ https://urostrailovic.github.io/zebraos/; do
+            echo "===== HTTPS GET: $url ====="
+            curl -L -sS -D /tmp/audit_headers -o /tmp/audit_page --max-time 20 \
+              -w 'http_code=%{http_code} remote_ip=%{remote_ip} redirects=%{num_redirects} redirect_to=%{url_effective} dns=%{time_namelookup}s tcp=%{time_connect}s tls=%{time_appconnect}s ttfb=%{time_starttransfer}s total=%{time_total}s downloaded=%{size_download}B\n' "$url"
+            status=$?
+            echo "curl_exit=$status"
+            sed -n '1,20p' /tmp/audit_headers
+            head -c 100 /tmp/audit_page; echo
+          done
+      - name: Mesurer le chargement initial dans le dépôt
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from html.parser import HTMLParser
+          import gzip
+          class Page(HTMLParser):
+            def __init__(self):
+              super().__init__()
+              self.scripts=[];self.css=[]
+            def handle_starttag(self,tag,attrs):
+              d=dict(attrs)
+              if tag=='script' and 'src' in d: self.scripts.append(d['src'].split('?')[0])
+              if tag=='link' and d.get('rel')=='stylesheet': self.css.append(d['href'].split('?')[0])
+          parser=Page();parser.feed(Path('index.html').read_text())
+          rows=[]
+          for kind,paths in [('SCRIPT',parser.scripts),('CSS',parser.css)]:
+            for name in paths:
+              path=Path(name)
+              if not path.exists():
+                print('MISSING',kind,name);continue
+              data=path.read_bytes()
+              rows.append((kind,name,len(data),len(gzip.compress(data,compresslevel=6))))
+          raw=sum(x[2] for x in rows)+Path('index.html').stat().st_size
+          zipped=sum(x[3] for x in rows)+len(gzip.compress(Path('index.html').read_bytes(),compresslevel=6))
+          print('INITIAL_REQUESTS',len(rows)+1)
+          print('INITIAL_SCRIPT_COUNT',len(parser.scripts))
+          print('INITIAL_CSS_COUNT',len(parser.css))
+          print('INITIAL_RAW_BYTES',raw,'INITIAL_APPROX_GZIP_BYTES',zipped)
+          print('TOP_INITIAL_ASSETS raw / approx gzip:')
+          for x in sorted(rows,key=lambda row:row[2],reverse=True)[:20]:
+            print(*x)
+          repo_data=sum(p.stat().st_size for p in Path('STUDIO').rglob('*') if p.is_file())
+          print('STUDIO_RAW_BYTES',repo_data)
+          print('ROOT_MP3_BYTES',sum(p.stat().st_size for p in Path('.').glob('*.mp3')))
+          PY
