@@ -257,18 +257,20 @@ async function importFiles(files){
  if(!files.length){status("Sélectionne des fichiers audio MP3, WAV, OGG, M4A ou FLAC.");return;}
  var p=getList();
  if(p.readonly)p=createPlaylist("Ma playlist 1",true);
- var first=null,count=0,failed=0;
+ var count=0,failed=0;
  status("Importation des fichiers…");
  for(var i=0;i<files.length;i++){
   var file=files[i],id=stamp();
   try{
    await dbOp("put",null,{id:id,blob:file,name:file.name});
    var item={id:id,blobKey:id,kind:"blob",name:label(file.name)};
-   p.tracks.push(item);if(!first)first=id;count++;
+   p.tracks.push(item);count++;
   }catch(e){failed++;}
  }
- if(count){store();if(first)await pick(first,true);}
- status(count+" fichier(s) ajouté(s)."+(failed?" "+failed+" échec(s) : vérifie l'espace de stockage.":""));
+ // Importer = ajouter à la playlist, sans changer le morceau en cours et
+ // surtout sans lancer la lecture. ▶ reste une action volontaire.
+ if(count)store();
+ status(count+" fichier(s) ajouté(s)."+(failed?" "+failed+" échec(s) : vérifie l'espace de stockage.":"")+(count?" Appuie sur ▶ pour écouter.":""));
  render();
 }
 function openPublic(item){
