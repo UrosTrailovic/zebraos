@@ -11,7 +11,7 @@ var audio=new Audio();audio.preload="metadata";audio.crossOrigin="anonymous";aud
 var album={id:ALBUM,name:"Zebra Tape 2",readonly:true,tracks:[]};
 var playlists=[],current=ALBUM,currentId=null,loadedUrl=null,loadedBlob=null,view=null;
 var ctx=null,filters=[],analyser=null,graphTried=false,reverbGraph=null;
-var allSounds=[],dbPromise=null,dbAvailable=true,shuffle=false,repeat="tout",speed=1,reverb=0,volume=.7,eq=[0,0,0,0,0],preset="Neutre";
+var allSounds=[],dbPromise=null,dbAvailable=true,shuffle=false,repeat="tout",speed=1,preservePitch=false,reverb=0,volume=.7,eq=[0,0,0,0,0],preset="Neutre";
 var presetValues={
  "Neutre":[0,0,0,0,0],
  "Basses":[7,4,0,-1,-2],
@@ -34,7 +34,7 @@ function status(text){notifyText=text||"";renderStatus();}
 function store(){
  try{localStorage.setItem(KEY,JSON.stringify({
    playlists:playlists,volume:volume,shuffle:shuffle,repeat:repeat,
-   speed:speed,reverb:reverb,eq:eq,preset:preset
+   speed:speed,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,eq:eq,preset:preset
  }));}catch(e){status("Stockage des préférences indisponible.");}
 }
 function restore(){
@@ -52,12 +52,38 @@ function restore(){
   if(!Number.isNaN(Number(d.volume)))volume=Math.max(0,Math.min(1,Number(d.volume)));
   shuffle=!!d.shuffle;repeat=["aucun","tout","un"].includes(d.repeat)?d.repeat:"tout";
   speed=Number.isFinite(Number(d.speed))?Math.max(.5,Math.min(1.5,Math.round(Number(d.speed)*20)/20)):1;
+  preservePitch=d.pitchMode==="constant";
   reverb=Number.isFinite(Number(d.reverb))?Math.max(0,Math.min(100,Math.round(Number(d.reverb)/5)*5)):0;
   if(Array.isArray(d.eq)&&d.eq.length===5)eq=d.eq.map(function(x){return Math.max(-12,Math.min(12,Number(x)||0));});
   if(typeof d.preset==="string")preset=d.preset;
  }catch(e){}
- audio.volume=volume;audio.playbackRate=speed;
+ audio.volume=volume;applyPitchMode();audio.playbackRate=speed;
  current=ALBUM;
+}
+function applyPitchMode(){
+ // Le navigateur tente sinon un time-stretch pour conserver la hauteur
+ // (défaut HTMLMediaElement), ce qui déforme souvent les transitoires.
+ // Vinyle = resampling naturel : vitesse et tonalité baissent ensemble.
+ try{audio.preservesPitch=preservePitch;}catch(e){}
+ try{if("mozPreservesPitch" in audio)audio.mozPreservesPitch=preservePitch;}catch(e){}
+ try{if("webkitPreservesPitch" in audio)audio.webkitPreservesPitch=preservePitch;}catch(e){}
+}
+function setPitchMode(mode){
+ preservePitch=mode==="constant";
+ applyPitchMode();store();renderPitchMode();
+}
+function renderPitchMode(){
+ if(!view||!view.isConnected)return;
+ var buttons=view.querySelectorAll("[data-amp-pitch-mode]");
+ Array.prototype.forEach.call(buttons,function(button){
+  var selected=button.getAttribute("data-amp-pitch-mode")===(preservePitch?"constant":"vinyl");
+  button.classList.toggle("enabled",selected);
+  button.setAttribute("aria-pressed",String(selected));
+ });
+ var info=view.querySelector("[data-amp-pitch-explain]");
+ if(info)info.textContent=preservePitch?
+ "TONALITÉ CONSERVÉE · peut créer des artefacts à basse vitesse.":
+ "VINYLE · vitesse et tonalité baissent ensemble, sans étirement artificiel.";
 }
 function db(){
  if(dbPromise)return dbPromise;
@@ -129,7 +155,7 @@ function updatePublic(){
 }
 function init(){
  if(initDone)return;
- initDone=true;restore();
+ initDone=true;applyPitchMode();restore();
  if(window.ZebraGitFiles){
   window.ZebraGitFiles.subscribe(function(){syncAlbum(window.ZebraGitFiles.allFiles());});
   updatePublic();
