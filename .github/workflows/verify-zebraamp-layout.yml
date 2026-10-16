@@ -158,8 +158,15 @@ jobs:
               Object.defineProperty(window.ZebraAMP.media,"paused",{
                 configurable:true,value:false
               });
-              await sleep(160);
-              report.spectrumReconnect=mini.querySelector('[data-amp-spectrum-status]').textContent==="SIGNAL";
+              // Un petit écran virtuel peut retarder les RAF : attendre le
+              // premier frame réellement peint, plutôt qu'un délai fixe.
+              let vizStatus="";
+              for(let k=0;k<12;k++){
+                await sleep(90);
+                vizStatus=mini.querySelector('[data-amp-spectrum-status]').textContent;
+                if(vizStatus==="SIGNAL")break;
+              }
+              report.spectrumReconnect=vizStatus==="SIGNAL";
               delete window.ZebraAMP.media.paused;
               window.ZebraAMP.media.play=originalPlay;
               window.AudioContext=originalAudioContext;
