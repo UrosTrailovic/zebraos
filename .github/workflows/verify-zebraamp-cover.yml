@@ -79,14 +79,16 @@ jobs:
               const save=JSON.parse(localStorage.getItem("zebraamp-v3"));
               const p=save.playlists.find(x=>x.name===listName);
               result.metadata=!!p&&p.coverKey==="cover:"+p.id;
-              result.coverStored=result.metadata;
+              result.coverStored=result.metadata
+                &&(localStorage.getItem("zebraamp-cover-v1-"+p.id)||"").startsWith("data:image/jpeg;base64,");
+              try{await root.querySelector(".amp3-cover-image").decode();}catch(e){}
               result.coverRendered=!root.querySelector(".amp3-cover").classList.contains("amp3-cover-empty")
-                &&root.querySelector(".amp3-cover-image").src.startsWith("blob:");
+                &&root.querySelector(".amp3-cover-image").src.startsWith("data:image/jpeg;base64,");
               result.playlistKept=root.querySelector('[data-amp-select]').value===p.id;
               document.documentElement.dataset.coverPhase="editor-2";
               root.querySelector("[data-amp-rename]").click();
               const editor2=root.querySelector(".amp3-edit-overlay");
-              result.previewAfterReload=editor2.querySelector(".amp3-edit-cover-image").src.startsWith("blob:");
+              result.previewAfterReload=editor2.querySelector(".amp3-edit-cover-image").src.startsWith("data:image/jpeg;base64,");
               editor2.querySelector(".amp3-edit-remove").click();
               editor2.querySelector(".amp3-edit-save").click();
               await new Promise(resolve=>{
