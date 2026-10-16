@@ -1,35 +1,52 @@
-name: Vérifier les sprites de Zebra Snake
+name: Vérifier Zebra Snake
 on:
   push:
     paths:
-      - "assets/games/zebra-snake-atlas.png"
-      - ".github/workflows/verify-snake-assets.yml"
+      - snake.js
+      - snake.css
+      - assets/games/snake/**
+      - tests/snake.test.cjs
+      - .github/workflows/verify-snake-assets.yml
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Vérifier signature, intégrité des blocs et décompression PNG
-        shell: python
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check snake.js && node --test tests/snake.test.cjs
+      - name: Plateau et commandes sur mobile et bureau
         run: |
-          import pathlib,struct,zlib
-          p=pathlib.Path("assets/games/zebra-snake-atlas.png")
-          b=p.read_bytes()
-          assert b[:8]==bytes.fromhex("89504e470d0a1a0a"), "signature PNG invalide"
-          off=8
-          chunks=[]
-          idat=b""
-          while off+12 <= len(b):
-              size=struct.unpack(">I",b[off:off+4])[0]
-              kind=b[off+4:off+8]
-              data=b[off+8:off+8+size]
-              crc=struct.unpack(">I",b[off+8+size:off+12+size])[0]
-              assert zlib.crc32(kind+data)==crc, f"CRC incorrect pour {kind!r}"
-              chunks.append(kind)
-              if kind==b"IDAT":idat+=data
-              off+=size+12
-              if kind==b"IEND":break
-          assert chunks[0]==b"IHDR" and chunks[-1]==b"IEND"
-          assert zlib.decompress(idat), "Données pixels illisibles"
-          print("PNG chargé avec succès, taille :", len(b), "octets.")
+          cat > _verify_snake.html <<'HTML'
+          <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="snake.css"><style>html,body{margin:0;width:100%;height:100%}#test{position:fixed;inset:0;display:block;width:100%;height:100%;padding:0}</style><div id="test" class="window-body zebra-game-body"></div><script src="snake.js"></script><script>
+          window.addEventListener('load',async()=>{
+           const out={},host=document.querySelector('#test'),wait=ms=>new Promise(r=>setTimeout(r,ms));
+           try{
+            ZebraSnake.mount(host);await wait(150);
+            const $=q=>host.querySelector(q),stage=$('.zs-stage'),bounds=stage.getBoundingClientRect(),consoleBounds=$('.zs-console').getBoundingClientRect();
+            out.fits=bounds.width>100&&bounds.height>90&&bounds.left>=0&&bounds.right<=innerWidth&&consoleBounds.bottom<=innerHeight+1;
+            const ctx=$('canvas').getContext('2d');out.drawn=ctx.getImageData(160,160,1,1).data[3]===255;
+            const image=new Image();image.src='/assets/games/snake/tileSnake.png';await image.decode();out.tile=image.naturalWidth===32&&getComputedStyle($('.zs-machine')).backgroundImage.includes('tileSnake');
+            out.ready=$('.zs-state').textContent==='PRÊT';$('.zs-play').click();out.play=$('.zs-state').textContent==='EN JEU'&&$('.zs-overlay').hidden;
+            $('.zs-play').click();out.pause=$('.zs-state').textContent==='PAUSE'&&!$('.zs-overlay').hidden;
+            $('.zs-menu').click();$('.zs-up').dispatchEvent(new PointerEvent('pointerdown',{button:0,bubbles:true}));out.direction=$('.zs-state').textContent==='EN JEU';
+            document.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true}));out.keyboard=$('.zs-state').textContent==='PAUSE';
+            $('.zs-restart').click();out.restart=$('.zs-state').textContent==='EN JEU'&&$('.zs-score').textContent==='0000';
+            out.mobile=innerWidth>700||getComputedStyle($('.zs-handheld')).display==='flex';
+            host._zebraDispose();await wait(320);out.dispose=$('.zs-state').textContent==='EN JEU';
+           }catch(e){out.error=String(e.stack||e)}
+           document.documentElement.dataset.snakeReport=JSON.stringify(out);document.documentElement.dataset.snakeStatus=Object.values(out).every(v=>v===true)?'ok':'failed';
+          });
+          </script>
+          HTML
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/snake-server.log 2>&1 &
+          sleep 1
+          for size in 390,740 1160,900; do
+            google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=$size --virtual-time-budget=3000 --dump-dom http://127.0.0.1:8765/_verify_snake.html > /tmp/snake-$size.html 2>/tmp/snake-$size.log
+            grep -o 'data-snake-report="[^"]*"' /tmp/snake-$size.html
+            grep -q 'data-snake-status="ok"' /tmp/snake-$size.html
+          done

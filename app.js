@@ -688,8 +688,8 @@ function openUtility(name){
 var gameModules={
  tetris:{name:"Tetris.exe",width:735,height:770,global:"ZebraTetris",
   files:["tetris-artwork.js?v=1.7","tetris.js?v=2.3"]},
- snake:{name:"Snake.exe",width:790,height:650,global:"ZebraSnake",
-  files:["snake-assets.js?v=1.0","snake.js?v=2.0"]},
+ snake:{name:"Snake.exe",width:650,height:700,global:"ZebraSnake",
+  files:["snake.js?v=3.0"],css:"snake.css?v=3.0"},
  paint:{name:"ZebraPaint.exe",width:850,height:640,global:"ZebraPaint",
   files:["paint.js?v=1.4"],css:"paint-responsive.css?v=1.4"}
 };
