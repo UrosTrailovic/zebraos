@@ -2286,3 +2286,17 @@
 @media(prefers-reduced-motion:reduce){
  .zebra-game-body .zg.zg-retro:not(.zt-assembling){transition:none}
 }
+
+/* Chargement à la demande des jeux / de ZebraPaint : indicateur discret. */
+.zebra-lazy-loading{
+ margin:auto;align-self:center;justify-self:center;text-align:center;
+ display:flex;flex-direction:column;gap:12px;align-items:center;
+ padding:28px;color:#233958;font:700 12px "Courier New",monospace;
+}
+.zebra-lazy-loading::before{
+ content:"";display:block;width:30px;height:30px;
+ border:4px solid #8b99b0;border-top-color:#264c93;
+ border-radius:50%;animation:zebra-loading-spin .8s linear infinite;
+}
+@keyframes zebra-loading-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.zebra-lazy-loading::before{animation:none}}
