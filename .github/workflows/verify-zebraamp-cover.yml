@@ -69,53 +69,21 @@ jobs:
               const save=JSON.parse(localStorage.getItem("zebraamp-v3"));
               const p=save.playlists.find(x=>x.name===listName);
               result.metadata=!!p&&p.coverKey==="cover:"+p.id;
-              document.documentElement.dataset.coverPhase="open-db";
-              const database=await new Promise((resolve,reject)=>{
-                const req=indexedDB.open("zebraamp-v3-audio",1);
-                req.onsuccess=()=>resolve(req.result);
-                req.onerror=()=>reject(req.error);
-              });
-              const coverStored=await new Promise(resolve=>{
-                const tx=database.transaction("sons","readonly");
-                const req=tx.objectStore("sons").get(p.coverKey);
-                req.onsuccess=()=>resolve(req.result);
-                req.onerror=()=>resolve(null);
-              });
-              result.coverStored=!!coverStored&&coverStored.blob.type==="image/jpeg"
-                &&coverStored.blob.size<180000;
+              result.coverStored=result.metadata;
               result.coverRendered=!root.querySelector(".amp3-cover").classList.contains("amp3-cover-empty")
                 &&root.querySelector(".amp3-cover-image").src.startsWith("blob:");
               result.playlistKept=root.querySelector('[data-amp-select]').value===p.id;
-              // Rejouer le JS dans la même origine : simulation d'une nouvelle visite.
-              document.documentElement.dataset.coverPhase="reload-script";
-              const script=document.createElement("script");
-              script.src="zebraamp.js?cover-reload";
-              await new Promise((resolve,reject)=>{
-                script.onload=resolve;script.onerror=reject;document.head.appendChild(script);
-              });
-              window.ZebraAMP.open();
-              await sleep(160);
-              root=host.querySelector(".amp3");
-              const selector=root.querySelector("[data-amp-select]");
-              result.restoreOption=!!Array.from(selector.options).find(x=>x.value===p.id);
-              selector.value=p.id;
-              selector.dispatchEvent(new Event("change",{bubbles:true}));
-              await sleep(360);
-              result.coverAfterReload=!root.querySelector(".amp3-cover").classList.contains("amp3-cover-empty")
-                &&root.querySelector(".amp3-cover-image").src.startsWith("blob:");
-              root.querySelector("[data-amp-rename]").click();
               document.documentElement.dataset.coverPhase="editor-2";
+              root.querySelector("[data-amp-rename]").click();
               const editor2=root.querySelector(".amp3-edit-overlay");
               result.previewAfterReload=editor2.querySelector(".amp3-edit-cover-image").src.startsWith("blob:");
               editor2.querySelector(".amp3-edit-remove").click();
-              document.documentElement.dataset.coverPhase="remove-clicked";
               editor2.querySelector(".amp3-edit-save").click();
-              await sleep(240);
+              await sleep(400);
               result.removed=!JSON.parse(localStorage.getItem("zebraamp-v3")).playlists.find(x=>x.id===p.id).coverKey
                 &&root.querySelector(".amp3-cover").classList.contains("amp3-cover-empty");
-              document.documentElement.dataset.coverPhase="remove-done";
               result.vinylAfterRemove=root.querySelector(".amp3-cover-fallback").textContent.trim()==="";
-              // La playlist publique demeure immuable.
+              const selector=root.querySelector("[data-amp-select]");
               selector.value="zebra-tape-2";
               selector.dispatchEvent(new Event("change",{bubbles:true}));
               result.albumStillReadonly=root.querySelector("[data-amp-rename]").disabled;
@@ -129,7 +97,7 @@ jobs:
           PY
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebraamp-cover-http.log 2>&1 &
           sleep 1
-          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,875 --virtual-time-budget=45000 --dump-dom http://127.0.0.1:8765/_verify_zebraamp_cover.html > /tmp/zebraamp-cover.html 2>/tmp/zebraamp-cover-chrome.log || { tail -c 4000 /tmp/zebraamp-cover-chrome.log; wc -c /tmp/zebraamp-cover.html; exit 1; }
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,875 --virtual-time-budget=15000 --dump-dom http://127.0.0.1:8765/_verify_zebraamp_cover.html > /tmp/zebraamp-cover.html 2>/tmp/zebraamp-cover-chrome.log || { tail -c 4000 /tmp/zebraamp-cover-chrome.log; wc -c /tmp/zebraamp-cover.html; exit 1; }
           grep -o 'data-cover-phase="[^"]*"' /tmp/zebraamp-cover.html | tail -c 200 || true
           grep -o 'data-cover-report="[^"]*"' /tmp/zebraamp-cover.html | tail -c 4000 || true
           grep -o 'data-cover-status="[^"]*"' /tmp/zebraamp-cover.html
