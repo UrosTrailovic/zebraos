@@ -119,7 +119,7 @@ jobs:
           PY
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebraamp-cover-http.log 2>&1 &
           sleep 1
-          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,875 --virtual-time-budget=9000 --dump-dom http://127.0.0.1:8765/_verify_zebraamp_cover.html > /tmp/zebraamp-cover.html 2>/tmp/zebraamp-cover-chrome.log
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,875 --virtual-time-budget=9000 --dump-dom http://127.0.0.1:8765/_verify_zebraamp_cover.html > /tmp/zebraamp-cover.html 2>/tmp/zebraamp-cover-chrome.log || { tail -c 4000 /tmp/zebraamp-cover-chrome.log; wc -c /tmp/zebraamp-cover.html; exit 1; }
           grep -o 'data-cover-report="[^"]*"' /tmp/zebraamp-cover.html | tail -c 4000
           grep -o 'data-cover-status="[^"]*"' /tmp/zebraamp-cover.html
           grep -q 'data-cover-status="ok"' /tmp/zebraamp-cover.html
