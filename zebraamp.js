@@ -725,12 +725,25 @@ function visualize(){
    bassEnergy+=v;
    var hh=Math.max(2,v*(height*.68));
    var x=margin+i*(bw+gap);
-   c.fillStyle=v>.13?"#8df2b9":"#3d8e64";
-   c.fillRect(x,floor-hh,bw,hh);
-   if(v>.08){c.fillStyle="#c6ffda";c.fillRect(x,floor-hh-2,bw,2);}
+   // Match ZebraVIS phosphor: broad green emission and a hot fine core.
+   // The dim baseline stays unlit when audio is paused or silent.
+   if(v>.025){
+    c.save();c.globalCompositeOperation="lighter";
+    c.shadowColor="#20ff84";c.shadowBlur=Math.min(16,height*.15);
+    c.fillStyle="rgba(37,255,132,.42)";c.fillRect(x,floor-hh,bw,hh);
+    c.shadowColor="#7affb0";c.shadowBlur=Math.min(6,height*.06);
+    c.fillStyle="rgba(170,255,205,.83)";c.fillRect(x,floor-hh,bw,hh);
+    c.restore();c.shadowBlur=0;
+    c.fillStyle="#ddffe9";c.fillRect(x+bw*.2,floor-hh,bw*.6,hh);
+    c.shadowColor="#8affbc";c.shadowBlur=6;
+    c.fillStyle="#edfff2";c.fillRect(x,floor-hh-2,bw,1.4);
+    c.shadowBlur=0;
+   }else{c.fillStyle="#356c4c";c.fillRect(x,floor-hh,bw,hh);}
   }
-  c.fillStyle="#5eae85";c.font="9px monospace";
+  c.shadowColor="#66ff9e";c.shadowBlur=5;
+  c.fillStyle="#a4eec0";c.font="9px monospace";
   c.fillText(!audio.paused?(analyser&&bassEnergy>.02?"CH 01 • AUDIO":"CH 01 • EN ATTENTE"):"CH 01 • VEILLE",8,12);
+  c.shadowBlur=0;
   var signal=view&&view.querySelector("[data-amp-spectrum-status]");
   if(signal)signal.textContent=audio.paused?"VEILLE":analyser&&bassEnergy>.02?"SIGNAL":"ANALYSE…";
  }
@@ -745,7 +758,7 @@ function loadVisualizer(){
  if(visualizerPromise)return visualizerPromise;
  visualizerPromise=new Promise(function(resolve,reject){
   var script=document.createElement("script");
-  script.src="/visualizer.js?v=4.2";script.async=true;
+  script.src="/visualizer.js?v=4.3";script.async=true;
   script.onload=function(){
    if(window.ZebraVisualizer)resolve(window.ZebraVisualizer);
    else reject(Error("Module ZebraVIS introuvable."));

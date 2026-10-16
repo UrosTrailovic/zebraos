@@ -1,0 +1,66 @@
+/* Phosphor only inside the machine's displays; keycaps keep engraved ink.
+   No layout or control-size changes, including the compact mobile player. */
+.amp3{
+ --amp-phosphor:0 0 1px #eefff3,0 0 4px #65ffa2aa,0 0 10px #25ff8059;
+ --amp-phosphor-soft:0 0 2px #8effb780,0 0 6px #30ff793b;
+}
+.amp3-head,.amp3-info-screen,.amp3-list,.amp3-eq-panel,
+.amp3-speed-panel,.amp3-reverb-panel{
+ text-shadow:var(--amp-phosphor-soft);
+}
+.amp3-head strong,.amp3-time,.amp3-marquee,
+.amp3-eq-panel>summary,.amp3-eq-gain,
+.amp3-speed-header strong,.amp3-reverb-header strong{
+ color:#c7ffdc;text-shadow:var(--amp-phosphor);
+}
+.amp3-head strong{color:#d4ffe2;text-shadow:0 0 1px #fff,0 0 5px #9affbdcc,0 0 12px #40ff865e}
+.amp3-head span{color:#8ec9a4;text-shadow:var(--amp-phosphor-soft)}
+.amp3-track-title{color:#bff4ce;text-shadow:var(--amp-phosphor-soft)}
+.amp3-track.active .amp3-track-title{color:#e3ffeb;text-shadow:var(--amp-phosphor)}
+.amp3-track-source{color:#79ae8d;text-shadow:0 0 3px #51ee8b38}
+.amp3-viz-label,.amp3-viz-state,.amp3-led-active{
+ color:#b5ffd0;text-shadow:var(--amp-phosphor);
+}
+.amp3-led:not(.amp3-led-active){text-shadow:var(--amp-phosphor-soft)}
+.amp3-select,.amp3-preset-row select{color:#c3f8d4;text-shadow:var(--amp-phosphor-soft)}
+.amp3-select option,.amp3-preset-row select option{text-shadow:none;background:#0a1b13;color:#c3f8d4}
+/* A touch of emitted light in the seek control, not a filter over cover art. */
+.amp3-screen>input[type=range]{filter:drop-shadow(0 0 3px #51ff9766)}
+/* Raised cast keycaps: bright upper bevel, inset rim, dark lower lip.
+   Existing pixel glyphs, green play key and fixed control dimensions remain. */
+.amp3 :is(.amp3-btn,.amp3-item-play,.amp3-small),.zviz button{
+ border:2px solid;border-color:#eff7ef #7e9585 #435e4c #c2d2c5;
+ border-radius:2px;
+ background:linear-gradient(180deg,#ffffff60 0%,#ffffff08 35%,#0000000d 65%,#00000029 100%),linear-gradient(135deg,#d8e4da,#a4b6a8);
+ box-shadow:inset 0 1px 0 #ffffffe6,inset 1px 0 0 #ffffff7a,inset -1px -1px 0 #354f3d77,inset 0 -4px 0 #314e3b33,0 2px 0 #07170d,1px 3px 3px #0008;
+ color:#142b1e;font-weight:bold;
+ text-shadow:0 1px 0 #f1fff1b3;
+ transition:filter 80ms,box-shadow 60ms,transform 60ms;
+}
+.amp3 .amp3-play,.zviz .zviz-play{
+ background:linear-gradient(180deg,#f0fff1 0%,#bbf0cd 12%,#99dcb1 65%,#6eaf8a 100%);
+ border-color:#e2ffe9 #7cb592 #366548 #b1eac3;
+ color:#0a3921;box-shadow:inset 0 1px 0 #fff,inset 0 -4px 0 #1b5f3733,0 2px 0 #07170d,1px 3px 3px #0008;
+}
+.amp3 .amp3-btn.enabled,
+.amp3 .amp3-btn[aria-pressed=true],.amp3 .amp3-btn[aria-expanded=true]{
+ background:linear-gradient(180deg,#74b28d,#a1d3af);
+ border-color:#42664e #b9ddc3 #d8f2dd #456c52;
+ box-shadow:inset 1px 2px 4px #06251177,0 1px 0 #c9efd038;
+ color:#0b2c18;
+}
+@media(hover:hover){
+ .amp3 :is(.amp3-btn,.amp3-item-play,.amp3-small):hover:not(:disabled),.zviz button:hover:not(:disabled){filter:brightness(1.08)}
+}
+.amp3 :is(.amp3-btn,.amp3-item-play,.amp3-small):active:not(:disabled),.zviz button:active:not(:disabled){
+ border-color:#45634e #c7decb #e5f4e6 #536d5b;
+ box-shadow:inset 1px 2px 4px #102b1c80,inset 0 1px 1px #0003,0 1px 0 #aac8b044;
+ transform:translateY(2px);filter:brightness(.94);
+}
+.amp3 :is(.amp3-btn,.amp3-item-play,.amp3-small):disabled{
+ text-shadow:none;box-shadow:inset 0 1px 0 #ffffff55,0 1px 0 #07170d;opacity:.45;
+}
+.amp3 .amp3-danger,.amp3 .amp3-edit-remove{color:#8a302a}
+@media(prefers-reduced-motion:reduce){
+ .amp3 :is(.amp3-btn,.amp3-item-play,.amp3-small),.zviz button{transition:none}
+}

@@ -168,17 +168,17 @@ function drawSpectrum(ctx,w,h,m){
   }
   ctx.save();ctx.globalCompositeOperation="lighter";
   ctx.shadowColor="#00ff69";
-  ctx.shadowBlur=(lowPower?26:42)+m.hit*12;
-  ctx.fillStyle="rgba(10,255,102,.55)";ctx.fill();
+  ctx.shadowBlur=(lowPower?23:36)+m.hit*10;
+  ctx.fillStyle="rgba(10,255,102,.46)";ctx.fill();
   ctx.shadowColor="#30ff8d";ctx.shadowBlur=lowPower?10:17;
-  ctx.fillStyle="rgba(92,255,160,.72)";ctx.fill();
+  ctx.fillStyle="rgba(92,255,160,.63)";ctx.fill();
   ctx.shadowColor="#b5ffd2";ctx.shadowBlur=lowPower?4:7;
-  ctx.fillStyle="rgba(190,255,218,.92)";ctx.fill();
+  ctx.fillStyle="rgba(190,255,218,.83)";ctx.fill();
   ctx.restore();ctx.shadowBlur=0;
   // Small brilliant cores retain the segmented LED structure inside the glow.
   for(var i=0;i<count;i++){
     var value=m.levels[i],x=margin+i*step,lit=Math.floor(value*segments);
-    ctx.fillStyle="#edfff2";
+    ctx.fillStyle="#dfffeb";
     for(var k=0;k<lit;k++)ctx.fillRect(x+bw*.14,base-(k+1)*sh,bw*.72,Math.max(.8,(sh-1.3)*.48));
     if(m.peaks[i]>.015){
       ctx.shadowColor="#71ffab";ctx.shadowBlur=lowPower?11:20;
