@@ -10,21 +10,21 @@ var modes=[
 ];
 var accounts=["visitor","zebra","admin","daniel"];
 var dbPromise=null,currentSession=null,applyToken=0,refreshGallery=null,selectedItem=null;
-// Fond actuel compressé = secours. Si tu téléverses un PNG original dans
-// assets/wallpapers/zebra-default.png, ZebraOS choisit automatiquement le PNG net.
-var zebraDefault="/assets/wallpapers/zebra-default.avif?v=1";
-var zebraHiRes="/assets/wallpapers/zebra-default.png?v=2";
-var zebraHiResCheck=null;
+// Aucun AVIF requis : le PNG existant s'affiche immédiatement.
+ // Si une version WebP existe, elle prend le relais sans écran vide.
+var zebraPng="/assets/wallpapers/zebra-default.png?v=2";
+var zebraWebp="/assets/wallpapers/zebra-default.webp?v=1";
+var zebraDefault=zebraPng,webpCheck=null;
 function builtIn(account){return account==="zebra"?zebraDefault:null;}
-function checkHiRes(){
-  if(zebraHiResCheck)return zebraHiResCheck;
-  zebraHiResCheck=new Promise(function(resolve){
-    var image=new Image();
-    image.onload=function(){zebraDefault=zebraHiRes;resolve(true);};
-    image.onerror=function(){resolve(false);};
-    image.src=zebraHiRes;
-  });
-  return zebraHiResCheck;
+function checkWebp(){
+ if(webpCheck)return webpCheck;
+ webpCheck=new Promise(function(resolve){
+  var image=new Image();
+  image.onload=function(){zebraDefault=zebraWebp;resolve(true);};
+  image.onerror=function(){resolve(false);};
+  image.src=zebraWebp;
+ });
+ return webpCheck;
 }
 var cache={};
 var gradients={
@@ -128,7 +128,7 @@ function apply(name){
   if(!wall)return;
   paint(wall,name,builtIn(name),cfg.mode,cfg.posX,cfg.posY);
   if(name==="zebra"&&!cfg.imageId){
-    checkHiRes().then(function(available){
+    checkWebp().then(function(available){
       if(available&&token===applyToken&&currentSession==="zebra"&&!read(name).imageId)
         paint(wall,name,builtIn(name),read(name).mode,read(name).posX,read(name).posY);
     });
