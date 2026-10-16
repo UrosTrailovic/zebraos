@@ -134,6 +134,9 @@ jobs:
             report.gamesFolder=!!entry("Tetris.exe")&&!!entry("Snake.exe")
               &&!entry("ZebraCalc.exe");
             entry("Tetris.exe").click();
+            // Le moteur n'est téléchargé qu'au premier lancement.
+            await window.ZebraLazyApps.load("tetris");
+            await new Promise(resolve=>setTimeout(resolve,100));
             report.tetrisWorks=!!document.querySelector(".zg-tetris-stage");
             desk("OUTILS").click();
             await new Promise(resolve=>setTimeout(resolve,150));
