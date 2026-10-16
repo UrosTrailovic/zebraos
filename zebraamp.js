@@ -22,6 +22,7 @@ var presetValues={
 };
 var eqFreq=[70,250,1000,3500,11000],eqNames=["GRAVES","BAS-MÉD.","MÉDIUMS","PRÉSENCE","AIGUS"];
 var animation=null,loadingId=0,notifyText="",initDone=false,albumChecked=false;
+var visualizerPromise=null;
 function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
 function b(label,action,cls){var x=el("button",cls||"amp3-btn",label);x.type="button";x.onclick=action;return x;}
 function stamp(){return "pl-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);}
@@ -447,6 +448,31 @@ function visualize(){
  }
  animation=requestAnimationFrame(frame);
 }
+function loadVisualizer(){
+ if(window.ZebraVisualizer)return Promise.resolve(window.ZebraVisualizer);
+ if(visualizerPromise)return visualizerPromise;
+ visualizerPromise=new Promise(function(resolve,reject){
+  var script=document.createElement("script");
+  script.src="/visualizer.js?v=3.1";script.async=true;
+  script.onload=function(){
+   if(window.ZebraVisualizer)resolve(window.ZebraVisualizer);
+   else reject(Error("Module ZebraVIS introuvable."));
+  };
+  script.onerror=function(){reject(Error("Impossible de charger ZebraVIS."));};
+  document.head.appendChild(script);
+ }).catch(function(err){visualizerPromise=null;throw err;});
+ return visualizerPromise;
+}
+function openVisualizer(){
+ resumeGraph();
+ loadVisualizer().then(function(module){
+  if(!view||!view.isConnected)return;
+  var config=window.ZebraAMPConfig;
+  if(!config||typeof config.windowBox!=="function")return;
+  var box=config.windowBox("visualizer","ZebraVIS.exe — Visualiseur",650,500);
+  module.mount(box,audio,{analyser:analyser});
+ }).catch(function(err){status(err.message||"Visualiseur indisponible.");});
+}
 function open(){
  init();
  if(!window.ZebraAMPConfig||typeof window.ZebraAMPConfig.windowBox!=="function")return;
@@ -504,13 +530,7 @@ function open(){
  shuffleBtn.setAttribute("data-amp-shuffle","");modes.appendChild(shuffleBtn);
  var repeatBtn=b("RÉPÉTER : TOUS",function(){repeat=repeat==="tout"?"un":repeat==="un"?"aucun":"tout";store();render();},"amp3-btn");
  repeatBtn.setAttribute("data-amp-repeat","");modes.appendChild(repeatBtn);
- var visualButton=b("VISUEL",function(){
-  resumeGraph();
-  if(!window.ZebraVisualizer){status("Visualiseur indisponible.");return;}
-  var config=window.ZebraAMPConfig;
-  var box=config.windowBox("visualizer","ZebraVIS.exe — Visualiseur",650,500);
-  window.ZebraVisualizer.mount(box,audio,{analyser:analyser});
- },"amp3-btn amp3-visual-btn");
+ var visualButton=b("VISUEL",openVisualizer,"amp3-btn amp3-visual-btn");
  modes.appendChild(visualButton);
  controls.appendChild(modes);
  root.appendChild(controls);
