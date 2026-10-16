@@ -1,0 +1,125 @@
+name: Vérifier covers des playlists ZebraAMP
+on:
+  push:
+    paths:
+      - 'zebraamp.js'
+      - 'zebraamp-compact.css'
+      - 'index.html'
+      - '.github/workflows/verify-zebraamp-cover.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  playlist-cover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier syntaxe du lecteur
+        run: node --check zebraamp.js
+      - name: Vérifier import, sauvegarde, réouverture et retrait cover sur mobile
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path('index.html').read_text()
+          test=r'''<script>
+          window.addEventListener("load",async function(){
+            const result={},sleep=ms=>new Promise(r=>setTimeout(r,ms));
+            try{
+              const host=document.createElement("div");
+              host.className="window-body";
+              host.style.cssText="position:absolute;top:8px;left:5px;width:380px;height:740px;z-index:9999;overflow:hidden";
+              document.body.append(host);
+              window.ZebraGitFiles={
+                subscribe(){},load(){return Promise.resolve({ok:true,entries:[]})},
+                allFiles(){return []}
+              };
+              window.ZebraAMPConfig={windowBox(){return host;}};
+              window.ZebraAMP.open();
+              await sleep(120);
+              let root=host.querySelector(".amp3");
+              result.defaultVinyl=root.querySelector(".amp3-cover-fallback").textContent.trim()===""
+                &&getComputedStyle(root.querySelector(".amp3-cover-fallback"),"::before").backgroundImage!=="none";
+              const edit=root.querySelector("[data-amp-rename]");
+              result.albumReadonly=edit.disabled;
+              const listName="Cover-test-"+Date.now();
+              window.prompt=()=>listName;
+              Array.from(root.querySelectorAll(".amp3-playlist-tools button")).find(b=>b.textContent.includes("NOUVELLE")).click();
+              root=host.querySelector(".amp3");
+              result.customEditable=!root.querySelector("[data-amp-rename]").disabled;
+              root.querySelector("[data-amp-rename]").click();
+              const dialog=root.querySelector(".amp3-edit-overlay");
+              result.editor=!!dialog&&!!dialog.querySelector(".amp3-edit-name")
+                &&!!dialog.querySelector('input[type=file]')
+                &&!!dialog.querySelector(".amp3-edit-save");
+              const cvs=document.createElement("canvas");cvs.width=80;cvs.height=80;
+              cvs.getContext("2d").fillStyle="#fa2e38";
+              cvs.getContext("2d").fillRect(0,0,80,80);
+              const blob=await new Promise(resolve=>cvs.toBlob(resolve,"image/png"));
+              const file=new File([blob],"pochette.png",{type:"image/png"});
+              const uploader=dialog.querySelector('input[type=file]');
+              Object.defineProperty(uploader,"files",{configurable:true,value:[file]});
+              uploader.dispatchEvent(new Event("change",{bubbles:true}));
+              result.coverPreview=dialog.querySelector(".amp3-edit-cover-image").src.startsWith("blob:");
+              dialog.querySelector(".amp3-edit-save").click();
+              await sleep(550);
+              const save=JSON.parse(localStorage.getItem("zebraamp-v3"));
+              const p=save.playlists.find(x=>x.name===listName);
+              result.metadata=!!p&&p.coverKey==="cover:"+p.id;
+              const database=await new Promise((resolve,reject)=>{
+                const req=indexedDB.open("zebraamp-v3-audio",1);
+                req.onsuccess=()=>resolve(req.result);
+                req.onerror=()=>reject(req.error);
+              });
+              const coverStored=await new Promise(resolve=>{
+                const tx=database.transaction("sons","readonly");
+                const req=tx.objectStore("sons").get(p.coverKey);
+                req.onsuccess=()=>resolve(req.result);
+                req.onerror=()=>resolve(null);
+              });
+              result.coverStored=!!coverStored&&coverStored.blob.type==="image/jpeg"
+                &&coverStored.blob.size<180000;
+              result.coverRendered=!root.querySelector(".amp3-cover").classList.contains("amp3-cover-empty")
+                &&root.querySelector(".amp3-cover-image").src.startsWith("blob:");
+              result.playlistKept=root.querySelector('[data-amp-select]').value===p.id;
+              // Rejouer le JS dans la même origine : simulation d'une nouvelle visite.
+              const script=document.createElement("script");
+              script.src="zebraamp.js?cover-reload";
+              await new Promise((resolve,reject)=>{
+                script.onload=resolve;script.onerror=reject;document.head.appendChild(script);
+              });
+              window.ZebraAMP.open();
+              await sleep(160);
+              root=host.querySelector(".amp3");
+              const selector=root.querySelector("[data-amp-select]");
+              result.restoreOption=!!Array.from(selector.options).find(x=>x.value===p.id);
+              selector.value=p.id;
+              selector.dispatchEvent(new Event("change",{bubbles:true}));
+              await sleep(360);
+              result.coverAfterReload=!root.querySelector(".amp3-cover").classList.contains("amp3-cover-empty")
+                &&root.querySelector(".amp3-cover-image").src.startsWith("blob:");
+              root.querySelector("[data-amp-rename]").click();
+              const editor2=root.querySelector(".amp3-edit-overlay");
+              result.previewAfterReload=editor2.querySelector(".amp3-edit-cover-image").src.startsWith("blob:");
+              editor2.querySelector(".amp3-edit-remove").click();
+              editor2.querySelector(".amp3-edit-save").click();
+              await sleep(240);
+              result.removed=!JSON.parse(localStorage.getItem("zebraamp-v3")).playlists.find(x=>x.id===p.id).coverKey
+                &&root.querySelector(".amp3-cover").classList.contains("amp3-cover-empty");
+              result.vinylAfterRemove=root.querySelector(".amp3-cover-fallback").textContent.trim()==="";
+              // La playlist publique demeure immuable.
+              selector.value="zebra-tape-2";
+              selector.dispatchEvent(new Event("change",{bubbles:true}));
+              result.albumStillReadonly=root.querySelector("[data-amp-rename]").disabled;
+            }catch(e){result.error=String(e.stack||e);}
+            document.documentElement.dataset.coverReport=JSON.stringify(result);
+            document.documentElement.dataset.coverStatus=Object.values(result).every(v=>v===true)?"ok":"failed";
+          });
+          </script>'''
+          Path('_verify_zebraamp_cover.html').write_text(html.replace("</body>",test+"</body>"))
+          PY
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebraamp-cover-http.log 2>&1 &
+          sleep 1
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,875 --virtual-time-budget=9000 --dump-dom http://127.0.0.1:8765/_verify_zebraamp_cover.html > /tmp/zebraamp-cover.html 2>/tmp/zebraamp-cover-chrome.log
+          grep -o 'data-cover-report="[^"]*"' /tmp/zebraamp-cover.html | tail -c 4000
+          grep -o 'data-cover-status="[^"]*"' /tmp/zebraamp-cover.html
+          grep -q 'data-cover-status="ok"' /tmp/zebraamp-cover.html
