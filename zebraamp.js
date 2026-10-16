@@ -375,7 +375,9 @@ function render(){
   opt.value=p.id;sel.appendChild(opt);
  });
  sel.value=current;
- var rows=view.querySelector("[data-amp-rows]");rows.innerHTML="";
+ var rows=view.querySelector("[data-amp-rows]");
+ var oldListScroll=rows.dataset.playlist===current?rows.scrollTop:0;
+ rows.innerHTML="";rows.dataset.playlist=current;
  var editable=!list.readonly;
  view.querySelector("[data-amp-rename]").disabled=!editable;
  view.querySelector("[data-amp-delete-list]").disabled=!editable;
@@ -416,6 +418,7 @@ function render(){
  var speedValue=view.querySelector("[data-amp-speed-value]");
  if(speedValue)speedValue.textContent=Math.round(speed*100)+" %";
  view.querySelector("[data-amp-volume]").value=String(Math.round(volume*100));
+ rows.scrollTop=oldListScroll;
  renderProgress();renderStatus();
 }
 function visualize(){
@@ -424,12 +427,15 @@ function visualize(){
  if(!c)return;
  if(animation)cancelAnimationFrame(animation);
  var bins=analyser?new Uint8Array(analyser.frequencyBinCount):null;
- var last=0;
+ var last=0,pausedFramePainted=false;
  function frame(now){
   if(!view||!view.isConnected)return;
   animation=requestAnimationFrame(frame);
   if(document.hidden||now-last<33)return;
   last=now;
+  // Ne pas redessiner indéfiniment le spectre noir en pause (batterie mobile).
+  if(audio.paused){if(pausedFramePainted)return;pausedFramePainted=true;}
+  else pausedFramePainted=false;
   var width=canvas.clientWidth||125,height=canvas.clientHeight||58;
   var dpr=Math.min(window.devicePixelRatio||1,1.5),w=Math.round(width*dpr),h=Math.round(height*dpr);
   if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
