@@ -411,7 +411,15 @@ function render(){
   });
  }
  view.querySelector("[data-amp-shuffle]").classList.toggle("enabled",shuffle);
- view.querySelector("[data-amp-repeat]").textContent=repeat==="aucun"?"RÉPÉTER : NON":repeat==="un"?"RÉPÉTER : 1":"RÉPÉTER : TOUS";
+ var repeatBtn=view.querySelector("[data-amp-repeat]");
+ repeatBtn.textContent=repeat==="aucun"?"↻ ×":repeat==="un"?"↻ 1":"↻ ∞";
+ repeatBtn.title=repeat==="aucun"?"Répétition désactivée":repeat==="un"?"Répéter ce morceau":"Répéter toute la playlist";
+ repeatBtn.setAttribute("aria-label",repeatBtn.title);
+ repeatBtn.setAttribute("aria-pressed",String(repeat!=="aucun"));
+ var shuffleBtn=view.querySelector("[data-amp-shuffle]");
+ shuffleBtn.title=shuffle?"Mode aléatoire activé":"Mode aléatoire désactivé";
+ shuffleBtn.setAttribute("aria-label",shuffleBtn.title);
+ shuffleBtn.setAttribute("aria-pressed",String(shuffle));
  view.querySelector("[data-amp-speed]").textContent="VITESSE "+Math.round(speed*100)+" %";
  var speedInput=view.querySelector("[data-amp-speed-input]");
  if(speedInput)speedInput.value=String(Math.round(speed*100));
@@ -426,31 +434,53 @@ function visualize(){
  var canvas=view.querySelector("canvas.amp3-spectrum"),c=canvas&&canvas.getContext("2d");
  if(!c)return;
  if(animation)cancelAnimationFrame(animation);
- var bins=analyser?new Uint8Array(analyser.frequencyBinCount):null;
- var last=0,pausedFramePainted=false;
+ // L'analyseur audio est créé au premier clic ▶, APRES l'ouverture de
+ // ZebraAMP. Ne surtout pas figer bins=null à l'ouverture de la fenêtre.
+ var bins=null;
+ var last=0,pausedFramePainted=false,previousLink=false;
  function frame(now){
   if(!view||!view.isConnected)return;
   animation=requestAnimationFrame(frame);
   if(document.hidden||now-last<33)return;
   last=now;
   // Ne pas redessiner indéfiniment le spectre noir en pause (batterie mobile).
+  if(analyser&&(!bins||bins.length!==analyser.frequencyBinCount)){
+   bins=new Uint8Array(analyser.frequencyBinCount);pausedFramePainted=false;
+  }
+  if(!audio.paused&&ctx&&ctx.state==="suspended")resumeGraph();
   if(audio.paused){if(pausedFramePainted)return;pausedFramePainted=true;}
   else pausedFramePainted=false;
   var width=canvas.clientWidth||125,height=canvas.clientHeight||58;
   var dpr=Math.min(window.devicePixelRatio||1,1.5),w=Math.round(width*dpr),h=Math.round(height*dpr);
   if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
   c.setTransform(dpr,0,0,dpr,0,0);
-  c.fillStyle="#04140d";c.fillRect(0,0,width,height);
-  var bars=22,gap=2,bw=Math.max(1,(width-gap*bars)/bars);
-  if(analyser&&bins)analyser.getByteFrequencyData(bins);
-  for(var i=0;i<bars;i++){
-   var idx=Math.min(bins?bins.length-1:0,Math.floor(Math.pow(i/bars,1.4)*320));
-   var v=bins&&!audio.paused?bins[idx]/255:0;
-   var hh=Math.max(2,v*(height-11));
-   c.fillStyle=i<12?"#6cbb85":i<32?"#98d8a8":"#c8edb9";
-   c.fillRect(i*(bw+gap),height-hh,bw,hh);
+  c.fillStyle="#03140e";c.fillRect(0,0,width,height);
+  // Grille légère pour que le CRT ait un véritable affichage à l'arrêt.
+  c.strokeStyle="rgba(86,165,117,.13)";c.lineWidth=1;
+  c.beginPath();
+  for(var gx=0;gx<width;gx+=18){c.moveTo(gx,0);c.lineTo(gx,height);}
+  for(var gy=0;gy<height;gy+=14){c.moveTo(0,gy);c.lineTo(width,gy);}
+  c.stroke();
+  var bars=32,gap=Math.max(1,width*.006),margin=width*.055;
+  var bw=Math.max(1,(width-2*margin-gap*(bars-1))/bars),floor=height*.82;
+  var bassEnergy=0;
+  if(analyser&&bins&&!audio.paused){
+   try{analyser.getByteFrequencyData(bins);}catch(e){}
   }
-  // Affichage minimal façon Winamp : seulement les barres, sans texte inutile.
+  for(var i=0;i<bars;i++){
+   var idx=Math.min(bins?bins.length-1:0,Math.floor(Math.pow(i/bars,1.55)*Math.min(400,bins?bins.length-1:0)));
+   var v=bins&&!audio.paused?bins[idx]/255:0;
+   bassEnergy+=v;
+   var hh=Math.max(2,v*(height*.68));
+   var x=margin+i*(bw+gap);
+   c.fillStyle=v>.13?"#8df2b9":"#3d8e64";
+   c.fillRect(x,floor-hh,bw,hh);
+   if(v>.08){c.fillStyle="#c6ffda";c.fillRect(x,floor-hh-2,bw,2);}
+  }
+  c.fillStyle="#5eae85";c.font="9px monospace";
+  c.fillText(!audio.paused?(analyser&&bassEnergy>.02?"CH 01 • AUDIO":"CH 01 • EN ATTENTE"):"CH 01 • VEILLE",8,12);
+  var signal=view&&view.querySelector("[data-amp-spectrum-status]");
+  if(signal)signal.textContent=audio.paused?"VEILLE":analyser&&bassEnergy>.02?"SIGNAL":"ANALYSE…";
  }
  animation=requestAnimationFrame(frame);
 }
@@ -514,7 +544,13 @@ function open(){
  var canvas=el("canvas","amp3-spectrum");
  canvas.setAttribute("aria-label","Spectre audio");
  spectrumBox.appendChild(canvas);
- displayRow.append(cover,spectrumBox,readout);
+ var spectrumLabel=el("span","amp3-viz-label","SPECTRE / CH 01");
+ var spectrumState=el("span","amp3-viz-state","VEILLE");
+ spectrumState.setAttribute("data-amp-spectrum-status","");
+ spectrumBox.prepend(spectrumLabel);spectrumBox.appendChild(spectrumState);
+ var infoScreen=el("div","amp3-info-screen");
+ infoScreen.append(cover,readout);
+ displayRow.append(spectrumBox,infoScreen);
  screen.appendChild(displayRow);
  var seek=el("input");seek.type="range";seek.min="0";seek.max="1000";seek.value="0";seek.setAttribute("data-amp-progress","");
  seek.oninput=function(){if(Number.isFinite(audio.duration)&&audio.duration)audio.currentTime=Number(seek.value)*audio.duration/1000;};
@@ -526,17 +562,18 @@ function open(){
    if(audio.paused){var t=getTrack();if(t){if(audio.src)play();else pick(t.id,true);}else{var p=getList();if(p.tracks.length)pick(p.tracks[0].id,true);}}
    else audio.pause();
  },"amp3-btn amp3-play amp3-transport");
- playBtn.setAttribute("data-amp-play","");transports.appendChild(playBtn);
+ playBtn.setAttribute("data-amp-play","");playBtn.title="Lecture / Pause";transports.appendChild(playBtn);
  var stopBtn=b("■",function(){audio.pause();audio.currentTime=0;renderProgress();},"amp3-btn amp3-transport");
  stopBtn.title="Arrêter";transports.appendChild(stopBtn);
  var nextBtn=b("▶Ⅰ",function(){next(true);},"amp3-btn amp3-transport");nextBtn.title="Morceau suivant";transports.appendChild(nextBtn);
  controls.appendChild(transports);
  var modes=el("div","amp3-modes");
- var shuffleBtn=b("ALÉATOIRE",function(){shuffle=!shuffle;store();render();},"amp3-btn");
+ var shuffleBtn=b("⇄",function(){shuffle=!shuffle;store();render();},"amp3-btn amp3-mode-shuffle");
  shuffleBtn.setAttribute("data-amp-shuffle","");modes.appendChild(shuffleBtn);
- var repeatBtn=b("RÉPÉTER : TOUS",function(){repeat=repeat==="tout"?"un":repeat==="un"?"aucun":"tout";store();render();},"amp3-btn");
+ var repeatBtn=b("↻ ∞",function(){repeat=repeat==="tout"?"un":repeat==="un"?"aucun":"tout";store();render();},"amp3-btn amp3-mode-repeat");
  repeatBtn.setAttribute("data-amp-repeat","");modes.appendChild(repeatBtn);
- var visualButton=b("VISUEL",openVisualizer,"amp3-btn amp3-visual-btn");
+ var visualButton=b("VIS",openVisualizer,"amp3-btn amp3-visual-btn");
+ visualButton.title="Ouvrir ZebraVIS en grand";visualButton.setAttribute("aria-label",visualButton.title);
  modes.appendChild(visualButton);
  controls.appendChild(modes);
  root.appendChild(controls);
