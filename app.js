@@ -667,20 +667,78 @@ function openUtility(name){
  if(name==="sticky")tools.stickyManager(body,session,function(){tools.stickyDesktop(session);});
  else tools[config[3]](body,session);
 }
-function openGame(name){
- var apps={
-  tetris:[window.ZebraTetris,"Tetris.exe",735,770],
-  snake:[window.ZebraSnake,"Snake.exe",790,650],
-  paint:[window.ZebraPaint,"ZebraPaint.exe",850,640]
- };
- var entry=apps[name];if(!entry||!entry[0])return;
- var root=windowBox(name,entry[1],Math.min(entry[2],window.innerWidth-16),Math.min(entry[3],window.innerHeight-50));
- if(name==="tetris"||name==="snake")root.classList.add("zebra-game-body");
- // Réouvrir une fenêtre existante ne doit plus réinitialiser une partie en cours.
- if(root._zebraApp===name)return;
- root._zebraApp=name;
- entry[0].mount(root);
+/* ZebraOS lazy apps: rien n'est téléchargé avant le premier lancement.
+   Le navigateur + Service Worker conservent les fichiers après ce chargement. */
+var gameModules={
+ tetris:{name:"Tetris.exe",width:735,height:770,global:"ZebraTetris",
+  files:["tetris-artwork.js?v=1.7","tetris.js?v=2.3"]},
+ snake:{name:"Snake.exe",width:790,height:650,global:"ZebraSnake",
+  files:["snake-assets.js?v=1.0","snake.js?v=2.0"]},
+ paint:{name:"ZebraPaint.exe",width:850,height:640,global:"ZebraPaint",
+  files:["paint.js?v=1.4"],css:"paint-responsive.css?v=1.4"}
+};
+var assetPromises={};
+function loadAsset(url,css){
+ if(assetPromises[url])return assetPromises[url];
+ assetPromises[url]=new Promise(function(resolve,reject){
+  var el=document.createElement(css?"link":"script");
+  if(css){el.rel="stylesheet";el.href=url;}
+  else{el.src=url;el.async=false;}
+  el.onload=function(){resolve();};
+  el.onerror=function(){
+   delete assetPromises[url];el.remove();
+   reject(Error("Chargement impossible : "+url));
+  };
+  document.head.appendChild(el);
+ });
+ return assetPromises[url];
 }
+function loadGameModule(name){
+ var module=gameModules[name];if(!module)return Promise.reject(Error("Application inconnue"));
+ if(window[module.global])return Promise.resolve(window[module.global]);
+ if(module.pending)return module.pending;
+ module.pending=(module.css?loadAsset(module.css,true):Promise.resolve())
+  .then(function(){
+    // Ordre garanti : illustration/ressources d'abord, moteur ensuite.
+    return module.files.reduce(function(p,url){
+      return p.then(function(){return loadAsset(url,false);});
+    },Promise.resolve());
+  }).then(function(){
+    if(!window[module.global])throw Error("Module non initialisé : "+name);
+    return window[module.global];
+  }).finally(function(){module.pending=null;});
+ return module.pending;
+}
+function openGame(name){
+ var entry=gameModules[name];if(!entry)return;
+ var root=windowBox(name,entry.name,
+   Math.min(entry.width,window.innerWidth-16),Math.min(entry.height,window.innerHeight-50));
+ if(name==="tetris"||name==="snake")root.classList.add("zebra-game-body");
+ // Pas de reset d'une application déjà ouverte ou en cours de chargement.
+ if(root._zebraApp===name||root._zebraLoading===name)return;
+ root._zebraLoading=name;
+ root.innerHTML="";
+ var info=el("div","zebra-lazy-loading","Chargement de "+entry.name+"…");
+ info.setAttribute("role","status");info.setAttribute("aria-live","polite");
+ root.appendChild(info);
+ loadGameModule(name).then(function(module){
+  if(!root.isConnected||root._zebraLoading!==name)return;
+  root._zebraLoading=null;root.innerHTML="";
+  root._zebraApp=name;
+  try{module.mount(root);}catch(err){
+   root._zebraApp=null;
+   root.textContent="Impossible de démarrer "+entry.name+" : "+err.message;
+  }
+ }).catch(function(err){
+  if(!root.isConnected||root._zebraLoading!==name)return;
+  root._zebraLoading=null;root.replaceChildren();
+  var warning=el("p","app-message","Le chargement a échoué. Vérifie ta connexion et réessaie.");
+  var retry=el("button","win-button","↻ Réessayer");
+  retry.onclick=function(){openGame(name);};
+  root.append(warning,retry);
+ });
+}
+window.ZebraLazyApps={load:loadGameModule};
 function open(code){$("start-menu").classList.add("hidden");if(code==="tetris"||code==="snake"||code==="paint")openGame(code);else if(code==="folder:games"||code==="folder:tools"||code==="folder:atelier")appFolder(code.split(":")[1]);else if(code==="calc"||code==="sticky"||code==="planner")openUtility(code);else if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="datetime")dateTime();else if(code==="welcome")welcome();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
 decorateSystemMenus();
 $("power-btn").onclick=powerOn;$("skip-boot").onclick=finishBoot;$("skip-session-boot").onclick=finishSessionBoot;$("restart-login").onclick=restartLogin;$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
