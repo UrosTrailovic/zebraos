@@ -107,6 +107,20 @@ jobs:
               report.speedApplied=Math.abs(window.ZebraAMP.media.playbackRate-1.35)<.0001
                 &&speedButton.textContent.includes("135 %")
                 &&JSON.parse(localStorage.getItem("zebraamp-v3")).speed===1.35;
+              report.pitchModeDefault=window.ZebraAMP.debug().pitchMode==="vinyl"
+                &&window.ZebraAMP.media.preservesPitch===false;
+              const fixedPitch=group.querySelector('[data-amp-pitch-mode="constant"]');
+              const vinylPitch=group.querySelector('[data-amp-pitch-mode="vinyl"]');
+              fixedPitch.click();
+              report.pitchPreserved=window.ZebraAMP.debug().pitchMode==="constant"
+                &&window.ZebraAMP.media.preservesPitch===true
+                &&JSON.parse(localStorage.getItem("zebraamp-v3")).pitchMode==="constant";
+              vinylPitch.click();
+              report.pitchNatural=window.ZebraAMP.media.preservesPitch===false
+                &&vinylPitch.getAttribute("aria-pressed")==="true";
+              const deepPreset=group.querySelector(".amp3-speed-presets button:last-child");
+              deepPreset.click();
+              report.deepSlow=window.ZebraAMP.media.playbackRate===.75;
               group.querySelector(".amp3-speed-reset").click();
               report.speedReset=window.ZebraAMP.media.playbackRate===1;
               speedButton.click();
@@ -170,7 +184,11 @@ jobs:
                   getByteTimeDomainData(target){target.fill(128);}};}
                 createGain(){return {gain:{value:1,setTargetAtTime(value){this.value=value;}},connect(){}};}
                 createDelay(){return {delayTime:{value:0},connect(){}};}
-                createConvolver(){return {buffer:null,connect(){}};}
+                createConvolver(){return {buffer:null,normalize:true,connect(){}};}
+                createDynamicsCompressor(){return {
+                  threshold:{value:0},knee:{value:0},ratio:{value:0},attack:{value:0},release:{value:0},
+                  connect(){}
+                };}
                 createBuffer(ch,length){
                   const arrays=Array.from({length:ch},()=>new Float32Array(length));
                   return {getChannelData(i){return arrays[i];}};
@@ -188,6 +206,7 @@ jobs:
                 &&window.ZebraAMP.analyser().frequencyBinCount===512;
               report.reverbGraphAfterPlay=window.ZebraAMP.debug().reverbActive
                 &&window.ZebraAMP.debug().reverbConnected;
+              report.reverbStudioTail=window.ZebraAMP.debug().reverbSeconds===3.4;
               // Un curseur à 0 doit stopper l'entrée de la convolution.
               const reverbSlider=root.querySelector("[data-amp-reverb-input]");
               reverbSlider.value="0";reverbSlider.dispatchEvent(new Event("input",{bubbles:true}));
