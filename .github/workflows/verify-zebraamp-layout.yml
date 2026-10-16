@@ -111,6 +111,30 @@ jobs:
               report.speedReset=window.ZebraAMP.media.playbackRate===1;
               speedButton.click();
               report.speedClose=panel.hidden;
+              const reverbGroup=root.querySelector(".amp3-reverb-group");
+              const reverbButton=reverbGroup.querySelector("[data-amp-reverb]");
+              const reverbPanel=reverbGroup.querySelector(".amp3-reverb-panel");
+              const reverbInput=reverbGroup.querySelector("[data-amp-reverb-input]");
+              report.reverbInitiallyOff=window.ZebraAMP.debug().reverb===0
+                &&!window.ZebraAMP.debug().reverbActive;
+              report.reverbClosed=reverbPanel.hidden;
+              reverbButton.click();
+              report.reverbOpens=!reverbPanel.hidden
+                &&reverbButton.getAttribute("aria-expanded")==="true";
+              report.reverbSteps=reverbInput.min==="0"&&reverbInput.max==="100"&&reverbInput.step==="5";
+              reverbInput.value="65";
+              reverbInput.dispatchEvent(new Event("input",{bubbles:true}));
+              report.reverbPersisted=window.ZebraAMP.debug().reverb===65
+                &&JSON.parse(localStorage.getItem("zebraamp-v3")).reverb===65
+                &&reverbButton.textContent.includes("65 %");
+              report.reverbLazy=!window.ZebraAMP.debug().reverbActive;
+              reverbGroup.querySelector(".amp3-reverb-presets button").click();
+              report.reverbDryPreset=window.ZebraAMP.debug().reverb===0;
+              const presets=reverbGroup.querySelectorAll(".amp3-reverb-presets button");
+              presets[2].click();
+              report.reverbDreamPreset=window.ZebraAMP.debug().reverb===65;
+              reverbButton.click();
+              report.reverbClose=reverbPanel.hidden;
               for(let i=0;i<65;i++){
                 const row=document.createElement("div");
                 row.className="amp3-track";
@@ -137,13 +161,20 @@ jobs:
               // être associées au canvas après le premier ▶, jamais figées à null.
               const originalAudioContext=window.AudioContext;
               class AudioContextFake {
-                constructor(){this.state="running";this.destination={};}
+                constructor(){this.state="running";this.destination={};this.sampleRate=44100;this.currentTime=3;}
                 createMediaElementSource(){return {connect(){}};}
                 createBiquadFilter(){return {frequency:{value:0},gain:{value:0},Q:{value:0},connect(){}};}
                 createAnalyser(){return {fftSize:1024,frequencyBinCount:512,
-                  smoothingTimeConstant:0,connect(){},
+                  smoothingTimeConstant:0,connect(){},disconnect(){},
                   getByteFrequencyData(target){target.fill(0);for(let i=0;i<target.length;i++)target[i]=140;},
                   getByteTimeDomainData(target){target.fill(128);}};}
+                createGain(){return {gain:{value:1,setTargetAtTime(value){this.value=value;}},connect(){}};}
+                createDelay(){return {delayTime:{value:0},connect(){}};}
+                createConvolver(){return {buffer:null,connect(){}};}
+                createBuffer(ch,length){
+                  const arrays=Array.from({length:ch},()=>new Float32Array(length));
+                  return {getChannelData(i){return arrays[i];}};
+                }
                 resume(){return Promise.resolve();}
               }
               window.AudioContext=AudioContextFake;
@@ -154,6 +185,14 @@ jobs:
               // créer le graphe même si aucune piste n'est encore sélectionnée.
               window.ZebraAMP.play();
               report.analyserAfterPlay=!!window.ZebraAMP.analyser()
+                &&window.ZebraAMP.analyser().frequencyBinCount===512;
+              report.reverbGraphAfterPlay=window.ZebraAMP.debug().reverbActive
+                &&window.ZebraAMP.debug().reverbConnected;
+              // Un curseur à 0 doit stopper l'entrée de la convolution.
+              const reverbSlider=root.querySelector("[data-amp-reverb-input]");
+              reverbSlider.value="0";reverbSlider.dispatchEvent(new Event("input",{bubbles:true}));
+              report.reverbOffAfterUse=window.ZebraAMP.debug().reverb===0
+                &&!window.ZebraAMP.debug().reverbConnected
                 &&window.ZebraAMP.analyser().frequencyBinCount===512;
               Object.defineProperty(window.ZebraAMP.media,"paused",{
                 configurable:true,value:false
