@@ -100,73 +100,33 @@ function fallbackIcon(item){
 }
 /* Les documents photo affichent leur vraie miniature dans un cadre d'icône
    Windows rétro. Le choix explicite .icone.png reste prioritaire. */
-var VIDEO_POSTERS=new Map();
-function videoPoster(item){
- if(VIDEO_POSTERS.has(item.path))return VIDEO_POSTERS.get(item.path);
- var promise=new Promise(function(resolve){
-  var v=document.createElement("video"),settled=false;
-  v.muted=true;v.playsInline=true;v.preload="metadata";
-  function done(poster){
-   if(settled)return;settled=true;clearTimeout(timeout);
-   v.removeAttribute("src");try{v.load();}catch(_){}
-   resolve(poster);
-  }
-  var timeout=setTimeout(function(){done(null);},8000);
-  function capture(){
-   if(settled||!v.videoWidth||!v.videoHeight)return;
-   try{
-    var c=document.createElement("canvas"),w=Math.min(192,v.videoWidth);
-    c.width=Math.round(w);c.height=Math.max(1,Math.round(w*v.videoHeight/v.videoWidth));
-    c.getContext("2d").drawImage(v,0,0,c.width,c.height);
-    done(c.toDataURL("image/jpeg",.7));
-   }catch(_){done(null);}
-  }
-  v.addEventListener("loadeddata",capture,{once:true});
-  v.addEventListener("seeked",capture,{once:true});
-  v.addEventListener("loadedmetadata",function(){
-   try{v.currentTime=Number.isFinite(v.duration)&&v.duration>1?Math.min(.6,v.duration*.1):0;}
-   catch(_){}
-  },{once:true});
-  v.addEventListener("error",function(){done(null);},{once:true});
-  // Même origine : évite le canvas tainted et préserve la lecture en aperçu.
-  v.src=site(item.path);
- });
- VIDEO_POSTERS.set(item.path,promise);
- return promise;
+/* Vignettes simples : seules les vraies photos sont décodées.
+   Une vidéo n'ouvre aucune connexion ni décodage avant un clic explicite. */
+function videoIcon(item){
+ var box=node("span","bureau-item-symbol bureau-media-thumb bureau-video-thumb bureau-video-static");
+ box.title=item.name;
+ var reel=node("span","bureau-video-reel","▣");
+ reel.setAttribute("aria-hidden","true");
+ var play=node("span","bureau-video-play","▶");
+ play.setAttribute("aria-hidden","true");
+ box.append(reel,play);
+ return box;
 }
 function thumbnail(item,osIcon,size){
- var isVideo=kinds.video.test(item.name);
- var box=node("span","bureau-item-symbol bureau-media-thumb "+(isVideo?"bureau-video-thumb":"bureau-photo-thumb"));
+ var box=node("span","bureau-item-symbol bureau-media-thumb bureau-photo-thumb");
  box.title=item.name;
  var fallback=node("span","bureau-media-fallback");
- fallback.appendChild(osIcon(isVideo?"jpg":"jpg",size));
- box.appendChild(fallback);
- var img=node("img","bureau-media-image");img.alt="";
- img.loading="lazy";img.decoding="async";img.draggable=false;
+ fallback.appendChild(osIcon("jpg",size));box.appendChild(fallback);
+ var img=node("img","bureau-media-image");
+ img.alt="";img.loading="lazy";img.decoding="async";img.draggable=false;
  img.onload=function(){if(img.naturalWidth)box.classList.add("bureau-thumb-loaded");};
- img.onerror=function(){box.classList.remove("bureau-thumb-loaded");};
+ var tried=false;
+ img.onerror=function(){
+  if(!tried){tried=true;img.src=raw(item.path);}
+  else box.classList.remove("bureau-thumb-loaded");
+ };
+ img.src=site(item.path);
  box.appendChild(img);
- if(!isVideo){
-  var attemptedFallback=false;
-  img.onerror=function(){
-   if(!attemptedFallback){attemptedFallback=true;img.src=raw(item.path);}
-   else box.classList.remove("bureau-thumb-loaded");
-  };
-  img.src=site(item.path);
- }else{
-  var overlay=node("span","bureau-video-play","▶");overlay.setAttribute("aria-hidden","true");box.appendChild(overlay);
-  // Uniquement si visible, pour éviter de charger toutes les vidéos du dossier.
-  // Un grand fichier reste sur l'icône de secours (pas de téléchargement massif).
-  if(!(item.size>45000000)){
-   var start=function(){videoPoster(item).then(function(poster){if(poster&&box.isConnected)img.src=poster;});};
-   if("IntersectionObserver"in window){
-    var observer=new IntersectionObserver(function(entries){
-     if(entries.some(function(e){return e.isIntersecting;})){observer.disconnect();start();}
-    },{rootMargin:"120px"});
-    observer.observe(box);
-   }else start();
-  }
- }
  return box;
 }
 function icon(item,osIcon,size){
@@ -176,13 +136,15 @@ function icon(item,osIcon,size){
   img.src=raw(path);
   img.onerror=function(){img.replaceWith(osIcon(fallbackIcon(item),size));};
   box.appendChild(img);
- }else if(item.type==="file"&&(kinds.image.test(item.name)||kinds.video.test(item.name))){
+ }else if(item.type==="file"&&kinds.image.test(item.name)){
   return thumbnail(item,osIcon,size);
+ }else if(item.type==="file"&&kinds.video.test(item.name)){
+  return videoIcon(item);
  }else box.appendChild(osIcon(fallbackIcon(item),size));
  return box;
 }
 function read(url){
- return fetch(url,{cache:"no-store"}).then(function(r){
+ return fetch(url,{cache:"no-cache"}).then(function(r){
   if(!r.ok)throw Error("Chargement impossible : HTTP "+r.status);
   return r.json();
  }).then(function(data){
@@ -196,17 +158,33 @@ function read(url){
  });
 }
 function notify(){listeners.slice().forEach(function(fn){try{fn();}catch(e){}});}
+var LOCAL_INDEX="zebraos.bureau.index.v1";
 function load(){
  if(loading)return loading;
- var q=Date.now();
- loading=read(site(INDEX)+"?v="+q)
-  .catch(function(){return read(raw(INDEX)+"?v="+q);})
+ // Affichage immédiat depuis le dernier index local, puis actualisation HTTP.
+ // Si GitHub Pages est indisponible, le bureau reste navigable hors connexion.
+ if(!known){
+  try{
+   var cached=JSON.parse(localStorage.getItem(LOCAL_INDEX)||"null");
+   if(cached&&Array.isArray(cached.entries)){
+    known=valid(cached.entries);stamp=cached.generatedAt||"";
+    desktopOrder=Array.isArray(cached.desktopOrder)?cached.desktopOrder:[];
+    notify();
+   }
+  }catch(_){}
+ }
+ loading=read(site(INDEX))
+  .catch(function(){return read(raw(INDEX));})
   .then(function(result){
-    known=result.entries;stamp=result.stamp;desktopOrder=result.desktopOrder;notify();
-    return {ok:true,entries:known};
+   known=result.entries;stamp=result.stamp;desktopOrder=result.desktopOrder;
+   notify();
+   try{localStorage.setItem(LOCAL_INDEX,JSON.stringify({
+    entries:known,generatedAt:stamp,desktopOrder:desktopOrder
+   }));}catch(_){}
+   return {ok:true,entries:known};
   })
   .catch(function(err){
-    return {ok:false,error:err.message,entries:known||[]};
+   return {ok:!!known,error:err.message,entries:known||[],offline:!!known};
   }).finally(function(){loading=null;});
  return loading;
 }
