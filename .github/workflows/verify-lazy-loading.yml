@@ -1,0 +1,82 @@
+name: Vérifier le chargement léger ZebraOS
+on:
+  push:
+    paths:
+      - 'index.html'
+      - 'app.js'
+      - 'wallpaper.js'
+      - 'github-files.js'
+      - 'media-thumbnails.css'
+      - 'style.css'
+      - 'sw.js'
+      - '.github/workflows/verify-lazy-loading.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  navigateur:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntaxe du chargeur et du cache local
+        run: |
+          node --check app.js
+          node --check github-files.js
+          node --check wallpaper.js
+          node --check sw.js
+      - name: Vérifier les ressources initiales, l'ouverture rapide et les vidéos sans miniatures
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path('index.html').read_text()
+          audit=r'''<script>
+          window.addEventListener("load",async()=>{
+           const report={};
+           const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+           try{
+            const resources=()=>performance.getEntriesByType("resource").map(e=>new URL(e.name).pathname);
+            const has=name=>resources().some(p=>p.endsWith("/"+name));
+            const loader=window.ZebraLazyApps;
+            report.loaderPresent=!!loader&&typeof loader.load==="function";
+            report.noInitialPaint=!has("paint.js")&&!has("paint-responsive.css");
+            report.noInitialTetris=!has("tetris.js")&&!has("tetris-artwork.js");
+            report.noInitialSnake=!has("snake.js")&&!has("snake-assets.js");
+            report.noInitialVideoRequests=!resources().some(p=>/\.(mp4|webm)$/.test(p));
+            const video={type:"file",path:"STUDIO/BUREAU/Photo et vidéo cool/demo.mp4",name:"demo.mp4",size:200000};
+            const icon=window.ZebraGitFiles.icon(video,()=>document.createElement("i"),32);
+            document.body.append(icon);
+            await sleep(60);
+            report.videoStatic=icon.classList.contains("bureau-video-static")
+               &&!icon.querySelector("video")&&!icon.querySelector("img");
+            report.videoStillNoNetwork=!resources().some(p=>/\.(mp4|webm)$/.test(p));
+            const start=performance.now();
+            const paint=await loader.load("paint");
+            report.paintLoaded=!!paint&&typeof paint.mount==="function"
+             &&has("paint.js")&&has("paint-responsive.css");
+            report.paintMs=Math.round(performance.now()-start);
+            const tetris=await loader.load("tetris");
+            const snake=await loader.load("snake");
+            report.tetrisLoaded=!!tetris&&typeof tetris.mount==="function"&&has("tetris.js");
+            report.snakeLoaded=!!snake&&typeof snake.mount==="function"&&has("snake.js");
+            const before=resources().length;
+            const again=await loader.load("paint");
+            report.reuseCachedModule=again===paint&&resources().length===before;
+            const bg=window.ZebraWallpaper;
+            bg.apply("zebra");
+            report.wallpaperPng=document.getElementById("wallpaper").style.backgroundImage.includes("zebra-default.png");
+            report.initialNoAvif=!resources().some(p=>p.endsWith(".avif"));
+            report.serviceWorkerSource=!!document.querySelector('script')&&!document.querySelector('script[src="sw.js"]');
+           }catch(e){report.error=String(e.stack||e);}
+           document.documentElement.dataset.lazyReport=JSON.stringify(report);
+           document.documentElement.dataset.lazyStatus=Object.entries(report)
+             .filter(([k])=>k!=="paintMs").every(([,v])=>v===true)?"ok":"failed";
+          });
+          </script>'''
+          Path("_verify_lazy.html").write_text(html.replace("</body>",audit+"</body>"))
+          PY
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebra-lazy-server.log 2>&1 &
+          sleep 1
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,850 --virtual-time-budget=6500 --dump-dom http://127.0.0.1:8765/_verify_lazy.html > /tmp/zebra-lazy.html 2>/tmp/zebra-lazy-chrome.log
+          grep -o 'data-lazy-report="[^"]*"' /tmp/zebra-lazy.html | tail -c 2500
+          grep -o 'data-lazy-status="[^"]*"' /tmp/zebra-lazy.html
+          grep -q 'data-lazy-status="ok"' /tmp/zebra-lazy.html
