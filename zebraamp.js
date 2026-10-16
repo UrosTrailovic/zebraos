@@ -10,8 +10,8 @@ var ALBUM="zebra-tape-2",OPENED="fichiers-ouverts",KEY="zebraamp-v3",DB="zebraam
 var audio=new Audio();audio.preload="metadata";audio.crossOrigin="anonymous";audio.volume=.7;
 var album={id:ALBUM,name:"Zebra Tape 2",readonly:true,tracks:[]};
 var playlists=[],current=ALBUM,currentId=null,loadedUrl=null,loadedBlob=null,view=null;
-var ctx=null,filters=[],analyser=null,graphTried=false;
-var allSounds=[],dbPromise=null,dbAvailable=true,shuffle=false,repeat="tout",speed=1,volume=.7,eq=[0,0,0,0,0],preset="Neutre";
+var ctx=null,filters=[],analyser=null,graphTried=false,reverbGraph=null;
+var allSounds=[],dbPromise=null,dbAvailable=true,shuffle=false,repeat="tout",speed=1,reverb=0,volume=.7,eq=[0,0,0,0,0],preset="Neutre";
 var presetValues={
  "Neutre":[0,0,0,0,0],
  "Basses":[7,4,0,-1,-2],
@@ -34,7 +34,7 @@ function status(text){notifyText=text||"";renderStatus();}
 function store(){
  try{localStorage.setItem(KEY,JSON.stringify({
    playlists:playlists,volume:volume,shuffle:shuffle,repeat:repeat,
-   speed:speed,eq:eq,preset:preset
+   speed:speed,reverb:reverb,eq:eq,preset:preset
  }));}catch(e){status("Stockage des préférences indisponible.");}
 }
 function restore(){
@@ -52,6 +52,7 @@ function restore(){
   if(!Number.isNaN(Number(d.volume)))volume=Math.max(0,Math.min(1,Number(d.volume)));
   shuffle=!!d.shuffle;repeat=["aucun","tout","un"].includes(d.repeat)?d.repeat:"tout";
   speed=Number.isFinite(Number(d.speed))?Math.max(.5,Math.min(1.5,Math.round(Number(d.speed)*20)/20)):1;
+  reverb=Number.isFinite(Number(d.reverb))?Math.max(0,Math.min(100,Math.round(Number(d.reverb)/5)*5)):0;
   if(Array.isArray(d.eq)&&d.eq.length===5)eq=d.eq.map(function(x){return Math.max(-12,Math.min(12,Number(x)||0));});
   if(typeof d.preset==="string")preset=d.preset;
  }catch(e){}
@@ -156,12 +157,78 @@ function ensureGraph(){
   });
   analyser=ctx.createAnalyser();analyser.fftSize=1024;analyser.smoothingTimeConstant=.78;
   last.connect(analyser);analyser.connect(ctx.destination);
+  // L'effet coûteux est construit seulement si l'utilisateur l'active.
+  if(reverb>0)applyReverb();
   return true;
  }catch(err){
   status("L'égaliseur n'a pas pu démarrer. Recharge la page pour réessayer.");
   return false;
  }
 }
+/* Réverbération à convolution générée localement au PREMIER usage.
+   Aucun son téléchargé, aucun MP3 copié, aucun DSP au démarrage.
+   Le graphe standard reste EQ -> analyseur -> haut-parleur à 0 %. */
+function ensureReverb(){
+ if(!ctx||!analyser)return false;
+ if(reverbGraph)return true;
+ try{
+  var length=Math.round(ctx.sampleRate*1.4);
+  var impulse=ctx.createBuffer(2,length,ctx.sampleRate);
+  for(var ch=0;ch<2;ch++){
+   var data=impulse.getChannelData(ch),last=0;
+   for(var i=0;i<length;i++){
+    last=last*.48+(Math.random()*2-1)*.52;
+    var t=1-i/length;
+    data[i]=last*Math.pow(t,2.6);
+   }
+  }
+  var convolver=ctx.createConvolver();convolver.buffer=impulse;
+  var preDelay=ctx.createDelay(.1);preDelay.delayTime.value=.028;
+  var tone=ctx.createBiquadFilter();tone.type="lowpass";tone.frequency.value=5400;
+  var dry=ctx.createGain(),wet=ctx.createGain();
+  dry.gain.value=1;wet.gain.value=0;
+  // Construire le circuit avant de débrancher la sortie d'origine.
+  preDelay.connect(convolver);convolver.connect(tone);tone.connect(wet);
+  wet.connect(ctx.destination);dry.connect(ctx.destination);
+  analyser.disconnect();
+  analyser.connect(dry);analyser.connect(preDelay);
+  reverbGraph={dry:dry,wet:wet,preDelay:preDelay,convolver:convolver,connected:true};
+  return true;
+ }catch(err){
+  status("Réverbération indisponible sur ce navigateur.");
+  return false;
+ }
+}
+function applyReverb(){
+ if(!ctx||!analyser)return;
+ if(reverb===0&&!reverbGraph)return;
+ if(!ensureReverb())return;
+ var state=reverbGraph;
+ var t=reverb/100;
+ if(t>0&&!state.connected){analyser.connect(state.preDelay);state.connected=true;}
+ // Interpolation évite les clics quand on déplace la jauge.
+ var now=ctx.currentTime||0;
+ state.dry.gain.setTargetAtTime(1-.18*t,now,.02);
+ state.wet.gain.setTargetAtTime(.72*t,now,.02);
+ if(t===0&&state.connected){
+  analyser.disconnect(state.preDelay);
+  state.connected=false;
+ }
+}
+function setReverb(value){
+ reverb=Math.max(0,Math.min(100,Math.round((Number(value)||0)/5)*5));
+ applyReverb();store();renderReverb();
+}
+function renderReverb(){
+ if(!view||!view.isConnected)return;
+ var button=view.querySelector("[data-amp-reverb]");
+ if(button)button.textContent="RÉVERB "+reverb+" %";
+ var input=view.querySelector("[data-amp-reverb-input]");
+ if(input)input.value=String(reverb);
+ var value=view.querySelector("[data-amp-reverb-value]");
+ if(value)value.textContent=reverb+" %";
+}
+
 function resumeGraph(){
  if(!ensureGraph())return;
  if(ctx&&ctx.state==="suspended"){var r=ctx.resume();if(r&&r.catch)r.catch(function(){});}
@@ -421,6 +488,7 @@ function render(){
  shuffleBtn.setAttribute("aria-label",shuffleBtn.title);
  shuffleBtn.setAttribute("aria-pressed",String(shuffle));
  view.querySelector("[data-amp-speed]").textContent="VITESSE "+Math.round(speed*100)+" %";
+ renderReverb();
  var speedInput=view.querySelector("[data-amp-speed-input]");
  if(speedInput)speedInput.value=String(Math.round(speed*100));
  var speedValue=view.querySelector("[data-amp-speed-value]");
@@ -522,7 +590,7 @@ function open(){
  view=w;
  w.innerHTML="";
  var root=el("div","amp3");
- var top=el("div","amp3-head");top.appendChild(el("strong","","ZEBRAAMP 3.4"));top.appendChild(el("span","","STUDIO PLAYER"));root.appendChild(top);
+ var top=el("div","amp3-head");top.appendChild(el("strong","","ZEBRAAMP 3.7"));top.appendChild(el("span","","STUDIO PLAYER"));root.appendChild(top);
  var stripe=el("div","amp3-zebra-plate");
  stripe.setAttribute("aria-hidden","true");
  stripe.appendChild(el("span","amp3-zebra-rivet amp3-zebra-rivet-left"));
@@ -593,6 +661,9 @@ function open(){
   var wasOpen=!speedPanel.hidden;
   speedPanel.hidden=wasOpen;
   speedBtn.setAttribute("aria-expanded",String(!wasOpen));
+  if(!wasOpen&&reverbPanel&&!reverbPanel.hidden){
+   reverbPanel.hidden=true;reverbBtn.setAttribute("aria-expanded","false");
+  }
  },"amp3-btn amp3-speed-btn");
  speedBtn.setAttribute("data-amp-speed","");
  speedBtn.setAttribute("aria-expanded","false");
@@ -626,6 +697,44 @@ function open(){
  speedPanel.appendChild(speedReset);
  speedGroup.append(speedBtn,speedPanel);
  extra.appendChild(speedGroup);
+ // Réverb indépendante de la vitesse, panneau aussi compact que VITESSE.
+ var reverbGroup=el("div","amp3-reverb-group");
+ var reverbBtn=b("RÉVERB 0 %",function(){
+  var wasOpen=!reverbPanel.hidden;
+  reverbPanel.hidden=wasOpen;
+  reverbBtn.setAttribute("aria-expanded",String(!wasOpen));
+  if(!wasOpen&&speedPanel&&!speedPanel.hidden){
+   speedPanel.hidden=true;speedBtn.setAttribute("aria-expanded","false");
+  }
+ },"amp3-btn amp3-reverb-btn");
+ reverbBtn.setAttribute("data-amp-reverb","");
+ reverbBtn.setAttribute("aria-expanded","false");
+ reverbBtn.title="Réverbération en temps réel";
+ var reverbPanel=el("div","amp3-reverb-panel");
+ reverbPanel.hidden=true;
+ var reverbHead=el("div","amp3-reverb-header");
+ reverbHead.appendChild(el("span","","RÉVERBÉRATION"));
+ var reverbValue=el("strong","","0 %");
+ reverbValue.setAttribute("data-amp-reverb-value","");
+ reverbHead.appendChild(reverbValue);
+ reverbPanel.appendChild(reverbHead);
+ var reverbRange=el("input","amp3-reverb-range");
+ reverbRange.type="range";reverbRange.min="0";reverbRange.max="100";
+ reverbRange.step="5";reverbRange.value=String(reverb);
+ reverbRange.setAttribute("data-amp-reverb-input","");
+ reverbRange.setAttribute("aria-label","Réverbération de zéro à cent pour cent");
+ reverbRange.oninput=function(){setReverb(reverbRange.value);};
+ reverbPanel.appendChild(reverbRange);
+ var reverbTicks=el("div","amp3-reverb-ticks");
+ reverbTicks.append(el("span","","SEC"),el("span","","DOUX"),el("span","","SPACIEUX"));
+ reverbPanel.appendChild(reverbTicks);
+ var reverbPresets=el("div","amp3-reverb-presets");
+ [["SEC",0],["DOUX",30],["RÊVE",65],["SPACIEUX",100]].forEach(function(p){
+  reverbPresets.appendChild(b(p[0],function(){setReverb(p[1]);},"amp3-btn amp3-reverb-preset"));
+ });
+ reverbPanel.appendChild(reverbPresets);
+ reverbGroup.append(reverbBtn,reverbPanel);
+ extra.appendChild(reverbGroup);
  root.appendChild(extra);
  var eqBlock=el("details","amp3-eq-panel");
  var summary=el("summary","","▸ ÉGALISEUR · 5 BANDES");eqBlock.appendChild(summary);
@@ -678,6 +787,6 @@ function stop(){
 window.ZebraAMP={
  open:open,init:init,stop:stop,importFiles:importFiles,openPublic:openPublic,openBlob:openBlob,
  pick:pick,play:play,updatePublic:updatePublic,media:audio,analyser:function(){return analyser;},
- debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length};}
+ debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected)};}
 };
 }());
