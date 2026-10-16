@@ -150,9 +150,17 @@ jobs:
               // Déclenche le graphe de l'égaliseur via l'action de lecture.
               const originalPlay=window.ZebraAMP.media.play;
               window.ZebraAMP.media.play=function(){return Promise.resolve();};
-              root.querySelector("[data-amp-play]").click();
+              // Sur ce test sans morceau, appeler explicitement Play pour
+              // créer le graphe même si aucune piste n'est encore sélectionnée.
+              window.ZebraAMP.play();
               report.analyserAfterPlay=!!window.ZebraAMP.analyser()
                 &&window.ZebraAMP.analyser().frequencyBinCount===512;
+              Object.defineProperty(window.ZebraAMP.media,"paused",{
+                configurable:true,value:false
+              });
+              await sleep(160);
+              report.spectrumReconnect=mini.querySelector('[data-amp-spectrum-status]').textContent==="SIGNAL";
+              delete window.ZebraAMP.media.paused;
               window.ZebraAMP.media.play=originalPlay;
               window.AudioContext=originalAudioContext;
               const wasAbsent=!window.ZebraVisualizer;
