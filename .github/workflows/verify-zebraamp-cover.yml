@@ -64,7 +64,17 @@ jobs:
               result.coverPreview=dialog.querySelector(".amp3-edit-cover-image").src.startsWith("blob:");
               document.documentElement.dataset.coverPhase="save-clicked";
               dialog.querySelector(".amp3-edit-save").click();
-              await sleep(550);
+              await new Promise(resolve=>{
+                if(!dialog.isConnected){resolve();return;}
+                const observer=new MutationObserver(()=>{
+                  if(!dialog.isConnected){observer.disconnect();resolve();}
+                });
+                observer.observe(root,{childList:true,subtree:true});
+                setTimeout(()=>{observer.disconnect();resolve();},4000);
+              });
+              await sleep(180);
+              result.statusAfterSave=root.querySelector("[data-amp-status]")?.textContent||"";
+              result.editorStillOpen=!!root.querySelector(".amp3-edit-overlay");
               document.documentElement.dataset.coverPhase="save-stored";
               const save=JSON.parse(localStorage.getItem("zebraamp-v3"));
               const p=save.playlists.find(x=>x.name===listName);
@@ -79,7 +89,14 @@ jobs:
               result.previewAfterReload=editor2.querySelector(".amp3-edit-cover-image").src.startsWith("blob:");
               editor2.querySelector(".amp3-edit-remove").click();
               editor2.querySelector(".amp3-edit-save").click();
-              await sleep(400);
+              await new Promise(resolve=>{
+                if(!editor2.isConnected){resolve();return;}
+                const observer=new MutationObserver(()=>{
+                  if(!editor2.isConnected){observer.disconnect();resolve();}
+                });
+                observer.observe(root,{childList:true,subtree:true});
+                setTimeout(()=>{observer.disconnect();resolve();},4000);
+              });
               result.removed=!JSON.parse(localStorage.getItem("zebraamp-v3")).playlists.find(x=>x.id===p.id).coverKey
                 &&root.querySelector(".amp3-cover").classList.contains("amp3-cover-empty");
               result.vinylAfterRemove=root.querySelector(".amp3-cover-fallback").textContent.trim()==="";
@@ -90,14 +107,14 @@ jobs:
             }catch(e){result.error=String(e.stack||e);}
             document.documentElement.dataset.coverPhase="complete";
             document.documentElement.dataset.coverReport=JSON.stringify(result);
-            document.documentElement.dataset.coverStatus=Object.values(result).every(v=>v===true)?"ok":"failed";
+            document.documentElement.dataset.coverStatus=Object.entries(result).every(([k,v])=>["statusAfterSave","editorStillOpen"].includes(k)||v===true)?"ok":"failed";
           });
           </script>'''
           Path('_verify_zebraamp_cover.html').write_text(html.replace("</body>",test+"</body>"))
           PY
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebraamp-cover-http.log 2>&1 &
           sleep 1
-          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,875 --virtual-time-budget=15000 --dump-dom http://127.0.0.1:8765/_verify_zebraamp_cover.html > /tmp/zebraamp-cover.html 2>/tmp/zebraamp-cover-chrome.log || { tail -c 4000 /tmp/zebraamp-cover-chrome.log; wc -c /tmp/zebraamp-cover.html; exit 1; }
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,875 --virtual-time-budget=30000 --dump-dom http://127.0.0.1:8765/_verify_zebraamp_cover.html > /tmp/zebraamp-cover.html 2>/tmp/zebraamp-cover-chrome.log || { tail -c 4000 /tmp/zebraamp-cover-chrome.log; wc -c /tmp/zebraamp-cover.html; exit 1; }
           grep -o 'data-cover-phase="[^"]*"' /tmp/zebraamp-cover.html | tail -c 200 || true
           grep -o 'data-cover-report="[^"]*"' /tmp/zebraamp-cover.html | tail -c 4000 || true
           grep -o 'data-cover-status="[^"]*"' /tmp/zebraamp-cover.html
