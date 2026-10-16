@@ -783,7 +783,7 @@ function openVisualizer(){
 function open(){
  init();
  if(!window.ZebraAMPConfig||typeof window.ZebraAMPConfig.windowBox!=="function")return;
- var w=window.ZebraAMPConfig.windowBox("amp","ZebraAMP.exe — Lecteur du studio",660,635);
+ var w=window.ZebraAMPConfig.windowBox("amp","ZebraAMP.exe — Lecteur du studio",660,686);
  view=w;
  w.innerHTML="";displayedCover=null;
  var root=el("div","amp3");

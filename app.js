@@ -430,10 +430,14 @@ function desktopWorkArea(){
   height:Math.max(170,((rect&&rect.height)||window.innerHeight)-(taskHeight||36))
  };
 }
+function windowMaxWidth(w,area){
+ var requested=Number(w.dataset&&w.dataset.maxWidth);
+ return Math.min(area.width,requested>0?Math.max(250,requested):area.width);
+}
 function clampWindow(w){
  if(!w||w.classList.contains("maximized"))return;
  var area=desktopWorkArea();
- var width=Math.min(Math.max(250,parseFloat(w.style.width)||500),area.width);
+ var width=Math.min(Math.max(250,parseFloat(w.style.width)||500),windowMaxWidth(w,area));
  var height=Math.min(Math.max(180,parseFloat(w.style.height)||350),area.height);
  var left=Math.max(0,Math.min(parseFloat(w.style.left)||0,area.width-width));
  var top=Math.max(0,Math.min(parseFloat(w.style.top)||0,area.height-height));
@@ -479,13 +483,14 @@ function addResizeHandles(w){
     top:parseFloat(w.style.top)||0,
     width:w.offsetWidth,height:w.offsetHeight
    };
-   var active=true,area=desktopWorkArea(),minWidth=250,minHeight=180;
+   var active=true,area=desktopWorkArea(),minWidth=250,minHeight=180,maxWidth=windowMaxWidth(w,area);
    function move(ev){
     if(!active)return;
     var dx=ev.clientX-initial.x,dy=ev.clientY-initial.y;
     var l=initial.left,t=initial.top,r=l+initial.width,b=t+initial.height;
     if(edge.includes("w"))l=Math.max(0,Math.min(l+dx,r-minWidth));
-    if(edge.includes("e"))r=Math.max(l+minWidth,Math.min(r+dx,area.width));
+    if(edge.includes("e"))r=Math.max(l+minWidth,Math.min(r+dx,area.width,l+maxWidth));
+    if(edge.includes("w"))l=Math.max(l,r-maxWidth);
     if(edge.includes("n"))t=Math.max(0,Math.min(t+dy,b-minHeight));
     if(edge.includes("s"))b=Math.max(t+minHeight,Math.min(b+dy,area.height));
     w.style.left=Math.round(l)+"px";
@@ -521,8 +526,9 @@ function windowBox(id,title,width,height){
   return opened[id].w.querySelector(".window-body");
  }
  var w=el("div","window");
+ if(id==="amp"){w.classList.add("amp-window");w.dataset.maxWidth="960";}
  var area=desktopWorkArea();
- w.style.width=Math.min(width,area.width)+"px";
+ w.style.width=Math.min(width,windowMaxWidth(w,area))+"px";
  w.style.height=Math.min(height,area.height)+"px";
  var offset=seq++*23;
  w.style.left=Math.max(0,Math.min(115+offset,area.width-parseFloat(w.style.width)))+"px";

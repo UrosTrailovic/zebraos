@@ -6,6 +6,8 @@ on:
       - zebraamp.js
       - zebravis-controls.css
       - tests/zebravis.test.cjs
+      - tests/amp-window.test.cjs
+      - app.js
       - .github/workflows/verify-zebravis.yml
   workflow_dispatch:
 permissions:
@@ -20,4 +22,4 @@ jobs:
           node-version: '22'
       - run: node --check visualizer.js
       - run: node --check zebraamp.js
-      - run: node --test tests/zebravis.test.cjs
+      - run: node --test tests/*.test.cjs
