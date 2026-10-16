@@ -153,33 +153,43 @@ function drawSpectrum(ctx,w,h,m){
   var count=m.levels.length,step=usable/count,bw=Math.max(1,step*.72);
   var cap=h*.65,segments=Math.max(10,Math.min(32,Math.floor(cap/5)));
   var sh=cap/segments;
-  ctx.shadowColor="#57ffb0";ctx.shadowBlur=lowPower?3:7;
+  // Draw the unlit matrix first: it must never paint over the bloom.
+  ctx.shadowBlur=0;ctx.fillStyle="rgba(83,168,117,.045)";
   for(var i=0;i<count;i++){
-    var value=m.levels[i],x=margin+i*step;
-    var lit=Math.floor(value*segments);
-    // One broad phosphor halo per lit column, then sharp luminous cells.
-    // This keeps the bloom visible on mobile without blurring every cell.
-    if(lit>0){
-      ctx.shadowColor="#43ffa0";ctx.shadowBlur=lowPower?9:19;
-      ctx.fillStyle="rgba(66,255,151,"+(.13+value*.18)+")";
-      ctx.fillRect(x,base-lit*sh,bw,lit*sh);
-    }
-    ctx.shadowBlur=0;
-    for(var k=0;k<segments;k++){
-      ctx.fillStyle=k<lit?(k>segments*.83?"#fff6bd":k>segments*.62?"#dcffcc":"#adffcf"):"rgba(83,168,117,.065)";
-      ctx.fillRect(x,base-(k+1)*sh,bw,Math.max(1,sh-1.3));
-      if(k<lit){
-        ctx.fillStyle="rgba(235,255,242,.6)";
-        ctx.fillRect(x,base-(k+1)*sh,bw,Math.max(.6,(sh-1.3)*.24));
-      }
-    }
-    ctx.shadowColor="#7affb5";ctx.shadowBlur=lowPower?6:13;
-    if(m.peaks[i]>.015){ctx.fillStyle="#e6ffed";ctx.fillRect(x,base-m.peaks[i]*cap-2,bw,1.8);}
-    ctx.shadowBlur=0;
-    ctx.fillStyle="rgba(101,255,177,"+(value*.18)+")";
-    ctx.fillRect(x,base+5,bw,value*h*.075);
+    for(var k=0;k<segments;k++)ctx.fillRect(margin+i*step,base-(k+1)*sh,bw,Math.max(1,sh-1.3));
   }
-  ctx.shadowBlur=0;
+  // A compound emissive mask gets three additive phosphor passes. The
+  // wide green bloom, hot inner halo and near-white core all come from
+  // the actual lit cells, so silence cannot illuminate a static rectangle.
+  ctx.beginPath();
+  for(var i=0;i<count;i++){
+    var lit=Math.floor(m.levels[i]*segments),x=margin+i*step;
+    for(var k=0;k<lit;k++)ctx.rect(x,base-(k+1)*sh,bw,Math.max(1,sh-1.3));
+  }
+  ctx.save();ctx.globalCompositeOperation="lighter";
+  ctx.shadowColor="#00ff69";
+  ctx.shadowBlur=(lowPower?26:42)+m.hit*12;
+  ctx.fillStyle="rgba(10,255,102,.55)";ctx.fill();
+  ctx.shadowColor="#30ff8d";ctx.shadowBlur=lowPower?10:17;
+  ctx.fillStyle="rgba(92,255,160,.72)";ctx.fill();
+  ctx.shadowColor="#b5ffd2";ctx.shadowBlur=lowPower?4:7;
+  ctx.fillStyle="rgba(190,255,218,.92)";ctx.fill();
+  ctx.restore();ctx.shadowBlur=0;
+  // Small brilliant cores retain the segmented LED structure inside the glow.
+  for(var i=0;i<count;i++){
+    var value=m.levels[i],x=margin+i*step,lit=Math.floor(value*segments);
+    ctx.fillStyle="#edfff2";
+    for(var k=0;k<lit;k++)ctx.fillRect(x+bw*.14,base-(k+1)*sh,bw*.72,Math.max(.8,(sh-1.3)*.48));
+    if(m.peaks[i]>.015){
+      ctx.shadowColor="#71ffab";ctx.shadowBlur=lowPower?11:20;
+      ctx.fillStyle="#f2fff5";ctx.fillRect(x,base-m.peaks[i]*cap-2,bw,2);
+    }
+    ctx.shadowBlur=0;
+    var reflection=ctx.createLinearGradient(0,base+3,0,base+6+value*h*.1);
+    reflection.addColorStop(0,"rgba(103,255,169,"+(value*.45)+")");
+    reflection.addColorStop(1,"rgba(45,255,130,0)");
+    ctx.fillStyle=reflection;ctx.fillRect(x,base+3,bw,3+value*h*.1);
+  }
   ctx.font="10px monospace";ctx.fillStyle="#75b99b";ctx.textAlign="left";
   ctx.fillText("SPECTRE / 45 Hz — 14 kHz",margin,22);
   var labels=[[60,"60"],[250,"250"],[1000,"1k"],[4000,"4k"],[12000,"12k Hz"]];
