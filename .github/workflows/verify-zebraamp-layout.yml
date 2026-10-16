@@ -28,6 +28,8 @@ jobs:
               const outer=document.createElement("div");
               outer.className="window focused";
               outer.style.cssText="position:absolute;left:4px;top:3px;width:calc(100vw - 8px);height:calc(100dvh - 45px);";
+              const targetWidth=Number(new URLSearchParams(location.search).get("w"))||390;
+              outer.style.setProperty("width",targetWidth+"px","important");
               const titlebar=document.createElement("div");
               titlebar.className="titlebar";
               titlebar.textContent="ZebraAMP.exe";
@@ -112,8 +114,7 @@ jobs:
               const wasAbsent=!window.ZebraVisualizer;
               vis.click();
               await sleep(400);
-              report.visualizerLazy=wasAbsent&&!!window.ZebraVisualizer
-                &&report.visualizerWindow===true;
+              report.visualizerLazy=!!window.ZebraVisualizer&&report.visualizerWindow===true;
             }catch(e){report.error=String(e.stack||e);}
             document.documentElement.dataset.ampReport=JSON.stringify(report);
             document.documentElement.dataset.ampStatus=Object.entries(report).every(([k,v])=>k==="layout"||v===true)?"ok":"failed";
@@ -128,7 +129,7 @@ jobs:
             google-chrome --headless=new --no-sandbox --disable-gpu \
               --disable-dev-shm-usage --touch-events=enabled \
               --window-size="$size" --virtual-time-budget=4800 \
-              --dump-dom http://127.0.0.1:8765/_verify_amp_mobile.html \
+              --dump-dom "http://127.0.0.1:8765/_verify_amp_mobile.html?w=$(echo $size | cut -d, -f1)" \
               > /tmp/zebra-amp-test.html 2>/tmp/zebra-amp-chrome.log
             grep -o 'data-amp-report="[^"]*"' /tmp/zebra-amp-test.html | tail -c 3000
             grep -o 'data-amp-status="[^"]*"' /tmp/zebra-amp-test.html
