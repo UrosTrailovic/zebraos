@@ -25,6 +25,7 @@ jobs:
           window.addEventListener("load",async function(){
             const result={},sleep=ms=>new Promise(r=>setTimeout(r,ms));
             try{
+              document.documentElement.dataset.coverPhase="start";
               const host=document.createElement("div");
               host.className="window-body";
               host.style.cssText="position:absolute;top:8px;left:5px;width:380px;height:740px;z-index:9999;overflow:hidden";
@@ -47,6 +48,7 @@ jobs:
               root=host.querySelector(".amp3");
               result.customEditable=!root.querySelector("[data-amp-rename]").disabled;
               root.querySelector("[data-amp-rename]").click();
+              document.documentElement.dataset.coverPhase="editor-1";
               const dialog=root.querySelector(".amp3-edit-overlay");
               result.editor=!!dialog&&!!dialog.querySelector(".amp3-edit-name")
                 &&!!dialog.querySelector('input[type=file]')
@@ -60,11 +62,14 @@ jobs:
               Object.defineProperty(uploader,"files",{configurable:true,value:[file]});
               uploader.dispatchEvent(new Event("change",{bubbles:true}));
               result.coverPreview=dialog.querySelector(".amp3-edit-cover-image").src.startsWith("blob:");
+              document.documentElement.dataset.coverPhase="save-clicked";
               dialog.querySelector(".amp3-edit-save").click();
               await sleep(550);
+              document.documentElement.dataset.coverPhase="save-stored";
               const save=JSON.parse(localStorage.getItem("zebraamp-v3"));
               const p=save.playlists.find(x=>x.name===listName);
               result.metadata=!!p&&p.coverKey==="cover:"+p.id;
+              document.documentElement.dataset.coverPhase="open-db";
               const database=await new Promise((resolve,reject)=>{
                 const req=indexedDB.open("zebraamp-v3-audio",1);
                 req.onsuccess=()=>resolve(req.result);
@@ -82,6 +87,7 @@ jobs:
                 &&root.querySelector(".amp3-cover-image").src.startsWith("blob:");
               result.playlistKept=root.querySelector('[data-amp-select]').value===p.id;
               // Rejouer le JS dans la même origine : simulation d'une nouvelle visite.
+              document.documentElement.dataset.coverPhase="reload-script";
               const script=document.createElement("script");
               script.src="zebraamp.js?cover-reload";
               await new Promise((resolve,reject)=>{
@@ -98,19 +104,23 @@ jobs:
               result.coverAfterReload=!root.querySelector(".amp3-cover").classList.contains("amp3-cover-empty")
                 &&root.querySelector(".amp3-cover-image").src.startsWith("blob:");
               root.querySelector("[data-amp-rename]").click();
+              document.documentElement.dataset.coverPhase="editor-2";
               const editor2=root.querySelector(".amp3-edit-overlay");
               result.previewAfterReload=editor2.querySelector(".amp3-edit-cover-image").src.startsWith("blob:");
               editor2.querySelector(".amp3-edit-remove").click();
+              document.documentElement.dataset.coverPhase="remove-clicked";
               editor2.querySelector(".amp3-edit-save").click();
               await sleep(240);
               result.removed=!JSON.parse(localStorage.getItem("zebraamp-v3")).playlists.find(x=>x.id===p.id).coverKey
                 &&root.querySelector(".amp3-cover").classList.contains("amp3-cover-empty");
+              document.documentElement.dataset.coverPhase="remove-done";
               result.vinylAfterRemove=root.querySelector(".amp3-cover-fallback").textContent.trim()==="";
               // La playlist publique demeure immuable.
               selector.value="zebra-tape-2";
               selector.dispatchEvent(new Event("change",{bubbles:true}));
               result.albumStillReadonly=root.querySelector("[data-amp-rename]").disabled;
             }catch(e){result.error=String(e.stack||e);}
+            document.documentElement.dataset.coverPhase="complete";
             document.documentElement.dataset.coverReport=JSON.stringify(result);
             document.documentElement.dataset.coverStatus=Object.values(result).every(v=>v===true)?"ok":"failed";
           });
@@ -119,7 +129,8 @@ jobs:
           PY
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebraamp-cover-http.log 2>&1 &
           sleep 1
-          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,875 --virtual-time-budget=9000 --dump-dom http://127.0.0.1:8765/_verify_zebraamp_cover.html > /tmp/zebraamp-cover.html 2>/tmp/zebraamp-cover-chrome.log || { tail -c 4000 /tmp/zebraamp-cover-chrome.log; wc -c /tmp/zebraamp-cover.html; exit 1; }
-          grep -o 'data-cover-report="[^"]*"' /tmp/zebraamp-cover.html | tail -c 4000
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,875 --virtual-time-budget=45000 --dump-dom http://127.0.0.1:8765/_verify_zebraamp_cover.html > /tmp/zebraamp-cover.html 2>/tmp/zebraamp-cover-chrome.log || { tail -c 4000 /tmp/zebraamp-cover-chrome.log; wc -c /tmp/zebraamp-cover.html; exit 1; }
+          grep -o 'data-cover-phase="[^"]*"' /tmp/zebraamp-cover.html | tail -c 200 || true
+          grep -o 'data-cover-report="[^"]*"' /tmp/zebraamp-cover.html | tail -c 4000 || true
           grep -o 'data-cover-status="[^"]*"' /tmp/zebraamp-cover.html
           grep -q 'data-cover-status="ok"' /tmp/zebraamp-cover.html
