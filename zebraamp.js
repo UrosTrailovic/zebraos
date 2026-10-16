@@ -400,7 +400,9 @@ function editPlaylist(){
   save.disabled=true;cancel.disabled=true;pick.disabled=true;removeBtn.disabled=true;
   try{
    if(selectedFile){
+    status("Préparation de la pochette…");
     var compressed=await coverBlob(selectedFile);
+    status("Sauvegarde locale de la pochette…");
     await dbOp("put",null,{id:"cover:"+p.id,blob:compressed,name:selectedFile.name});
     releaseCover(p.id);
     coverCache.set(p.id,URL.createObjectURL(compressed));
