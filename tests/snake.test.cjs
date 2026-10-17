@@ -35,3 +35,34 @@ test('painted trees and bushes leave the classic game unchanged and remain trave
  // The tree at (21,22) covers this cell; it must remain playable.
  g.tick();assert.equal(g.snake[0].x,1);assert.equal(g.state,'running');
 });
+function soundHarness(){
+ const contexts=[],nodes=[];let muted=false;
+ const storage={getItem:()=>muted?'1':'0'};
+ class Audio{
+  constructor(){this.currentTime=10;this.state='suspended';this.destination={};this.closed=false;contexts.push(this);}
+  resume(){this.state='running';return Promise.resolve();}
+  close(){this.closed=true;return Promise.resolve();}
+  createOscillator(){const n={stops:[],frequency:{setValueAtTime(v){n.frequencyValue=v;},exponentialRampToValueAtTime(){}},connect(){},disconnect(){n.disconnected=true;},start(t){n.startAt=t;},stop(t){n.stops.push(t);}};nodes.push(n);return n;}
+  createGain(){return {gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}};}
+ }
+ const env={window:{AudioContext:Audio},document:{hidden:false},localStorage:storage,Math};
+ vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../snake.js'),'utf8'),env);
+ return {sounds:env.window.ZebraSnake.createSounds(),contexts,nodes,document:env.document,mute:v=>{muted=v;}};
+}
+test('game-over sound is gesture-gated and plays two short notes then a longer third',()=>{
+ const h=soundHarness();h.sounds.play('over');assert.equal(h.contexts.length,0);
+ h.sounds.unlock();h.sounds.play('over');assert.equal(h.contexts.length,1);assert.equal(h.nodes.length,3);
+ assert.deepEqual(h.nodes.map(n=>n.frequencyValue),[392,311,196]);assert.deepEqual(h.nodes.map(n=>n.startAt),[10,10.2,10.4]);
+ const lengths=h.nodes.map(n=>n.stops[0]-n.startAt);assert.ok(lengths[2]>lengths[0]*3);h.sounds.dispose();
+});
+test('game sounds obey system mute and hidden tabs, and dispose releases audio',()=>{
+ const h=soundHarness();h.mute(true);h.sounds.unlock();h.sounds.play('start');assert.equal(h.contexts.length,0);
+ h.mute(false);h.sounds.unlock();h.sounds.play('eat');assert.equal(h.nodes.length,2);
+ h.mute(true);h.sounds.play('turn');assert.equal(h.nodes.length,2);assert.ok(h.nodes.every(n=>n.stops.length===2));
+ h.mute(false);h.document.hidden=true;h.sounds.play('start');assert.equal(h.nodes.length,2);
+ h.sounds.dispose();assert.equal(h.contexts[0].closed,true);h.document.hidden=false;h.sounds.unlock();h.sounds.play('start');assert.equal(h.nodes.length,2);
+});
+test('restart cancels the unfinished game-over fanfare before new sounds',()=>{
+ const h=soundHarness();h.sounds.unlock();h.sounds.play('over');h.sounds.stop();
+ assert.ok(h.nodes.every(n=>n.stops.length===2&&n.disconnected));h.sounds.play('start');assert.equal(h.nodes.length,5);h.sounds.dispose();
+});

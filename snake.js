@@ -78,38 +78,92 @@ function draw(ctx,g,background){
  const head=points[0],d=DIR[g.direction],side=[-d[1],d[0]];
  for(const s of [-1,1]){const x=head.x+d[0]*3+side[0]*s*3,y=head.y+d[1]*3+side[1]*s*3;ctx.fillStyle='#fff6b0';ctx.fillRect(x-1,y-1,3,3);ctx.fillStyle='#112b27';ctx.fillRect(x+d[0],y+d[1],2,2);}
 }
+/* Small chip sounds, unlocked by an input gesture and disposed with the window. */
+function createSounds(){
+ let context=null,unlocked=false,disposed=false;
+ const voices=new Set();
+ const notes={
+  start:[[440,0,.07],[660,.09,.12]],eat:[[740,0,.045],[990,.05,.075]],turn:[[180,0,.022]],
+  pause:[[440,0,.055],[280,.075,.085]],resume:[[280,0,.055],[440,.075,.085]],
+  menu:[[220,0,.055]],over:[[392,0,.13],[311,.2,.13],[196,.4,.46]],
+  won:[[440,0,.09],[554,.12,.09],[660,.24,.09],[880,.36,.23]]
+ };
+ function muted(){try{return localStorage.getItem('zebra.sfx.muted')==='1';}catch(_){return false;}}
+ function stop(){
+  voices.forEach(v=>{try{v.osc.stop();}catch(_){}try{v.osc.disconnect();v.gain.disconnect();}catch(_){}});
+  voices.clear();
+ }
+ function unlock(){
+  if(disposed||muted())return;
+  unlocked=true;
+  try{
+   const Audio=window.AudioContext||window.webkitAudioContext;
+   if(!context&&Audio)context=new Audio();
+   if(context&&context.state==='suspended'){const pending=context.resume();if(pending&&pending.catch)pending.catch(()=>{});}
+  }catch(_){}
+ }
+ function play(type){
+  if(disposed||!unlocked||!context||document.hidden||!notes[type])return;
+  if(muted()){stop();return;}
+  try{
+   const start=context.currentTime;
+   for(const [freq,offset,duration]of notes[type]){
+    const osc=context.createOscillator(),gain=context.createGain(),at=start+offset;
+    const voice={osc,gain};voices.add(voice);
+    osc.type='square';osc.frequency.setValueAtTime(freq,at);
+    if(type==='over'&&offset===.4)osc.frequency.exponentialRampToValueAtTime(140,at+duration);
+    gain.gain.setValueAtTime(.0001,at);gain.gain.linearRampToValueAtTime(type==='turn'?.009:.035,at+.006);
+    gain.gain.exponentialRampToValueAtTime(.0001,at+duration);
+    osc.connect(gain);gain.connect(context.destination);
+    osc.onended=()=>{voices.delete(voice);try{osc.disconnect();gain.disconnect();}catch(_){}};
+    osc.start(at);osc.stop(at+duration+.012);
+   }
+  }catch(_){}
+ }
+ function dispose(){disposed=true;stop();if(context){try{const closed=context.close();if(closed&&closed.catch)closed.catch(()=>{});}catch(_){}context=null;}}
+ return {unlock,play,stop,dispose};
+}
 function mount(root){
  if(root._zebraDispose)root._zebraDispose();root.innerHTML='';
- const g=createGame();let alive=true,best=0,observer;
+ const g=createGame(),sounds=createSounds();let alive=true,best=0,observer,lastState=g.state,lastScore=0;
  try{best=Number(localStorage.getItem('zebra.snake.best'))||0;}catch(_){}
  const wrap=make('div','zs-machine');
- wrap.innerHTML='<div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div>SCORE <b class="zs-score">0000</b></div><div>RECORD <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znak : manger les pommes, éviter les murs et sa queue"></canvas><div class="zs-overlay"><strong></strong><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console zg-retro"><div class="zs-handheld zt-handheld zt-skin-ready"><div class="zs-toolbar zg-buttons zt-buttons"></div><div class="zs-dpad zt-dpad" aria-label="Direction"><div class="zs-cross zt-cross"></div></div><div class="zs-action-side zt-action-side"><div class="zs-ab zt-ab"></div><span class="zs-select-space zt-select" aria-hidden="true"></span></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
+ wrap.innerHTML='<div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div>SCORE <b class="zs-score">0000</b></div><div>RECORD <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znak : manger les pommes, éviter les murs et sa queue"></canvas><div class="zs-overlay"><strong role="heading" aria-level="2"></strong><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console zg-retro"><div class="zs-handheld zt-handheld zt-skin-ready"><div class="zs-toolbar zg-buttons zt-buttons"></div><div class="zs-dpad zt-dpad" aria-label="Direction"><div class="zs-cross zt-cross"></div></div><div class="zs-action-side zt-action-side"><div class="zs-ab zt-ab"></div><span class="zs-select-space zt-select" aria-hidden="true"></span></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
  root.appendChild(wrap);
  const $=s=>wrap.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d');canvas.width=CW;canvas.height=CH;
  const stage=$('.zs-stage'),arena=$('.zs-arena'),hud=$('.zs-hud'),overlay=$('.zs-overlay'),status=$('.zs-state');
- function button(label,cls,fn,parent){const e=make('button','zs-button '+cls,label);e.type='button';e.onclick=fn;parent.appendChild(e);return e;}
+ function button(label,cls,fn,parent){const e=make('button','zs-button '+cls,label);e.type='button';e.onclick=function(event){sounds.unlock();fn(event);};parent.appendChild(e);return e;}
  const background=document.createElement('canvas');background.width=CW;background.height=CH;
  drawBackground(background.getContext('2d'));
+ function restart(){sounds.stop();lastState='ready';lastScore=0;g.reset();g.toggle();render();}
  const play=button('Jouer','zs-play',()=>{g.toggle();render();},$('.zs-toolbar'));
- button('Recommencer','zs-restart',()=>{g.reset();g.toggle();render();},$('.zs-toolbar'));
- button('Menu','zs-menu',()=>{g.reset();render();},$('.zs-toolbar'));
+ button('Recommencer','zs-restart',restart,$('.zs-toolbar'));
+ button('Menu','zs-menu',()=>{sounds.stop();g.reset();sounds.play('menu');render();},$('.zs-toolbar'));
  for(const [d,label]of Object.entries({up:'▲',left:'◀',right:'▶',down:'▼'})){
-  const b=button(label,'zs-dir zt-control zt-dir zt-dir-'+d+' zs-'+d,e=>{if(e.detail===0){g.turn(d);render();}},$('.zs-cross'));
+  const b=button(label,'zs-dir zt-control zt-dir zt-dir-'+d+' zs-'+d,e=>{if(e.detail===0){turn(d);}},$('.zs-cross'));
   b.setAttribute('aria-label',({up:'Haut',down:'Bas',left:'Gauche',right:'Droite'})[d]);
-  b.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();g.turn(d);render();};
+  b.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();sounds.unlock();turn(d);};
  }
  const a=button('A','zs-a zt-control zt-ab-button zt-a',()=>{g.toggle();render();},$('.zs-ab'));a.setAttribute('aria-label','Jouer ou pause');
- const b=button('B','zs-b zt-control zt-ab-button zt-b',()=>{g.reset();g.toggle();render();},$('.zs-ab'));b.setAttribute('aria-label','Recommencer');
- $('.zs-start').onclick=()=>{g.toggle();render();};
+ const b=button('B','zs-b zt-control zt-ab-button zt-b',restart,$('.zs-ab'));b.setAttribute('aria-label','Recommencer');
+ $('.zs-start').onclick=()=>{sounds.unlock();g.toggle();render();};
+ function turn(d){const wasRunning=g.state==='running';if(g.turn(d)&&wasRunning)sounds.play('turn');render();}
  function render(){
   if(!alive)return;
+  if(g.state!==lastState){
+   if(g.state==='over'||g.state==='won'){sounds.stop();sounds.play(g.state);}
+   else if(g.state==='paused'){sounds.stop();sounds.play('pause');}
+   else if(g.state==='running'){sounds.stop();sounds.play(lastState==='paused'?'resume':'start');}
+   lastState=g.state;
+  }
+  if(g.score>lastScore&&g.state==='running')sounds.play('eat');lastScore=g.score;
   if(g.score>best){best=g.score;try{localStorage.setItem('zebra.snake.best',String(best));}catch(_){}}
   $('.zs-score').textContent=String(g.score).padStart(4,'0');$('.zs-best').textContent=String(best).padStart(4,'0');
-  status.textContent=({ready:'PRÊT',running:'EN JEU',paused:'PAUSE',over:'PERDU',won:'BRAVO'})[g.state];
+  status.textContent=({ready:'PRÊT',running:'EN JEU',paused:'PAUSE',over:'GAME OVER',won:'VICTOIRE'})[g.state];
   play.textContent=g.state==='running'?'Pause':g.state==='paused'?'Reprendre':g.state==='ready'?'Jouer':'Rejouer';
-  overlay.hidden=g.state==='running';
-  overlay.querySelector('strong').textContent=({ready:'ON JOUE ?',paused:'PETITE PAUSE',over:'ENCORE UNE ?',won:'BIEN JOUÉ'})[g.state]||'';
-  overlay.querySelector('span').textContent=g.state==='ready'?'Espace ou Jouer pour commencer.':g.state==='paused'?'Reprends quand tu veux.':'Score : '+g.score;
+  overlay.hidden=g.state==='running';overlay.dataset.state=g.state;
+  overlay.querySelector('strong').textContent=({ready:'ZNAK',paused:'PAUSE',over:'GAME OVER',won:'VICTOIRE'})[g.state]||'';
+  overlay.querySelector('span').textContent=g.state==='ready'?'ESPACE : JOUER':g.state==='paused'?'ESPACE : REPRENDRE':'SCORE : '+g.score;
   $('.zs-start').textContent=play.textContent;
   draw(ctx,g,background);
  }
@@ -118,7 +172,7 @@ function mount(root){
  function key(e){
   if(!alive||!focused()||e.altKey||e.ctrlKey||e.metaKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable)return;
   const d=({ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',z:'up',s:'down',a:'left',q:'left',d:'right'})[e.key];
-  if(d){e.preventDefault();if(!e.repeat){g.turn(d);render();}}else if(e.code==='Space'||e.key===' '||e.key.toLowerCase()==='p'){e.preventDefault();if(!e.repeat){g.toggle();render();}}
+  if(d){e.preventDefault();if(!e.repeat){sounds.unlock();turn(d);}}else if(e.code==='Space'||e.key===' '||e.key.toLowerCase()==='p'){e.preventDefault();if(!e.repeat){sounds.unlock();g.toggle();render();}}
  }
  function hide(){if(document.hidden&&g.state==='running'){g.state='paused';render();}}
  function blur(){if(g.state==='running'){g.state='paused';render();}}
@@ -126,7 +180,7 @@ function mount(root){
  const clock=setInterval(()=>{if(g.state==='running'){if(!focused()){blur();return;}g.tick();render();}},140);
  if(typeof ResizeObserver!=='undefined'){observer=new ResizeObserver(fit);observer.observe(arena);}else window.addEventListener('resize',fit);
  fit();render();
- root._zebraDispose=function(){alive=false;clearInterval(clock);if(observer)observer.disconnect();window.removeEventListener('resize',fit);window.removeEventListener('blur',blur);document.removeEventListener('keydown',key);document.removeEventListener('visibilitychange',hide);};
+ root._zebraDispose=function(){alive=false;sounds.dispose();clearInterval(clock);if(observer)observer.disconnect();window.removeEventListener('resize',fit);window.removeEventListener('blur',blur);document.removeEventListener('keydown',key);document.removeEventListener('visibilitychange',hide);};
 }
-window.ZebraSnake={mount,createGame,draw,drawBackground,width:CW,height:CH};
+window.ZebraSnake={mount,createGame,createSounds,draw,drawBackground,width:CW,height:CH};
 }());
