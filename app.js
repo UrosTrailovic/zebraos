@@ -220,7 +220,8 @@ function beginSessionBoot(id){
 function skipStartupKey(event){
   if(event.isComposing||!(event.key==="Escape"||event.key===" "||event.code==="Space"))return;
   var finish=null;
-  if(booting&&$("boot-screen").classList.contains("active"))finish=finishBoot;
+  if($("power-screen").classList.contains("active")&&(event.key===" "||event.code==="Space"))finish=powerOn;
+  else if(booting&&$("boot-screen").classList.contains("active"))finish=finishBoot;
   else if(sessionBooting&&$("session-boot-screen").classList.contains("active"))finish=finishSessionBoot;
   if(!finish)return;
   event.preventDefault();event.stopImmediatePropagation();
