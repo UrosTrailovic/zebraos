@@ -29,6 +29,7 @@ jobs:
            try{
             localStorage.setItem('zebra.snake.theme','night');ZebraSnake.mount(host);await wait(150);
             const $=q=>host.querySelector(q),stage=$('.zs-stage'),bounds=stage.getBoundingClientRect(),consoleBounds=$('.zs-console').getBoundingClientRect();
+            const hudBounds=$('.zs-hud').getBoundingClientRect();out.hudAligned=Math.abs(hudBounds.left-bounds.left)<1&&Math.abs(hudBounds.right-bounds.right)<1;
             out.fits=bounds.width>100&&bounds.height>90&&bounds.left>=0&&bounds.right<=innerWidth&&consoleBounds.bottom<=innerHeight+1;
             const ctx=$('canvas').getContext('2d');out.drawn=ctx.getImageData(160,160,1,1).data[3]===255;
             const image=new Image();image.src='/assets/games/snake/tileSnake.png';await image.decode();out.tile=image.naturalWidth===32&&getComputedStyle($('.zs-machine')).backgroundImage.includes('tileSnake');
