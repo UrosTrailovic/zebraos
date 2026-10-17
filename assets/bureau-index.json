@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-17T01:05:14.916Z",
+  "generatedAt": "2026-10-17T01:05:32.844622+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -28,13 +28,6 @@
       "type": "dir"
     },
     {
-      "path": "STUDIO/BUREAU/Jeux/Znak.exe.zebraos.json",
-      "type": "app",
-      "name": "Znak.exe",
-      "app": "snake",
-      "icon": "snake"
-    },
-    {
       "path": "STUDIO/BUREAU/Jeux/Tetris.exe.zebraos.json",
       "type": "app",
       "name": "Tetris.exe",
@@ -45,6 +38,18 @@
       "path": "STUDIO/BUREAU/Jeux/Tetris.exe.zebraos.json.icone.png",
       "type": "file",
       "size": 18121
+    },
+    {
+      "path": "STUDIO/BUREAU/Jeux/Znak.exe.zebraos.json",
+      "type": "app",
+      "name": "Znak.exe",
+      "app": "snake",
+      "icon": "snake"
+    },
+    {
+      "path": "STUDIO/BUREAU/Jeux/Znak.exe.zebraos.json.icone.png",
+      "type": "file",
+      "size": 2110
     },
     {
       "path": "STUDIO/BUREAU/Jeux/icone.png",
@@ -514,11 +519,6 @@
       "path": "STUDIO/BUREAU/thanks.txt",
       "type": "file",
       "size": 107
-    },
-    {
-      "path": "STUDIO/BUREAU/Jeux/Znak.exe.zebraos.json.icone.png",
-      "type": "file",
-      "size": 2110
     }
   ]
 }
