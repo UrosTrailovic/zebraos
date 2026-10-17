@@ -72,6 +72,8 @@ function children(path){
   return visible(item)&&item.path.slice(0,item.path.lastIndexOf("/"))===path;
  }).sort(function(a,b){
   if(path===ROOT){
+   var aThanks=a.name.toLocaleLowerCase("fr")==="thanks.txt",bThanks=b.name.toLocaleLowerCase("fr")==="thanks.txt";
+   if(aThanks!==bThanks)return aThanks?1:-1;
    var ai=rank[a.name.toLocaleLowerCase("fr")],bi=rank[b.name.toLocaleLowerCase("fr")];
    var as=ai===undefined?Infinity:ai,bs=bi===undefined?Infinity:bi;
    if(as!==bs)return as-bs;

@@ -9,6 +9,7 @@ on:
       - 'desktop-layout.js'
       - 'desktop-layout.css'
       - 'app.js'
+      - 'control-panel.js'
       - 'index.html'
       - 'STUDIO/BUREAU/**'
       - 'assets/bureau-index.json'
@@ -27,6 +28,7 @@ jobs:
           node --check github-files.js
           node --check desktop-layout.js
           node --check app.js
+          node --check control-panel.js
           python3 - <<'PY'
           import json
           from pathlib import Path
@@ -43,11 +45,11 @@ jobs:
                   assert Path(item['path']).is_file(),item
                   assert json.loads(Path(item['path']).read_text())['app']==item['app']
           names=[e['path'] for e in entries]
-          for name in ['JEUX','OUTILS','Zebra Tape 2','sadate']:
+          for name in ['Jeux','Outils','Zebra Tape 2','sadate']:
               assert 'STUDIO/BUREAU/'+name in names,name
           for item in entries:
               if item['type']=='app' and item['app']=='settings':
-                  assert item['path'].startswith('STUDIO/BUREAU/Panneau'),item
+                  assert item['path'].startswith('STUDIO/BUREAU/Réglage'),item
           print('Structure GitHub : OK,',len(entries),'entrées')
           PY
       - name: Tester bureau, dossiers et trois utilitaires dans Chromium
@@ -66,7 +68,7 @@ jobs:
             document.querySelector(".user-visitor").click();
             document.getElementById("skip-session-boot").click();
             var result=await lib.load();
-            report.indexLoaded=result.ok&&lib.list(lib.root).some(x=>x.name==="OUTILS");
+            report.indexLoaded=result.ok&&lib.list(lib.root).some(x=>x.name==="Outils");
             var existingPhoto=lib.allFiles().find(x=>x.type==="file"&&/\.(jpg|png|webp)$/i.test(x.name)
               &&x.path.includes("Photo et vidéo cool/")&&!x.name.includes("icone."));
             report.photoInRepo=!!existingPhoto;
@@ -94,15 +96,20 @@ jobs:
             report.videoThumbnail=!!videoThumb.querySelector(".bureau-video-play")
               &&videoThumb.classList.contains("bureau-video-thumb");
             report.configOrder=lib.list(lib.root).slice(0,3).map(e=>e.name).join("|")
-              ==="Panneau de configuration|Poste de travail|ZebraAMP.exe";
+              ==="Réglage de l’ordinateur|ZebraAMP.exe|Jeux";
             await new Promise(resolve=>setTimeout(resolve,160));
             var icons=Array.from(document.querySelectorAll(".desk-icon .desk-caption")).map(e=>e.textContent);
-            report.desktop=["JEUX","OUTILS","Zebra Tape 2","sadate","Poste de travail","ZebraAMP.exe","Panneau de configuration"].every(n=>icons.includes(n))
-              &&!icons.includes("ATELIER")&&!icons.includes("Tetris.exe")&&!icons.includes("Snake.exe")
+            report.desktop=["Jeux","Outils","Zebra Tape 2","sadate","ZebraAMP.exe","Réglage de l’ordinateur"].every(n=>icons.includes(n))
+              &&!icons.includes("Poste de travail")&&!icons.includes("ATELIER")&&!icons.includes("Tetris.exe")&&!icons.includes("Snake.exe")
               &&icons.includes("Corbeille")&&!icons.includes("Gestionnaire Studio");
             function desk(label){return Array.from(document.querySelectorAll(".desk-icon")).find(e=>e.querySelector(".desk-caption")?.textContent===label);}
             function entry(label){return Array.from(document.querySelectorAll(".github-file-entry")).find(e=>e.querySelector(".github-file-name")?.textContent===label);}
             function button(label,element){return Array.from(element.querySelectorAll("button")).find(e=>e.textContent.trim().includes(label));}
+            report.thanksLast=lib.list(lib.root).slice(-1)[0].name==="thanks.txt";
+            desk("Réglage de l’ordinateur").click();
+            var panel=document.querySelector(".zcp");
+            report.welcomeFirst=!!panel&&panel.querySelector(".zcp-item-title").textContent==="Bienvenu";
+            report.settingsTitle=panel.closest(".window").querySelector(".windowtitle").textContent==="Réglage de l’ordinateur";
             var bin=document.querySelector(".zu-trash-icon");
             var binRect=bin.getBoundingClientRect();
             report.fixedTrash=binRect.right>=innerWidth-25&&binRect.bottom<=innerHeight-34
@@ -129,7 +136,7 @@ jobs:
             var restore=Array.from(document.querySelectorAll(".zu-trash-item button")).find(e=>e.textContent.includes("RESTAURER"));
             restore.click();
             report.trashRestore=!!desk("ZebraAMP.exe")&&JSON.parse(localStorage.getItem("zebra.desktop.v1.visitor")).trash.length===0;
-            desk("JEUX").click();
+            desk("Jeux").click();
             await new Promise(resolve=>setTimeout(resolve,150));
             report.gamesFolder=!!entry("Tetris.exe")&&!!entry("Snake.exe")
               &&!entry("ZebraCalc.exe");
@@ -138,11 +145,11 @@ jobs:
             await window.ZebraLazyApps.load("tetris");
             await new Promise(resolve=>setTimeout(resolve,100));
             report.tetrisWorks=!!document.querySelector(".zg-tetris-stage");
-            desk("OUTILS").click();
+            desk("Outils").click();
             await new Promise(resolve=>setTimeout(resolve,150));
             report.toolsFolder=!!entry("ZebraCalc.exe")&&!!entry("ZebraSticky.exe")
               &&!!entry("ZebraPlanner.exe")&&!!entry("ZebraPaint.exe")
-              &&!!entry("Bloc-notes")&&!entry("Panneau de configuration");
+              &&!!entry("Bloc-notes")&&!entry("Réglage de l’ordinateur");
             entry("ZebraCalc.exe").click();
             var calc=document.querySelector(".zu-calc"),key=function(v){return Array.from(calc.querySelectorAll(".zu-calc-key")).find(b=>b.textContent.trim()===v).click();};
             key("2");key("+");key("3");key("=");

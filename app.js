@@ -640,7 +640,7 @@ function openDesktopTrash(){
 function msg(title,message){if(/unavailable|denied/i.test(title))sfx("error");var r=windowBox("msg-"+(++seq),title,375,180);r.appendChild(el("p","app-message",message));r.appendChild(button("OK",function(){r.parentNode.remove();Object.keys(opened).forEach(function(k){if(!document.body.contains(opened[k].w))delete opened[k]});task()}))}
 function notepad(id){var name=id==="notes"?"MES_NOTES.TXT":id==="readme"?"LISEZMOI.TXT":(id||"LISEZMOI").toUpperCase()+".TXT";var r=windowBox("note-"+id,name+" — Bloc-notes",480,380);r.innerHTML="";var wrap=el("div","note-editor");var ta=el("textarea");ta.value=id==="notes"?(getStore("zebra.note."+session)||""):docs[id]||"";if(id!=="notes")ta.readOnly=true;wrap.appendChild(ta);if(id==="notes")wrap.appendChild(button("Fichier > Enregistrer",function(){setStore("zebra.note."+session,ta.value);msg("Bloc-notes","Enregistré dans ton navigateur.")}));else wrap.appendChild(el("div","desktop-note","Fichier en lecture seule"));r.appendChild(wrap)}
 function viewer(name){var r=windowBox("viewer","Visionneuse d’images — "+name+".JPG",440,340);r.innerHTML="";var p=el("div","viewer-placeholder","[ "+name.toUpperCase()+".JPG ]\n\nImages et captures à venir");p.style.whiteSpace="pre-line";r.appendChild(p)}
-/* Panneau de configuration ZebraOS — les fenêtres restent indépendantes. */
+/* Réglage de l’ordinateur ZebraOS — les fenêtres restent indépendantes. */
 function panelContext(){
  return {
   windowBox:windowBox,session:function(){return session||"visiteur";},
@@ -655,9 +655,9 @@ function panelContext(){
  };
 }
 function settings(){
- var root=windowBox("settings","Panneau de configuration",Math.min(660,window.innerWidth-20),Math.min(475,window.innerHeight-60));
+ var root=windowBox("settings","Réglage de l’ordinateur",Math.min(660,window.innerWidth-20),Math.min(475,window.innerHeight-60));
  if(window.ZebraControlPanel)window.ZebraControlPanel.mount(root,panelContext());
- else root.textContent="Impossible de charger le Panneau de configuration.";
+ else root.textContent="Impossible de charger le Réglage de l’ordinateur.";
 }
 function about(){if(window.ZebraControlPanel)window.ZebraControlPanel.about(panelContext());}
 function dateTime(){if(window.ZebraControlPanel)window.ZebraControlPanel.dateTime(panelContext());}
@@ -671,7 +671,7 @@ function player(){
 }
 /* Dossiers réels : le même contenu depuis le Bureau et Poste de travail. */
 function appFolder(type){
- explorer("github:STUDIO/BUREAU/"+(type==="games"?"JEUX":"OUTILS"));
+ explorer("github:STUDIO/BUREAU/"+(type==="games"?"Jeux":"Outils"));
 }
 function openUtility(name){
  var tools=window.ZebraTools;if(!tools)return;

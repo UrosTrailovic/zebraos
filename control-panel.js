@@ -1,4 +1,4 @@
-/* ZebraOS — utilitaires classiques : Panneau de configuration, Date/Heure,
+/* ZebraOS — utilitaires classiques : Réglage de l’ordinateur, Date/Heure,
    Informations système et Bienvenue. Simule le temps du bureau, sans modifier
    l'horloge réelle du téléphone/de l'ordinateur. */
 (function(){
@@ -63,12 +63,12 @@ function mountPanel(root,ctx){
  main.appendChild(e("div","zcp-description","Double-cliquez sur une icône pour modifier les paramètres de ZebraOS."));
  var grid=e("div","zcp-grid");
  var options=[
+  ["Bienvenu","?","Guide des programmes",function(){showWelcome(ctx);}],
   ["Fond d’écran","▣","Fonds d’écran et apparence",function(){showDisplay(ctx);}],
   ["Sons","♫","Sons de l’interface",function(){showSounds(ctx);}],
   ["Date et heure","◷","Calendrier et horloge",function(){showDateTime(ctx);}],
   ["Système","▤","Détails de l’ordinateur",function(){showSystem(ctx);}],
-  ["À propos de ZebraOS","ⓘ","Informations sur ZebraOS",function(){showAbout(ctx);}],
-  ["Bienvenue","?","Guide des programmes",function(){showWelcome(ctx);}]
+  ["À propos de ZebraOS","ⓘ","Informations sur ZebraOS",function(){showAbout(ctx);}]
  ];
  options.forEach(function(item){
   var tile=btn("",function(){

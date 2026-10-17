@@ -1,15 +1,16 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-15T16:14:17.603796+00:00",
+  "generatedAt": "2026-10-17T00:42:24.904Z",
   "desktopOrder": [
-    "Panneau de configuration",
-    "Poste de travail",
+    "Réglage de l’ordinateur",
     "ZebraAMP.exe",
-    "thanks.txt",
-    "JEUX",
-    "OUTILS",
+    "Jeux",
+    "Outils",
     "Zebra Tape 2",
-    "sadate"
+    "sadate",
+    "Photo et vidéo cool",
+    "Gestionnaire Studio",
+    "thanks.txt"
   ],
   "entries": [
     {
@@ -23,106 +24,106 @@
       ]
     },
     {
-      "path": "STUDIO/BUREAU/JEUX",
+      "path": "STUDIO/BUREAU/Jeux",
       "type": "dir"
     },
     {
-      "path": "STUDIO/BUREAU/JEUX/Snake.exe.zebraos.json",
+      "path": "STUDIO/BUREAU/Jeux/Snake.exe.zebraos.json",
       "type": "app",
       "name": "Snake.exe",
       "app": "snake",
       "icon": "snake"
     },
     {
-      "path": "STUDIO/BUREAU/JEUX/Tetris.exe.zebraos.json",
+      "path": "STUDIO/BUREAU/Jeux/Tetris.exe.zebraos.json",
       "type": "app",
       "name": "Tetris.exe",
       "app": "tetris",
       "icon": "tetris"
     },
     {
-      "path": "STUDIO/BUREAU/JEUX/Tetris.exe.zebraos.json.icone.png",
+      "path": "STUDIO/BUREAU/Jeux/Tetris.exe.zebraos.json.icone.png",
       "type": "file",
       "size": 18121
     },
     {
-      "path": "STUDIO/BUREAU/JEUX/icone.png",
+      "path": "STUDIO/BUREAU/Jeux/icone.png",
       "type": "file",
       "size": 18083
     },
     {
-      "path": "STUDIO/BUREAU/OUTILS",
+      "path": "STUDIO/BUREAU/Outils",
       "type": "dir"
     },
     {
-      "path": "STUDIO/BUREAU/OUTILS/Bloc-notes.zebraos.json",
+      "path": "STUDIO/BUREAU/Outils/Bloc-notes.zebraos.json",
       "type": "app",
       "name": "Bloc-notes",
       "app": "notepad",
       "icon": "txt"
     },
     {
-      "path": "STUDIO/BUREAU/OUTILS/Bloc-notes.zebraos.json.icone.png",
+      "path": "STUDIO/BUREAU/Outils/Bloc-notes.zebraos.json.icone.png",
       "type": "file",
       "size": 15509
     },
     {
-      "path": "STUDIO/BUREAU/OUTILS/ZebraCalc.exe.zebraos.json",
+      "path": "STUDIO/BUREAU/Outils/ZebraCalc.exe.zebraos.json",
       "type": "app",
       "name": "ZebraCalc.exe",
       "app": "calc",
       "icon": "calc"
     },
     {
-      "path": "STUDIO/BUREAU/OUTILS/ZebraCalc.exe.zebraos.json.icone.png",
+      "path": "STUDIO/BUREAU/Outils/ZebraCalc.exe.zebraos.json.icone.png",
       "type": "file",
       "size": 26182
     },
     {
-      "path": "STUDIO/BUREAU/OUTILS/ZebraPaint.exe.zebraos.json",
+      "path": "STUDIO/BUREAU/Outils/ZebraPaint.exe.zebraos.json",
       "type": "app",
       "name": "ZebraPaint.exe",
       "app": "paint",
       "icon": "paint"
     },
     {
-      "path": "STUDIO/BUREAU/OUTILS/ZebraPaint.exe.zebraos.json.icone.png",
+      "path": "STUDIO/BUREAU/Outils/ZebraPaint.exe.zebraos.json.icone.png",
       "type": "file",
       "size": 23204
     },
     {
-      "path": "STUDIO/BUREAU/OUTILS/ZebraPlanner.exe.zebraos.json",
+      "path": "STUDIO/BUREAU/Outils/ZebraPlanner.exe.zebraos.json",
       "type": "app",
       "name": "ZebraPlanner.exe",
       "app": "planner",
       "icon": "planner"
     },
     {
-      "path": "STUDIO/BUREAU/OUTILS/ZebraPlanner.exe.zebraos.json.icone.png",
+      "path": "STUDIO/BUREAU/Outils/ZebraPlanner.exe.zebraos.json.icone.png",
       "type": "file",
       "size": 19207
     },
     {
-      "path": "STUDIO/BUREAU/OUTILS/ZebraSticky.exe.zebraos.json",
+      "path": "STUDIO/BUREAU/Outils/ZebraSticky.exe.zebraos.json",
       "type": "app",
       "name": "ZebraSticky.exe",
       "app": "sticky",
       "icon": "sticky"
     },
     {
-      "path": "STUDIO/BUREAU/OUTILS/ZebraSticky.exe.zebraos.json.icone.png",
+      "path": "STUDIO/BUREAU/Outils/ZebraSticky.exe.zebraos.json.icone.png",
       "type": "file",
       "size": 18706
     },
     {
-      "path": "STUDIO/BUREAU/OUTILS/icone.png",
+      "path": "STUDIO/BUREAU/Outils/icone.png",
       "type": "file",
       "size": 20631
     },
     {
-      "path": "STUDIO/BUREAU/Panneau de configuration.zebraos.json",
+      "path": "STUDIO/BUREAU/Réglage de l’ordinateur.zebraos.json",
       "type": "app",
-      "name": "Panneau de configuration",
+      "name": "Réglage de l’ordinateur",
       "app": "settings",
       "icon": "control-panel"
     },
@@ -402,13 +403,6 @@
       "path": "STUDIO/BUREAU/Photo et vidéo cool/icone.png",
       "type": "file",
       "size": 19000
-    },
-    {
-      "path": "STUDIO/BUREAU/Poste de travail.zebraos.json",
-      "type": "app",
-      "name": "Poste de travail",
-      "app": "explorer:root",
-      "icon": "computer"
     },
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
