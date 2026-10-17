@@ -61,6 +61,15 @@ jobs:
           script=r'''<script>
           window.addEventListener("load",async function(){
            var report={};
+           async function waitUntil(check,label){
+            for(var attempt=0;attempt<100;attempt++){
+             if(check())return;await new Promise(resolve=>setTimeout(resolve,25));
+            }
+            throw Error(label);
+           }
+           async function waitImage(image){
+            await waitUntil(()=>image.complete&&image.naturalWidth>0,"Icône non chargée : "+image.src);
+           }
            try{
             var tools=window.ZebraTools,lib=window.ZebraGitFiles;
             report.loaded=!!tools&&!!lib;
@@ -141,6 +150,9 @@ jobs:
             await new Promise(resolve=>setTimeout(resolve,150));
             report.gamesFolder=!!entry("Tetris.exe")&&!!entry("Znak.exe")
               &&!entry("ZebraCalc.exe");
+            document.documentElement.dataset.zebraPhase="folder-ready";
+            await waitUntil(()=>Array.from(document.querySelectorAll(".github-drive-toolbar button")).some(b=>b.textContent.includes("Actualiser")&&!b.disabled),"Actualisation du dossier inachevée");
+            document.documentElement.dataset.zebraPhase="folder-views";
             const viewSelect=document.querySelector(".folder-view-select"),desktopWidth=desk("Jeux").querySelector("img").getBoundingClientRect().width;
             report.folderViews=Array.from(viewSelect.options).map(o=>o.textContent).join("|")==="Petites icônes|Icônes moyennes|Grandes icônes|Liste";
             report.folderSizes=true;
@@ -154,12 +166,12 @@ jobs:
             viewSelect.value="large";viewSelect.dispatchEvent(new Event("change"));
             report.folderViewSaved=localStorage.getItem("zebraos.folder-view.v1.visitor")==="large";
             const znakEntry=entry("Znak.exe"),znakIcon=znakEntry.querySelector(".bureau-custom-icon");
-            await znakIcon.decode();report.znakFolderIcon=znakIcon.naturalWidth===64;
-            znakEntry.click();await window.ZebraLazyApps.load("snake");
+            document.documentElement.dataset.zebraPhase="folder-icon";await waitImage(znakIcon);report.znakFolderIcon=znakIcon.naturalWidth===64;
+            document.documentElement.dataset.zebraPhase="znak-load";znakEntry.click();await window.ZebraLazyApps.load("snake");
             await new Promise(resolve=>setTimeout(resolve,100));
             const znakWindow=document.querySelector(".zs-machine").closest(".window");
             report.znakName=znakWindow.querySelector(".windowtitle").textContent==="Znak.exe";
-            const titleIcon=znakWindow.querySelector(".titlebar img.os-icon-graphic");await titleIcon.decode();
+            const titleIcon=znakWindow.querySelector(".titlebar img.os-icon-graphic");await waitImage(titleIcon);
             report.znakTitleIcon=titleIcon.naturalWidth===64;
             entry("Tetris.exe").click();
             // Le moteur n'est téléchargé qu'au premier lancement.
@@ -209,7 +221,8 @@ jobs:
           PY
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebra-tools-server.log 2>&1 &
           sleep 1
-          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --touch-events=enabled --window-size=430,900 --virtual-time-budget=10000 --dump-dom http://127.0.0.1:8765/_verify_zebra_tools.html > /tmp/zebra-tools-result.html 2>/tmp/zebra-tools-chrome.log
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --touch-events=enabled --window-size=430,900 --virtual-time-budget=20000 --dump-dom http://127.0.0.1:8765/_verify_zebra_tools.html > /tmp/zebra-tools-result.html 2>/tmp/zebra-tools-chrome.log
+          grep -o 'data-zebra-phase="[^"]*"' /tmp/zebra-tools-result.html || true
           grep -o 'data-zebra-report="[^"]*"' /tmp/zebra-tools-result.html | tail -c 3500
           grep -o 'data-zebra-result="[^"]*"' /tmp/zebra-tools-result.html
           grep -q 'data-zebra-result="ok"' /tmp/zebra-tools-result.html
