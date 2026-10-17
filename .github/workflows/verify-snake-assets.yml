@@ -39,6 +39,9 @@ jobs:
             out.bare=!$('.zs-header')&&!$('.zs-logo')&&clean($('.zs-hud'))&&clean($('.zs-console'))&&clean(stage)&&clean($('.zs-overlay'));
             out.noBricks=$('canvas').width===384&&$('canvas').height===320;
             out.ready=$('.zs-state').textContent==='PRÊT';
+            document.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true}));out.spaceStart=$('.zs-state').textContent==='EN JEU'&&$('.zs-overlay').hidden;
+            document.dispatchEvent(new KeyboardEvent('keydown',{key:' ',repeat:true,bubbles:true}));out.spaceHeld=$('.zs-state').textContent==='EN JEU';
+            $('.zs-menu').click();
             const ground=ctx.getImageData(0,0,1,1).data;out.groveOnly=!$('.zs-themes')&&!$('.zs-theme')&&ground[1]>100&&ground[0]<70&&ground[2]<70;
             $('.zs-play').click();out.play=$('.zs-state').textContent==='EN JEU'&&$('.zs-overlay').hidden;
             $('.zs-play').click();out.pause=$('.zs-state').textContent==='PAUSE'&&!$('.zs-overlay').hidden;

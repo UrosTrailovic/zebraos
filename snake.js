@@ -109,7 +109,7 @@ function mount(root){
   play.textContent=g.state==='running'?'Pause':g.state==='paused'?'Reprendre':g.state==='ready'?'Jouer':'Rejouer';
   overlay.hidden=g.state==='running';
   overlay.querySelector('strong').textContent=({ready:'ON JOUE ?',paused:'PETITE PAUSE',over:'ENCORE UNE ?',won:'BIEN JOUÉ'})[g.state]||'';
-  overlay.querySelector('span').textContent=g.state==='ready'?'Une pomme, dix points. Garde le cap.':g.state==='paused'?'Reprends quand tu veux.':'Score : '+g.score;
+  overlay.querySelector('span').textContent=g.state==='ready'?'Espace ou Jouer pour commencer.':g.state==='paused'?'Reprends quand tu veux.':'Score : '+g.score;
   $('.zs-start').textContent=play.textContent;
   draw(ctx,g,background);
  }
@@ -118,7 +118,7 @@ function mount(root){
  function key(e){
   if(!alive||!focused()||e.altKey||e.ctrlKey||e.metaKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable)return;
   const d=({ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',z:'up',s:'down',a:'left',q:'left',d:'right'})[e.key];
-  if(d){e.preventDefault();if(!e.repeat){g.turn(d);render();}}else if(e.code==='Space'||e.key.toLowerCase()==='p'){e.preventDefault();if(!e.repeat){g.toggle();render();}}
+  if(d){e.preventDefault();if(!e.repeat){g.turn(d);render();}}else if(e.code==='Space'||e.key===' '||e.key.toLowerCase()==='p'){e.preventDefault();if(!e.repeat){g.toggle();render();}}
  }
  function hide(){if(document.hidden&&g.state==='running'){g.state='paused';render();}}
  function blur(){if(g.state==='running'){g.state='paused';render();}}
