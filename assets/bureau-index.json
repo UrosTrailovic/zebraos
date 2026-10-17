@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-17T02:11:54.580109+00:00",
+  "generatedAt": "2026-10-17T02:49:58.235691+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -38,6 +38,13 @@
       "path": "STUDIO/BUREAU/Jeux/Tetris.exe.zebraos.json.icone.png",
       "type": "file",
       "size": 18121
+    },
+    {
+      "path": "STUDIO/BUREAU/Jeux/Zebra Pursuit.exe.zebraos.json",
+      "type": "app",
+      "name": "Zebra Pursuit.exe",
+      "app": "racer",
+      "icon": "racer"
     },
     {
       "path": "STUDIO/BUREAU/Jeux/Znake.exe.zebraos.json",
