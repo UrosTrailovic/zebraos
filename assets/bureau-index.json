@@ -40,14 +40,14 @@
       "size": 18121
     },
     {
-      "path": "STUDIO/BUREAU/Jeux/Znak.exe.zebraos.json",
+      "path": "STUDIO/BUREAU/Jeux/Znake.exe.zebraos.json",
       "type": "app",
-      "name": "Znak.exe",
+      "name": "Znake.exe",
       "app": "snake",
       "icon": "snake"
     },
     {
-      "path": "STUDIO/BUREAU/Jeux/Znak.exe.zebraos.json.icone.png",
+      "path": "STUDIO/BUREAU/Jeux/Znake.exe.zebraos.json.icone.png",
       "type": "file",
       "size": 2110
     },

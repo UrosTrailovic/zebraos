@@ -1,7 +1,7 @@
 /* Zebra Snake — classic grid rules, self-contained pixel artwork. */
 (function(){
 'use strict';
-const W=24,H=20,C=16,B=0,CW=W*C+B*2,CH=H*C+B*2;
+const W=24,H=24,C=16,B=0,CW=W*C+B*2,CH=H*C+B*2;
 const DIR={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
 function createGame(random=Math.random){
  const g={snake:[],queue:[],direction:'right',food:null,score:0,state:'ready',impact:null};
@@ -31,49 +31,120 @@ function createGame(random=Math.random){
  };
  g.reset();return g;
 }
+const LEVEL_MS=[180,140,110,85];
+function createDuel(options={},random=Math.random){
+ const level=Math.max(1,Math.min(4,Number(options.level)||1)),humans=options.players===2?2:1;
+ const g={state:'ready',players:[],food:null,impact:null,winner:null,level,humans,ticks:0,kind:'duel'};
+ Object.defineProperties(g,{snake:{get:()=>g.players[0].snake},direction:{get:()=>g.players[0].direction},score:{get:()=>g.players[0].score}});
+ const same=(a,b)=>a.x===b.x&&a.y===b.y;
+ const inside=p=>p.x>=0&&p.x<W&&p.y>=0&&p.y<H;
+ function food(){const free=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(!g.players.some(p=>p.snake.some(q=>q.x===x&&q.y===y)))free.push({x,y});g.food=free.length?free[Math.min(free.length-1,Math.floor(random()*free.length))]:null;}
+ g.reset=function(){
+  g.players=[{snake:Array.from({length:6},(_,i)=>({x:6-i,y:6})),direction:'right',queue:[],score:0,blocked:0,lost:false},{snake:Array.from({length:6},(_,i)=>({x:17+i,y:13})),direction:'left',queue:[],score:0,blocked:0,lost:false}];
+  g.state='ready';g.impact=null;g.winner=null;g.ticks=0;food();
+ };
+ g.turn=function(d,index=0){
+  if(g.state!=='running'&&g.state!=='ready')return false;
+  const p=g.players[index];if(!p||!DIR[d])return false;
+  const previous=DIR[p.queue[p.queue.length-1]||p.direction],next=DIR[d];
+  if(p.queue.length>=2||(previous[0]===next[0]&&previous[1]===next[1])||(previous[0]===-next[0]&&previous[1]===-next[1]))return false;
+  p.queue.push(d);return true;
+ };
+ function ai(){
+  const p=g.players[1],head=p.snake[0],current=DIR[p.direction];
+  const occupied=new Set(g.players.flatMap(p=>p.snake.slice(0,-1).map(q=>q.x+q.y*W)));
+  let best=null,bestScore=-Infinity;
+  for(const [name,d]of Object.entries(DIR)){
+   if(d[0]===-current[0]&&d[1]===-current[1])continue;
+   const next={x:head.x+d[0],y:head.y+d[1]};if(!inside(next)||occupied.has(next.x+next.y*W))continue;
+   const seen=new Set(),queue=[next];
+   for(let i=0;i<queue.length;i++){
+    const q=queue[i],key=q.x+q.y*W;if(seen.has(key))continue;seen.add(key);
+    for(const v of Object.values(DIR)){const n={x:q.x+v[0],y:q.y+v[1]},k=n.x+n.y*W;if(inside(n)&&!occupied.has(k)&&!seen.has(k))queue.push(n);}
+   }
+   const target=g.food||g.players[0].snake[0];
+   const distance=Math.abs(next.x-target.x)+Math.abs(next.y-target.y);
+   const enemy=g.players[0].snake[0],near=Math.abs(next.x-enemy.x)+Math.abs(next.y-enemy.y);
+   const score=Math.min(seen.size,80)*(level>=3?2:.5)-distance+(name===p.direction?1:0)+(level===1?random()*12:0)-(near<2?25:0);
+   if(score>bestScore){bestScore=score;best=name;}
+  }
+  if(best&&best!==p.direction)g.turn(best,1);
+ }
+ g.tick=function(){
+  if(g.state!=='running')return;if(humans===1)ai();g.ticks++;
+  const grow=g.ticks%4===0;
+  const next=g.players.map(p=>{if(p.queue.length)p.direction=p.queue.shift();const d=DIR[p.direction];return {x:p.snake[0].x+d[0],y:p.snake[0].y+d[1]};});
+  const eats=next.map(n=>g.food&&same(n,g.food));
+  const body=g.players.flatMap((p,i)=>grow||eats[i]?p.snake:p.snake.slice(0,-1));
+  const meet=same(next[0],next[1])||(same(next[0],g.players[1].snake[0])&&same(next[1],g.players[0].snake[0]));
+  const blocked=next.map(n=>!inside(n)||body.some(q=>same(q,n))||meet);
+  // A blocked head has a short chance to turn out; an enclosed snake loses.
+  // Keep a blocked opponent's tail occupied when resolving the other move.
+  for(let i=0;i<2;i++)if(blocked[1-i]&&same(next[i],g.players[1-i].snake.at(-1)))blocked[i]=true;
+  g.players.forEach((p,i)=>{
+   if(blocked[i]){p.blocked+=LEVEL_MS[level-1];p.lost=p.blocked>=1200;}
+   else{p.blocked=0;p.snake.unshift(next[i]);if(eats[i])p.score+=10;if(!grow&&!eats[i])p.snake.pop();}
+  });
+  if(g.players.some(p=>p.lost)){
+   g.state='hurt';g.winner=g.players[0].lost&&g.players[1].lost?0:g.players[0].lost?2:1;
+   const head=g.players.find(p=>p.lost).snake[0];g.impact={x:head.x,y:head.y};g.players.forEach(p=>{p.queue=[];});
+  }else if(eats.some(Boolean))food();
+ };
+ g.finishCrash=function(){if(g.state==='hurt')g.state='over';};
+ g.toggle=function(){if(g.state==='hurt')return;if(g.state==='over')g.reset();g.state=g.state==='running'?'paused':'running';};
+ g.reset();return g;
+}
 function make(tag,cls,text){const e=document.createElement(tag);e.className=cls||'';if(text!==undefined)e.textContent=text;return e;}
-// A small fixed palette and flat symbols, like an early handheld game.
 const FIELD='#9eaf76',DECOR='#75885c',INK='#263c2b',STRIPE='#dfe6b9';
 function drawBackground(ctx){
  ctx.imageSmoothingEnabled=false;
- ctx.fillStyle=FIELD;ctx.fillRect(0,0,CW,CH);
- ctx.fillStyle=DECOR;
- // Quiet, single-colour scenery. Every symbol remains traversable.
- function tree(x,y){
-  ctx.fillRect(x+7,y,4,4);ctx.fillRect(x+4,y+4,10,4);
-  ctx.fillRect(x+1,y+8,16,4);ctx.fillRect(x+7,y+12,4,7);
+ // Saturated grass with painted, fully traversable trees and bushes.
+ ctx.fillStyle='#238f20';ctx.fillRect(0,0,CW,CH);
+ for(let y=0;y<CH;y+=4)for(let x=0;x<CW;x+=4){
+  const n=(x*31+y*17+(x*y)%71)%29;
+  ctx.fillStyle=n<3?'#31a62a':n<7?'#1c7e1d':'#259422';ctx.fillRect(x,y,2,2);
  }
- function bush(x,y){ctx.fillRect(x+3,y,8,4);ctx.fillRect(x,y+4,14,6);}
- for(const p of [[24,28],[151,40],[331,29],[43,153],[302,151],[27,267],[181,277],[335,266]])tree(...p);
- for(const p of [[92,55],[244,32],[113,139],[237,214],[79,283]])bush(...p);
+ for(let i=0;i<110;i++){
+  const x=3+(i*73)%(CW-6),y=3+(i*47)%(CH-6);
+  ctx.fillStyle=i%3?'#329f26':'#4eb82e';ctx.fillRect(x,y,1,3);ctx.fillRect(x+2,y+1,1,2);
+ }
+ // All trees and bushes belong to the painted background, never to collisions.
+ function bush(x,y){
+  ctx.fillStyle='#1b6422';ctx.fillRect(x-1,y+8,19,5);
+  ctx.fillStyle='#0e5927';ctx.fillRect(x,y+3,17,8);ctx.fillRect(x+3,y,10,3);
+  ctx.fillStyle='#267a2c';ctx.fillRect(x+2,y+3,13,6);ctx.fillRect(x+5,y+1,7,2);
+  ctx.fillStyle='#50a938';ctx.fillRect(x+3,y+3,4,2);ctx.fillRect(x+10,y+5,3,2);
+ }
+ function tree(x,y){
+  ctx.fillStyle='#1b6422';ctx.fillRect(x+1,y+23,22,5);
+  ctx.fillStyle='#553b24';ctx.fillRect(x+10,y+15,4,12);ctx.fillStyle='#957044';ctx.fillRect(x+10,y+19,1,6);
+  ctx.fillStyle='#124f27';ctx.fillRect(x+2,y+6,20,13);ctx.fillRect(x+6,y+2,12,4);ctx.fillRect(x+8,y,8,3);ctx.fillRect(x+6,y+19,12,3);
+  ctx.fillStyle='#236d2b';ctx.fillRect(x+4,y+6,16,10);ctx.fillRect(x+7,y+3,10,5);
+  ctx.fillStyle='#4e9c32';ctx.fillRect(x+6,y+5,7,4);ctx.fillRect(x+4,y+9,4,3);ctx.fillRect(x+14,y+12,4,3);
+ }
+ for(const p of [[21,22],[139,34],[325,27],[53,121],[289,139],[18,257],[165,267],[328,262]])tree(...p);
+ for(const p of [[76,38],[227,22],[347,94],[117,116],[191,83],[20,199],[237,202],[320,222],[84,279],[271,287]])bush(...p);
 }
 function draw(ctx,g,background){
  ctx.imageSmoothingEnabled=false;
- if(background)ctx.drawImage(background,0,0);else drawBackground(ctx);
- if(g.food){
-  const x=B+g.food.x*C,y=B+g.food.y*C;
-  ctx.fillStyle='#963e36';ctx.fillRect(x+4,y+5,8,8);
-  ctx.fillStyle=INK;ctx.fillRect(x+8,y+2,2,3);
- }
+ if(background&&background.duelLayer){}else if(background)ctx.drawImage(background,0,0);else drawBackground(ctx);
+ if(g.food){const x=B+g.food.x*C,y=B+g.food.y*C;ctx.fillStyle='#123021';ctx.fillRect(x+3,y+13,11,2);ctx.fillStyle='#fe7552';ctx.fillRect(x+3,y+5,10,8);ctx.fillRect(x+5,y+3,6,2);ctx.fillStyle='#ffce79';ctx.fillRect(x+4,y+5,3,3);ctx.fillStyle='#a5cf59';ctx.fillRect(x+8,y+1,4,2);}
+ if(g.kind==='duel'){g.players.forEach((p,i)=>draw(ctx,{snake:p.snake,direction:p.direction,food:null,state:p.lost?'hurt':'running',impact:p.lost?g.impact:null},{duelLayer:true,second:i===1}));return;}
+ // Draw one connected ribbon, then a narrow highlight. Corners stay joined.
+ const points=g.snake.map(p=>({x:B+p.x*C+8,y:B+p.y*C+8}));
+ function ribbon(color,width,offset){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y+offset):ctx.moveTo(p.x,p.y+offset));ctx.stroke();}
  const hurt=g.state==='hurt'||g.state==='over';
- // Square cells and one plain zebra stripe: no volume, shading or outlines.
- for(let i=g.snake.length-1;i>=0;i--){
-  const p=g.snake[i],x=B+p.x*C+1,y=B+p.y*C+1;
-  ctx.fillStyle=hurt?'#c92d34':INK;ctx.fillRect(x,y,14,14);
-  if(i){
-   const prev=g.snake[i-1],horizontal=prev.y===p.y;
-   ctx.fillStyle=STRIPE;
-   if(horizontal){ctx.fillRect(x+5,y+1,3,7);ctx.fillRect(x+7,y+7,3,6);}
-   else{ctx.fillRect(x+1,y+5,7,3);ctx.fillRect(x+7,y+7,6,3);}
-  }
+ ribbon(hurt?'#4b080e':'#202522',14,2);ribbon(hurt?'#fa263c':background&&background.second?'#88bbef':'#e0d9ae',11,0);ribbon(hurt?'#ff9970':background&&background.second?'#c9e7ff':'#faf0c5',4,-2);
+ // Simple zebra marks on each straight segment, clipped away from the head.
+ ctx.fillStyle='#282b2c';
+ for(let i=1;i<points.length;i++){
+  const p=points[i],prev=points[i-1],horizontal=prev.y===p.y;
+  if(horizontal){ctx.fillRect(p.x-3,p.y-5,3,7);ctx.fillRect(p.x+2,p.y,3,5);}
+  else{ctx.fillRect(p.x-5,p.y-3,7,3);ctx.fillRect(p.x,p.y+2,5,3);}
  }
- const head=g.snake[0],d=DIR[g.direction],side=[-d[1],d[0]];
- ctx.fillStyle=STRIPE;
- for(const sign of [-1,1])ctx.fillRect(B+head.x*C+7+d[0]*3+side[0]*sign*3,B+head.y*C+7+d[1]*3+side[1]*sign*3,2,2);
- if(hurt&&g.impact){
-  const x=g.impact.x*C+8,y=g.impact.y*C+8;
-  ctx.fillStyle=STRIPE;ctx.fillRect(x-1,y-11,2,5);ctx.fillRect(x-1,y+7,2,5);ctx.fillRect(x-11,y-1,5,2);ctx.fillRect(x+7,y-1,5,2);
- }
+ if(hurt&&g.impact){const x=g.impact.x*C+8,y=g.impact.y*C+8;ctx.fillStyle='#ffe39a';for(let i=0;i<8;i++){const a=i*Math.PI/4;ctx.fillRect(Math.round(x+Math.cos(a)*12)-1,Math.round(y+Math.sin(a)*12)-1,3,3);}ctx.fillStyle='#ff3b36';ctx.fillRect(x-2,y-2,5,5);}
+ const head=points[0],d=DIR[g.direction],side=[-d[1],d[0]];
+ for(const s of [-1,1]){const x=head.x+d[0]*3+side[0]*s*3,y=head.y+d[1]*3+side[1]*s*3;ctx.fillStyle='#fff6b0';ctx.fillRect(x-1,y-1,3,3);ctx.fillStyle='#112b27';ctx.fillRect(x+d[0],y+d[1],2,2);}
 }
 /* Small chip sounds, unlocked by an input gesture and disposed with the window. */
 function createSounds(){
@@ -147,11 +218,11 @@ function createSounds(){
 }
 function mount(root){
  if(root._zebraDispose)root._zebraDispose();root.innerHTML='';
- const g=createGame(),sounds=createSounds();let alive=true,best=0,observer,lastState=g.state,lastScore=0,crashTimer=null;
+ const sounds=createSounds(),settings={players:1,level:1,mode:'duel'};let g=createDuel(settings),menuRow=0,elapsed=0;let alive=true,best=0,observer,lastState=g.state,lastScore=0,crashTimer=null;
  fetch('/assets/games/snake/audio.json?v=1',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(a=>{if(alive)sounds.configure(a);}).catch(()=>{});
  try{best=Number(localStorage.getItem('zebra.snake.best'))||0;}catch(_){}
  const wrap=make('div','zs-machine');
- wrap.innerHTML='<header class="zs-header"><img class="zs-logo" src="/assets/games/snake/znaklogo.png?v=1" alt="Znak" width="165" height="98"></header><div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div>SCORE <b class="zs-score">0000</b></div><div>RECORD <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znak : manger les pommes, éviter les murs et sa queue"></canvas><div class="zs-overlay"><strong role="heading" aria-level="2"></strong><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console zg-retro"><div class="zs-handheld zt-handheld zt-skin-ready"><div class="zs-toolbar zg-buttons zt-buttons"></div><div class="zs-dpad zt-dpad" aria-label="Direction"><div class="zs-cross zt-cross"></div></div><div class="zs-action-side zt-action-side"><div class="zs-ab zt-ab"></div><span class="zs-select-space zt-select" aria-hidden="true"></span></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
+ wrap.innerHTML='<header class="zs-header"><img class="zs-logo" src="/assets/games/snake/znaklogo.png?v=1" alt="Znake" width="165" height="98"></header><div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div><label class="zs-score-label">SCORE</label> <b class="zs-score">0000</b></div><div><label class="zs-best-label">RECORD</label> <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znake : manger les pommes, éviter les murs et sa queue"></canvas><section class="zs-launch" aria-label="Menu de Znake"><h1>Znake</h1><div class="zs-players" role="group" aria-label="Nombre de joueurs"><button type="button" data-players="1">1 JOUEUR</button><button type="button" data-players="2">2 JOUEURS</button></div><div class="zs-level-row"><button type="button" class="zs-level-prev" aria-label="Niveau précédent">◀</button><span>NIVEAU <b class="zs-level-value">1</b></span><button type="button" class="zs-level-next" aria-label="Niveau suivant">▶</button></div><button type="button" class="zs-mode">DUEL</button><canvas class="zs-title-art" aria-hidden="true"></canvas><button type="button" class="zs-launch-play">APPUYER SUR ESPACE</button><small class="zs-menu-hint"></small></section><div class="zs-overlay"><strong role="heading" aria-level="2"></strong><em class="zs-result"></em><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console zg-retro"><div class="zs-handheld zt-handheld zt-skin-ready"><div class="zs-toolbar zg-buttons zt-buttons"></div><div class="zs-dpad zt-dpad" aria-label="Direction"><div class="zs-cross zt-cross"></div></div><div class="zs-action-side zt-action-side"><div class="zs-ab zt-ab"></div><span class="zs-select-space zt-select" aria-hidden="true"></span></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
  root.appendChild(wrap);
  const $=s=>wrap.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d');canvas.width=CW;canvas.height=CH;
  const stage=$('.zs-stage'),arena=$('.zs-arena'),hud=$('.zs-hud'),overlay=$('.zs-overlay'),status=$('.zs-state');
@@ -159,23 +230,62 @@ function mount(root){
  const background=document.createElement('canvas');background.width=CW;background.height=CH;
  drawBackground(background.getContext('2d'));
  function clearCrash(){if(crashTimer!==null){clearTimeout(crashTimer);crashTimer=null;}}
- function restart(){if(g.state==='hurt')return;clearCrash();sounds.stop();lastState='ready';lastScore=0;g.reset();g.toggle();render();}
- const play=button('Jouer','zs-play',()=>{g.toggle();render();},$('.zs-toolbar'));
+ function restart(){if(g.state==='hurt')return;clearCrash();sounds.stop();lastState='ready';lastScore=0;elapsed=0;g=g.state==='ready'?(settings.players===1&&settings.mode==='classic'?createGame():createDuel(settings)):g;g.reset();g.toggle();render();}
+ function action(){if(g.state==='ready'||g.state==='over'||g.state==='won')restart();else{g.toggle();render();}}
+ function menu(){if(g.state==='hurt')return;clearCrash();sounds.stop();g.reset();sounds.play('menu');elapsed=0;render();}
+ const play=button('Jouer','zs-play',action,$('.zs-toolbar'));
  button('Recommencer','zs-restart',restart,$('.zs-toolbar'));
- button('Menu','zs-menu',()=>{if(g.state==='hurt')return;clearCrash();sounds.stop();g.reset();sounds.play('menu');render();},$('.zs-toolbar'));
+ button('Menu','zs-menu',menu,$('.zs-toolbar'));
  for(const [d,label]of Object.entries({up:'▲',left:'◀',right:'▶',down:'▼'})){
   const b=button(label,'zs-dir zt-control zt-dir zt-dir-'+d+' zs-'+d,e=>{if(e.detail===0){turn(d);}},$('.zs-cross'));
   b.setAttribute('aria-label',({up:'Haut',down:'Bas',left:'Gauche',right:'Droite'})[d]);
   b.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();sounds.unlock();turn(d);};
  }
- const a=button('A','zs-a zt-control zt-ab-button zt-a',()=>{g.toggle();render();},$('.zs-ab'));a.setAttribute('aria-label','Jouer ou pause');
+ const a=button('A','zs-a zt-control zt-ab-button zt-a',action,$('.zs-ab'));a.setAttribute('aria-label','Jouer ou pause');
  const b=button('B','zs-b zt-control zt-ab-button zt-b',restart,$('.zs-ab'));b.setAttribute('aria-label','Recommencer');
- $('.zs-start').onclick=()=>{sounds.unlock();g.toggle();render();};
- function turn(d){const wasRunning=g.state==='running';if(g.turn(d)&&wasRunning)sounds.play('turn');render();}
+ $('.zs-start').onclick=()=>{sounds.unlock();action();};
+ const launch=$('.zs-launch');
+ function changeLevel(delta){settings.level=(settings.level-1+delta+4)%4+1;sounds.play('turn');renderMenu();}
+ function choosePlayers(value){settings.players=value;if(value===2)settings.mode='duel';sounds.play('turn');renderMenu();}
+ function renderMenu(){
+  launch.dataset.row=String(menuRow);
+  launch.querySelectorAll('[data-players]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.players)===settings.players)));
+  $('.zs-level-value').textContent=settings.level;
+  $('.zs-mode').textContent=settings.players===2?'DUEL LOCAL':settings.mode==='classic'?'CLASSIQUE':'DUEL CONTRE ORDI';
+  $('.zs-menu-hint').textContent=settings.players===2?'J1 : ZQSD · J2 : FLÈCHES':'FLÈCHES : CHOISIR · A / ENTRÉE : JOUER';
+ }
+ function navigate(d){
+  if(d==='up'||d==='down')menuRow=(menuRow+(d==='down'?1:2))%3;
+  else if(menuRow===0)choosePlayers(settings.players===1?2:1);
+  else if(menuRow===1)changeLevel(d==='right'?1:-1);
+  else if(settings.players===1)settings.mode=settings.mode==='classic'?'duel':'classic';
+  sounds.play('turn');renderMenu();
+ }
+ launch.querySelectorAll('[data-players]').forEach(b=>b.onclick=()=>{sounds.unlock();choosePlayers(Number(b.dataset.players));});
+ $('.zs-level-prev').onclick=()=>{sounds.unlock();changeLevel(-1);};$('.zs-level-next').onclick=()=>{sounds.unlock();changeLevel(1);};
+ $('.zs-mode').onclick=()=>{sounds.unlock();if(settings.players===1)settings.mode=settings.mode==='classic'?'duel':'classic';renderMenu();};
+ $('.zs-launch-play').onclick=()=>{sounds.unlock();restart();};
+ // An original, simple two-ink title illustration, drawn at handheld resolution.
+ const art=$('.zs-title-art');art.width=384;art.height=100;const ac=art.getContext('2d');
+ ac.fillStyle=DECOR;for(let y=0;y<35;y+=12)for(let x=-24;x<384;x+=48)ac.fillRect(x+(y%24?24:0),y,44,9);
+ ac.fillStyle=INK;for(let i=0;i<6;i++){ac.fillRect(145+i*40,56,30,28);ac.fillRect(150+i*40,86,20,4);}
+ ac.fillRect(38,52,95,33);ac.fillRect(55,43,70,10);ac.fillRect(26,65,15,17);ac.fillRect(42,85,84,6);
+ ac.fillStyle=STRIPE;ac.fillRect(39,70,68,10);ac.fillRect(75,47,22,20);ac.fillStyle=INK;ac.fillRect(82,51,8,12);ac.fillRect(44,61,4,4);
+ // Two independent touch pads in local two-player games.
+ const second=make('div','zs-second-pad');second.setAttribute('aria-label','Direction du joueur 2');
+ second.appendChild(make('span','zs-p2-label','J2'));
+ for(const [d,label]of Object.entries({up:'▲',left:'◀',right:'▶',down:'▼'})){
+  const control=button(label,'zs-p2-dir zs-p2-'+d,e=>{if(e.detail===0)turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);},second);
+  control.setAttribute('aria-label','Joueur 2 : '+({up:'Haut',left:'Gauche',right:'Droite',down:'Bas'})[d]);
+  control.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();sounds.unlock();turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);};
+ }
+ wrap.insertBefore(second,$('.zs-hud'));
+ renderMenu();
+ function turn(d,index=0){if(g.state==='ready'){navigate(d);return;}const wasRunning=g.state==='running';if(g.turn(d,index)&&wasRunning)sounds.play('turn');render();}
  function render(){
   if(!alive)return;
   if(g.state!==lastState){
-   if(g.state==='hurt'){sounds.setMode('hurt');crashTimer=setTimeout(()=>{crashTimer=null;if(alive){g.finishCrash();render();}},2000);}
+   if(g.state==='hurt'){if(g.kind==='duel'&&settings.players===1&&g.winner===1){sounds.stop();sounds.play('won');}else sounds.setMode('hurt');crashTimer=setTimeout(()=>{crashTimer=null;if(alive){g.finishCrash();render();}},2000);}
    else if(g.state==='won'){sounds.stop();sounds.play('won');}
    else if(g.state==='paused'){sounds.stop();sounds.play('pause');}
    else if(g.state==='running'){sounds.stop();sounds.setMode('running');sounds.play(lastState==='paused'?'resume':'start');}
@@ -183,13 +293,16 @@ function mount(root){
   }
   if(g.score>lastScore&&g.state==='running')sounds.play('eat');lastScore=g.score;
   if(g.score>best){best=g.score;try{localStorage.setItem('zebra.snake.best',String(best));}catch(_){}}
-  $('.zs-score').textContent=String(g.score).padStart(4,'0');$('.zs-best').textContent=String(best).padStart(4,'0');
+  $('.zs-score-label').textContent=g.kind==='duel'&&g.state!=='ready'?'J1':'SCORE';$('.zs-best-label').textContent=g.kind==='duel'&&g.state!=='ready'?(settings.players===1?'ORDI':'J2'):'RECORD';
+  $('.zs-score').textContent=String(g.score).padStart(4,'0');$('.zs-best').textContent=String(g.kind==='duel'&&g.state!=='ready'?g.players[1].score:best).padStart(4,'0');
   status.textContent=({ready:'PRÊT',running:'EN JEU',paused:'PAUSE',hurt:'AÏE',over:'GAME OVER',won:'VICTOIRE'})[g.state];
   play.textContent=g.state==='running'?'Pause':g.state==='paused'?'Reprendre':g.state==='ready'?'Jouer':'Rejouer';
-  wrap.dataset.state=g.state;
+  wrap.dataset.state=g.state;wrap.dataset.duo=String(g.kind==='duel'&&settings.players===2&&g.state!=='ready');fit();
+  launch.hidden=g.state!=='ready';renderMenu();
+  $('.zs-result').textContent=g.kind==='duel'&&g.state==='over'?(g.winner===0?'ÉGALITÉ':g.winner===1?'JOUEUR 1 GAGNE':settings.players===1?'L’ORDI GAGNE':'JOUEUR 2 GAGNE'):'';
   wrap.querySelectorAll('button').forEach(b=>{b.disabled=g.state==='hurt';});
-  overlay.hidden=g.state==='running'||g.state==='hurt';overlay.dataset.state=g.state;
-  overlay.querySelector('strong').textContent=({ready:'ZNAK',paused:'PAUSE',hurt:'AÏE',over:'GAME OVER',won:'VICTOIRE'})[g.state]||'';
+  overlay.hidden=g.state==='ready'||g.state==='running'||g.state==='hurt';overlay.dataset.state=g.state;
+  overlay.querySelector('strong').textContent=({ready:'ZNAKE',paused:'PAUSE',hurt:'AÏE',over:'GAME OVER',won:'VICTOIRE'})[g.state]||'';
   overlay.querySelector('span').textContent=g.state==='ready'?'ESPACE : JOUER':g.state==='paused'?'ESPACE : REPRENDRE':g.state==='over'?'Appuyer sur espace pour recommencer':'SCORE : '+g.score;
   $('.zs-start').textContent=play.textContent;
   draw(ctx,g,background);
@@ -198,16 +311,20 @@ function mount(root){
  function focused(){const w=root.closest('.window');return !w||w.classList.contains('active')||w.classList.contains('focused')||w.style.zIndex===String(Math.max(...Array.from(document.querySelectorAll('.window')).map(e=>Number(e.style.zIndex)||0)));}
  function key(e){
   if(!alive||!focused()||e.altKey||e.ctrlKey||e.metaKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable)return;
-  const d=({ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',z:'up',s:'down',a:'left',q:'left',d:'right'})[e.key];
-  if(d){e.preventDefault();if(!e.repeat){sounds.unlock();turn(d);}}else if(e.code==='Space'||e.key===' '||e.key.toLowerCase()==='p'){e.preventDefault();if(!e.repeat){sounds.unlock();g.toggle();render();}}
+  const letter=e.key.toLowerCase(),arrows={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
+  const keys={w:'up',z:'up',s:'down',a:'left',q:'left',d:'right'},d=arrows[e.key]||keys[letter];
+  if(g.state==='ready'&&(letter==='1'||letter==='2')){e.preventDefault();if(!e.repeat){sounds.unlock();choosePlayers(Number(letter));}return;}
+  if(d){e.preventDefault();if(!e.repeat){sounds.unlock();turn(d,g.state!=='ready'&&settings.players===2&&arrows[e.key]?1:0);}}
+  else if(e.code==='Space'||e.key===' '||e.key==='Enter'||letter==='p'){e.preventDefault();if(!e.repeat){sounds.unlock();action();}}
+  else if(e.key==='Escape'){e.preventDefault();menu();}
  }
  function hide(){if(document.hidden){sounds.stop();if(g.state==='running'){g.state='paused';render();}}}
  function blur(){sounds.stop();if(g.state==='running'){g.state='paused';render();}}
  document.addEventListener('keydown',key);document.addEventListener('visibilitychange',hide);window.addEventListener('blur',blur);
- const clock=setInterval(()=>{sounds.sync();if(g.state==='running'){if(!focused()){blur();return;}g.tick();render();}},140);
+ const clock=setInterval(()=>{sounds.sync();if(g.state==='running'){if(!focused()){blur();return;}elapsed+=20;if(elapsed>=LEVEL_MS[settings.level-1]){elapsed=0;g.tick();render();}}},20);
  if(typeof ResizeObserver!=='undefined'){observer=new ResizeObserver(fit);observer.observe(arena);}else window.addEventListener('resize',fit);
  fit();render();
  root._zebraDispose=function(){alive=false;clearCrash();sounds.dispose();clearInterval(clock);if(observer)observer.disconnect();window.removeEventListener('resize',fit);window.removeEventListener('blur',blur);document.removeEventListener('keydown',key);document.removeEventListener('visibilitychange',hide);};
 }
-window.ZebraSnake={mount,createGame,createSounds,draw,drawBackground,width:CW,height:CH};
+window.ZebraSnake={mount,createGame,createDuel,LEVEL_MS,createSounds,draw,drawBackground,width:CW,height:CH};
 }());

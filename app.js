@@ -112,7 +112,7 @@ function playMechanicalClick(name){
 function osIcon(name,size){
   if(name==="snake"){
     var znak=el("img","os-icon-graphic");
-    znak.src="/STUDIO/BUREAU/Jeux/Znak.exe.zebraos.json.icone.png?v=1";
+    znak.src="/STUDIO/BUREAU/Jeux/Znake.exe.zebraos.json.icone.png?v=1";
     znak.alt="";znak.width=size;znak.height=size;
     znak.style.width=size+"px";znak.style.height=size+"px";znak.style.objectFit="contain";
     znak.setAttribute("aria-hidden","true");return znak;
@@ -696,8 +696,8 @@ function openUtility(name){
 var gameModules={
  tetris:{name:"Tetris.exe",width:735,height:770,global:"ZebraTetris",
   files:["tetris-artwork.js?v=1.7","tetris.js?v=2.3"]},
- snake:{name:"Znak.exe",width:650,height:700,global:"ZebraSnake",
-  files:["snake.js?v=4.2"],css:"snake.css?v=4.2"},
+ snake:{name:"Znake.exe",width:650,height:700,global:"ZebraSnake",
+  files:["snake.js?v=5.0"],css:"snake.css?v=5.0"},
  paint:{name:"ZebraPaint.exe",width:850,height:640,global:"ZebraPaint",
   files:["paint.js?v=1.4"],css:"paint-responsive.css?v=1.4"}
 };

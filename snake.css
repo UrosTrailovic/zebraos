@@ -49,3 +49,50 @@
 @media(hover:none),(pointer:coarse){.zs-header{height:52px}.zs-machine{gap:7px}}
 @media(max-height:530px){.zs-header{height:32px}.zs-machine{gap:5px}}
 @media(prefers-reduced-motion:reduce){.zs-machine[data-state="hurt"] .zs-stage canvas{animation:none;filter:brightness(.5) saturate(.6)}}
+
+@font-face{font-family:'Redden';src:url('/assets/fonts/redden.woff') format('woff');font-style:normal;font-weight:400;font-display:swap}
+/* The title menu is its own handheld screen. */
+.zs-launch{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;gap:clamp(3px,1.5cqw,9px);padding:4% 4% 3%;background:#9eaf76;color:#263c2b;text-align:center;text-shadow:none}
+.zs-launch[hidden]{display:none}
+.zs-launch h1{margin:0;font:400 clamp(36px,19cqw,110px)/.95 'Redden',serif;text-transform:uppercase;letter-spacing:-1px;flex:none}
+.zs-launch button{appearance:none;font:inherit;color:inherit;background:transparent;border:0;box-shadow:none;cursor:pointer;padding:4px;touch-action:manipulation}
+.zs-launch button:focus-visible{outline:2px dashed currentColor;outline-offset:1px}
+.zs-players{display:flex;justify-content:space-between;gap:8px;width:100%;font-size:clamp(10px,4.4cqw,21px)}
+.zs-players button{position:relative;white-space:nowrap;padding-left:16px}
+.zs-players [aria-pressed="true"]::before{content:'▶';position:absolute;left:0}
+.zs-level-row{display:flex;align-items:center;gap:18px;font-size:clamp(10px,4cqw,20px)}
+.zs-level-row button{min-width:32px;min-height:32px}
+.zs-level-value{font-weight:400}
+.zs-launch .zs-mode{font-size:clamp(8px,2.7cqw,14px);padding:4px 9px;min-height:26px}
+.zs-launch[data-row="1"] .zs-level-row,.zs-launch[data-row="2"] .zs-mode{text-decoration:underline;text-underline-offset:4px}
+.zs-stage .zs-title-art{display:block;width:100%;height:auto;min-height:0;flex:1;object-fit:contain;image-rendering:pixelated}
+.zs-launch .zs-launch-play{font-size:clamp(9px,3cqw,16px);min-height:28px}
+.zs-menu-hint{font:clamp(7px,2.1cqw,11px)/1.3 monospace}
+.zs-overlay[data-state="over"] strong{font-family:'Redden',serif;font-size:clamp(30px,17cqw,110px);font-weight:400;letter-spacing:-1px;line-height:1.05}
+.zs-result{font:400 clamp(11px,4cqw,22px)/1.2 'Zebra Videotex',monospace;color:#ffe575;font-style:normal}
+.zs-result:empty{display:none}
+.zs-second-pad{display:none}
+/* Two players face each other across one square board. */
+@media(hover:none),(pointer:coarse){
+ .zs-machine[data-duo="true"]{gap:4px;padding:6px 10px}
+ .zs-machine[data-duo="true"] .zs-header{display:none}
+ .zs-machine[data-duo="true"] .zs-hud{font-size:9px;padding:0 2px}
+ .zs-machine[data-duo="true"] .zs-hud b{display:inline-block;font-size:15px;margin:0 0 0 6px;letter-spacing:0}
+ .zs-machine[data-duo="true"] .zs-console{width:100%;margin:0}
+ .zebra-game-body .zs-machine[data-duo="true"] .zs-handheld{display:flex!important;align-items:center;justify-content:center;gap:22px;height:114px!important;min-height:0!important;padding:0!important}
+ .zs-machine[data-duo="true"] .zs-toolbar{display:flex;flex-direction:column;gap:3px}
+ .zs-machine[data-duo="true"] .zs-toolbar .zs-button{font-size:8px;min-height:28px;padding:3px 7px}
+ .zs-machine[data-duo="true"] .zs-action-side{display:none!important}
+ .zebra-game-body .zs-machine[data-duo="true"] .zs-dpad{position:relative!important;display:block!important;width:114px!important;height:114px!important;margin:0!important}
+ .zebra-game-body .zs-machine[data-duo="true"] .zs-cross{position:relative!important;width:114px!important;height:114px!important;inset:auto!important}
+ .zebra-game-body .zs-machine[data-duo="true"] .zs-console .zs-handheld .zs-dir{position:absolute!important;width:38px!important;height:38px!important;min-height:0!important;margin:0!important;transform:none!important;font-size:23px!important;padding:0!important}
+ .zebra-game-body .zs-machine[data-duo="true"] .zs-console .zs-handheld .zs-up{left:38px!important;top:0!important}
+ .zebra-game-body .zs-machine[data-duo="true"] .zs-console .zs-handheld .zs-down{left:38px!important;top:76px!important}
+ .zebra-game-body .zs-machine[data-duo="true"] .zs-console .zs-handheld .zs-left{left:0!important;top:38px!important}
+ .zebra-game-body .zs-machine[data-duo="true"] .zs-console .zs-handheld .zs-right{left:76px!important;top:38px!important}
+ .zs-machine[data-duo="true"] .zs-second-pad{display:grid;flex:none;align-self:center;position:relative;grid-template:repeat(3,38px)/repeat(3,38px);width:114px;height:114px;transform:rotate(180deg);touch-action:none}
+ .zs-p2-label{position:absolute;right:130px;top:48px;font-size:12px;color:#b9dcff;white-space:nowrap}
+ .zs-p2-dir{min-width:0;min-height:0;padding:0;border-radius:5px;font:23px monospace;background:#97bfdf;box-shadow:inset 2px 2px #cce8fa,inset -2px -3px #557da8,0 2px #080f25}
+ .zs-p2-up{grid-area:1/2}.zs-p2-down{grid-area:3/2}.zs-p2-left{grid-area:2/1}.zs-p2-right{grid-area:2/3}
+ .zs-machine[data-duo="true"] .zs-second-pad::before{content:'';position:absolute;left:38px;top:38px;width:38px;height:38px;background:#83aacd;border:2px solid #17223a;z-index:-1}
+}

@@ -6,6 +6,7 @@ on:
       - snake.css
       - assets/games/snake/**
       - assets/fonts/zebra-videotex.woff
+      - assets/fonts/redden.woff
       - tests/snake.test.cjs
       - .github/workflows/verify-snake-assets.yml
   workflow_dispatch:
@@ -40,16 +41,33 @@ jobs:
             out.logo=$('.zs-logo').getAttribute('src').includes('znaklogo.png')&&$('.zs-header').getBoundingClientRect().bottom<=hudBounds.top;
             const logo=$('.zs-logo');await loaded(logo);out.logoLoaded=logo.naturalWidth>0;
             out.bare=clean($('.zs-hud'))&&clean($('.zs-console'))&&clean(stage)&&clean($('.zs-overlay'));
-            out.noBricks=$('canvas').width===384&&$('canvas').height===320;
+            out.noBricks=$('canvas').width===384&&$('canvas').height===384;
+            out.square=Math.abs(bounds.width-bounds.height)<1;
+            await Promise.race([document.fonts.load('36px Redden'),wait(2000)]);out.redden=document.fonts.check('36px Redden');
+            out.launch=!$('.zs-launch').hidden&&$('.zs-launch h1').textContent==='Znake';
+            $('.zs-level-prev').click();out.levelWrap=$('.zs-level-value').textContent==='4';$('.zs-level-next').click();$('.zs-level-next').click();out.levelSelect=$('.zs-level-value').textContent==='2';
+            $('.zs-play').click();out.soloDuel=$('.zs-best-label').textContent==='ORDI';$('.zs-menu').click();
+            $('[data-players="2"]').click();$('.zs-play').click();await wait(40);
+            out.duo=$('.zs-machine').dataset.duo==='true'&&$('.zs-best-label').textContent==='J2';
+            if(matchMedia('(hover:none),(pointer:coarse)').matches){
+             const top=$('.zs-second-pad').getBoundingClientRect(),bottom=$('.zs-cross').getBoundingClientRect(),board=stage.getBoundingClientRect();
+             out.faceToFace=top.height>=110&&top.bottom<=board.top&&bottom.top>=board.bottom&&Math.abs(board.width-board.height)<1&&top.top>=0&&bottom.bottom<=innerHeight;
+             out.inverted=getComputedStyle($('.zs-second-pad')).transform.startsWith('matrix(-1,');
+             out.duoHitTargets=Array.from(host.querySelectorAll('.zs-dir,.zs-p2-dir')).every(b=>b.getBoundingClientRect().width>=38&&b.getBoundingClientRect().height>=38);
+            }
+            $('.zs-up').dispatchEvent(new PointerEvent('pointerdown',{button:0,bubbles:true}));$('.zs-p2-up').dispatchEvent(new PointerEvent('pointerdown',{button:0,bubbles:true}));await wait(150);$('.zs-play').click();
+            const inkAt=(x,y,blue)=>{const pixels=ctx.getImageData(x*16,y*16,16,16).data;for(let i=0;i<pixels.length;i+=4)if(blue?pixels[i+2]>180&&pixels[i+2]>pixels[i+1]:pixels[i]>180&&pixels[i+1]>150&&pixels[i+2]>120)return true;return false;};
+            out.independentTouch=inkAt(6,5,false)&&inkAt(17,14,true);
+            $('.zs-menu').click();$('[data-players="1"]').click();$('.zs-mode').click();
             out.ready=$('.zs-state').textContent==='PRÊT';
             document.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true}));out.spaceStart=$('.zs-state').textContent==='EN JEU'&&$('.zs-overlay').hidden;
             document.dispatchEvent(new KeyboardEvent('keydown',{key:' ',repeat:true,bubbles:true}));out.spaceHeld=$('.zs-state').textContent==='EN JEU';
             $('.zs-menu').click();
-            const ground=ctx.getImageData(0,0,1,1).data;out.groveOnly=!$('.zs-themes')&&!$('.zs-theme')&&ground[0]===158&&ground[1]===175&&ground[2]===118;
+            const ground=ctx.getImageData(0,0,1,1).data;out.groveOnly=!$('.zs-themes')&&!$('.zs-theme')&&ground[1]>100&&ground[0]<70&&ground[2]<70;
             $('.zs-play').click();out.play=$('.zs-state').textContent==='EN JEU'&&$('.zs-overlay').hidden;
             $('.zs-play').click();out.pause=$('.zs-state').textContent==='PAUSE'&&!$('.zs-overlay').hidden;
             out.pauseTitle=$('.zs-overlay strong').textContent==='PAUSE'&&parseFloat(getComputedStyle($('.zs-overlay strong')).fontSize)>=24;
-            $('.zs-menu').click();$('.zs-up').dispatchEvent(new PointerEvent('pointerdown',{button:0,bubbles:true}));out.direction=$('.zs-state').textContent==='EN JEU';
+            $('.zs-menu').click();$('.zs-up').dispatchEvent(new PointerEvent('pointerdown',{button:0,bubbles:true}));out.menuDpad=$('.zs-state').textContent==='PRÊT';$('.zs-play').click();$('.zs-up').dispatchEvent(new PointerEvent('pointerdown',{button:0,bubbles:true}));out.direction=$('.zs-state').textContent==='EN JEU';
             document.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true}));out.keyboard=$('.zs-state').textContent==='PAUSE';
             $('.zs-restart').click();out.restart=$('.zs-state').textContent==='EN JEU'&&$('.zs-score').textContent==='0000';
             out.mobile=innerWidth>700||getComputedStyle($('.zs-handheld')).display==='grid';
@@ -80,6 +98,7 @@ jobs:
             out.restartCaption=$('.zs-overlay span').textContent==='Appuyer sur espace pour recommencer';
             out.redTitle=getComputedStyle($('.zs-overlay strong')).color==='rgb(255, 38, 61)';
             out.gameoverBlink=getComputedStyle($('.zs-overlay strong')).animationName.includes('zs-gameover');
+            out.gameoverFont=getComputedStyle($('.zs-overlay strong')).fontFamily.includes('Redden');
             out.gameoverSize=parseFloat(getComputedStyle($('.zs-overlay strong')).fontSize)>=24;
             document.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true}));out.replay=$('.zs-state').textContent==='EN JEU'&&$('.zs-overlay').hidden;
             host._zebraDispose();await wait(320);out.dispose=$('.zs-state').textContent==='EN JEU';
@@ -91,7 +110,7 @@ jobs:
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/snake-server.log 2>&1 &
           sleep 1
           for size in 390,740 1160,900; do
-            google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=$size --virtual-time-budget=18000 --dump-dom http://127.0.0.1:8765/_verify_snake.html > /tmp/snake-$size.html 2>/tmp/snake-$size.log
+            google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=$size --virtual-time-budget=24000 --dump-dom http://127.0.0.1:8765/_verify_snake.html > /tmp/snake-$size.html 2>/tmp/snake-$size.log
             grep -o 'data-snake-report="[^"]*"' /tmp/snake-$size.html
             grep -q 'data-snake-status="ok"' /tmp/snake-$size.html
           done
