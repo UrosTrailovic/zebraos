@@ -46,6 +46,10 @@ jobs:
           sleep 1
           for size in 390,780 1100,800; do
             google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --touch-events=enabled --window-size=$size --virtual-time-budget=2400 --dump-dom http://127.0.0.1:8765/_verify_racer.html > /tmp/racer-$size.html 2>/tmp/racer-$size.log
-            grep -o 'data-racer-report="[^"]*"' /tmp/racer-$size.html
-            grep -q 'data-racer-status="ok"' /tmp/racer-$size.html
+            report=$(grep -o 'data-racer-report="[^"]*"' /tmp/racer-$size.html || true)
+            echo "$report"
+            if ! grep -q 'data-racer-status="ok"' /tmp/racer-$size.html; then
+              echo "::error title=Zebra Pursuit $size::$report"
+              exit 1
+            fi
           done
