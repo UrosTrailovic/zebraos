@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-17T00:42:24.904Z",
+  "generatedAt": "2026-10-17T00:43:28.882610+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -119,13 +119,6 @@
       "path": "STUDIO/BUREAU/Outils/icone.png",
       "type": "file",
       "size": 20631
-    },
-    {
-      "path": "STUDIO/BUREAU/Réglage de l’ordinateur.zebraos.json",
-      "type": "app",
-      "name": "Réglage de l’ordinateur",
-      "app": "settings",
-      "icon": "control-panel"
     },
     {
       "path": "STUDIO/BUREAU/Photo et vidéo cool",
@@ -403,6 +396,13 @@
       "path": "STUDIO/BUREAU/Photo et vidéo cool/icone.png",
       "type": "file",
       "size": 19000
+    },
+    {
+      "path": "STUDIO/BUREAU/Réglage de l’ordinateur.zebraos.json",
+      "type": "app",
+      "name": "Réglage de l’ordinateur",
+      "app": "settings",
+      "icon": "control-panel"
     },
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
