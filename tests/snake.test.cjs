@@ -26,16 +26,12 @@ test('filling the board wins without looping for food',()=>{
  const g=createGame();g.snake=[{x:0,y:0}];for(let y=0;y<20;y++)for(let x=0;x<24;x++)if((x!==0||y!==0)&&(x!==1||y!==0))g.snake.push({x,y});
  g.food={x:1,y:0};g.toggle();g.tick();assert.equal(g.state,'won');assert.equal(g.snake.length,480);assert.equal(g.food,null);
 });
-test('all four painted grounds leave the same classic game and traversable scenery',()=>{
- const {draw,themes}=context.window.ZebraSnake;
- const signatures=new Set();
- for(const theme of themes){
-  const g=createGame(()=>0);g.snake=[{x:0,y:1}];g.direction='right';g.food={x:20,y:19};g.toggle();
-  const before=JSON.stringify(g),ops=[];
-  const ctx={fillStyle:'',strokeStyle:'',fillRect(...args){ops.push([this.fillStyle,...args]);},beginPath(){},moveTo(){},lineTo(){},stroke(){}};
-  draw(ctx,g,theme.id);assert.equal(JSON.stringify(g),before,'painting must not alter the run');signatures.add(JSON.stringify(ops));
-  // The tree at (21,22) covers this cell in Bosquet; it must remain playable.
-  g.tick();assert.equal(g.snake[0].x,1);assert.equal(g.state,'running');
- }
- assert.equal(themes.length,4);assert.equal(signatures.size,4);
+test('painted trees and bushes leave the classic game unchanged and remain traversable',()=>{
+ const {draw}=context.window.ZebraSnake;
+ const g=createGame(()=>0);g.snake=[{x:0,y:1}];g.direction='right';g.food={x:20,y:19};g.toggle();
+ const before=JSON.stringify(g);
+ const ctx={fillStyle:'',strokeStyle:'',fillRect(){},beginPath(){},moveTo(){},lineTo(){},stroke(){}};
+ draw(ctx,g);assert.equal(JSON.stringify(g),before,'painting must not alter the run');
+ // The tree at (21,22) covers this cell; it must remain playable.
+ g.tick();assert.equal(g.snake[0].x,1);assert.equal(g.state,'running');
 });

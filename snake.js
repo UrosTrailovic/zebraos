@@ -31,34 +31,9 @@ function createGame(random=Math.random){
  g.reset();return g;
 }
 function make(tag,cls,text){const e=document.createElement(tag);e.className=cls||'';if(text!==undefined)e.textContent=text;return e;}
-const THEMES=[{id:'grass',label:'Herbe'},{id:'grove',label:'Bosquet'},{id:'digital',label:'Digital'},{id:'night',label:'Nuit'}];
-function drawBackground(ctx,theme){
+function drawBackground(ctx){
  ctx.imageSmoothingEnabled=false;
- if(theme==='digital'){
-  ctx.fillStyle='#071a26';ctx.fillRect(0,0,CW,CH);
-  ctx.strokeStyle='#10313d';ctx.lineWidth=1;ctx.beginPath();
-  for(let x=0;x<CW;x+=C){ctx.moveTo(x+.5,0);ctx.lineTo(x+.5,CH);}
-  for(let y=0;y<CH;y+=C){ctx.moveTo(0,y+.5);ctx.lineTo(CW,y+.5);}ctx.stroke();
-  ctx.strokeStyle='#19515a';
-  for(let i=0;i<14;i++){
-   const x=16+(i*79)%336,y=16+(i*53)%272;
-   ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+16,y);ctx.lineTo(x+16,y+16);ctx.lineTo(x+32,y+16);ctx.stroke();
-   ctx.fillStyle='#30847a';ctx.fillRect(x-1,y-1,3,3);ctx.fillRect(x+31,y+15,3,3);
-  }
-  return;
- }
- if(theme==='night'){
-  ctx.fillStyle='#25254b';ctx.fillRect(0,0,CW,CH);
-  for(let y=0;y<CH;y+=4)for(let x=0;x<CW;x+=4){const n=(x*31+y*17+(x*y)%71)%29;ctx.fillStyle=n<4?'#32335c':'#29294f';ctx.fillRect(x,y,2,2);}
-  for(let i=0;i<65;i++){
-   const x=6+(i*83)%(CW-12),y=6+(i*59)%(CH-12);
-   ctx.fillStyle=i%4?'#41436c':'#7794b1';ctx.fillRect(x,y,1,2);
-  }
-  function flower(x,y){ctx.fillStyle='#526d80';ctx.fillRect(x+2,y+3,1,5);ctx.fillStyle='#b68cbb';ctx.fillRect(x,y+1,5,2);ctx.fillRect(x+1,y,3,4);ctx.fillStyle='#e3d29f';ctx.fillRect(x+2,y+1,1,1);}
-  for(const p of [[24,31],[343,51],[42,271],[312,281],[176,26],[18,164],[354,187]])flower(...p);
-  return;
- }
- // Both green variants use exactly the same saturated grass.
+ // Saturated grass with painted, fully traversable trees and bushes.
  ctx.fillStyle='#238f20';ctx.fillRect(0,0,CW,CH);
  for(let y=0;y<CH;y+=4)for(let x=0;x<CW;x+=4){
   const n=(x*31+y*17+(x*y)%71)%29;
@@ -68,7 +43,6 @@ function drawBackground(ctx,theme){
   const x=3+(i*73)%(CW-6),y=3+(i*47)%(CH-6);
   ctx.fillStyle=i%3?'#329f26':'#4eb82e';ctx.fillRect(x,y,1,3);ctx.fillRect(x+2,y+1,1,2);
  }
- if(theme!=='grove')return;
  // All trees and bushes belong to the painted background, never to collisions.
  function bush(x,y){
   ctx.fillStyle='#1b6422';ctx.fillRect(x-1,y+8,19,5);
@@ -86,9 +60,9 @@ function drawBackground(ctx,theme){
  for(const p of [[21,22],[139,34],[325,27],[53,121],[289,139],[18,257],[165,267],[328,262]])tree(...p);
  for(const p of [[76,38],[227,22],[347,94],[117,116],[191,83],[20,199],[237,202],[320,222],[84,279],[271,287]])bush(...p);
 }
-function draw(ctx,g,theme='grass',background){
+function draw(ctx,g,background){
  ctx.imageSmoothingEnabled=false;
- if(background)ctx.drawImage(background,0,0);else drawBackground(ctx,theme);
+ if(background)ctx.drawImage(background,0,0);else drawBackground(ctx);
  if(g.food){const x=B+g.food.x*C,y=B+g.food.y*C;ctx.fillStyle='#123021';ctx.fillRect(x+3,y+13,11,2);ctx.fillStyle='#fe7552';ctx.fillRect(x+3,y+5,10,8);ctx.fillRect(x+5,y+3,6,2);ctx.fillStyle='#ffce79';ctx.fillRect(x+4,y+5,3,3);ctx.fillStyle='#a5cf59';ctx.fillRect(x+8,y+1,4,2);}
  // Draw one connected ribbon, then a narrow highlight. Corners stay joined.
  const points=g.snake.map(p=>({x:B+p.x*C+8,y:B+p.y*C+8}));
@@ -106,27 +80,16 @@ function draw(ctx,g,theme='grass',background){
 }
 function mount(root){
  if(root._zebraDispose)root._zebraDispose();root.innerHTML='';
- const g=createGame();let alive=true,best=0,observer,theme='grass';
- try{const saved=localStorage.getItem('zebra.snake.theme');if(THEMES.some(t=>t.id===saved))theme=saved;}catch(_){}
+ const g=createGame();let alive=true,best=0,observer;
  try{best=Number(localStorage.getItem('zebra.snake.best'))||0;}catch(_){}
  const wrap=make('div','zs-machine');
- wrap.innerHTML='<div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div>SCORE <b class="zs-score">0000</b></div><div>RECORD <b class="zs-best">0000</b></div></div><nav class="zs-themes" aria-label="Ambiance du terrain"></nav><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Snake : manger les pommes, éviter les murs et sa queue"></canvas><div class="zs-overlay"><strong></strong><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console"><div class="zs-toolbar"></div><div class="zs-handheld"><div class="zs-dpad" aria-label="Direction"></div><div class="zs-ab"></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
+ wrap.innerHTML='<div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div>SCORE <b class="zs-score">0000</b></div><div>RECORD <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Snake : manger les pommes, éviter les murs et sa queue"></canvas><div class="zs-overlay"><strong></strong><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console"><div class="zs-toolbar"></div><div class="zs-handheld"><div class="zs-dpad" aria-label="Direction"></div><div class="zs-ab"></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
  root.appendChild(wrap);
  const $=s=>wrap.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d');canvas.width=CW;canvas.height=CH;
  const stage=$('.zs-stage'),arena=$('.zs-arena'),overlay=$('.zs-overlay'),status=$('.zs-state');
  function button(label,cls,fn,parent){const e=make('button','zs-button '+cls,label);e.type='button';e.onclick=fn;parent.appendChild(e);return e;}
- const backgrounds=new Map(),themeButtons=[];
- function background(){
-  if(!backgrounds.has(theme)){const c=document.createElement('canvas');c.width=CW;c.height=CH;drawBackground(c.getContext('2d'),theme);backgrounds.set(theme,c);}
-  return backgrounds.get(theme);
- }
- for(const t of THEMES){
-  const b=button(t.label,'zs-theme',()=>{
-   theme=t.id;try{localStorage.setItem('zebra.snake.theme',theme);}catch(_){}
-   render();
-  },$('.zs-themes'));
-  b.dataset.theme=t.id;b.setAttribute('aria-pressed',String(t.id===theme));themeButtons.push(b);
- }
+ const background=document.createElement('canvas');background.width=CW;background.height=CH;
+ drawBackground(background.getContext('2d'));
  const play=button('Jouer','zs-play',()=>{g.toggle();render();},$('.zs-toolbar'));
  button('Recommencer','zs-restart',()=>{g.reset();g.toggle();render();},$('.zs-toolbar'));
  button('Menu','zs-menu',()=>{g.reset();render();},$('.zs-toolbar'));
@@ -148,8 +111,7 @@ function mount(root){
   overlay.querySelector('strong').textContent=({ready:'ON JOUE ?',paused:'PETITE PAUSE',over:'ENCORE UNE ?',won:'BIEN JOUÉ'})[g.state]||'';
   overlay.querySelector('span').textContent=g.state==='ready'?'Une pomme, dix points. Garde le cap.':g.state==='paused'?'Reprends quand tu veux.':'Score : '+g.score;
   $('.zs-start').textContent=play.textContent;
-  wrap.dataset.theme=theme;themeButtons.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.theme===theme)));
-  draw(ctx,g,theme,background());
+  draw(ctx,g,background);
  }
  function fit(){const w=Math.max(1,Math.min(arena.clientWidth,arena.clientHeight*CW/CH));stage.style.width=w+'px';stage.style.height=w*CH/CW+'px';}
  function focused(){const w=root.closest('.window');return !w||w.classList.contains('active')||w.classList.contains('focused')||w.style.zIndex===String(Math.max(...Array.from(document.querySelectorAll('.window')).map(e=>Number(e.style.zIndex)||0)));}
@@ -166,5 +128,5 @@ function mount(root){
  fit();render();
  root._zebraDispose=function(){alive=false;clearInterval(clock);if(observer)observer.disconnect();window.removeEventListener('resize',fit);window.removeEventListener('blur',blur);document.removeEventListener('keydown',key);document.removeEventListener('visibilitychange',hide);};
 }
-window.ZebraSnake={mount,createGame,draw,drawBackground,themes:THEMES,width:CW,height:CH};
+window.ZebraSnake={mount,createGame,draw,drawBackground,width:CW,height:CH};
 }());
