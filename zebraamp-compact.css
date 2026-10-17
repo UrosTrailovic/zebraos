@@ -95,9 +95,20 @@
  box-sizing:border-box;
  width:min(280px,calc(100vw - 27px));padding:11px;
  border:3px ridge #c9dfce;
- background:linear-gradient(140deg,#0d2c1d,#071c13);
+ background:
+  radial-gradient(ellipse at 18% 0%,rgba(145,170,148,.14),transparent 51%),
+  repeating-linear-gradient(90deg,transparent 0 3px,rgba(0,0,0,.017) 3px 4px),
+  linear-gradient(142deg,#37413b 0%,#25302b 36%,#1d2723 76%,#343e36 100%);
  box-shadow:3px 6px 16px #000b;
  color:#a4ebba;
+}
+.amp3-speed-panel::before,.amp3-reverb-panel::before{
+ content:"";position:absolute;pointer-events:none;inset:4px;
+ background:
+  radial-gradient(circle at 4px 4px,#e3ece5 0 1px,#718078 1.5px 2.5px,#17221c 3px,transparent 3.5px),
+  radial-gradient(circle at calc(100% - 4px) 4px,#e3ece5 0 1px,#718078 1.5px 2.5px,#17221c 3px,transparent 3.5px),
+  radial-gradient(circle at 4px calc(100% - 4px),#e3ece5 0 1px,#718078 1.5px 2.5px,#17221c 3px,transparent 3.5px),
+  radial-gradient(circle at calc(100% - 4px) calc(100% - 4px),#e3ece5 0 1px,#718078 1.5px 2.5px,#17221c 3px,transparent 3.5px);
 }
 .amp3-speed-panel[hidden]{display:none!important}
 .amp3-speed-header{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:10px;letter-spacing:.8px}
@@ -312,7 +323,11 @@
  box-sizing:border-box;
  width:min(286px,calc(100vw - 28px));padding:11px;
  border:3px ridge #c4ddca;
- color:#a4ebba;background:linear-gradient(140deg,#0d2c1d,#071c13);
+ color:#a4ebba;
+ background:
+  radial-gradient(ellipse at 18% 0%,rgba(145,170,148,.14),transparent 51%),
+  repeating-linear-gradient(90deg,transparent 0 3px,rgba(0,0,0,.017) 3px 4px),
+  linear-gradient(142deg,#37413b 0%,#25302b 36%,#1d2723 76%,#343e36 100%);
  box-shadow:3px 6px 16px #000b;
 }
 .amp3-reverb-panel[hidden]{display:none!important}
@@ -335,9 +350,9 @@
 
 /* ZebraAMP 3.9 — vitesse libre, vinyle permanent, sans boutons presets. */
 .amp3-reverb-description{
- font:10px/1.4 Tahoma,Arial,sans-serif;
- color:#acdcc0;opacity:.94;
- margin-top:7px;
+ font:bold 10px/1.4 "Courier New",monospace;
+ color:#c7ffdc;letter-spacing:.4px;text-shadow:0 0 5px #42ee8866;
+ margin-top:8px;text-align:center;
 }
 .amp3-speed-panel,.amp3-reverb-panel{
  max-height:min(340px,calc(100dvh - 84px));

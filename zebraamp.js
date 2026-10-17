@@ -760,7 +760,7 @@ function loadVisualizer(){
  if(visualizerPromise)return visualizerPromise;
  visualizerPromise=new Promise(function(resolve,reject){
   var script=document.createElement("script");
-  script.src="/visualizer.js?v=4.3";script.async=true;
+  script.src="/visualizer.js?v=4.4";script.async=true;
   script.onload=function(){
    if(window.ZebraVisualizer)resolve(window.ZebraVisualizer);
    else reject(Error("Module ZebraVIS introuvable."));
@@ -930,7 +930,7 @@ function open(){
   reverbPresets.appendChild(b(p[0],function(){setReverb(p[1]);},"amp3-btn amp3-reverb-preset"));
  });
  reverbPanel.appendChild(reverbPresets);
- reverbPanel.appendChild(el("div","amp3-reverb-description","Résonance longue · 3,4 secondes · stéréo chaude. Essaie 70–85 %."));
+ reverbPanel.appendChild(el("div","amp3-reverb-description","RÉVERBÉRATION · DURÉE : 3,4 S"));
  reverbGroup.append(reverbBtn,reverbPanel);
  extra.appendChild(reverbGroup);
  root.appendChild(extra);
