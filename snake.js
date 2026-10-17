@@ -72,10 +72,9 @@ function createDuel(options={},random=Math.random){
  }
  g.tick=function(){
   if(g.state!=='running')return;if(humans===1)ai();g.ticks++;
-  const grow=g.ticks%4===0;
   const next=g.players.map(p=>{if(p.queue.length)p.direction=p.queue.shift();const d=DIR[p.direction];return {x:p.snake[0].x+d[0],y:p.snake[0].y+d[1]};});
   const eats=next.map(n=>g.food&&same(n,g.food));
-  const bodies=g.players.map((p,i)=>grow||eats[i]?p.snake:p.snake.slice(0,-1));
+  const bodies=g.players.map((p,i)=>eats[i]?p.snake:p.snake.slice(0,-1));
   const headOn=same(next[0],next[1])||(same(next[0],g.players[1].snake[0])&&same(next[1],g.players[0].snake[0]));
   const dead=next.map((n,i)=>!inside(n)||headOn||bodies[i].some(q=>same(q,n))||bodies[1-i].some(q=>same(q,n)));
   if(dead.some(Boolean)){
@@ -84,7 +83,7 @@ function createDuel(options={},random=Math.random){
    const hit=next[dead[0]?0:1];g.impact={x:Math.max(0,Math.min(W-1,hit.x)),y:Math.max(0,Math.min(H-1,hit.y))};
    return;
   }
-  g.players.forEach((p,i)=>{p.snake.unshift(next[i]);if(eats[i])p.score+=10;if(!grow&&!eats[i])p.snake.pop();});
+  g.players.forEach((p,i)=>{p.snake.unshift(next[i]);if(eats[i])p.score+=10;else p.snake.pop();});
   if(eats.some(Boolean))food();
  };
  g.finishCrash=function(){if(g.state==='hurt')g.state='over';};
@@ -236,11 +235,11 @@ function createSounds(){
 }
 function mount(root){
  if(root._zebraDispose)root._zebraDispose();root.innerHTML='';
- const sounds=createSounds(),settings={players:1,level:1};let g=createDuel(settings),menuPage='mode',menuIndex=0,elapsed=0;let alive=true,best=0,observer,lastState=g.state,lastScore=0,crashTimer=null;
+ const sounds=createSounds(),settings={mode:'solo',players:1,level:1};let g=createGame(),menuPage='mode',menuIndex=0,elapsed=0;let alive=true,best=0,observer,lastState=g.state,lastScore=0,crashTimer=null;
  fetch('/assets/games/snake/audio.json?v=1',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(a=>{if(alive)sounds.configure(a);}).catch(()=>{});
  try{best=Number(localStorage.getItem('zebra.snake.best'))||0;}catch(_){}
  const wrap=make('div','zs-machine');
- wrap.innerHTML='<header class="zs-header"><img class="zs-logo" src="/assets/games/snake/znaklogo.png?v=1" alt="Znake" width="165" height="98"></header><div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div><label class="zs-score-label">SCORE</label> <b class="zs-score">0000</b></div><div><label class="zs-best-label">RECORD</label> <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znake : manger les pommes, éviter les murs et sa queue"></canvas><section class="zs-launch" aria-label="Menu de Znake"><div class="zs-menu-page zs-mode-page"><h1>Znake</h1><canvas class="zs-title-art" aria-hidden="true"></canvas><div class="zs-menu-list" role="group" aria-label="Mode de jeu"><button type="button" data-mode="robot">CONTRE ROBOT</button><button type="button" data-mode="local">VS LOCAL</button></div><small>FLÈCHES : CHOISIR · ESPACE : VALIDER</small></div><div class="zs-menu-page zs-level-page" hidden><h2>CHOISIS TON NIVEAU</h2><div class="zs-level-list" role="group" aria-label="Niveau"><button type="button" data-level="1">NIVEAU 1</button><button type="button" data-level="2">NIVEAU 2</button><button type="button" data-level="3">NIVEAU 3</button><button type="button" data-level="4">NIVEAU 4</button></div><button type="button" class="zs-menu-back">◀ RETOUR</button><small>ESPACE : JOUER</small></div></section><div class="zs-overlay"><strong role="heading" aria-level="2"></strong><em class="zs-result"></em><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console zg-retro"><div class="zs-handheld zt-handheld zt-skin-ready"><div class="zs-toolbar zg-buttons zt-buttons"></div><div class="zs-dpad zt-dpad" aria-label="Direction"><div class="zs-cross zt-cross"></div></div><div class="zs-action-side zt-action-side"><div class="zs-ab zt-ab"></div><span class="zs-select-space zt-select" aria-hidden="true"></span></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
+ wrap.innerHTML='<header class="zs-header"><img class="zs-logo" src="/assets/games/snake/znaklogo.png?v=1" alt="Znake" width="165" height="98"></header><div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div><label class="zs-score-label">SCORE</label> <b class="zs-score">0000</b></div><div><label class="zs-best-label">RECORD</label> <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znake : manger les pommes, éviter les murs et sa queue"></canvas><section class="zs-launch" aria-label="Menu de Znake"><div class="zs-menu-page zs-mode-page"><h1>Znake</h1><canvas class="zs-title-art" aria-hidden="true"></canvas><div class="zs-menu-list" role="group" aria-label="Mode de jeu"><button type="button" data-mode="solo">SOLO</button><button type="button" data-mode="robot">CONTRE ROBOT</button><button type="button" data-mode="local">VS LOCAL</button></div><small>FLÈCHES : CHOISIR · ESPACE : VALIDER</small></div><div class="zs-menu-page zs-level-page" hidden><h2>CHOISIS TON NIVEAU</h2><div class="zs-level-list" role="group" aria-label="Niveau"><button type="button" data-level="1">NIVEAU 1</button><button type="button" data-level="2">NIVEAU 2</button><button type="button" data-level="3">NIVEAU 3</button><button type="button" data-level="4">NIVEAU 4</button></div><button type="button" class="zs-menu-back">◀ RETOUR</button><small>ESPACE : JOUER</small></div></section><div class="zs-overlay"><strong role="heading" aria-level="2"></strong><em class="zs-result"></em><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console zg-retro"><div class="zs-handheld zt-handheld zt-skin-ready"><div class="zs-toolbar zg-buttons zt-buttons"></div><div class="zs-dpad zt-dpad" aria-label="Direction"><div class="zs-cross zt-cross"></div></div><div class="zs-action-side zt-action-side"><div class="zs-ab zt-ab"></div><span class="zs-select-space zt-select" aria-hidden="true"></span></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
  root.appendChild(wrap);
  const $=s=>wrap.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d');canvas.width=CW;canvas.height=CH;
  const stage=$('.zs-stage'),arena=$('.zs-arena'),hud=$('.zs-hud'),overlay=$('.zs-overlay'),status=$('.zs-state');
@@ -256,7 +255,8 @@ function mount(root){
   const image=new Image();image.onload=()=>{level3Tiles[name]=image;if(Object.keys(level3Tiles).length===3){drawLevel3Background(level3Background.getContext('2d'),level3Tiles);drawLevel4Background(level4Background.getContext('2d'),level3Background);wrap.dataset.level3Ready='true';wrap.dataset.level4Ready='true';if(alive&&settings.level>=3)render();}};image.src=src;
  }
  function clearCrash(){if(crashTimer!==null){clearTimeout(crashTimer);crashTimer=null;}}
- function restart(){if(g.state==='hurt')return;clearCrash();sounds.stop();lastState='ready';lastScore=0;elapsed=0;g=g.state==='ready'?createDuel(settings):g;g.reset();g.toggle();render();}
+ function selectedGame(){return settings.mode==='solo'?createGame():createDuel(settings);}
+ function restart(){if(g.state==='hurt')return;clearCrash();sounds.stop();lastState='ready';lastScore=0;elapsed=0;g=g.state==='ready'?selectedGame():g;g.reset();g.toggle();render();}
  function action(){if(g.state==='ready'){chooseMenu();return;}if(g.state==='over'||g.state==='won')restart();else{g.toggle();render();}}
  function menu(){if(g.state==='hurt')return;clearCrash();sounds.stop();g.reset();sounds.play('menu');elapsed=0;menuPage='mode';menuIndex=0;render();}
  const play=button('Jouer','zs-play',action,$('.zs-toolbar'));
@@ -277,21 +277,21 @@ function mount(root){
   const choices=menuPage==='mode'?Array.from(launch.querySelectorAll('[data-mode]')):Array.from(launch.querySelectorAll('[data-level]'));
   choices.forEach((b,i)=>b.setAttribute('aria-current',i===menuIndex?'true':'false'));
  }
- function chooseMode(mode){settings.players=mode==='local'?2:1;menuPage='level';menuIndex=0;sounds.play('turn');renderMenu();}
+ function chooseMode(mode){settings.mode=mode;settings.players=mode==='local'?2:1;menuPage='level';menuIndex=0;sounds.play('turn');renderMenu();}
  function chooseLevel(level){settings.level=Math.max(1,Math.min(4,Number(level)||1));sounds.unlock();restart();}
  function chooseMenu(){
-  if(menuPage==='mode'){chooseMode(menuIndex===0?'robot':'local');return;}
+  if(menuPage==='mode'){chooseMode(['solo','robot','local'][menuIndex]);return;}
   chooseLevel(menuIndex+1);
  }
  function navigate(d){
-  const count=menuPage==='mode'?2:4;
+  const count=menuPage==='mode'?3:4;
   if(d==='up'||d==='left')menuIndex=(menuIndex-1+count)%count;
   else if(d==='down'||d==='right')menuIndex=(menuIndex+1)%count;
   sounds.play('turn');renderMenu();
  }
  launch.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{sounds.unlock();chooseMode(b.dataset.mode);});
  launch.querySelectorAll('[data-level]').forEach(b=>b.onclick=()=>chooseLevel(b.dataset.level));
- $('.zs-menu-back').onclick=()=>{sounds.unlock();menuPage='mode';menuIndex=settings.players===2?1:0;sounds.play('menu');renderMenu();};
+ $('.zs-menu-back').onclick=()=>{sounds.unlock();menuPage='mode';menuIndex=settings.mode==='solo'?0:settings.mode==='robot'?1:2;sounds.play('menu');renderMenu();};
  // An original, simple two-ink title illustration, drawn at handheld resolution.
  const art=$('.zs-title-art');art.width=384;art.height=100;const ac=art.getContext('2d');
  ac.fillStyle=DECOR;for(let y=0;y<35;y+=12)for(let x=-24;x<384;x+=48)ac.fillRect(x+(y%24?24:0),y,44,9);
@@ -343,7 +343,7 @@ function mount(root){
   const keys={w:'up',z:'up',s:'down',a:'left',q:'left',d:'right'},d=arrows[e.key]||keys[letter];
     if(d){e.preventDefault();if(!e.repeat){sounds.unlock();turn(d,g.state!=='ready'&&settings.players===2&&arrows[e.key]?1:0);}}
   else if(e.code==='Space'||e.key===' '||e.key==='Enter'||letter==='p'){e.preventDefault();if(!e.repeat){sounds.unlock();action();}}
-  else if(e.key==='Escape'){e.preventDefault();if(g.state==='ready'&&menuPage==='level'){menuPage='mode';menuIndex=settings.players===2?1:0;renderMenu();}else menu();}
+  else if(e.key==='Escape'){e.preventDefault();if(g.state==='ready'&&menuPage==='level'){menuPage='mode';menuIndex=settings.mode==='solo'?0:settings.mode==='robot'?1:2;renderMenu();}else menu();}
  }
  function hide(){if(document.hidden){sounds.stop();if(g.state==='running'){g.state='paused';render();}}}
  function blur(){sounds.stop();if(g.state==='running'){g.state='paused';render();}}

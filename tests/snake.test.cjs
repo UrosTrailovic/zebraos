@@ -132,3 +132,10 @@ test('four levels, separate queues, safe food and AI movement',()=>{
  const g=createDuel({players:2});g.toggle();assert.equal(g.turn('up',0),true);assert.equal(g.turn('down',1),true);g.tick();
  assert.equal(g.players[0].snake[0].y,5);assert.equal(g.players[1].snake[0].y,14);
 });
+test('duel serpents grow only when they eat fruit',()=>{
+ const g=createDuel({players:2,level:1});g.food={x:20,y:20};g.toggle();
+ const lengths=g.players.map(p=>p.snake.length);for(let i=0;i<3;i++)g.tick();
+ assert.deepEqual(g.players.map(p=>p.snake.length),lengths);
+ const head=g.players[0].snake[0];g.food={x:head.x+1,y:head.y};g.tick();
+ assert.equal(g.players[0].snake.length,lengths[0]+1);assert.equal(g.players[0].score,10);
+});

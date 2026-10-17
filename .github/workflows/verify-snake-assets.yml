@@ -46,7 +46,8 @@ jobs:
             out.square=Math.abs(bounds.width-bounds.height)<1;
             await Promise.race([document.fonts.load('36px Redden'),wait(2000)]);out.redden=document.fonts.check('36px Redden');
             out.launch=!$('.zs-launch').hidden&&$('.zs-launch h1').textContent==='Znake'&&!$('.zs-mode-page').hidden&&$('.zs-level-page').hidden;
-            out.modeChoices=Array.from(host.querySelectorAll('[data-mode]')).map(b=>b.textContent).join('|')==='CONTRE ROBOT|VS LOCAL';
+            out.modeChoices=Array.from(host.querySelectorAll('[data-mode]')).map(b=>b.textContent).join('|')==='SOLO|CONTRE ROBOT|VS LOCAL';
+            $('[data-mode="solo"]').click();$('[data-level="1"]').click();out.solo=$('.zs-state').textContent==='EN JEU'&&$('.zs-score-label').textContent==='SCORE'&&$('.zs-best-label').textContent==='RECORD';$('.zs-menu').click();
             $('[data-mode="robot"]').click();out.levelPage=$('.zs-mode-page').hidden&&!$('.zs-level-page').hidden;
             out.fourLevels=Array.from(host.querySelectorAll('[data-level]')).map(b=>b.textContent).join('|')==='NIVEAU 1|NIVEAU 2|NIVEAU 3|NIVEAU 4';
             $('[data-level="2"]').click();out.soloDuel=$('.zs-state').textContent==='EN JEU'&&$('.zs-best-label').textContent==='ORDI';$('.zs-menu').click();
