@@ -71,6 +71,14 @@ function applyPitchMode(){
  try{if("mozPreservesPitch" in audio)audio.mozPreservesPitch=preservePitch;}catch(e){}
  try{if("webkitPreservesPitch" in audio)audio.webkitPreservesPitch=preservePitch;}catch(e){}
 }
+function syncPlaybackSettings(){
+ // Certains navigateurs remettent la vitesse effective à 1× lorsqu'une
+ // nouvelle source est chargée, sans modifier notre valeur mémorisée.
+ applyPitchMode();
+ try{audio.defaultPlaybackRate=speed;}catch(e){}
+ try{if(Math.abs(audio.playbackRate-speed)>.0001)audio.playbackRate=speed;}catch(e){}
+ if(analyser&&reverb>0)applyReverb();
+}
 function db(){
  if(dbPromise)return dbPromise;
  dbPromise=new Promise(function(resolve,reject){
@@ -147,6 +155,7 @@ function init(){
   updatePublic();
  }
  audio.addEventListener("ended",nextAfterEnd);
+ audio.addEventListener("loadedmetadata",syncPlaybackSettings);
  ["play","pause","timeupdate","loadedmetadata","durationchange","ratechange","volumechange","waiting","canplay"].forEach(function(k){
   audio.addEventListener(k,function(){renderProgress();if(k==="play"||k==="pause"){render();if(spectrumRefresh)spectrumRefresh();}});
  });
@@ -158,7 +167,10 @@ function ensureGraph(){
  try{
   var AudioCtx=window.AudioContext||window.webkitAudioContext;
   if(!AudioCtx){status("Égaliseur indisponible sur ce navigateur.");return false;}
-  ctx=new AudioCtx();
+  // Un tampon orienté lecture est plus stable lorsque le navigateur passe
+  // en arrière-plan. Repli sans option pour les anciens navigateurs.
+  try{ctx=new AudioCtx({latencyHint:"playback"});}
+  catch(contextError){ctx=new AudioCtx();}
   var src=ctx.createMediaElementSource(audio);
   var last=src;
   eqFreq.forEach(function(freq,i){
@@ -238,6 +250,7 @@ function applyReverb(){
 }
 function setReverb(value){
  reverb=Math.max(0,Math.min(100,Math.round((Number(value)||0)/5)*5));
+ if(reverb>0&&!audio.paused)resumeGraph();
  applyReverb();store();renderReverb();
 }
 function renderReverb(){
@@ -257,6 +270,7 @@ function resumeGraph(){
 function setEq(values,name){
  eq=values.map(function(x){return Math.max(-12,Math.min(12,Number(x)||0));});
  preset=name||"Personnalisé";
+ if(eq.some(function(x){return Math.abs(x)>.001;})&&!audio.paused)resumeGraph();
  filters.forEach(function(f,i){f.gain.value=eq[i];});
  store();renderEq();
 }
@@ -448,7 +462,7 @@ function releaseUrl(){if(loadedBlob){URL.revokeObjectURL(loadedBlob);loadedBlob=
 function setSource(src,isBlob){
  releaseUrl();
  if(isBlob)loadedBlob=src;
- audio.pause();audio.src=src;audio.load();renderProgress();
+ audio.pause();audio.src=src;syncPlaybackSettings();audio.load();syncPlaybackSettings();renderProgress();
 }
 function togglePlayback(){
  if(audio.paused){
@@ -458,7 +472,10 @@ function togglePlayback(){
  }else audio.pause();
 }
 function play(){
- resumeGraph();
+ syncPlaybackSettings();
+ // Lecture HTML native tant que le son est neutre : meilleure continuité
+ // sur mobile verrouillé. Web Audio ne démarre que pour un véritable effet.
+ if(analyser||reverb>0||eq.some(function(x){return Math.abs(x)>.001;}))resumeGraph();
  var res=audio.play();if(res&&res.catch)res.catch(function(err){
   status("Lecture bloquée : appuie sur ▶ pour démarrer le son.");
  });
@@ -876,7 +893,7 @@ function open(){
  rate.oninput=function(){
   var pct=Number(rate.value);
   speed=pct/100;
-  audio.playbackRate=speed;
+  syncPlaybackSettings();
   speedBtn.textContent="VITESSE "+pct+" %";
   currentSpeed.textContent=pct+" %";
   store();

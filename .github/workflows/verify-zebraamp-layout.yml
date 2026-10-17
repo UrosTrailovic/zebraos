@@ -107,8 +107,15 @@ jobs:
               report.speedSteps=slider.min==="50"&&slider.max==="150"&&slider.step==="5";
               slider.value="135";slider.dispatchEvent(new Event("input",{bubbles:true}));
               report.speedApplied=Math.abs(window.ZebraAMP.media.playbackRate-1.35)<.0001
+                &&Math.abs(window.ZebraAMP.media.defaultPlaybackRate-1.35)<.0001
                 &&speedButton.textContent.includes("135 %")
                 &&JSON.parse(localStorage.getItem("zebraamp-v3")).speed===1.35;
+              window.ZebraAMP.media.playbackRate=1;
+              window.ZebraAMP.media.defaultPlaybackRate=1;
+              window.ZebraAMP.media.dispatchEvent(new Event("loadedmetadata"));
+              report.speedSurvivesTrackChange=Math.abs(window.ZebraAMP.media.playbackRate-1.35)<.0001
+                &&Math.abs(window.ZebraAMP.media.defaultPlaybackRate-1.35)<.0001
+                &&window.ZebraAMP.media.preservesPitch===false;
               report.pitchModeDefault=window.ZebraAMP.debug().pitchMode==="vinyl"
                 &&window.ZebraAMP.media.preservesPitch===false;
               report.noPitchSelector=group.querySelectorAll("[data-amp-pitch-mode]").length===0
