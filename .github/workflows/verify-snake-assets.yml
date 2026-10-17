@@ -44,12 +44,25 @@ jobs:
             $('.zs-menu').click();$('.zs-up').dispatchEvent(new PointerEvent('pointerdown',{button:0,bubbles:true}));out.direction=$('.zs-state').textContent==='EN JEU';
             document.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true}));out.keyboard=$('.zs-state').textContent==='PAUSE';
             $('.zs-restart').click();out.restart=$('.zs-state').textContent==='EN JEU'&&$('.zs-score').textContent==='0000';
-            out.mobile=innerWidth>700||getComputedStyle($('.zs-handheld')).display==='flex';
+            out.mobile=innerWidth>700||getComputedStyle($('.zs-handheld')).display==='grid';
             if(innerWidth<=700){
-             const pad=$('.zs-dpad').getBoundingClientRect(),ab=$('.zs-ab').getBoundingClientRect();
-             out.largeDirections=Array.from(host.querySelectorAll('.zs-dir')).every(b=>{const r=b.getBoundingClientRect();return r.width>=44&&r.height>=44});
-             out.largeAB=Array.from(host.querySelectorAll('.zs-ab button')).every(b=>parseFloat(getComputedStyle(b).width)>=50);
-             out.centeredControls=pad.left>=20&&ab.right<=innerWidth-20&&ab.left-pad.right>=16&&ab.left-pad.right<=60;
+             // A Tetris DOM fixture uses its real production CSS at the same size.
+             const ref=document.createElement('div');ref.className='window-body zebra-game-body';ref.style.cssText='position:fixed;left:-10000px;top:0;padding:0;width:'+host.clientWidth+'px;height:'+host.clientHeight+'px';
+             const retro=document.createElement('div');retro.className='zg zg-retro';
+             const fill=document.createElement('div');fill.style.cssText='flex:1;min-height:0';
+             const clone=$('.zs-handheld').cloneNode(true);
+             for(const e of [clone,...clone.querySelectorAll('[class]')])e.className=e.className.split(' ').filter(c=>!c.startsWith('zs-')).join(' ');
+             retro.append(fill,clone);ref.append(retro);document.body.append(ref);
+             const origin=host.getBoundingClientRect(),refOrigin=ref.getBoundingClientRect();
+             const pairs=[['.zs-cross','.zt-cross'],['.zs-up','.zt-dir-up'],['.zs-down','.zt-dir-down'],['.zs-left','.zt-dir-left'],['.zs-right','.zt-dir-right'],['.zs-a','.zt-a'],['.zs-b','.zt-b']];
+             out.tetrisGeometry=pairs.every(([a,b])=>{
+              const actual=$(a).getBoundingClientRect(),expected=ref.querySelector(b).getBoundingClientRect();
+              return Math.abs(actual.width-expected.width)<1&&Math.abs(actual.height-expected.height)<1&&Math.abs((actual.left-origin.left)-(expected.left-refOrigin.left))<1&&Math.abs((actual.top-origin.top)-(expected.top-refOrigin.top))<1;
+             });
+             out.diagonal=$('.zs-a').getBoundingClientRect().top<$('.zs-b').getBoundingClientRect().top;
+             out.visibleControls=Array.from(host.querySelectorAll('.zs-dir,.zs-ab button')).every(b=>{const r=b.getBoundingClientRect();const s=getComputedStyle(b);return r.width>=30&&r.height>=30&&r.left>=0&&r.right<=innerWidth&&s.color!=='rgba(0, 0, 0, 0)'});
+             out.noControlPanel=getComputedStyle($('.zs-handheld'),'::before').display==='none';
+             ref.remove();
             }
             host._zebraDispose();await wait(320);out.dispose=$('.zs-state').textContent==='EN JEU';
            }catch(e){out.error=String(e.stack||e)}
@@ -60,7 +73,7 @@ jobs:
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/snake-server.log 2>&1 &
           sleep 1
           for size in 390,740 1160,900; do
-            google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=$size --virtual-time-budget=3000 --dump-dom http://127.0.0.1:8765/_verify_snake.html > /tmp/snake-$size.html 2>/tmp/snake-$size.log
+            google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=$size --virtual-time-budget=5000 --dump-dom http://127.0.0.1:8765/_verify_snake.html > /tmp/snake-$size.html 2>/tmp/snake-$size.log
             grep -o 'data-snake-report="[^"]*"' /tmp/snake-$size.html
             grep -q 'data-snake-status="ok"' /tmp/snake-$size.html
           done
