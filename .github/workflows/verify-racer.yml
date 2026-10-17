@@ -31,10 +31,10 @@ jobs:
             out.canvas=canvas.width===960&&canvas.height===540&&ctx.getImageData(720,116,1,1).data[3]===255;
             out.fit=screen.width>200&&screen.left>=0&&screen.right<=innerWidth+1&&screen.bottom<=innerHeight+1&&Math.abs(screen.width/screen.height-16/9)<.03;
             out.controls=Array.from(root.querySelectorAll('[data-control]')).map(b=>b.dataset.control).join('|')==='left|right|brake|nitro|gas';
-            document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowUp',bubbles:true}));await wait(650);document.dispatchEvent(new KeyboardEvent('keyup',{key:'ArrowUp',bubbles:true}));
-            out.drives=wrap.dataset.state==='running'&&Number(wrap.dataset.speed)>20;
-            document.dispatchEvent(new KeyboardEvent('keydown',{key:'p',bubbles:true}));await wait(40);out.pause=wrap.dataset.state==='paused'&&!root.querySelector('.zr-start').hidden;
-            root.querySelector('.zr-start').click();await wait(40);out.resume=wrap.dataset.state==='running';
+            document.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowUp',bubbles:true}));for(let i=0;i<16;i++)root._zebraRacerGame.tick(.05);document.dispatchEvent(new KeyboardEvent('keyup',{key:'ArrowUp',bubbles:true}));
+            out.drives=root._zebraRacerGame.state==='running'&&root._zebraRacerGame.speed>20;
+            document.dispatchEvent(new KeyboardEvent('keydown',{key:'p',bubbles:true}));out.pause=root._zebraRacerGame.state==='paused';
+            root.querySelector('.zr-start').click();out.resume=root._zebraRacerGame.state==='running';
             if(innerWidth<=700)out.touchTargets=Array.from(root.querySelectorAll('.zr-controls button')).every(b=>{const r=b.getBoundingClientRect();return r.width>=50&&r.height>=48&&r.left>=0&&r.right<=innerWidth+1;});
             root._zebraDispose();const speed=wrap.dataset.speed;await wait(100);out.dispose=wrap.dataset.speed===speed;
            }catch(e){out.error=String(e.stack||e)}

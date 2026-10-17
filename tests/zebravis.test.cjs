@@ -85,6 +85,13 @@ test('transport buttons operate audio, not the effect selector; icon follows pla
  assert.equal(buttons[1].textContent,'Ⅱ');assert.equal(buttons[1].attrs['aria-label'],'Mettre en pause');
  h.media.paused=true;h.media.emit('pause');assert.equal(buttons[1].textContent,'▶');
 });
+test('audio stays linked automatically without audio-link or auto-mode controls',()=>{
+ const h=domHarness(),controls=h.find('zviz-controls');
+ assert.equal(h.find('zviz-connect'),null);
+ assert.equal(h.find('zviz-auto'),null);
+ assert.equal(controls.children.length,4);
+ assert.equal(h.find('zviz-led').className,'zviz-led');
+});
 test('scope zoom covers 0.5× to 8×, resets to original 1×, and hides for other effects',()=>{
  const h=domHarness(),zoom=h.find('zviz-zoom'),slider=h.find('zviz-zoom-range');
  assert.equal(zoom.hidden,true);

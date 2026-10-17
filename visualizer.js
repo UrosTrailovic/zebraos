@@ -353,9 +353,8 @@ function mount(host,media,options){
   var back=element("button","zviz-step","◀");
   var next=element("button","zviz-step","▶");
   var modeText=element("div","zviz-mode-name");
-  var autoButton=element("button","zviz-auto","AUTO : NON");
   var fullButton=element("button","zviz-fullscreen","⛶");
-  var mode=readMode(),auto=false,lastSwitch=0,lastFrame=0,stars=makeStars(),motion=makeMotion();
+  var mode=readMode(),lastFrame=0,stars=makeStars(),motion=makeMotion();
   var ctx=canvas.getContext("2d",{alpha:false});
   if(!ctx){host.appendChild(element("p","github-drive-error","Canvas 2D non disponible sur ce navigateur."));return;}
   function updatePreset(){
@@ -363,22 +362,19 @@ function mount(host,media,options){
     back.title="Mode précédent";next.title="Mode suivant";
     zoomPanel.hidden=mode!==1;
     saveMode(mode);
-    lastSwitch=performance.now();
   }
   back.onclick=function(){mode=(mode+presets.length-1)%presets.length;updatePreset();};
   next.onclick=function(){mode=(mode+1)%presets.length;updatePreset();};
-  autoButton.onclick=function(){auto=!auto;autoButton.textContent=auto?"AUTO: ON":"AUTO : NON";lastSwitch=performance.now();};
   fullButton.title="Plein écran";
   fullButton.onclick=function(){
     if(document.fullscreenElement===shell&&document.exitFullscreen){document.exitFullscreen().catch(function(){});}
     else if(shell.requestFullscreen){var p=shell.requestFullscreen();if(p&&p.catch)p.catch(function(){});}
   };
-  bar.appendChild(back);bar.appendChild(modeText);bar.appendChild(next);bar.appendChild(autoButton);bar.appendChild(fullButton);
+  bar.appendChild(back);bar.appendChild(modeText);bar.appendChild(next);bar.appendChild(fullButton);
   shell.appendChild(bar);
   var footer=element("div","zviz-footer");
   var hint=element("span","","EFFETS RÉACTIFS AU SON / CANVAS 2D");
-  var connectButton=element("button","zviz-connect","LIER AUDIO");
-  footer.appendChild(hint);footer.appendChild(connectButton);shell.appendChild(footer);
+  footer.appendChild(hint);shell.appendChild(footer);
   var transport=element("div","zviz-transport");
   transport.setAttribute("role","group");transport.setAttribute("aria-label","Commandes de lecture de ZebraAMP");
   var previousTrack=element("button","zviz-track","Ⅰ◀");
@@ -408,12 +404,10 @@ function mount(host,media,options){
   host.appendChild(shell);
   function connectNow(){
     var ok=connect(media,options&&options.analyser);
-    connectButton.textContent=ok?"AUDIO LIÉ":"RÉESSAYER";
     led.classList.toggle("on",ok);
     if(ok&&audioContext)requestAnimationFrame(function(){if(audioContext&&audioContext.state==="suspended")audioContext.resume().catch(function(){});});
     return ok;
   }
-  connectButton.onclick=connectNow;
   var linked=connectNow();
   updatePreset();
   var startX=0;
@@ -451,7 +445,6 @@ function mount(host,media,options){
     var sounding=playing&&hasSignal;
     overlay.style.opacity=sounding?"0":"1";
     led.classList.toggle("pulsing",sounding);
-    if(auto&&t-lastSwitch>12000){mode=(mode+1)%presets.length;updatePreset();}
     if(mode===0)drawSpectrum(ctx,w,h,motion);
     else if(mode===1)drawScope(ctx,w,h,bass,mids,t,scopeZoom);
     else if(mode===2)drawTunnel(ctx,w,h,motion);
