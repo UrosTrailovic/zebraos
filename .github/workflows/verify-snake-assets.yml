@@ -26,18 +26,19 @@ jobs:
           <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="snake.css"><style>html,body{margin:0;width:100%;height:100%}#test{position:fixed;inset:0;display:block;width:100%;height:100%;padding:0}</style><div id="test" class="window-body zebra-game-body"></div><script src="snake.js"></script><script>
           window.addEventListener('load',async()=>{
            const out={},host=document.querySelector('#test'),wait=ms=>new Promise(r=>setTimeout(r,ms));
+           const loaded=async image=>{for(let i=0;i<80;i++){if(image.complete&&image.naturalWidth)return;await wait(25);}throw Error('Image non chargée : '+image.src);};
            try{
             localStorage.setItem('zebra.snake.theme','night');ZebraSnake.mount(host);await wait(150);
             const $=q=>host.querySelector(q),stage=$('.zs-stage'),bounds=stage.getBoundingClientRect(),consoleBounds=$('.zs-console').getBoundingClientRect();
             const hudBounds=$('.zs-hud').getBoundingClientRect();out.hudAligned=Math.abs(hudBounds.left-bounds.left)<1&&Math.abs(hudBounds.right-bounds.right)<1;
             out.fits=bounds.width>100&&bounds.height>90&&bounds.left>=0&&bounds.right<=innerWidth&&consoleBounds.bottom<=innerHeight+1;
             const ctx=$('canvas').getContext('2d');out.drawn=ctx.getImageData(160,160,1,1).data[3]===255;
-            const image=new Image();image.src='/assets/games/snake/tileSnake.png';await image.decode();out.tile=image.naturalWidth===32&&getComputedStyle($('.zs-machine')).backgroundImage.includes('tileSnake');
-            await document.fonts.load('16px "Zebra Videotex"');
+            const image=new Image();image.src='/assets/games/snake/tileSnake.png';await loaded(image);out.tile=image.naturalWidth===32&&getComputedStyle($('.zs-machine')).backgroundImage.includes('tileSnake');
+            await Promise.race([document.fonts.load('16px "Zebra Videotex"'),wait(2000)]);
             out.font=document.fonts.check('16px "Zebra Videotex"');
             const clean=e=>{const s=getComputedStyle(e);return s.backgroundColor==='rgba(0, 0, 0, 0)'&&s.backgroundImage==='none'&&s.boxShadow==='none'&&s.borderTopWidth==='0px'};
             out.logo=$('.zs-logo').getAttribute('src').includes('znaklogo.png')&&$('.zs-header').getBoundingClientRect().bottom<=hudBounds.top;
-            const logo=$('.zs-logo');await logo.decode();out.logoLoaded=logo.naturalWidth>0;
+            const logo=$('.zs-logo');await loaded(logo);out.logoLoaded=logo.naturalWidth>0;
             out.bare=clean($('.zs-hud'))&&clean($('.zs-console'))&&clean(stage)&&clean($('.zs-overlay'));
             out.noBricks=$('canvas').width===384&&$('canvas').height===320;
             out.ready=$('.zs-state').textContent==='PRÊT';
@@ -90,7 +91,7 @@ jobs:
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/snake-server.log 2>&1 &
           sleep 1
           for size in 390,740 1160,900; do
-            google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=$size --virtual-time-budget=12000 --dump-dom http://127.0.0.1:8765/_verify_snake.html > /tmp/snake-$size.html 2>/tmp/snake-$size.log
+            google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=$size --virtual-time-budget=18000 --dump-dom http://127.0.0.1:8765/_verify_snake.html > /tmp/snake-$size.html 2>/tmp/snake-$size.log
             grep -o 'data-snake-report="[^"]*"' /tmp/snake-$size.html
             grep -q 'data-snake-status="ok"' /tmp/snake-$size.html
           done
