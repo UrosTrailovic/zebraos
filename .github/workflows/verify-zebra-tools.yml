@@ -100,7 +100,7 @@ jobs:
             await new Promise(resolve=>setTimeout(resolve,160));
             var icons=Array.from(document.querySelectorAll(".desk-icon .desk-caption")).map(e=>e.textContent);
             report.desktop=["Jeux","Outils","Zebra Tape 2","sadate","ZebraAMP.exe","Réglage de l’ordinateur"].every(n=>icons.includes(n))
-              &&!icons.includes("Poste de travail")&&!icons.includes("ATELIER")&&!icons.includes("Tetris.exe")&&!icons.includes("Snake.exe")
+              &&!icons.includes("Poste de travail")&&!icons.includes("ATELIER")&&!icons.includes("Tetris.exe")&&!icons.includes("Znak.exe")
               &&icons.includes("Corbeille")&&!icons.includes("Gestionnaire Studio");
             function desk(label){return Array.from(document.querySelectorAll(".desk-icon")).find(e=>e.querySelector(".desk-caption")?.textContent===label);}
             function entry(label){return Array.from(document.querySelectorAll(".github-file-entry")).find(e=>e.querySelector(".github-file-name")?.textContent===label);}
@@ -138,8 +138,16 @@ jobs:
             report.trashRestore=!!desk("ZebraAMP.exe")&&JSON.parse(localStorage.getItem("zebra.desktop.v1.visitor")).trash.length===0;
             desk("Jeux").click();
             await new Promise(resolve=>setTimeout(resolve,150));
-            report.gamesFolder=!!entry("Tetris.exe")&&!!entry("Snake.exe")
+            report.gamesFolder=!!entry("Tetris.exe")&&!!entry("Znak.exe")
               &&!entry("ZebraCalc.exe");
+            const znakEntry=entry("Znak.exe"),znakIcon=znakEntry.querySelector(".bureau-custom-icon");
+            await znakIcon.decode();report.znakFolderIcon=znakIcon.naturalWidth===64;
+            znakEntry.click();await window.ZebraLazyApps.load("snake");
+            await new Promise(resolve=>setTimeout(resolve,100));
+            const znakWindow=document.querySelector(".zs-machine").closest(".window");
+            report.znakName=znakWindow.querySelector(".windowtitle").textContent==="Znak.exe";
+            const titleIcon=znakWindow.querySelector(".titlebar img.os-icon-graphic");await titleIcon.decode();
+            report.znakTitleIcon=titleIcon.naturalWidth===64;
             entry("Tetris.exe").click();
             // Le moteur n'est téléchargé qu'au premier lancement.
             await window.ZebraLazyApps.load("tetris");

@@ -110,6 +110,13 @@ function playMechanicalClick(name){
 
 /* Custom ZebraOS desktop sprite: user-supplied 128px PNGs, optimised for small UI sizes. */
 function osIcon(name,size){
+  if(name==="snake"){
+    var znak=el("img","os-icon-graphic");
+    znak.src="/STUDIO/BUREAU/Jeux/Znak.exe.zebraos.json.icone.png?v=1";
+    znak.alt="";znak.width=size;znak.height=size;
+    znak.style.width=size+"px";znak.style.height=size+"px";znak.style.objectFit="contain";
+    znak.setAttribute("aria-hidden","true");return znak;
+  }
   if(name==="tetris"||name==="snake"||name==="paint"){
     var retro=el("span","zapp-icon zapp-"+name,name==="tetris"?"▦":name==="snake"?"▥":"✎");
     retro.style.width=size+"px";retro.style.height=size+"px";
@@ -689,8 +696,8 @@ function openUtility(name){
 var gameModules={
  tetris:{name:"Tetris.exe",width:735,height:770,global:"ZebraTetris",
   files:["tetris-artwork.js?v=1.7","tetris.js?v=2.3"]},
- snake:{name:"Snake.exe",width:650,height:700,global:"ZebraSnake",
-  files:["snake.js?v=3.7"],css:"snake.css?v=3.7"},
+ snake:{name:"Znak.exe",width:650,height:700,global:"ZebraSnake",
+  files:["snake.js?v=3.8"],css:"snake.css?v=3.7"},
  paint:{name:"ZebraPaint.exe",width:850,height:640,global:"ZebraPaint",
   files:["paint.js?v=1.4"],css:"paint-responsive.css?v=1.4"}
 };

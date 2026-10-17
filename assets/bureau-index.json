@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-17T00:43:28.882610+00:00",
+  "generatedAt": "2026-10-17T01:05:14.916Z",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -28,9 +28,9 @@
       "type": "dir"
     },
     {
-      "path": "STUDIO/BUREAU/Jeux/Snake.exe.zebraos.json",
+      "path": "STUDIO/BUREAU/Jeux/Znak.exe.zebraos.json",
       "type": "app",
-      "name": "Snake.exe",
+      "name": "Znak.exe",
       "app": "snake",
       "icon": "snake"
     },
@@ -514,6 +514,11 @@
       "path": "STUDIO/BUREAU/thanks.txt",
       "type": "file",
       "size": 107
+    },
+    {
+      "path": "STUDIO/BUREAU/Jeux/Znak.exe.zebraos.json.icone.png",
+      "type": "file",
+      "size": 2110
     }
   ]
 }
