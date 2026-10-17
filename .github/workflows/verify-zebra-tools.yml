@@ -5,6 +5,7 @@ on:
       - 'zebra-tools.js'
       - 'zebra-tools.css'
       - 'github-files.js'
+      - 'folder-views.css'
       - 'media-thumbnails.css'
       - 'desktop-layout.js'
       - 'desktop-layout.css'
@@ -140,6 +141,18 @@ jobs:
             await new Promise(resolve=>setTimeout(resolve,150));
             report.gamesFolder=!!entry("Tetris.exe")&&!!entry("Znak.exe")
               &&!entry("ZebraCalc.exe");
+            const viewSelect=document.querySelector(".folder-view-select"),desktopWidth=desk("Jeux").querySelector("img").getBoundingClientRect().width;
+            report.folderViews=Array.from(viewSelect.options).map(o=>o.textContent).join("|")==="Petites icônes|Icônes moyennes|Grandes icônes|Liste";
+            report.folderSizes=true;
+            for(const [view,px] of [["small",24],["medium",32],["large",64],["list",20]]){
+             viewSelect.value=view;viewSelect.dispatchEvent(new Event("change"));
+             const grid=document.querySelector(".github-drive-list"),icon=entry("Znak.exe").querySelector(".bureau-custom-icon");
+             report.folderSizes=report.folderSizes&&grid.dataset.view===view&&Math.abs(icon.getBoundingClientRect().width-px)<1;
+            }
+            report.folderList=getComputedStyle(entry("Znak.exe")).display==="grid"&&getComputedStyle(document.querySelector(".github-drive-list")).display==="flex";
+            report.desktopSizeUntouched=desk("Jeux").querySelector("img").getBoundingClientRect().width===desktopWidth;
+            viewSelect.value="large";viewSelect.dispatchEvent(new Event("change"));
+            report.folderViewSaved=localStorage.getItem("zebraos.folder-view.v1.visitor")==="large";
             const znakEntry=entry("Znak.exe"),znakIcon=znakEntry.querySelector(".bureau-custom-icon");
             await znakIcon.decode();report.znakFolderIcon=znakIcon.naturalWidth===64;
             znakEntry.click();await window.ZebraLazyApps.load("snake");
@@ -155,6 +168,7 @@ jobs:
             report.tetrisWorks=!!document.querySelector(".zg-tetris-stage");
             desk("Outils").click();
             await new Promise(resolve=>setTimeout(resolve,150));
+            report.folderViewRetained=document.querySelector(".folder-view-select").value==="large"&&document.querySelector(".github-drive-list").dataset.view==="large";
             report.toolsFolder=!!entry("ZebraCalc.exe")&&!!entry("ZebraSticky.exe")
               &&!!entry("ZebraPlanner.exe")&&!!entry("ZebraPaint.exe")
               &&!!entry("Bloc-notes")&&!entry("Réglage de l’ordinateur");

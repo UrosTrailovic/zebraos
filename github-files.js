@@ -288,6 +288,9 @@ function mount(host,path,opts){
  host._zebraPublicTicket=ticket;
  var admin=!!opts.canUpload;
  var account=typeof opts.session==="string"?opts.session:"visitor";
+ var viewSizes={small:24,medium:32,large:64,list:20},view="medium";
+ var viewKey="zebraos.folder-view.v1."+account;
+ try{var savedView=localStorage.getItem(viewKey);if(Object.keys(viewSizes).includes(savedView))view=savedView;}catch(_){}
  var place=path===ROOT?"Bureau":path.slice(ROOT.length+1).replace(/\//g," \\ ");
  var w=host.closest(".window");
  if(w){var title=w.querySelector(".windowtitle");if(title)title.textContent="Poste de travail — "+place;}
@@ -300,6 +303,20 @@ function mount(host,path,opts){
  button("↑",function(){mount(host,path===ROOT?ROOT:path.substring(0,path.lastIndexOf("/")),opts);});
  var refreshButton=button("↻ Actualiser",reload);
  if(admin)button("Ajouter sur GitHub ↗",function(){openExternal(upload(path));});
+ var viewControl=node("label","folder-view-control");
+ viewControl.appendChild(node("span","","Affichage"));
+ var viewSelect=node("select","folder-view-select");viewSelect.setAttribute("aria-label","Affichage du dossier");
+ [["small","Petites icônes"],["medium","Icônes moyennes"],["large","Grandes icônes"],["list","Liste"]].forEach(function(item){
+  var option=node("option","",item[1]);option.value=item[0];viewSelect.appendChild(option);
+ });
+ viewSelect.value=view;
+ viewSelect.onchange=function(){
+  if(!isCurrent())return;
+  view=Object.keys(viewSizes).includes(viewSelect.value)?viewSelect.value:"medium";
+  try{localStorage.setItem(viewKey,view);}catch(_){}
+  render();
+ };
+ viewControl.appendChild(viewSelect);bar.appendChild(viewControl);
  host.appendChild(bar);
  host.appendChild(node("div","folder-path","C:\\BUREAU"+(path===ROOT?"":"\\"+path.slice(ROOT.length+1).replace(/\//g,"\\"))));
  if(admin)host.appendChild(node("p","github-drive-hint","Dossiers et fichiers publics. Pour modifier, utilise GitHub."));
@@ -311,13 +328,14 @@ function mount(host,path,opts){
  function render(){
   if(!isCurrent())return;
   files.innerHTML="";
+  files.dataset.view=view;files.style.setProperty("--folder-icon-size",viewSizes[view]+"px");
   var items=children(path).filter(function(item){return !item.sessions||item.sessions.includes(account);});
   msg.style.display=items.length?"none":"";
   msg.className="github-drive-empty";
   msg.textContent="Ce dossier est vide.";
   items.forEach(function(item){
    var b=node("button","file-entry github-file-entry");b.type="button";b.title=item.name;
-   b.appendChild(icon(item,opts.osIcon,32));
+   b.appendChild(icon(item,opts.osIcon,viewSizes[view]));
    b.appendChild(node("span","github-file-name",item.name));
    b.appendChild(node("small","github-file-size",item.type==="dir"?"Dossier":item.type==="app"?"Application":sizeText(item.size)));
    b.onclick=function(){if(item.type==="dir")mount(host,item.path,opts);else preview(item,opts);};

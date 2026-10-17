@@ -1,0 +1,23 @@
+/* Explorer display modes; desktop icons keep their own layout and sizes. */
+.folder-view-control{margin-left:auto;display:flex;align-items:center;gap:6px;font:11px Tahoma,Arial,sans-serif;color:#263834;max-width:100%}
+.folder-view-select{max-width:100%;min-height:29px;border:2px inset #e0e0e0;border-radius:0;background:#fff;color:#172923;font:12px Tahoma,Arial,sans-serif;padding:3px 5px;cursor:pointer}
+.folder-view-select:focus-visible{outline:2px solid #254b7c;outline-offset:2px}
+.github-drive-list[data-view]>.github-file-entry>.bureau-item-symbol:not(.bureau-media-thumb){width:var(--folder-icon-size);height:var(--folder-icon-size);min-width:var(--folder-icon-size);min-height:var(--folder-icon-size)}
+.github-drive-list[data-view] .bureau-custom-icon{width:var(--folder-icon-size);height:var(--folder-icon-size);image-rendering:pixelated}
+.github-drive-list[data-view="small"]{grid-template-columns:repeat(auto-fill,minmax(min(96px,100%),1fr))}
+.github-drive-list[data-view="small"]>.github-file-entry{min-height:76px;padding:7px 5px}
+.github-drive-list[data-view="small"]>.github-file-entry>.bureau-media-thumb{width:56px;height:44px}
+.github-drive-list[data-view="small"]>.github-file-entry:has(>.bureau-media-thumb){min-height:98px}
+.github-drive-list[data-view="large"]{grid-template-columns:repeat(auto-fill,minmax(min(150px,100%),1fr));gap:10px}
+.github-drive-list[data-view="large"]>.github-file-entry{min-height:128px;padding:10px 8px;gap:8px}
+.github-drive-list[data-view="large"]>.github-file-entry>.bureau-media-thumb{width:112px;height:88px}
+.github-drive-list[data-view="large"]>.github-file-entry:has(>.bureau-media-thumb){min-height:162px}
+.github-drive-list[data-view="large"] .bureau-video-reel{font-size:46px}
+.github-drive-list[data-view="list"]{display:flex;flex-direction:column;gap:2px}
+.github-drive-list[data-view="list"]>.github-file-entry{display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;text-align:left;width:100%;min-height:36px;padding:5px 8px;gap:9px}
+.github-drive-list[data-view="list"]>.github-file-entry>.github-file-name{white-space:nowrap;text-overflow:ellipsis;overflow:hidden;min-width:0;text-align:left}
+.github-drive-list[data-view="list"]>.github-file-entry>.github-file-size{font-size:10px;text-align:right;margin-left:5px;white-space:nowrap}
+.github-drive-list[data-view="list"]>.github-file-entry>.bureau-media-thumb{width:28px;height:24px;max-width:28px;margin:0;padding:1px;border-width:1px}
+.github-drive-list[data-view="list"] .bureau-video-reel{font-size:16px}
+.github-drive-list[data-view="list"] .bureau-video-play{display:none}
+@media(max-width:700px){.folder-view-control{margin-left:auto}.folder-view-select{min-height:35px;font-size:12px}.folder-view-control>span{display:none}}
