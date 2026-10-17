@@ -56,6 +56,12 @@ jobs:
             document.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true}));out.keyboard=$('.zs-state').textContent==='PAUSE';
             $('.zs-restart').click();out.restart=$('.zs-state').textContent==='EN JEU'&&$('.zs-score').textContent==='0000';
             out.mobile=innerWidth>700||getComputedStyle($('.zs-handheld')).display==='flex';
+            if(innerWidth<=700){
+             const pad=$('.zs-dpad').getBoundingClientRect(),ab=$('.zs-ab').getBoundingClientRect();
+             out.largeDirections=Array.from(host.querySelectorAll('.zs-dir')).every(b=>{const r=b.getBoundingClientRect();return r.width>=44&&r.height>=44});
+             out.largeAB=Array.from(host.querySelectorAll('.zs-ab button')).every(b=>parseFloat(getComputedStyle(b).width)>=50);
+             out.centeredControls=pad.left>=24&&ab.right<=innerWidth-24&&ab.left-pad.right>=5&&ab.left-pad.right<=32;
+            }
             host._zebraDispose();await wait(320);out.dispose=$('.zs-state').textContent==='EN JEU';
            }catch(e){out.error=String(e.stack||e)}
            document.documentElement.dataset.snakeReport=JSON.stringify(out);document.documentElement.dataset.snakeStatus=Object.values(out).every(v=>v===true)?'ok':'failed';
