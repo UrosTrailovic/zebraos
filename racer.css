@@ -1,5 +1,5 @@
 .zr-game{box-sizing:border-box;width:100%;height:100%;min-height:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px;background:linear-gradient(#241340,#090b1d 65%);color:#ffe8bc;font-family:monospace;overflow:hidden;touch-action:none;user-select:none}
-.zr-screen{position:relative;width:min(100%,calc((100vh - 190px)*16/9));max-width:960px;aspect-ratio:16/9;min-height:0;flex:1 1 auto;filter:drop-shadow(0 0 12px #ff3c9455);border:2px solid #fa6ba4;background:#16102c}
+.zr-screen{position:relative;width:min(100%,calc((100vh - 190px)*16/9));max-width:960px;aspect-ratio:16/9;min-height:0;flex:0 1 auto;filter:drop-shadow(0 0 12px #ff3c9455);border:2px solid #fa6ba4;background:#16102c}
 .zr-screen canvas{display:block;width:100%;height:100%;image-rendering:auto}
 .zr-start{position:absolute;left:50%;top:61%;translate:-50% -50%;min-width:150px;padding:10px 25px;border:2px solid #ffd37b;background:#39175f;color:#fff1c1;box-shadow:4px 4px 0 #110822;font:700 20px monospace;cursor:pointer}
 .zr-start[hidden]{display:none}
@@ -11,6 +11,6 @@
 .zr-controls button:active{translate:0 4px;box-shadow:inset 2px 2px #160c2a}
 .zr-help{margin:0;font-size:11px;color:#f5a4c9;flex:0 0 auto;text-align:center}
 .zapp-racer{display:inline-grid;place-items:center;border:2px solid #1a1130;border-radius:5px;background:linear-gradient(145deg,#ffb369 0 38%,#d43478 39% 67%,#342069 68%);color:#fff0a8;text-shadow:1px 2px #251138;box-shadow:inset 1px 1px #ffdba5,inset -2px -2px #17102d;font-family:monospace;font-weight:900}
-@media(max-width:700px),(max-height:650px){.zr-game{padding:5px;gap:4px}.zr-screen{width:min(100%,calc((100vh - 124px)*16/9));flex:1 1 auto}.zr-controls{height:70px;flex-basis:70px;width:100%}.zr-controls button{width:64px;height:54px}.zr-pedals button{width:60px;height:54px;font-size:11px}.zr-help{font-size:9px}}
+@media(max-width:700px),(max-height:650px){.zr-game{padding:5px;gap:4px}.zr-screen{width:min(100%,calc((100vh - 124px)*16/9));flex:0 1 auto}.zr-controls{height:70px;flex-basis:70px;width:100%}.zr-controls button{width:64px;height:54px}.zr-pedals button{width:60px;height:54px;font-size:11px}.zr-help{font-size:9px}}
 @media(max-width:390px){.zr-controls button{width:55px;height:50px}.zr-pedals button{width:53px}.zr-steer,.zr-pedals{gap:5px}}
 @media(hover:hover) and (pointer:fine){.zr-controls{opacity:.82}.zr-controls button:hover{filter:brightness(1.12)}}
