@@ -90,6 +90,23 @@ test('custom music loops and custom lose starts at impact without a competing sy
 });
 
 const {createDuel,LEVEL_MS}=context.window.ZebraSnake;
+test('level 3 background keeps native tiles and builds a one-tile inset frame',()=>{
+ const {drawLevel3Background}=context.window.ZebraSnake,calls=[];
+ const ctx={fillStyle:'',imageSmoothingEnabled:true,fillRect(){},drawImage(...args){calls.push(args);}};
+ const tiles={tile1:{name:'base'},tile2:{name:'frame'},tile3:{name:'center'}};
+ drawLevel3Background(ctx,tiles);
+ assert.equal(ctx.imageSmoothingEnabled,false);
+ assert.equal(calls.filter(c=>c[0]===tiles.tile1).length,36,'tile1 fills the 6 x 6 board');
+ assert.equal(calls.filter(c=>c[0]===tiles.tile2).length,12,'tile2 makes the inset ring');
+ assert.deepEqual(calls.at(-1),[tiles.tile3,127,127,130,130]);
+});
+test('level 4 reuses the level 3 board with a blue-red screen filter',()=>{
+ const {drawLevel4Background}=context.window.ZebraSnake,calls=[],stops=[];
+ const ctx={fillStyle:'',filter:'none',globalCompositeOperation:'source-over',imageSmoothingEnabled:true,fillRect(...args){calls.push(['fill',...args]);},drawImage(...args){calls.push(['image',...args]);},createLinearGradient(){return {addColorStop(...args){stops.push(args);}};}};
+ const source={name:'level3'};drawLevel4Background(ctx,source);
+ assert.ok(calls.some(c=>c[0]==='image'&&c[1]===source));assert.deepEqual(stops.map(s=>s[1]),['rgba(0,50,190,.48)','rgba(20,0,55,.16)','rgba(210,0,28,.46)']);
+ assert.equal(ctx.filter,'none');assert.equal(ctx.globalCompositeOperation,'source-over');
+});
 test('hitting a wall or the other serpent kills immediately without a stuck state',()=>{
  const wall=createDuel({players:2,level:2});wall.players[0].snake=[{x:23,y:5},{x:22,y:5}];wall.players[1].snake=[{x:10,y:15},{x:11,y:15}];wall.toggle();wall.tick();
  assert.equal(wall.state,'hurt');assert.equal(wall.winner,2);assert.equal(wall.players[0].lost,true);
@@ -105,9 +122,9 @@ test('simultaneous head-on collision is a draw and never overlaps heads',()=>{
  const g=createDuel({players:2,level:1});g.players[0].snake=[{x:10,y:10}];g.players[1].snake=[{x:12,y:10}];g.toggle();g.tick();
  assert.equal(g.winner,0);assert.equal(g.state,'hurt');assert.equal(g.players[0].snake[0].x,10);assert.equal(g.players[1].snake[0].x,12);
 });
-test('three levels, separate queues, safe food and AI movement',()=>{
- assert.deepEqual(Array.from(LEVEL_MS),[180,135,95]);
- for(let level=1;level<=3;level++){
+test('four levels, separate queues, safe food and AI movement',()=>{
+ assert.deepEqual(Array.from(LEVEL_MS),[180,135,95,75]);
+ for(let level=1;level<=4;level++){
   const g=createDuel({players:1,level},()=>.5);g.toggle();for(let i=0;i<100;i++){g.tick();if(g.state!=='running')break;}
   assert.ok(g.players.every(p=>p.snake.every(q=>q.x>=0&&q.x<24&&q.y>=0&&q.y<24)));
   if(g.food)assert.ok(!g.players.some(p=>p.snake.some(q=>q.x===g.food.x&&q.y===g.food.y)));

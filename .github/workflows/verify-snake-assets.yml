@@ -35,6 +35,7 @@ jobs:
             out.fits=bounds.width>100&&bounds.height>90&&bounds.left>=0&&bounds.right<=innerWidth&&consoleBounds.bottom<=innerHeight+1;
             const ctx=$('canvas').getContext('2d');out.drawn=ctx.getImageData(160,160,1,1).data[3]===255;
             const image=new Image();image.src='/assets/games/snake/tileSnake.png';await loaded(image);out.tile=image.naturalWidth===32&&getComputedStyle($('.zs-machine')).backgroundImage.includes('tileSnake');
+            const levelTiles=['tile1.png','tile2.png','tile3.png'].map(name=>{const image=new Image();image.src='/assets/games/snake/'+name;return image;});await Promise.all(levelTiles.map(loaded));out.level3Tiles=levelTiles.map(i=>i.naturalWidth+'x'+i.naturalHeight).join('|')==='64x64|64x64|130x130';
             await Promise.race([document.fonts.load('16px "Zebra Videotex"'),wait(2000)]);
             out.font=document.fonts.check('16px "Zebra Videotex"');
             const clean=e=>{const s=getComputedStyle(e);return s.backgroundColor==='rgba(0, 0, 0, 0)'&&s.backgroundImage==='none'&&s.boxShadow==='none'&&s.borderTopWidth==='0px'};
@@ -47,7 +48,7 @@ jobs:
             out.launch=!$('.zs-launch').hidden&&$('.zs-launch h1').textContent==='Znake'&&!$('.zs-mode-page').hidden&&$('.zs-level-page').hidden;
             out.modeChoices=Array.from(host.querySelectorAll('[data-mode]')).map(b=>b.textContent).join('|')==='CONTRE ROBOT|VS LOCAL';
             $('[data-mode="robot"]').click();out.levelPage=$('.zs-mode-page').hidden&&!$('.zs-level-page').hidden;
-            out.threeLevels=Array.from(host.querySelectorAll('[data-level]')).map(b=>b.textContent).join('|')==='NIVEAU 1|NIVEAU 2|NIVEAU 3';
+            out.fourLevels=Array.from(host.querySelectorAll('[data-level]')).map(b=>b.textContent).join('|')==='NIVEAU 1|NIVEAU 2|NIVEAU 3|NIVEAU 4';
             $('[data-level="2"]').click();out.soloDuel=$('.zs-state').textContent==='EN JEU'&&$('.zs-best-label').textContent==='ORDI';$('.zs-menu').click();
             $('[data-mode="local"]').click();$('[data-level="1"]').click();await wait(40);
             out.duo=$('.zs-machine').dataset.duo==='true'&&$('.zs-best-label').textContent==='J2';
@@ -66,7 +67,8 @@ jobs:
             document.dispatchEvent(new KeyboardEvent('keydown',{key:' ',repeat:true,bubbles:true}));out.spaceHeld=$('.zs-state').textContent==='EN JEU';
             $('.zs-menu').click();
             const ground=ctx.getImageData(0,0,1,1).data;out.groveOnly=!$('.zs-themes')&&!$('.zs-theme')&&ground[1]>100&&ground[0]<70&&ground[2]<70;
-            $('[data-mode="robot"]').click();$('[data-level="3"]').click();out.play=$('.zs-state').textContent==='EN JEU'&&$('.zs-overlay').hidden;
+            $('[data-mode="robot"]').click();$('[data-level="3"]').click();for(let i=0;i<80&&!$('.zs-machine').dataset.level3Ready;i++)await wait(25);out.play=$('.zs-state').textContent==='EN JEU'&&$('.zs-overlay').hidden;
+            const level3Corner=ctx.getImageData(4,4,1,1).data,level3Center=ctx.getImageData(192,192,1,1).data;out.level3Board=$('.zs-machine').dataset.level3Ready==='true'&&level3Corner.some((v,i)=>i<3&&v!==level3Center[i]);
             $('.zs-play').click();out.pause=$('.zs-state').textContent==='PAUSE'&&!$('.zs-overlay').hidden;
             out.pauseTitle=$('.zs-overlay strong').textContent==='PAUSE'&&parseFloat(getComputedStyle($('.zs-overlay strong')).fontSize)>=24;
             $('.zs-menu').click();$('.zs-up').dispatchEvent(new PointerEvent('pointerdown',{button:0,bubbles:true}));out.menuDpad=$('.zs-state').textContent==='PRÊT';
@@ -97,7 +99,7 @@ jobs:
             out.impact=$('.zs-machine').dataset.state==='hurt'&&$('.zs-overlay').hidden;
             document.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true}));out.lockedImpact=$('.zs-machine').dataset.state==='hurt';
             await wait(2100);
-            out.gameoverTitle=$('.zs-state').textContent==='GAME OVER'&&$('.zs-overlay strong').textContent==='GAME OVER';
+            out.gameoverTitle=/^(PLAYER 1 WIN|ZNAKEBOT WIN|DRAW)$/.test($('.zs-state').textContent)&&$('.zs-overlay strong').textContent===$('.zs-state').textContent;
             out.restartCaption=$('.zs-overlay span').textContent==='Appuyer sur espace pour recommencer';
             out.redTitle=getComputedStyle($('.zs-overlay strong')).color==='rgb(255, 38, 61)';
             out.gameoverBlink=getComputedStyle($('.zs-overlay strong')).animationName.includes('zs-gameover');

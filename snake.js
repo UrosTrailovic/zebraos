@@ -31,9 +31,9 @@ function createGame(random=Math.random){
  };
  g.reset();return g;
 }
-const LEVEL_MS=[180,135,95];
+const LEVEL_MS=[180,135,95,75];
 function createDuel(options={},random=Math.random){
- const level=Math.max(1,Math.min(3,Number(options.level)||1)),humans=options.players===2?2:1;
+ const level=Math.max(1,Math.min(4,Number(options.level)||1)),humans=options.players===2?2:1;
  const g={state:'ready',players:[],food:null,impact:null,winner:null,level,humans,ticks:0,kind:'duel'};
  Object.defineProperties(g,{snake:{get:()=>g.players[0].snake},direction:{get:()=>g.players[0].direction},score:{get:()=>g.players[0].score}});
  const same=(a,b)=>a.x===b.x&&a.y===b.y;
@@ -121,6 +121,27 @@ function drawBackground(ctx){
  }
  for(const p of [[21,22],[139,34],[325,27],[53,121],[289,139],[18,257],[165,267],[328,262]])tree(...p);
  for(const p of [[76,38],[227,22],[347,94],[117,116],[191,83],[20,199],[237,202],[320,222],[84,279],[271,287]])bush(...p);
+}
+function drawLevel3Background(ctx,tiles={}){
+ ctx.imageSmoothingEnabled=false;
+ ctx.fillStyle='#282622';ctx.fillRect(0,0,CW,CH);
+ const base=tiles.tile1,frame=tiles.tile2,center=tiles.tile3;
+ if(base)for(let y=0;y<CH;y+=64)for(let x=0;x<CW;x+=64)ctx.drawImage(base,x,y,64,64);
+ if(frame){
+  // A native 64 px ring, one tile in from the board edge.
+  for(let x=64;x<=256;x+=64){ctx.drawImage(frame,x,64,64,64);ctx.drawImage(frame,x,256,64,64);}
+  for(let y=128;y<=192;y+=64){ctx.drawImage(frame,64,y,64,64);ctx.drawImage(frame,256,y,64,64);}
+ }
+ // The supplied 130 px emblem stays unscaled and lands on the exact board centre.
+ if(center)ctx.drawImage(center,127,127,130,130);
+}
+function drawLevel4Background(ctx,source){
+ ctx.imageSmoothingEnabled=false;
+ ctx.fillStyle='#090a14';ctx.fillRect(0,0,CW,CH);
+ if(!source)return;
+ ctx.filter='contrast(1.22) saturate(1.35) brightness(.72)';ctx.drawImage(source,0,0);ctx.filter='none';
+ const wash=ctx.createLinearGradient?ctx.createLinearGradient(0,0,CW,0):null;
+ if(wash){wash.addColorStop(0,'rgba(0,50,190,.48)');wash.addColorStop(.5,'rgba(20,0,55,.16)');wash.addColorStop(1,'rgba(210,0,28,.46)');ctx.globalCompositeOperation='screen';ctx.fillStyle=wash;ctx.fillRect(0,0,CW,CH);ctx.globalCompositeOperation='source-over';}
 }
 function draw(ctx,g,background){
  ctx.imageSmoothingEnabled=false;
@@ -219,13 +240,21 @@ function mount(root){
  fetch('/assets/games/snake/audio.json?v=1',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(a=>{if(alive)sounds.configure(a);}).catch(()=>{});
  try{best=Number(localStorage.getItem('zebra.snake.best'))||0;}catch(_){}
  const wrap=make('div','zs-machine');
- wrap.innerHTML='<header class="zs-header"><img class="zs-logo" src="/assets/games/snake/znaklogo.png?v=1" alt="Znake" width="165" height="98"></header><div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div><label class="zs-score-label">SCORE</label> <b class="zs-score">0000</b></div><div><label class="zs-best-label">RECORD</label> <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znake : manger les pommes, éviter les murs et sa queue"></canvas><section class="zs-launch" aria-label="Menu de Znake"><div class="zs-menu-page zs-mode-page"><h1>Znake</h1><canvas class="zs-title-art" aria-hidden="true"></canvas><div class="zs-menu-list" role="group" aria-label="Mode de jeu"><button type="button" data-mode="robot">CONTRE ROBOT</button><button type="button" data-mode="local">VS LOCAL</button></div><small>FLÈCHES : CHOISIR · ESPACE : VALIDER</small></div><div class="zs-menu-page zs-level-page" hidden><h2>CHOISIS TON NIVEAU</h2><div class="zs-level-list" role="group" aria-label="Niveau"><button type="button" data-level="1">NIVEAU 1</button><button type="button" data-level="2">NIVEAU 2</button><button type="button" data-level="3">NIVEAU 3</button></div><button type="button" class="zs-menu-back">◀ RETOUR</button><small>ESPACE : JOUER</small></div></section><div class="zs-overlay"><strong role="heading" aria-level="2"></strong><em class="zs-result"></em><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console zg-retro"><div class="zs-handheld zt-handheld zt-skin-ready"><div class="zs-toolbar zg-buttons zt-buttons"></div><div class="zs-dpad zt-dpad" aria-label="Direction"><div class="zs-cross zt-cross"></div></div><div class="zs-action-side zt-action-side"><div class="zs-ab zt-ab"></div><span class="zs-select-space zt-select" aria-hidden="true"></span></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
+ wrap.innerHTML='<header class="zs-header"><img class="zs-logo" src="/assets/games/snake/znaklogo.png?v=1" alt="Znake" width="165" height="98"></header><div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div><label class="zs-score-label">SCORE</label> <b class="zs-score">0000</b></div><div><label class="zs-best-label">RECORD</label> <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znake : manger les pommes, éviter les murs et sa queue"></canvas><section class="zs-launch" aria-label="Menu de Znake"><div class="zs-menu-page zs-mode-page"><h1>Znake</h1><canvas class="zs-title-art" aria-hidden="true"></canvas><div class="zs-menu-list" role="group" aria-label="Mode de jeu"><button type="button" data-mode="robot">CONTRE ROBOT</button><button type="button" data-mode="local">VS LOCAL</button></div><small>FLÈCHES : CHOISIR · ESPACE : VALIDER</small></div><div class="zs-menu-page zs-level-page" hidden><h2>CHOISIS TON NIVEAU</h2><div class="zs-level-list" role="group" aria-label="Niveau"><button type="button" data-level="1">NIVEAU 1</button><button type="button" data-level="2">NIVEAU 2</button><button type="button" data-level="3">NIVEAU 3</button><button type="button" data-level="4">NIVEAU 4</button></div><button type="button" class="zs-menu-back">◀ RETOUR</button><small>ESPACE : JOUER</small></div></section><div class="zs-overlay"><strong role="heading" aria-level="2"></strong><em class="zs-result"></em><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console zg-retro"><div class="zs-handheld zt-handheld zt-skin-ready"><div class="zs-toolbar zg-buttons zt-buttons"></div><div class="zs-dpad zt-dpad" aria-label="Direction"><div class="zs-cross zt-cross"></div></div><div class="zs-action-side zt-action-side"><div class="zs-ab zt-ab"></div><span class="zs-select-space zt-select" aria-hidden="true"></span></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
  root.appendChild(wrap);
  const $=s=>wrap.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d');canvas.width=CW;canvas.height=CH;
  const stage=$('.zs-stage'),arena=$('.zs-arena'),hud=$('.zs-hud'),overlay=$('.zs-overlay'),status=$('.zs-state');
  function button(label,cls,fn,parent){const e=make('button','zs-button '+cls,label);e.type='button';e.onclick=function(event){sounds.unlock();fn(event);};parent.appendChild(e);return e;}
  const background=document.createElement('canvas');background.width=CW;background.height=CH;
  drawBackground(background.getContext('2d'));
+ const level3Background=document.createElement('canvas');level3Background.width=CW;level3Background.height=CH;
+ const level4Background=document.createElement('canvas');level4Background.width=CW;level4Background.height=CH;
+ drawLevel3Background(level3Background.getContext('2d'));
+ drawLevel4Background(level4Background.getContext('2d'));
+ const level3Tiles={};
+ for(const [name,src]of Object.entries({tile1:'/assets/games/snake/tile1.png?v=1',tile2:'/assets/games/snake/tile2.png?v=1',tile3:'/assets/games/snake/tile3.png?v=1'})){
+  const image=new Image();image.onload=()=>{level3Tiles[name]=image;if(Object.keys(level3Tiles).length===3){drawLevel3Background(level3Background.getContext('2d'),level3Tiles);drawLevel4Background(level4Background.getContext('2d'),level3Background);wrap.dataset.level3Ready='true';wrap.dataset.level4Ready='true';if(alive&&settings.level>=3)render();}};image.src=src;
+ }
  function clearCrash(){if(crashTimer!==null){clearTimeout(crashTimer);crashTimer=null;}}
  function restart(){if(g.state==='hurt')return;clearCrash();sounds.stop();lastState='ready';lastScore=0;elapsed=0;g=g.state==='ready'?createDuel(settings):g;g.reset();g.toggle();render();}
  function action(){if(g.state==='ready'){chooseMenu();return;}if(g.state==='over'||g.state==='won')restart();else{g.toggle();render();}}
@@ -249,13 +278,13 @@ function mount(root){
   choices.forEach((b,i)=>b.setAttribute('aria-current',i===menuIndex?'true':'false'));
  }
  function chooseMode(mode){settings.players=mode==='local'?2:1;menuPage='level';menuIndex=0;sounds.play('turn');renderMenu();}
- function chooseLevel(level){settings.level=Math.max(1,Math.min(3,Number(level)||1));sounds.unlock();restart();}
+ function chooseLevel(level){settings.level=Math.max(1,Math.min(4,Number(level)||1));sounds.unlock();restart();}
  function chooseMenu(){
   if(menuPage==='mode'){chooseMode(menuIndex===0?'robot':'local');return;}
   chooseLevel(menuIndex+1);
  }
  function navigate(d){
-  const count=menuPage==='mode'?2:3;
+  const count=menuPage==='mode'?2:4;
   if(d==='up'||d==='left')menuIndex=(menuIndex-1+count)%count;
   else if(d==='down'||d==='right')menuIndex=(menuIndex+1)%count;
   sounds.play('turn');renderMenu();
@@ -293,17 +322,18 @@ function mount(root){
   if(g.score>best){best=g.score;try{localStorage.setItem('zebra.snake.best',String(best));}catch(_){}}
   $('.zs-score-label').textContent=g.kind==='duel'&&g.state!=='ready'?'J1':'SCORE';$('.zs-best-label').textContent=g.kind==='duel'&&g.state!=='ready'?(settings.players===1?'ORDI':'J2'):'RECORD';
   $('.zs-score').textContent=String(g.score).padStart(4,'0');$('.zs-best').textContent=String(g.kind==='duel'&&g.state!=='ready'?g.players[1].score:best).padStart(4,'0');
-  status.textContent=({ready:'PRÊT',running:'EN JEU',paused:'PAUSE',hurt:'AÏE',over:'GAME OVER',won:'VICTOIRE'})[g.state];
+  const duelResult=g.kind==='duel'&&g.state==='over'?(g.winner===0?'DRAW':g.winner===1?'PLAYER 1 WIN':settings.players===1?'ZNAKEBOT WIN':'PLAYER 2 WIN'):'';
+  status.textContent=duelResult||({ready:'PRÊT',running:'EN JEU',paused:'PAUSE',hurt:'AÏE',over:'GAME OVER',won:'VICTOIRE'})[g.state];
   play.textContent=g.state==='running'?'Pause':g.state==='paused'?'Reprendre':g.state==='ready'?'Jouer':'Rejouer';
   wrap.dataset.state=g.state;wrap.dataset.duo=String(g.kind==='duel'&&settings.players===2&&g.state!=='ready');fit();
   launch.hidden=g.state!=='ready';renderMenu();
-  $('.zs-result').textContent=g.kind==='duel'&&g.state==='over'?(g.winner===0?'ÉGALITÉ':g.winner===1?'JOUEUR 1 GAGNE':settings.players===1?'L’ORDI GAGNE':'JOUEUR 2 GAGNE'):'';
+  $('.zs-result').textContent='';
   wrap.querySelectorAll('button').forEach(b=>{b.disabled=g.state==='hurt';});
   overlay.hidden=g.state==='ready'||g.state==='running'||g.state==='hurt';overlay.dataset.state=g.state;
-  overlay.querySelector('strong').textContent=({ready:'ZNAKE',paused:'PAUSE',hurt:'AÏE',over:'GAME OVER',won:'VICTOIRE'})[g.state]||'';
+  overlay.querySelector('strong').textContent=duelResult||({ready:'ZNAKE',paused:'PAUSE',hurt:'AÏE',over:'GAME OVER',won:'VICTOIRE'})[g.state]||'';
   overlay.querySelector('span').textContent=g.state==='ready'?'ESPACE : JOUER':g.state==='paused'?'ESPACE : REPRENDRE':g.state==='over'?'Appuyer sur espace pour recommencer':'SCORE : '+g.score;
   $('.zs-start').textContent=play.textContent;
-  draw(ctx,g,background);
+  draw(ctx,g,settings.level===4?level4Background:settings.level===3?level3Background:background);
  }
  function fit(){const w=Math.max(1,Math.min(arena.clientWidth,arena.clientHeight*CW/CH));stage.style.width=w+'px';stage.style.height=w*CH/CW+'px';hud.style.width=w+'px';}
  function focused(){const w=root.closest('.window');return !w||w.classList.contains('active')||w.classList.contains('focused')||w.style.zIndex===String(Math.max(...Array.from(document.querySelectorAll('.window')).map(e=>Number(e.style.zIndex)||0)));}
@@ -323,5 +353,5 @@ function mount(root){
  fit();render();
  root._zebraDispose=function(){alive=false;clearCrash();sounds.dispose();clearInterval(clock);if(observer)observer.disconnect();window.removeEventListener('resize',fit);window.removeEventListener('blur',blur);document.removeEventListener('keydown',key);document.removeEventListener('visibilitychange',hide);};
 }
-window.ZebraSnake={mount,createGame,createDuel,LEVEL_MS,createSounds,draw,drawBackground,width:CW,height:CH};
+window.ZebraSnake={mount,createGame,createDuel,LEVEL_MS,createSounds,draw,drawBackground,drawLevel3Background,drawLevel4Background,width:CW,height:CH};
 }());
