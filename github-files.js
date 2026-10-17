@@ -10,7 +10,7 @@ var ROOT="STUDIO/BUREAU", REPO="UrosTrailovic/zebraos", BRANCH="main";
 var INDEX="assets/bureau-index.json";
 var APP_IDS={
  "explorer:root":true,"explorer:recycle":true,"studio-manager":true,
- amp:true,settings:true,tetris:true,snake:true,paint:true,
+ amp:true,settings:true,tetris:true,snake:true,racer:true,paint:true,
  calc:true,sticky:true,planner:true,notepad:true
 };
 var known=null,stamp="",desktopOrder=[],loading=null,listeners=[];

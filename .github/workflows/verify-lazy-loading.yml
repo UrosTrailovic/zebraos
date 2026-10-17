@@ -41,6 +41,7 @@ jobs:
             report.noInitialPaint=!has("paint.js")&&!has("paint-responsive.css");
             report.noInitialTetris=!has("tetris.js")&&!has("tetris-artwork.js");
             report.noInitialSnake=!has("snake.js")&&!has("snake-assets.js");
+            report.noInitialRacer=!has("racer.js")&&!has("racer.css");
             report.noInitialVideoRequests=!resources().some(p=>/\.(mp4|webm)$/.test(p));
             const video={type:"file",path:"STUDIO/BUREAU/Photo et vidéo cool/demo.mp4",name:"demo.mp4",size:200000};
             const icon=window.ZebraGitFiles.icon(video,()=>document.createElement("i"),32);
@@ -56,8 +57,10 @@ jobs:
             report.paintMs=Math.round(performance.now()-start);
             const tetris=await loader.load("tetris");
             const snake=await loader.load("snake");
+            const racer=await loader.load("racer");
             report.tetrisLoaded=!!tetris&&typeof tetris.mount==="function"&&has("tetris.js");
             report.snakeLoaded=!!snake&&typeof snake.mount==="function"&&has("snake.js");
+            report.racerLoaded=!!racer&&typeof racer.mount==="function"&&has("racer.js")&&has("racer.css");
             const before=resources().length;
             const again=await loader.load("paint");
             report.reuseCachedModule=again===paint&&resources().length===before;

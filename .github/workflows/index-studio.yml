@@ -30,12 +30,12 @@ jobs:
           # L'index publie leurs noms et IDs d'app, sans les traiter comme du texte.
           apps = {
               "explorer:root", "explorer:recycle", "studio-manager",
-              "amp", "settings", "tetris", "snake", "paint", "calc",
+              "amp", "settings", "tetris", "snake", "racer", "paint", "calc",
               "sticky", "planner", "notepad"
           }
           icons = {
               "computer", "recycle-bin", "zebraamp", "control-panel",
-              "tetris", "snake", "paint", "calc", "sticky", "planner",
+              "tetris", "snake", "racer", "paint", "calc", "sticky", "planner",
               "txt", "folder"
           }
           for path in sorted(root.rglob("*")):
