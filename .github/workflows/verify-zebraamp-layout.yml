@@ -143,13 +143,14 @@ jobs:
                 &&reverbButton.getAttribute("aria-expanded")==="true";
               report.reverbHardware=getComputedStyle(reverbPanel).backgroundImage.includes("radial-gradient")
                 &&getComputedStyle(reverbPanel,"::before").backgroundImage.includes("radial-gradient")
-                &&reverbPanel.querySelector(".amp3-reverb-description").textContent==="RÉVERBÉRATION · DURÉE : 3,4 S";
+                &&reverbPanel.querySelector(".amp3-reverb-description").textContent==="RÉVERBÉRATION · DURÉE : 3,4 S · BPM AUTO : VEILLE";
               report.reverbSteps=reverbInput.min==="0"&&reverbInput.max==="100"&&reverbInput.step==="5";
               reverbInput.value="65";
               reverbInput.dispatchEvent(new Event("input",{bubbles:true}));
               report.reverbPersisted=window.ZebraAMP.debug().reverb===65
                 &&JSON.parse(localStorage.getItem("zebraamp-v3")).reverb===65
-                &&reverbButton.textContent.includes("65 %");
+                &&reverbButton.textContent.includes("65 %")
+                &&reverbPanel.querySelector("[data-amp-reverb-tempo]").textContent.includes("BPM AUTO : ANALYSE");
               report.reverbLazy=!window.ZebraAMP.debug().reverbActive;
               reverbGroup.querySelector(".amp3-reverb-presets button").click();
               report.reverbDryPreset=window.ZebraAMP.debug().reverb===0;

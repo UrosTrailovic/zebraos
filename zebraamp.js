@@ -12,6 +12,7 @@ var album={id:ALBUM,name:"Zebra Tape 2",readonly:true,tracks:[]};
 var playlists=[],current=ALBUM,currentId=null,loadedUrl=null,loadedBlob=null,view=null;
 var coverCache=new Map(),displayedCover=null;
 var ctx=null,filters=[],analyser=null,graphTried=false,reverbGraph=null;
+var tempo={bpm:0,confidence:0,lastPeak:0,fluxMean:0,bassFloor:0,previous:new Float32Array(8),candidates:[]};
 var allSounds=[],dbPromise=null,dbAvailable=true,shuffle=false,repeat="tout",speed=1,preservePitch=false,reverb=0,volume=.7,eq=[0,0,0,0,0],preset="Neutre";
 var presetValues={
  "Neutre":[0,0,0,0,0],
@@ -70,6 +71,53 @@ function applyPitchMode(){
  try{audio.preservesPitch=preservePitch;}catch(e){}
  try{if("mozPreservesPitch" in audio)audio.mozPreservesPitch=preservePitch;}catch(e){}
  try{if("webkitPreservesPitch" in audio)audio.webkitPreservesPitch=preservePitch;}catch(e){}
+}
+function resetTempo(){
+ tempo.bpm=0;tempo.confidence=0;tempo.lastPeak=0;tempo.fluxMean=0;tempo.bassFloor=0;
+ tempo.previous.fill(0);tempo.candidates.length=0;renderReverb();
+}
+function median(values){
+ var sorted=values.slice().sort(function(a,b){return a-b;}),middle=Math.floor(sorted.length/2);
+ return sorted.length%2?sorted[middle]:(sorted[middle-1]+sorted[middle])/2;
+}
+function syncTempoDelay(){
+ if(!reverbGraph||tempo.confidence<.52||!tempo.bpm)return;
+ // Une triple croche de pré-delay laisse passer l'attaque avant la brume.
+ var delay=Math.max(.028,Math.min(.095,60/tempo.bpm/8));
+ var param=reverbGraph.preDelay.delayTime,now=ctx&&ctx.currentTime||0;
+ if(param&&param.setTargetAtTime)param.setTargetAtTime(delay,now,.08);
+ else if(param)param.value=delay;
+}
+function trackTempo(data,nowMs){
+ if(!data||data.length<9||reverb<=0||audio.paused)return;
+ var bass=0,flux=0;
+ for(var i=1;i<=8;i++){
+  var value=data[i]/255;bass+=value;
+  flux+=Math.max(0,value-tempo.previous[i-1]);tempo.previous[i-1]=value;
+ }
+ bass/=8;flux/=8;
+ tempo.bassFloor=tempo.bassFloor*.97+bass*.03;
+ tempo.fluxMean=tempo.fluxMean*.94+flux*.06;
+ var now=nowMs/1000,threshold=Math.max(.018,tempo.fluxMean*2.15);
+ if(flux<threshold||bass<Math.max(.09,tempo.bassFloor*1.08)||now-tempo.lastPeak<.26)return;
+ if(tempo.lastPeak){
+  var gap=now-tempo.lastPeak;
+  if(gap>=.28&&gap<=1.35){
+   var bpm=60/gap;
+   while(bpm<72)bpm*=2;
+   while(bpm>176)bpm/=2;
+   tempo.candidates.push(bpm);if(tempo.candidates.length>20)tempo.candidates.shift();
+   if(tempo.candidates.length>=5){
+    var center=median(tempo.candidates),inliers=tempo.candidates.filter(function(x){return Math.abs(x-center)<=Math.max(5,center*.045);});
+    if(inliers.length>=4){
+     tempo.bpm=Math.round(median(inliers));
+     tempo.confidence=Math.min(1,inliers.length/7)*(inliers.length/tempo.candidates.length);
+     syncTempoDelay();renderReverb();
+    }
+   }
+  }
+ }
+ tempo.lastPeak=now;
 }
 function syncPlaybackSettings(){
  // Certains navigateurs remettent la vitesse effective à 1× lorsqu'une
@@ -249,7 +297,9 @@ function applyReverb(){
  }
 }
 function setReverb(value){
+ var previous=reverb;
  reverb=Math.max(0,Math.min(100,Math.round((Number(value)||0)/5)*5));
+ if((previous===0)!==(reverb===0))resetTempo();
  if(reverb>0&&!audio.paused)resumeGraph();
  applyReverb();store();renderReverb();
 }
@@ -261,6 +311,8 @@ function renderReverb(){
  if(input)input.value=String(reverb);
  var value=view.querySelector("[data-amp-reverb-value]");
  if(value)value.textContent=reverb+" %";
+ var info=view.querySelector("[data-amp-reverb-tempo]");
+ if(info)info.textContent="RÉVERBÉRATION · DURÉE : 3,4 S · BPM AUTO : "+(reverb===0?"VEILLE":tempo.confidence>=.52&&tempo.bpm?tempo.bpm:"ANALYSE…");
 }
 
 function resumeGraph(){
@@ -462,7 +514,7 @@ function releaseUrl(){if(loadedBlob){URL.revokeObjectURL(loadedBlob);loadedBlob=
 function setSource(src,isBlob){
  releaseUrl();
  if(isBlob)loadedBlob=src;
- audio.pause();audio.src=src;syncPlaybackSettings();audio.load();syncPlaybackSettings();renderProgress();
+ audio.pause();resetTempo();audio.src=src;syncPlaybackSettings();audio.load();syncPlaybackSettings();renderProgress();
 }
 function togglePlayback(){
  if(audio.paused){
@@ -733,6 +785,7 @@ function visualize(){
   var bassEnergy=0;
   if(analyser&&bins&&!audio.paused){
    try{analyser.getByteFrequencyData(bins);}catch(e){}
+   trackTempo(bins,now);
   }
   if(analyser&&bins&&window.ZebraVisualizer&&window.ZebraVisualizer.sampleBands){
    window.ZebraVisualizer.sampleBands(bins,analyser,bars,miniBands);
@@ -947,7 +1000,8 @@ function open(){
   reverbPresets.appendChild(b(p[0],function(){setReverb(p[1]);},"amp3-btn amp3-reverb-preset"));
  });
  reverbPanel.appendChild(reverbPresets);
- reverbPanel.appendChild(el("div","amp3-reverb-description","RÉVERBÉRATION · DURÉE : 3,4 S"));
+ var reverbInfo=el("div","amp3-reverb-description","RÉVERBÉRATION · DURÉE : 3,4 S · BPM AUTO : VEILLE");
+ reverbInfo.setAttribute("data-amp-reverb-tempo","");reverbPanel.appendChild(reverbInfo);
  reverbGroup.append(reverbBtn,reverbPanel);
  extra.appendChild(reverbGroup);
  root.appendChild(extra);
@@ -1002,6 +1056,6 @@ function stop(){
 window.ZebraAMP={
  open:open,init:init,stop:stop,importFiles:importFiles,openPublic:openPublic,openBlob:openBlob,
  pick:pick,play:play,updatePublic:updatePublic,media:audio,analyser:function(){return analyser;},
- debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,speed:speed,preservePitch:preservePitch,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected),reverbSeconds:reverbGraph?reverbGraph.seconds:null};}
+ debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,speed:speed,preservePitch:preservePitch,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected),reverbSeconds:reverbGraph?reverbGraph.seconds:null,tempoBpm:tempo.bpm,tempoConfidence:tempo.confidence,reverbPreDelay:reverbGraph?reverbGraph.preDelay.delayTime.value:null};}
 };
 }());
