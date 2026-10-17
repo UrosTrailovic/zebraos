@@ -90,24 +90,26 @@ test('custom music loops and custom lose starts at impact without a competing sy
 });
 
 const {createDuel,LEVEL_MS}=context.window.ZebraSnake;
-test('duel resolves movement simultaneously and lets a blocked head escape',()=>{
- const g=createDuel({players:2,level:2});g.players[0].snake=[{x:23,y:5},{x:22,y:5}];g.players[1].snake=[{x:10,y:15},{x:11,y:15}];
- g.toggle();g.tick();assert.equal(g.state,'running');assert.equal(g.players[0].blocked,140);
- g.turn('down',0);g.tick();assert.equal(g.players[0].snake[0].y,6);assert.equal(g.players[0].blocked,0);
+test('hitting a wall or the other serpent kills immediately without a stuck state',()=>{
+ const wall=createDuel({players:2,level:2});wall.players[0].snake=[{x:23,y:5},{x:22,y:5}];wall.players[1].snake=[{x:10,y:15},{x:11,y:15}];wall.toggle();wall.tick();
+ assert.equal(wall.state,'hurt');assert.equal(wall.winner,2);assert.equal(wall.players[0].lost,true);
+ const enemy=createDuel({players:2,level:1});enemy.players[0].snake=[{x:10,y:10},{x:9,y:10}];enemy.players[1].snake=[{x:11,y:10},{x:12,y:10}];enemy.toggle();enemy.tick();
+ assert.equal(enemy.state,'hurt');assert.equal(enemy.winner,0,'a face-to-face hit is an immediate draw');
 });
-test('a trapped player loses after a grace period, followed by a delayed reveal',()=>{
- const g=createDuel({players:2,level:1});g.players[0].snake=[{x:23,y:5}];g.players[1].snake=[{x:15,y:15}];g.toggle();
- for(let i=0;i<7;i++)g.tick();assert.equal(g.state,'hurt');assert.equal(g.winner,2);assert.equal(g.players[0].lost,true);
- const before=JSON.stringify(g.players);g.tick();assert.equal(JSON.stringify(g.players),before);g.finishCrash();assert.equal(g.state,'over');
+test('turning into the opponent body is an immediate loss',()=>{
+ const g=createDuel({players:2,level:1});g.players[0].snake=[{x:5,y:6},{x:4,y:6}];g.players[1].snake=[{x:6,y:5},{x:5,y:5},{x:5,y:4},{x:6,y:4}];g.players[1].direction='up';g.toggle();g.turn('up',0);g.tick();
+ assert.equal(g.state,'hurt');assert.equal(g.winner,2);assert.equal(g.players[0].lost,true);assert.equal(g.players[0].snake[0].x,5);assert.equal(g.players[0].snake[0].y,6);
+ g.finishCrash();assert.equal(g.state,'over');
 });
-test('simultaneous head-on trapping is a draw and never overlaps heads',()=>{
- const g=createDuel({players:2,level:1});g.players[0].snake=[{x:10,y:10}];g.players[1].snake=[{x:12,y:10}];g.toggle();
- for(let i=0;i<7;i++)g.tick();assert.equal(g.winner,0);assert.equal(g.state,'hurt');assert.equal(g.players[0].snake[0].x,10);assert.equal(g.players[1].snake[0].x,12);
+test('simultaneous head-on collision is a draw and never overlaps heads',()=>{
+ const g=createDuel({players:2,level:1});g.players[0].snake=[{x:10,y:10}];g.players[1].snake=[{x:12,y:10}];g.toggle();g.tick();
+ assert.equal(g.winner,0);assert.equal(g.state,'hurt');assert.equal(g.players[0].snake[0].x,10);assert.equal(g.players[1].snake[0].x,12);
 });
-test('players have separate queues, food excludes both snakes, and AI runs on every level',()=>{
- for(let level=1;level<=4;level++){
+test('three levels, separate queues, safe food and AI movement',()=>{
+ assert.deepEqual(Array.from(LEVEL_MS),[180,135,95]);
+ for(let level=1;level<=3;level++){
   const g=createDuel({players:1,level},()=>.5);g.toggle();for(let i=0;i<100;i++){g.tick();if(g.state!=='running')break;}
-  assert.ok(LEVEL_MS[level-1]>0);assert.ok(g.players.every(p=>p.snake.every(q=>q.x>=0&&q.x<24&&q.y>=0&&q.y<24)));
+  assert.ok(g.players.every(p=>p.snake.every(q=>q.x>=0&&q.x<24&&q.y>=0&&q.y<24)));
   if(g.food)assert.ok(!g.players.some(p=>p.snake.some(q=>q.x===g.food.x&&q.y===g.food.y)));
  }
  const g=createDuel({players:2});g.toggle();assert.equal(g.turn('up',0),true);assert.equal(g.turn('down',1),true);g.tick();

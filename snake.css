@@ -54,20 +54,19 @@
 /* The title menu is its own handheld screen. */
 .zs-launch{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;gap:clamp(3px,1.5cqw,9px);padding:4% 4% 3%;background:#9eaf76;color:#263c2b;text-align:center;text-shadow:none}
 .zs-launch[hidden]{display:none}
-.zs-launch h1{margin:0;font:400 clamp(36px,19cqw,110px)/.95 'Redden',serif;text-transform:uppercase;letter-spacing:-1px;flex:none}
-.zs-launch button{appearance:none;font:inherit;color:inherit;background:transparent;border:0;box-shadow:none;cursor:pointer;padding:4px;touch-action:manipulation}
+.zs-menu-page{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(8px,3cqw,18px)}
+.zs-menu-page[hidden]{display:none}
+.zs-launch h1{margin:0;font:400 clamp(40px,20cqw,112px)/.9 'Redden',serif;text-transform:uppercase;letter-spacing:-1px}
+.zs-launch h2{margin:0 0 clamp(10px,5cqw,28px);font:400 clamp(24px,9cqw,50px)/1 'Redden',serif;text-transform:uppercase}
+.zs-launch button{appearance:none;position:relative;font:inherit;color:inherit;background:transparent;border:0;box-shadow:none;cursor:pointer;padding:6px 12px;touch-action:manipulation}
 .zs-launch button:focus-visible{outline:2px dashed currentColor;outline-offset:1px}
-.zs-players{display:flex;justify-content:space-between;gap:8px;width:100%;font-size:clamp(10px,4.4cqw,21px)}
-.zs-players button{position:relative;white-space:nowrap;padding-left:16px}
-.zs-players [aria-pressed="true"]::before{content:'▶';position:absolute;left:0}
-.zs-level-row{display:flex;align-items:center;gap:18px;font-size:clamp(10px,4cqw,20px)}
-.zs-level-row button{min-width:32px;min-height:32px}
-.zs-level-value{font-weight:400}
-.zs-launch .zs-mode{font-size:clamp(8px,2.7cqw,14px);padding:4px 9px;min-height:26px}
-.zs-launch[data-row="1"] .zs-level-row,.zs-launch[data-row="2"] .zs-mode{text-decoration:underline;text-underline-offset:4px}
-.zs-stage .zs-title-art{display:block;width:100%;height:auto;min-height:0;flex:1;object-fit:contain;image-rendering:pixelated}
-.zs-launch .zs-launch-play{font-size:clamp(9px,3cqw,16px);min-height:28px}
-.zs-menu-hint{font:clamp(7px,2.1cqw,11px)/1.3 monospace}
+.zs-stage .zs-title-art{display:block;width:100%;height:auto;min-height:0;max-height:42%;object-fit:contain;image-rendering:pixelated}
+.zs-menu-list,.zs-level-list{display:flex;flex-direction:column;align-items:center;gap:clamp(6px,2.6cqw,14px);font-size:clamp(13px,4.7cqw,24px)}
+.zs-menu-list button,.zs-level-list button{min-width:clamp(150px,55cqw,265px);text-align:left;padding-left:28px}
+.zs-menu-list button[aria-current="true"]::before,.zs-level-list button[aria-current="true"]::before{content:'▶';position:absolute;left:4px}
+.zs-level-list{font-size:clamp(18px,6cqw,31px);gap:clamp(10px,4cqw,22px)}
+.zs-menu-back{font-size:clamp(9px,2.8cqw,14px);margin-top:8px}
+.zs-launch small{font:clamp(7px,2.1cqw,11px)/1.3 monospace;margin-top:auto}
 .zs-overlay[data-state="over"] strong{font-family:'Redden',serif;font-size:clamp(30px,17cqw,110px);font-weight:400;letter-spacing:-1px;line-height:1.05}
 .zs-result{font:400 clamp(11px,4cqw,22px)/1.2 'Zebra Videotex',monospace;color:#ffe575;font-style:normal}
 .zs-result:empty{display:none}

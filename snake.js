@@ -31,16 +31,16 @@ function createGame(random=Math.random){
  };
  g.reset();return g;
 }
-const LEVEL_MS=[180,140,110,85];
+const LEVEL_MS=[180,135,95];
 function createDuel(options={},random=Math.random){
- const level=Math.max(1,Math.min(4,Number(options.level)||1)),humans=options.players===2?2:1;
+ const level=Math.max(1,Math.min(3,Number(options.level)||1)),humans=options.players===2?2:1;
  const g={state:'ready',players:[],food:null,impact:null,winner:null,level,humans,ticks:0,kind:'duel'};
  Object.defineProperties(g,{snake:{get:()=>g.players[0].snake},direction:{get:()=>g.players[0].direction},score:{get:()=>g.players[0].score}});
  const same=(a,b)=>a.x===b.x&&a.y===b.y;
  const inside=p=>p.x>=0&&p.x<W&&p.y>=0&&p.y<H;
  function food(){const free=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(!g.players.some(p=>p.snake.some(q=>q.x===x&&q.y===y)))free.push({x,y});g.food=free.length?free[Math.min(free.length-1,Math.floor(random()*free.length))]:null;}
  g.reset=function(){
-  g.players=[{snake:Array.from({length:6},(_,i)=>({x:6-i,y:6})),direction:'right',queue:[],score:0,blocked:0,lost:false},{snake:Array.from({length:6},(_,i)=>({x:17+i,y:13})),direction:'left',queue:[],score:0,blocked:0,lost:false}];
+  g.players=[{snake:Array.from({length:6},(_,i)=>({x:6-i,y:6})),direction:'right',queue:[],score:0,lost:false},{snake:Array.from({length:6},(_,i)=>({x:17+i,y:13})),direction:'left',queue:[],score:0,lost:false}];
   g.state='ready';g.impact=null;g.winner=null;g.ticks=0;food();
  };
  g.turn=function(d,index=0){
@@ -75,20 +75,17 @@ function createDuel(options={},random=Math.random){
   const grow=g.ticks%4===0;
   const next=g.players.map(p=>{if(p.queue.length)p.direction=p.queue.shift();const d=DIR[p.direction];return {x:p.snake[0].x+d[0],y:p.snake[0].y+d[1]};});
   const eats=next.map(n=>g.food&&same(n,g.food));
-  const body=g.players.flatMap((p,i)=>grow||eats[i]?p.snake:p.snake.slice(0,-1));
-  const meet=same(next[0],next[1])||(same(next[0],g.players[1].snake[0])&&same(next[1],g.players[0].snake[0]));
-  const blocked=next.map(n=>!inside(n)||body.some(q=>same(q,n))||meet);
-  // A blocked head has a short chance to turn out; an enclosed snake loses.
-  // Keep a blocked opponent's tail occupied when resolving the other move.
-  for(let i=0;i<2;i++)if(blocked[1-i]&&same(next[i],g.players[1-i].snake.at(-1)))blocked[i]=true;
-  g.players.forEach((p,i)=>{
-   if(blocked[i]){p.blocked+=LEVEL_MS[level-1];p.lost=p.blocked>=1200;}
-   else{p.blocked=0;p.snake.unshift(next[i]);if(eats[i])p.score+=10;if(!grow&&!eats[i])p.snake.pop();}
-  });
-  if(g.players.some(p=>p.lost)){
-   g.state='hurt';g.winner=g.players[0].lost&&g.players[1].lost?0:g.players[0].lost?2:1;
-   const head=g.players.find(p=>p.lost).snake[0];g.impact={x:head.x,y:head.y};g.players.forEach(p=>{p.queue=[];});
-  }else if(eats.some(Boolean))food();
+  const bodies=g.players.map((p,i)=>grow||eats[i]?p.snake:p.snake.slice(0,-1));
+  const headOn=same(next[0],next[1])||(same(next[0],g.players[1].snake[0])&&same(next[1],g.players[0].snake[0]));
+  const dead=next.map((n,i)=>!inside(n)||headOn||bodies[i].some(q=>same(q,n))||bodies[1-i].some(q=>same(q,n)));
+  if(dead.some(Boolean)){
+   g.players.forEach((p,i)=>{p.lost=dead[i];p.queue=[];});
+   g.state='hurt';g.winner=dead[0]&&dead[1]?0:dead[0]?2:1;
+   const hit=next[dead[0]?0:1];g.impact={x:Math.max(0,Math.min(W-1,hit.x)),y:Math.max(0,Math.min(H-1,hit.y))};
+   return;
+  }
+  g.players.forEach((p,i)=>{p.snake.unshift(next[i]);if(eats[i])p.score+=10;if(!grow&&!eats[i])p.snake.pop();});
+  if(eats.some(Boolean))food();
  };
  g.finishCrash=function(){if(g.state==='hurt')g.state='over';};
  g.toggle=function(){if(g.state==='hurt')return;if(g.state==='over')g.reset();g.state=g.state==='running'?'paused':'running';};
@@ -218,11 +215,11 @@ function createSounds(){
 }
 function mount(root){
  if(root._zebraDispose)root._zebraDispose();root.innerHTML='';
- const sounds=createSounds(),settings={players:1,level:1,mode:'duel'};let g=createDuel(settings),menuRow=0,elapsed=0;let alive=true,best=0,observer,lastState=g.state,lastScore=0,crashTimer=null;
+ const sounds=createSounds(),settings={players:1,level:1};let g=createDuel(settings),menuPage='mode',menuIndex=0,elapsed=0;let alive=true,best=0,observer,lastState=g.state,lastScore=0,crashTimer=null;
  fetch('/assets/games/snake/audio.json?v=1',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(a=>{if(alive)sounds.configure(a);}).catch(()=>{});
  try{best=Number(localStorage.getItem('zebra.snake.best'))||0;}catch(_){}
  const wrap=make('div','zs-machine');
- wrap.innerHTML='<header class="zs-header"><img class="zs-logo" src="/assets/games/snake/znaklogo.png?v=1" alt="Znake" width="165" height="98"></header><div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div><label class="zs-score-label">SCORE</label> <b class="zs-score">0000</b></div><div><label class="zs-best-label">RECORD</label> <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znake : manger les pommes, éviter les murs et sa queue"></canvas><section class="zs-launch" aria-label="Menu de Znake"><h1>Znake</h1><div class="zs-players" role="group" aria-label="Nombre de joueurs"><button type="button" data-players="1">1 JOUEUR</button><button type="button" data-players="2">2 JOUEURS</button></div><div class="zs-level-row"><button type="button" class="zs-level-prev" aria-label="Niveau précédent">◀</button><span>NIVEAU <b class="zs-level-value">1</b></span><button type="button" class="zs-level-next" aria-label="Niveau suivant">▶</button></div><button type="button" class="zs-mode">DUEL</button><canvas class="zs-title-art" aria-hidden="true"></canvas><button type="button" class="zs-launch-play">APPUYER SUR ESPACE</button><small class="zs-menu-hint"></small></section><div class="zs-overlay"><strong role="heading" aria-level="2"></strong><em class="zs-result"></em><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console zg-retro"><div class="zs-handheld zt-handheld zt-skin-ready"><div class="zs-toolbar zg-buttons zt-buttons"></div><div class="zs-dpad zt-dpad" aria-label="Direction"><div class="zs-cross zt-cross"></div></div><div class="zs-action-side zt-action-side"><div class="zs-ab zt-ab"></div><span class="zs-select-space zt-select" aria-hidden="true"></span></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
+ wrap.innerHTML='<header class="zs-header"><img class="zs-logo" src="/assets/games/snake/znaklogo.png?v=1" alt="Znake" width="165" height="98"></header><div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div><label class="zs-score-label">SCORE</label> <b class="zs-score">0000</b></div><div><label class="zs-best-label">RECORD</label> <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znake : manger les pommes, éviter les murs et sa queue"></canvas><section class="zs-launch" aria-label="Menu de Znake"><div class="zs-menu-page zs-mode-page"><h1>Znake</h1><canvas class="zs-title-art" aria-hidden="true"></canvas><div class="zs-menu-list" role="group" aria-label="Mode de jeu"><button type="button" data-mode="robot">CONTRE ROBOT</button><button type="button" data-mode="local">VS LOCAL</button></div><small>FLÈCHES : CHOISIR · ESPACE : VALIDER</small></div><div class="zs-menu-page zs-level-page" hidden><h2>CHOISIS TON NIVEAU</h2><div class="zs-level-list" role="group" aria-label="Niveau"><button type="button" data-level="1">NIVEAU 1</button><button type="button" data-level="2">NIVEAU 2</button><button type="button" data-level="3">NIVEAU 3</button></div><button type="button" class="zs-menu-back">◀ RETOUR</button><small>ESPACE : JOUER</small></div></section><div class="zs-overlay"><strong role="heading" aria-level="2"></strong><em class="zs-result"></em><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console zg-retro"><div class="zs-handheld zt-handheld zt-skin-ready"><div class="zs-toolbar zg-buttons zt-buttons"></div><div class="zs-dpad zt-dpad" aria-label="Direction"><div class="zs-cross zt-cross"></div></div><div class="zs-action-side zt-action-side"><div class="zs-ab zt-ab"></div><span class="zs-select-space zt-select" aria-hidden="true"></span></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
  root.appendChild(wrap);
  const $=s=>wrap.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d');canvas.width=CW;canvas.height=CH;
  const stage=$('.zs-stage'),arena=$('.zs-arena'),hud=$('.zs-hud'),overlay=$('.zs-overlay'),status=$('.zs-state');
@@ -230,9 +227,9 @@ function mount(root){
  const background=document.createElement('canvas');background.width=CW;background.height=CH;
  drawBackground(background.getContext('2d'));
  function clearCrash(){if(crashTimer!==null){clearTimeout(crashTimer);crashTimer=null;}}
- function restart(){if(g.state==='hurt')return;clearCrash();sounds.stop();lastState='ready';lastScore=0;elapsed=0;g=g.state==='ready'?(settings.players===1&&settings.mode==='classic'?createGame():createDuel(settings)):g;g.reset();g.toggle();render();}
- function action(){if(g.state==='ready'||g.state==='over'||g.state==='won')restart();else{g.toggle();render();}}
- function menu(){if(g.state==='hurt')return;clearCrash();sounds.stop();g.reset();sounds.play('menu');elapsed=0;render();}
+ function restart(){if(g.state==='hurt')return;clearCrash();sounds.stop();lastState='ready';lastScore=0;elapsed=0;g=g.state==='ready'?createDuel(settings):g;g.reset();g.toggle();render();}
+ function action(){if(g.state==='ready'){chooseMenu();return;}if(g.state==='over'||g.state==='won')restart();else{g.toggle();render();}}
+ function menu(){if(g.state==='hurt')return;clearCrash();sounds.stop();g.reset();sounds.play('menu');elapsed=0;menuPage='mode';menuIndex=0;render();}
  const play=button('Jouer','zs-play',action,$('.zs-toolbar'));
  button('Recommencer','zs-restart',restart,$('.zs-toolbar'));
  button('Menu','zs-menu',menu,$('.zs-toolbar'));
@@ -245,26 +242,27 @@ function mount(root){
  const b=button('B','zs-b zt-control zt-ab-button zt-b',restart,$('.zs-ab'));b.setAttribute('aria-label','Recommencer');
  $('.zs-start').onclick=()=>{sounds.unlock();action();};
  const launch=$('.zs-launch');
- function changeLevel(delta){settings.level=(settings.level-1+delta+4)%4+1;sounds.play('turn');renderMenu();}
- function choosePlayers(value){settings.players=value;if(value===2)settings.mode='duel';sounds.play('turn');renderMenu();}
  function renderMenu(){
-  launch.dataset.row=String(menuRow);
-  launch.querySelectorAll('[data-players]').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.players)===settings.players)));
-  $('.zs-level-value').textContent=settings.level;
-  $('.zs-mode').textContent=settings.players===2?'DUEL LOCAL':settings.mode==='classic'?'CLASSIQUE':'DUEL CONTRE ORDI';
-  $('.zs-menu-hint').textContent=settings.players===2?'J1 : ZQSD · J2 : FLÈCHES':'FLÈCHES : CHOISIR · A / ENTRÉE : JOUER';
+  const modePage=$('.zs-mode-page'),levelPage=$('.zs-level-page');
+  modePage.hidden=menuPage!=='mode';levelPage.hidden=menuPage!=='level';launch.dataset.page=menuPage;
+  const choices=menuPage==='mode'?Array.from(launch.querySelectorAll('[data-mode]')):Array.from(launch.querySelectorAll('[data-level]'));
+  choices.forEach((b,i)=>b.setAttribute('aria-current',i===menuIndex?'true':'false'));
+ }
+ function chooseMode(mode){settings.players=mode==='local'?2:1;menuPage='level';menuIndex=0;sounds.play('turn');renderMenu();}
+ function chooseLevel(level){settings.level=Math.max(1,Math.min(3,Number(level)||1));sounds.unlock();restart();}
+ function chooseMenu(){
+  if(menuPage==='mode'){chooseMode(menuIndex===0?'robot':'local');return;}
+  chooseLevel(menuIndex+1);
  }
  function navigate(d){
-  if(d==='up'||d==='down')menuRow=(menuRow+(d==='down'?1:2))%3;
-  else if(menuRow===0)choosePlayers(settings.players===1?2:1);
-  else if(menuRow===1)changeLevel(d==='right'?1:-1);
-  else if(settings.players===1)settings.mode=settings.mode==='classic'?'duel':'classic';
+  const count=menuPage==='mode'?2:3;
+  if(d==='up'||d==='left')menuIndex=(menuIndex-1+count)%count;
+  else if(d==='down'||d==='right')menuIndex=(menuIndex+1)%count;
   sounds.play('turn');renderMenu();
  }
- launch.querySelectorAll('[data-players]').forEach(b=>b.onclick=()=>{sounds.unlock();choosePlayers(Number(b.dataset.players));});
- $('.zs-level-prev').onclick=()=>{sounds.unlock();changeLevel(-1);};$('.zs-level-next').onclick=()=>{sounds.unlock();changeLevel(1);};
- $('.zs-mode').onclick=()=>{sounds.unlock();if(settings.players===1)settings.mode=settings.mode==='classic'?'duel':'classic';renderMenu();};
- $('.zs-launch-play').onclick=()=>{sounds.unlock();restart();};
+ launch.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{sounds.unlock();chooseMode(b.dataset.mode);});
+ launch.querySelectorAll('[data-level]').forEach(b=>b.onclick=()=>chooseLevel(b.dataset.level));
+ $('.zs-menu-back').onclick=()=>{sounds.unlock();menuPage='mode';menuIndex=settings.players===2?1:0;sounds.play('menu');renderMenu();};
  // An original, simple two-ink title illustration, drawn at handheld resolution.
  const art=$('.zs-title-art');art.width=384;art.height=100;const ac=art.getContext('2d');
  ac.fillStyle=DECOR;for(let y=0;y<35;y+=12)for(let x=-24;x<384;x+=48)ac.fillRect(x+(y%24?24:0),y,44,9);
@@ -313,10 +311,9 @@ function mount(root){
   if(!alive||!focused()||e.altKey||e.ctrlKey||e.metaKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable)return;
   const letter=e.key.toLowerCase(),arrows={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};
   const keys={w:'up',z:'up',s:'down',a:'left',q:'left',d:'right'},d=arrows[e.key]||keys[letter];
-  if(g.state==='ready'&&(letter==='1'||letter==='2')){e.preventDefault();if(!e.repeat){sounds.unlock();choosePlayers(Number(letter));}return;}
-  if(d){e.preventDefault();if(!e.repeat){sounds.unlock();turn(d,g.state!=='ready'&&settings.players===2&&arrows[e.key]?1:0);}}
+    if(d){e.preventDefault();if(!e.repeat){sounds.unlock();turn(d,g.state!=='ready'&&settings.players===2&&arrows[e.key]?1:0);}}
   else if(e.code==='Space'||e.key===' '||e.key==='Enter'||letter==='p'){e.preventDefault();if(!e.repeat){sounds.unlock();action();}}
-  else if(e.key==='Escape'){e.preventDefault();menu();}
+  else if(e.key==='Escape'){e.preventDefault();if(g.state==='ready'&&menuPage==='level'){menuPage='mode';menuIndex=settings.players===2?1:0;renderMenu();}else menu();}
  }
  function hide(){if(document.hidden){sounds.stop();if(g.state==='running'){g.state='paused';render();}}}
  function blur(){sounds.stop();if(g.state==='running'){g.state='paused';render();}}
