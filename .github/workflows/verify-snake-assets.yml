@@ -36,7 +36,9 @@ jobs:
             await document.fonts.load('16px "Zebra Videotex"');
             out.font=document.fonts.check('16px "Zebra Videotex"');
             const clean=e=>{const s=getComputedStyle(e);return s.backgroundColor==='rgba(0, 0, 0, 0)'&&s.backgroundImage==='none'&&s.boxShadow==='none'&&s.borderTopWidth==='0px'};
-            out.bare=!$('.zs-header')&&!$('.zs-logo')&&clean($('.zs-hud'))&&clean($('.zs-console'))&&clean(stage)&&clean($('.zs-overlay'));
+            out.logo=$('.zs-logo').getAttribute('src').includes('znaklogo.png')&&$('.zs-header').getBoundingClientRect().bottom<=hudBounds.top;
+            const logo=$('.zs-logo');await logo.decode();out.logoLoaded=logo.naturalWidth>0;
+            out.bare=clean($('.zs-hud'))&&clean($('.zs-console'))&&clean(stage)&&clean($('.zs-overlay'));
             out.noBricks=$('canvas').width===384&&$('canvas').height===320;
             out.ready=$('.zs-state').textContent==='PRÊT';
             document.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true}));out.spaceStart=$('.zs-state').textContent==='EN JEU'&&$('.zs-overlay').hidden;
@@ -69,11 +71,16 @@ jobs:
              out.noControlPanel=getComputedStyle($('.zs-handheld'),'::before').display==='none';
              ref.remove();
             }
-            await wait(2350);
+            await wait(2250);
+            out.impact=$('.zs-machine').dataset.state==='hurt'&&$('.zs-overlay').hidden;
+            document.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true}));out.lockedImpact=$('.zs-machine').dataset.state==='hurt';
+            await wait(2100);
             out.gameoverTitle=$('.zs-state').textContent==='GAME OVER'&&$('.zs-overlay strong').textContent==='GAME OVER';
+            out.restartCaption=$('.zs-overlay span').textContent==='Appuyer sur espace pour recommencer';
+            out.redTitle=getComputedStyle($('.zs-overlay strong')).color==='rgb(255, 38, 61)';
             out.gameoverBlink=getComputedStyle($('.zs-overlay strong')).animationName.includes('zs-gameover');
             out.gameoverSize=parseFloat(getComputedStyle($('.zs-overlay strong')).fontSize)>=24;
-            $('.zs-start').click();out.replay=$('.zs-state').textContent==='EN JEU'&&$('.zs-overlay').hidden;
+            document.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true}));out.replay=$('.zs-state').textContent==='EN JEU'&&$('.zs-overlay').hidden;
             host._zebraDispose();await wait(320);out.dispose=$('.zs-state').textContent==='EN JEU';
            }catch(e){out.error=String(e.stack||e)}
            document.documentElement.dataset.snakeReport=JSON.stringify(out);document.documentElement.dataset.snakeStatus=Object.values(out).every(v=>v===true)?'ok':'failed';
@@ -83,7 +90,7 @@ jobs:
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/snake-server.log 2>&1 &
           sleep 1
           for size in 390,740 1160,900; do
-            google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=$size --virtual-time-budget=8500 --dump-dom http://127.0.0.1:8765/_verify_snake.html > /tmp/snake-$size.html 2>/tmp/snake-$size.log
+            google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=$size --virtual-time-budget=12000 --dump-dom http://127.0.0.1:8765/_verify_snake.html > /tmp/snake-$size.html 2>/tmp/snake-$size.log
             grep -o 'data-snake-report="[^"]*"' /tmp/snake-$size.html
             grep -q 'data-snake-status="ok"' /tmp/snake-$size.html
           done

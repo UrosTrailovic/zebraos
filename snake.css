@@ -33,3 +33,21 @@
 @keyframes zs-gameover-intro{0%,23%,46%,100%{opacity:1}14%,37%{opacity:0}}
 @keyframes zs-gameover-blink{0%,72%{opacity:1}73%,100%{opacity:0}}
 @media(prefers-reduced-motion:reduce){.zs-overlay[data-state="over"] strong{animation:none}}
+
+/* Title artwork follows the board, just like the Tetris masthead. */
+.zs-header{flex:none;align-self:center;display:flex;justify-content:center;width:100%;height:70px;min-height:0}
+.zs-logo{display:block;max-width:100%;width:165px;height:100%;object-fit:contain;image-rendering:pixelated}
+.zs-button:disabled{cursor:default;filter:brightness(.65)}
+.zs-machine[data-state="hurt"] .zs-stage canvas{animation:zs-impact 360ms steps(1,end),zs-world-fall 2s ease-out forwards}
+.zs-machine[data-state="over"] .zs-stage canvas{filter:brightness(.4) saturate(.45) sepia(.5)}
+.zs-machine[data-state="hurt"] .zs-stage::after{content:'';position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 45px 15px #b30026;animation:zs-wound 2s ease-out forwards}
+.zs-overlay[data-state="over"]{inset:8% 2%;gap:22px}
+.zs-overlay[data-state="over"] strong{color:#ff263d;font-size:clamp(26px,11.5cqw,88px);letter-spacing:0;text-shadow:3px 4px #3a020d,0 0 12px #ff132d88}
+.zs-overlay[data-state="over"] span{font-family:monospace;text-transform:none;font-weight:bold;font-size:clamp(11px,3.4cqw,18px);max-width:95%;line-height:1.5;color:#ffe2c9}
+.zs-overlay[data-state="over"] .zs-start{display:none}
+@keyframes zs-impact{0%,40%{transform:translate(-5px,2px)}20%,60%{transform:translate(5px,-3px)}80%{transform:translate(-2px,1px)}100%{transform:none}}
+@keyframes zs-world-fall{0%{filter:brightness(1.5) saturate(2) sepia(1)}18%{filter:brightness(.8) saturate(1.5) sepia(.4)}100%{filter:brightness(.4) saturate(.45) sepia(.5)}}
+@keyframes zs-wound{0%{opacity:1;background:#ff182344}35%{background:transparent}100%{opacity:.3}}
+@media(hover:none),(pointer:coarse){.zs-header{height:52px}.zs-machine{gap:7px}}
+@media(max-height:530px){.zs-header{height:32px}.zs-machine{gap:5px}}
+@media(prefers-reduced-motion:reduce){.zs-machine[data-state="hurt"] .zs-stage canvas{animation:none;filter:brightness(.5) saturate(.6)}.zs-machine[data-state="hurt"] .zs-stage::after{animation:none;opacity:.35}}
