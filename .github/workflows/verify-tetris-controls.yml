@@ -68,7 +68,7 @@ jobs:
               report.buttons=!!$(".zt-play")&&!!$(".zt-restart")&&!!$(".zt-menu");
               report.titleScreen=$(".zg-state").textContent==="PRÊT"
                 &&$(".zg-overlay").dataset.state==="intro"
-                &&$(".zt-overlay-caption").textContent==="PRESS TO PLAY"
+                &&$(".zt-overlay-caption").textContent==="PRESS BUTTON TO PLAY"
                 &&$(".zt-overlay-subcaption").textContent.includes("ESPACE")
                 &&$(".zg-tetris-stage").tabIndex===0
                 &&getComputedStyle($(".zg-overlay")).display==="flex";
