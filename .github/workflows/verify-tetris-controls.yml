@@ -66,8 +66,16 @@ jobs:
 
               report.assets=!!$(".zt-logo");
               report.buttons=!!$(".zt-play")&&!!$(".zt-restart")&&!!$(".zt-menu");
+              report.titleScreen=$(".zg-state").textContent==="PRÊT"
+                &&$(".zg-overlay").dataset.state==="intro"
+                &&$(".zt-overlay-caption").textContent==="PRESS BUTTON TO PLAY"
+                &&$(".zt-overlay-subcaption").textContent.includes("ESPACE")
+                &&$(".zg-tetris-stage").tabIndex===0
+                &&getComputedStyle($(".zg-overlay")).display==="flex";
               $(".zt-play").click();
               report.start=$(".zg-state").textContent==="EN COURS";
+              report.titleDismissed=getComputedStyle($(".zg-overlay")).display==="none"
+                &&$(".zg-tetris-stage").tabIndex===-1;
               function keyboard(k,repeat){
                 const ev=new KeyboardEvent("keydown",{key:k,bubbles:true,cancelable:true,repeat:!!repeat});
                 document.dispatchEvent(ev);

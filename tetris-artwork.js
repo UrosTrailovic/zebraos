@@ -67,7 +67,7 @@ function applyImage(node,key,mode){
 }
 function setState(overlay,start,state,playing){
  if(!cache)return;
- applyImage(overlay,state==="gameover"?"gameover":"paused","image");
+ applyImage(overlay,state==="gameover"?"gameover":state==="intro"?"logo":"paused","image");
  applyImage(start,playing?"pausebtn":"play","background");
  start.dataset.label=playing?"PAUSE":"JOUER";
 }
@@ -90,7 +90,7 @@ function apply({wrap,logo,overlay,start,restart,menu,onReady,onError}){
   wrap.classList.add("zt-art-loaded");
   logo.style.visibility="visible";
   overlay.style.visibility="visible";
-  setState(overlay,start,"pause",false);
+  setState(overlay,start,"intro",false);
   if(onReady)onReady();
  }).catch(function(err){
   // On ne laisse pas un <img> cassé ni une interface sans titre.

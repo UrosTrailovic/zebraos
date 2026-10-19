@@ -1251,6 +1251,53 @@
  color:#fff;text-shadow:2px 2px 0 #000;
  font:bold 12px/1.5 "Courier New",monospace;
 }
+.zebra-game-body .zg-retro .zg-overlay[data-state="intro"]{
+ overflow:hidden;pointer-events:auto;cursor:pointer;
+ background-color:rgba(6,4,15,.38);
+ background-image:
+  repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 4px),
+  radial-gradient(circle at 50% 42%,rgba(53,16,96,.66) 0,rgba(19,7,36,.54) 46%,rgba(4,3,9,.72) 78%);
+ isolation:isolate;
+}
+.zebra-game-body .zg-retro .zg-overlay[data-state="intro"]::before{
+ content:"";position:absolute;inset:7px;z-index:-1;pointer-events:none;
+ border:2px solid #3ce4f1;box-shadow:0 0 0 2px #301be2,0 0 15px #bd12e4aa,inset 0 0 18px #27165d;
+}
+.zebra-game-body .zg-retro .zg-overlay[data-state="intro"] .zt-overlay-art{
+ width:92%;max-width:205px;max-height:150px;
+ filter:drop-shadow(3px 4px 0 #09020c) drop-shadow(0 0 7px #db21f2);
+ animation:zt-title-hover 2.6s steps(2,end) infinite;
+}
+.zebra-game-body .zg-retro .zg-overlay[data-state="intro"] .zt-overlay-caption{
+ position:relative;padding:7px 10px 6px;
+ color:#fff36d;background:#130724;border:2px solid #f42fd5;
+ box-shadow:2px 2px 0 #241acb,-2px -2px 0 #37dfe9;
+ font:bold clamp(11px,4.2vw,17px)/1 "Courier New",monospace;
+ letter-spacing:1px;text-shadow:2px 2px 0 #a20c9e;
+ animation:zt-press-blink 1s steps(1,end) infinite;
+}
+.zebra-game-body .zg-retro .zt-overlay-subcaption{
+ color:#9beaf2;font:bold 8px/1.25 "Courier New",monospace;
+ letter-spacing:.5px;text-shadow:1px 1px #12031b;
+}
+.zebra-game-body .zg-retro .zt-intro-blocks{position:absolute;inset:0;z-index:-1;pointer-events:none}
+.zebra-game-body .zg-retro .zt-intro-blocks i{
+ position:absolute;width:12px;height:12px;background:#28def0;
+ border:2px solid #050506;box-shadow:inset 2px 2px #ffffff80,inset -2px -2px #00000080;
+}
+.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(1){left:12%;top:12%;background:#ffde0c}
+.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(2){left:18%;top:15%;background:#ffde0c}
+.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(3){right:14%;top:21%;background:#bd12e4}
+.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(4){right:14%;top:24%;background:#bd12e4}
+.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(5){left:13%;bottom:15%;background:#3be931}
+.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(6){left:19%;bottom:15%;background:#3be931}
+.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(7){right:15%;bottom:12%;background:#ff3232}
+@keyframes zt-press-blink{0%,62%{visibility:visible}63%,100%{visibility:hidden}}
+@keyframes zt-title-hover{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@media(prefers-reduced-motion:reduce){
+ .zebra-game-body .zg-retro .zg-overlay[data-state="intro"] .zt-overlay-art,
+ .zebra-game-body .zg-retro .zg-overlay[data-state="intro"] .zt-overlay-caption{animation:none}
+}
 .zebra-game-body .zg-retro .zg-buttons.zt-buttons{
  display:flex;flex:0 0 auto;justify-content:center;align-items:center;
  gap:7px;padding:0;background:transparent;
