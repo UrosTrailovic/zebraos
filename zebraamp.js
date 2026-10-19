@@ -7,7 +7,7 @@
 (function(){
 "use strict";
 var ALBUM="zebra-tape-2",OPENED="fichiers-ouverts",KEY="zebraamp-v3",DB="zebraamp-v3-audio";
-var audio=new Audio();audio.preload="metadata";audio.crossOrigin="anonymous";audio.volume=.7;
+var audio=new Audio();audio.preload="auto";audio.volume=.7;
 var album={id:ALBUM,name:"Zebra Tape 2",readonly:true,tracks:[]};
 var playlists=[],current=ALBUM,currentId=null,loadedUrl=null,loadedBlob=null,view=null;
 var coverCache=new Map(),displayedCover=null;
@@ -512,9 +512,16 @@ function makeOpenedPlaylist(){
 }
 function releaseUrl(){if(loadedBlob){URL.revokeObjectURL(loadedBlob);loadedBlob=null;}}
 function setSource(src,isBlob){
+ // Détacher l'ancienne source avant de révoquer son URL. Sur certains Chrome
+ // Android, révoquer un blob encore attaché laisse le média en attente.
+ audio.pause();
+ if(audio.src){audio.removeAttribute("src");audio.load();}
  releaseUrl();
  if(isBlob)loadedBlob=src;
- audio.pause();resetTempo();audio.src=src;syncPlaybackSettings();audio.load();syncPlaybackSettings();renderProgress();
+ // Les blobs IndexedDB sont locaux et ne doivent pas passer par CORS.
+ // Les morceaux GitHub gardent anonymous pour rester compatibles Web Audio.
+ if(isBlob)audio.removeAttribute("crossorigin");else audio.crossOrigin="anonymous";
+ resetTempo();audio.src=src;syncPlaybackSettings();audio.load();syncPlaybackSettings();renderProgress();
 }
 function togglePlayback(){
  if(audio.paused){
@@ -528,9 +535,18 @@ function play(){
  // Lecture HTML native tant que le son est neutre : meilleure continuité
  // sur mobile verrouillé. Web Audio ne démarre que pour un véritable effet.
  if(analyser||reverb>0||eq.some(function(x){return Math.abs(x)>.001;}))resumeGraph();
- var res=audio.play();if(res&&res.catch)res.catch(function(err){
+ var before=audio.currentTime||0,res=audio.play();
+ if(res&&res.then)res.then(function(){status("");}).catch(function(){
   status("Lecture bloquée : appuie sur ▶ pour démarrer le son.");
  });
+ // Samsung/Chrome peut conserver indéfiniment une promesse play() en attente
+ // après le remplacement d'une URL blob. Un seul rechargement local suffit,
+ // sans toucher aux morceaux réseau qui peuvent simplement charger lentement.
+ if(loadedBlob)setTimeout(function(){
+  if(!loadedBlob||audio.error||audio.currentTime>before+.01||audio.readyState>=3)return;
+  audio.pause();audio.load();syncPlaybackSettings();
+  var retry=audio.play();if(retry&&retry.catch)retry.catch(function(){status("Lecture bloquée : appuie sur ▶ pour démarrer le son.");});
+ },1400);
 }
 async function pick(id,autoplay){
  init();

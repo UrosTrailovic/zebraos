@@ -340,6 +340,11 @@
 @media(max-width:700px){
  .amp3-extras{gap:4px}
  .amp3-extras>label{gap:4px}
+ .amp3-speed-group,.amp3-reverb-group{position:static}
+ .amp3-speed-panel,.amp3-reverb-panel{
+  left:50%;right:auto;transform:translateX(-50%);
+  width:min(294px,calc(100% - 10px));
+ }
  .amp3-reverb-btn,.amp3-speed-btn{min-height:30px;padding:5px;font-size:9px;letter-spacing:0}
  .amp3-reverb-panel{padding:10px}
 }
@@ -360,7 +365,6 @@
  scrollbar-width:thin;
 }
 @media(max-width:700px){
- .amp3-speed-panel{width:min(294px,calc(100vw - 22px));}
  .amp3-reverb-description{font-size:9px}
 }
 

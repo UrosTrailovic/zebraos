@@ -20,14 +20,14 @@ jobs:
           const vm = require("node:vm");
           const fs = require("node:fs");
           const assert = require("node:assert/strict");
-          let playCount = 0;
+          let playCount = 0, revoked = 0;
           const stored = new Map();
           class FakeAudio {
-            constructor(){this.volume=1;this.src="";this.paused=true;}
+            constructor(){this.volume=1;this.src="";this.paused=true;this.readyState=4;this.currentTime=0;this.error=null;this.crossOrigin="anonymous";}
             addEventListener(){}
             pause(){this.paused=true;}
             load(){}
-            removeAttribute(k){if(k==="src")this.src="";}
+            removeAttribute(k){if(k==="src")this.src="";if(k==="crossorigin")this.crossOrigin=null;}
             play(){playCount++;this.paused=false;return Promise.resolve();}
           }
           function asyncRequest(value){
@@ -59,7 +59,7 @@ jobs:
           const env={
             window,Audio:FakeAudio,indexedDB:fakeDB,
             localStorage:{getItem(){return null;},setItem(){}},
-            URL:{createObjectURL(){return "blob:zebra-test";},revokeObjectURL(){}},
+            URL:{createObjectURL(){return "blob:zebra-test";},revokeObjectURL(){revoked++;}},
             console,Date,Math,Promise,setTimeout,clearTimeout
           };
           vm.runInNewContext(fs.readFileSync("zebraamp.js","utf8"),env);
@@ -72,6 +72,10 @@ jobs:
             const id=Array.from(stored.keys())[0];
             await amp.pick(id,true);
             assert.equal(playCount,1,"Le clic volontaire pour jouer doit toujours fonctionner");
+            assert.equal(amp.media.preload,"auto","Les blobs locaux doivent précharger les données audio");
+            assert.equal(amp.media.crossOrigin,null,"Un blob local ne doit pas être bloqué par CORS sur mobile");
+            await amp.pick(Array.from(stored.keys())[1],true);
+            assert.equal(revoked,1,"L'ancienne URL blob doit être révoquée après son détachement");
             console.log("ZebraAMP : import de 2 sons silencieux puis lecture manuelle OK");
           })().catch(e=>{console.error(e);process.exitCode=1;});
           JS

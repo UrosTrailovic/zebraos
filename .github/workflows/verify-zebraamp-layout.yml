@@ -102,6 +102,9 @@ jobs:
               report.speedClosed=panel.hidden;
               speedButton.click();
               report.speedOpens=!panel.hidden&&speedButton.getAttribute("aria-expanded")==="true";
+              const speedBox=rect(panel),extrasBox=rect(root.querySelector(".amp3-extras"));
+              report.speedPanelCentered=Math.abs((speedBox.left+speedBox.right)/2-(extrasBox.left+extrasBox.right)/2)<2
+                &&speedBox.left>=extrasBox.left&&speedBox.right<=extrasBox.right;
               report.speedHardware=getComputedStyle(panel).backgroundImage.includes("radial-gradient")
                 &&getComputedStyle(panel,"::before").backgroundImage.includes("radial-gradient");
               report.speedSteps=slider.min==="50"&&slider.max==="150"&&slider.step==="5";
