@@ -21,7 +21,7 @@ function btn(label,fn){let b=make("button","zg-button",label);b.type="button";b.
 function mount(root){
  if(root._zebraDispose)root._zebraDispose();
  root.innerHTML="";
- let active=true,paused=true,over=false,lines=0,score=0,level=1,records=best(),held=null,holdUsed=false;
+ let active=true,paused=true,started=false,over=false,lines=0,score=0,level=1,records=best(),held=null,holdUsed=false;
  let grid,upcoming=[],bag=[],current=null,clock=null,observer=null;
  let clearRows=[],clearDeadline=0,audioContext=null,lastSound={};
  let wrap=make("div","zg zg-tetris zg-retro zt-assembling");
@@ -37,10 +37,15 @@ function mount(root){
  canvas.width=W*BLOCK;canvas.height=H*BLOCK;canvas.setAttribute("aria-label","Plateau Tetris");
  stage.appendChild(canvas);
  let overlay=make("div","zg-overlay");
+ let introBlocks=make("div","zt-intro-blocks");
+ for(let i=0;i<7;i++)introBlocks.appendChild(make("i",""));
+ overlay.appendChild(introBlocks);
  let overlayArt=make("img","zt-overlay-art");
- overlayArt.alt="";
+ overlayArt.alt="Zebra Tetris";
  overlay.appendChild(overlayArt);
- overlay.appendChild(make("span","zt-overlay-caption","Appuie sur Jouer pour commencer"));
+ let overlayCaption=make("span","zt-overlay-caption","PRESS TO PLAY");
+ let overlaySubcaption=make("span","zt-overlay-subcaption","CLIQUE · ENTRÉE · ESPACE");
+ overlay.append(overlayCaption,overlaySubcaption);
  stage.appendChild(overlay);main.appendChild(stage);
  let statsPanel=make("div","zg-side zg-side-stats");
  let previewPanel=make("div","zg-side zg-side-previews");
@@ -78,7 +83,7 @@ function mount(root){
  // Bande séparatrice issue de la vraie texture de bordure fournie avec le jeu.
  wrap.appendChild(make("div","zt-panel-divider"));
  let controls=make("div","zg-buttons zt-buttons");
- const start=btn("JOUER",()=>{sound("ui");if(over||(!current&&!clearRows.length)){reset();return;}menuOpen=false;paused=!paused;updateStatus();});
+ const start=btn("JOUER",()=>{sound("ui");if(over||!started||(!current&&!clearRows.length)){reset();return;}menuOpen=false;paused=!paused;updateStatus();});
  start.classList.add("zt-image-button","zt-play");
  const restart=btn("RECOMMENCER",()=>{sound("ui");reset();});
  restart.classList.add("zt-image-button","zt-restart");
@@ -263,7 +268,16 @@ function mount(root){
  }
  function reset(){
   grid=blank();bag=[];upcoming=[];lines=0;score=0;level=1;held=null;holdUsed=false;
-  over=false;paused=false;menuOpen=false;current=null;clearRows=[];clearDeadline=0;spawn();render();updateStatus();
+  started=true;over=false;paused=false;menuOpen=false;current=null;clearRows=[];clearDeadline=0;spawn();render();updateStatus();
+ }
+ function showTitleScreen(){
+  grid=blank();bag=[];upcoming=[];lines=0;score=0;level=1;held=null;holdUsed=false;
+  started=false;over=false;paused=true;menuOpen=false;current=null;clearRows=[];clearDeadline=0;
+  refill();render();updateStatus();
+ }
+ function playFromTitle(){
+  if(started||over)return;
+  sound("ui");reset();
  }
  function merged(){
   current.mat.forEach((row,y)=>row.forEach((v,x)=>{if(v&&current.y+y>=0){grid[current.y+y][current.x+x]=v;}}));
@@ -320,19 +334,25 @@ function mount(root){
   holdUsed=true;sound("hold");render();updateStatus();
  }
  function updateStatus(){
-  status.textContent=over?"FIN DE PARTIE":menuOpen?"MENU":paused?"PAUSE":"EN COURS";
-  start.setAttribute("aria-label",paused?"Jouer":"Pause");
-  start.title=paused?"Jouer":"Pause";
-  start.classList.toggle("zt-paused-button",!paused);
-  start.textContent=paused?"JOUER":"PAUSE";
-  overlay.style.display=paused?"flex":"none";
-  overlay.dataset.state=over?"gameover":menuOpen?"menu":"pause";
+  const titleScreen=!started&&!over;
+  status.textContent=over?"FIN DE PARTIE":titleScreen?"PRÊT":menuOpen?"MENU":paused?"PAUSE":"EN COURS";
+  start.setAttribute("aria-label",paused||titleScreen?"Jouer":"Pause");
+  start.title=paused||titleScreen?"Jouer":"Pause";
+  start.classList.toggle("zt-paused-button",started&&!paused);
+  start.textContent=paused||titleScreen?"JOUER":"PAUSE";
+  overlay.style.display=titleScreen||paused?"flex":"none";
+  overlay.dataset.state=over?"gameover":titleScreen?"intro":menuOpen?"menu":"pause";
   overlayArt.style.display=menuOpen?"none":"block";
-  overlay.lastChild.textContent=over?"Recommencer pour rejouer":
+  introBlocks.style.display=titleScreen?"block":"none";
+  overlayCaption.textContent=over?"Recommencer pour rejouer":
     menuOpen?"P : pause · Q : réserve · ESPACE : poser":
-    (!current?"Appuie sur Jouer pour commencer":"Appuie sur Jouer pour continuer");
+    titleScreen?"PRESS TO PLAY":"Appuie sur Jouer pour continuer";
+  overlaySubcaption.textContent=titleScreen?"CLIQUE · ENTRÉE · ESPACE":"";
+  overlaySubcaption.style.display=titleScreen?"block":"none";
+  stage.setAttribute("aria-label",titleScreen?"Zebra Tetris — appuyez pour jouer":"Plateau Zebra Tetris");
+  stage.tabIndex=titleScreen?0:-1;
   if(window.ZebraTetrisArtwork&&atlasReady)
-   window.ZebraTetrisArtwork.setState(overlayArt,start,over?"gameover":menuOpen?"menu":"pause",!paused);
+   window.ZebraTetrisArtwork.setState(overlayArt,start,over?"gameover":titleScreen?"intro":menuOpen?"menu":"pause",started&&!paused);
  }
  function rect(context,x,y,size,val,alpha){
   if(!val)return;
@@ -378,6 +398,9 @@ function mount(root){
   if(!root.closest(".window")?.classList.contains("focused"))return;
   if(["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName))return;
   if(e.ctrlKey||e.metaKey||e.altKey)return;
+  if(!started&&(e.key==="Enter"||e.key===" ")){
+   e.preventDefault();if(!e.repeat)playFromTitle();return;
+  }
   const action={
    a:()=>move(-1,0),d:()=>move(1,0),s:soft,w:rotate,
    q:holdPiece," ":hardDrop,
@@ -431,6 +454,7 @@ function mount(root){
   if(observer){observer.disconnect();observer=null;}
  }
  root._zebraDispose=dispose;
+ stage.addEventListener("click",playFromTitle);
  document.addEventListener("keydown",key);
  let last=performance.now(),accum=0;
  clock=setInterval(()=>{
@@ -445,7 +469,7 @@ function mount(root){
    if(accum>Math.max(85,750*Math.pow(.83,level-1))){accum=0;tick();}
   }
  },40);
- reset();paused=true;updateStatus();render();
+ showTitleScreen();
  if(typeof ResizeObserver!=="undefined"){
   observer=new ResizeObserver(fitBoard);
   observer.observe(main);
