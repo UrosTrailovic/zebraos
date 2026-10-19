@@ -7,6 +7,7 @@ on:
       - zebravis-controls.css
       - tests/zebravis.test.cjs
       - tests/amp-window.test.cjs
+      - tests/zebraamp-audio-routing.test.cjs
       - app.js
       - .github/workflows/verify-zebravis.yml
   workflow_dispatch:
