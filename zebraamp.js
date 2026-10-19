@@ -27,6 +27,20 @@ var animation=null,spectrumRefresh=null,loadingId=0,notifyText="",initDone=false
 var visualizerPromise=null;
 function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
 function b(label,action,cls){var x=el("button",cls||"amp3-btn",label);x.type="button";x.onclick=action;return x;}
+function prepareNativeAudio(media){
+ // Chrome/Samsung est plus fiable avec un vrai élément média attaché au DOM.
+ // Forcer aussi les deux états de mute : currentTime peut avancer même lorsque
+ // la sortie d'un HTMLMediaElement est silencieuse.
+ try{media.muted=false;media.defaultMuted=false;}catch(e){}
+ try{media.setAttribute("playsinline","");}catch(e){}
+ try{media.playsInline=true;}catch(e){}
+ try{
+  if(document.body&&!media.isConnected){
+   media.hidden=true;media.setAttribute("aria-hidden","true");
+   media.setAttribute("data-zebraamp-native","");document.body.appendChild(media);
+  }
+ }catch(e){}
+}
 function stamp(){return "pl-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);}
 function label(name){return String(name||"Sans titre").replace(/\.[^.]+$/,"").slice(0,150);}
 function getList(){return current===ALBUM?album:playlists.find(function(p){return p.id===current;})||album;}
@@ -159,6 +173,7 @@ function bindAudioEvents(media){
 function init(){
  if(initDone)return;
  initDone=true;applyPitchMode();restore();
+ prepareNativeAudio(audio);
  if(window.ZebraGitFiles){
   window.ZebraGitFiles.subscribe(function(){syncAlbum(window.ZebraGitFiles.allFiles());});
   updatePublic();
@@ -477,6 +492,7 @@ function setSource(src,isBlob){
  // Les blobs IndexedDB sont locaux et ne doivent pas passer par CORS.
  // Les morceaux GitHub gardent anonymous pour rester compatibles Web Audio.
  if(isBlob)audio.removeAttribute("crossorigin");else audio.crossOrigin="anonymous";
+ prepareNativeAudio(audio);audio.muted=false;audio.defaultMuted=false;audio.volume=volume;
  audio.src=src;syncPlaybackSettings();audio.load();syncPlaybackSettings();renderProgress();
 }
 function togglePlayback(){
@@ -494,22 +510,32 @@ function nativeAudioFallback(position){
  ctx=null;filters=[];analyser=null;graphTried=false;reverbGraph=null;
  audio=new Audio();audio.preload="auto";audio.volume=volume;
  if(loadedBlob)audio.removeAttribute("crossorigin");else audio.crossOrigin="anonymous";
- bindAudioEvents(audio);audio.src=src;syncPlaybackSettings();audio.load();
+ prepareNativeAudio(audio);bindAudioEvents(audio);audio.src=src;syncPlaybackSettings();audio.load();
  var start=function(){
+  audio.muted=false;audio.defaultMuted=false;audio.volume=volume;
   try{audio.currentTime=Math.max(0,position||0);}catch(e){}
-  var p=audio.play();if(p&&p.catch)p.catch(function(){status("Lecture bloquée : appuie sur ▶ pour démarrer le son.");});
+  var p=audio.play();if(p&&p.then)p.then(function(){
+   // Ne retirer l'ancien média qu'une fois la nouvelle sortie réellement lancée.
+   try{previous.removeAttribute("src");previous.load();previous.remove();}catch(e){}
+   status("");
+  }).catch(function(){status("Lecture bloquée : appuie sur ▶ pour démarrer le son.");});
  };
  if(audio.readyState>=1)start();else audio.addEventListener("loadedmetadata",start,{once:true});
  status("Mode audio mobile direct · effets temps réel désactivés pour cette session.");
 }
 function play(){
  syncPlaybackSettings();
+ prepareNativeAudio(audio);audio.muted=false;audio.defaultMuted=false;audio.volume=volume;
  // Lecture HTML native tant que le son est neutre : meilleure continuité
  // sur mobile verrouillé. Web Audio ne démarre que pour un véritable effet.
  var needsGraph=!nativeFallback&&(analyser||reverb>0||eq.some(function(x){return Math.abs(x)>.001;}));
  var graphReady=needsGraph?resumeGraph():null;
  var before=audio.currentTime||0,res=audio.play();
- if(res&&res.then)res.then(function(){status("");}).catch(function(){
+ if(res&&res.then)res.then(function(){
+  // Réappliquer après play() : certains moteurs mobiles restaurent l'état du
+  // média au moment de l'activation de la session audio.
+  audio.muted=false;audio.defaultMuted=false;audio.volume=volume;status("");
+ }).catch(function(){
   status("Lecture bloquée : appuie sur ▶ pour démarrer le son.");
  });
  // Samsung/Chrome peut conserver indéfiniment une promesse play() en attente
@@ -1047,7 +1073,7 @@ function stop(){
 var api={
  open:open,init:init,stop:stop,importFiles:importFiles,openPublic:openPublic,openBlob:openBlob,
  pick:pick,play:play,updatePublic:updatePublic,analyser:function(){return analyser;},
- debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,speed:speed,preservePitch:preservePitch,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected),reverbSeconds:reverbGraph?reverbGraph.seconds:null,nativeFallback:nativeFallback};}
+ debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,speed:speed,preservePitch:preservePitch,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected),reverbSeconds:reverbGraph?reverbGraph.seconds:null,nativeFallback:nativeFallback,paused:audio.paused,muted:audio.muted,volume:audio.volume,readyState:audio.readyState};}
 };
 Object.defineProperty(api,"media",{enumerable:true,get:function(){return audio;}});
 window.ZebraAMP=api;
