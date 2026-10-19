@@ -180,9 +180,8 @@ function init(){
  }
  bindAudioEvents(audio);
 }
-function ensureGraph(){
- if(graphTried)return !!analyser;
- graphTried=true;
+function ensureContext(){
+ if(ctx&&ctx.state!=="closed")return true;
  try{
   var AudioCtx=window.AudioContext||window.webkitAudioContext;
   if(!AudioCtx){status("Égaliseur indisponible sur ce navigateur.");return false;}
@@ -190,7 +189,19 @@ function ensureGraph(){
   // en arrière-plan. Repli sans option pour les anciens navigateurs.
   try{ctx=new AudioCtx({latencyHint:"playback"});}
   catch(contextError){ctx=new AudioCtx();}
-  var src=ctx.createMediaElementSource(audio);
+  return true;
+ }catch(err){ctx=null;return false;}
+}
+function buildGraph(){
+ if(analyser)return true;
+ // Ne jamais détourner le média natif vers Web Audio tant que son contexte
+ // n'est pas réellement actif. Sinon Android fait avancer currentTime mais
+ // peut envoyer un silence complet vers les haut-parleurs.
+ if(!ctx||ctx.state!=="running"||graphTried)return false;
+ graphTried=true;
+ var src=null;
+ try{
+  src=ctx.createMediaElementSource(audio);
   var last=src;
   eqFreq.forEach(function(freq,i){
    var f=ctx.createBiquadFilter();
@@ -204,7 +215,12 @@ function ensureGraph(){
   if(reverb>0)applyReverb();
   return true;
  }catch(err){
-  status("L'égaliseur n'a pas pu démarrer. Recharge la page pour réessayer.");
+  // La lecture HTML reste native et audible si l'analyseur est indisponible.
+  try{if(ctx&&ctx.state!=="closed")ctx.close();}catch(e){}
+  ctx=null;filters=[];analyser=null;graphTried=false;reverbGraph=null;
+  // Si createMediaElementSource a déjà détourné le média avant l'erreur,
+  // repartir sur un élément natif neuf évite un lecteur qui avance en silence.
+  if(src)setTimeout(function(){if(!audio.paused)nativeAudioFallback(audio.currentTime);},0);
   return false;
  }
 }
@@ -283,11 +299,15 @@ function renderReverb(){
 }
 
 function resumeGraph(){
- if(nativeFallback||!ensureGraph())return Promise.resolve(false);
- if(!ctx||ctx.state==="running")return Promise.resolve(true);
+ if(nativeFallback)return Promise.resolve(false);
+ if(analyser&&ctx&&ctx.state==="running")return Promise.resolve(true);
+ if(!ensureContext())return Promise.resolve(false);
+ if(ctx.state==="running")return Promise.resolve(buildGraph());
  try{
   var r=ctx.resume();
-  return Promise.resolve(r).then(function(){return ctx&&ctx.state==="running";}).catch(function(){return false;});
+  return Promise.resolve(r).then(function(){
+   return !!(ctx&&ctx.state==="running"&&buildGraph());
+  }).catch(function(){return false;});
  }catch(e){return Promise.resolve(false);}
 }
 function setEq(values,name){
@@ -528,8 +548,10 @@ function play(){
  prepareNativeAudio(audio);audio.muted=false;audio.defaultMuted=false;audio.volume=volume;
  // Lecture HTML native tant que le son est neutre : meilleure continuité
  // sur mobile verrouillé. Web Audio ne démarre que pour un véritable effet.
- var needsGraph=!nativeFallback&&(analyser||reverb>0||eq.some(function(x){return Math.abs(x)>.001;}));
- var graphReady=needsGraph?resumeGraph():null;
+ // Le mini-spectre utilise lui aussi le signal réel. L'activation du contexte
+ // est tentée à chaque geste Play, mais le média n'y est branché qu'après
+ // confirmation de l'état running.
+ var graphReady=!nativeFallback?resumeGraph():null;
  var before=audio.currentTime||0,res=audio.play();
  if(res&&res.then)res.then(function(){
   // Réappliquer après play() : certains moteurs mobiles restaurent l'état du
@@ -547,8 +569,8 @@ function play(){
   var retry=audio.play();if(retry&&retry.catch)retry.catch(function(){status("Lecture bloquée : appuie sur ▶ pour démarrer le son.");});
  },1400);
  if(graphReady){
-  graphReady.then(function(ok){if(!ok&&!audio.paused)nativeAudioFallback(audio.currentTime);});
-  setTimeout(function(){if(ctx&&ctx.state!=="running"&&!audio.paused)nativeAudioFallback(audio.currentTime);},500);
+  graphReady.then(function(ok){if(!ok&&analyser&&!audio.paused)nativeAudioFallback(audio.currentTime);});
+  setTimeout(function(){if(analyser&&ctx&&ctx.state!=="running"&&!audio.paused)nativeAudioFallback(audio.currentTime);},500);
  }
 }
 async function pick(id,autoplay){
