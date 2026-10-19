@@ -72,6 +72,8 @@ jobs:
                 observer.observe(root,{childList:true,subtree:true});
                 setTimeout(()=>{observer.disconnect();resolve();},4000);
               });
+              result.coverRenderedImmediately=!root.querySelector(".amp3-cover").classList.contains("amp3-cover-empty")
+                &&root.querySelector(".amp3-cover-image").src.startsWith("data:image/jpeg;base64,");
               await sleep(180);
               result.statusAfterSave=root.querySelector("[data-amp-status]")?.textContent||"";
               result.editorStillOpen=!!root.querySelector(".amp3-edit-overlay");
@@ -84,6 +86,15 @@ jobs:
               try{await root.querySelector(".amp3-cover-image").decode();}catch(e){}
               result.coverRendered=!root.querySelector(".amp3-cover").classList.contains("amp3-cover-empty")
                 &&root.querySelector(".amp3-cover-image").src.startsWith("data:image/jpeg;base64,");
+              root.querySelector(".amp3-cover").click();
+              const viewer=root.querySelector(".amp3-cover-viewer");
+              const large=viewer&&viewer.querySelector(".amp3-cover-viewer-image");
+              result.coverViewer=!!viewer&&!!large;
+              result.viewerSameImage=!!large&&large.src===root.querySelector(".amp3-cover-image").src;
+              result.viewerPhosphor=!!large&&getComputedStyle(large).boxShadow!=="none"
+                &&getComputedStyle(large).filter!=="none";
+              viewer.querySelector(".amp3-cover-viewer-close").click();
+              result.viewerCloses=!root.querySelector(".amp3-cover-viewer");
               result.playlistKept=root.querySelector('[data-amp-select]').value===p.id;
               document.documentElement.dataset.coverPhase="editor-2";
               root.querySelector("[data-amp-rename]").click();
