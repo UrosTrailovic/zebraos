@@ -806,10 +806,10 @@ function visualize(){
   }
   c.shadowColor="#66ff9e";c.shadowBlur=5;
   c.fillStyle="#a4eec0";c.font="9px monospace";
-  c.fillText(!audio.paused?(analyser&&bassEnergy>.02?"CH 01 • AUDIO":"CH 01 • EN ATTENTE"):"CH 01 • VEILLE",8,12);
+  c.fillText(!audio.paused?(analyser&&bassEnergy>.02?"CH 01 • AUDIO":analyser?"CH 01 • EN ATTENTE":"CH 01 • DIRECT"):"CH 01 • VEILLE",8,12);
   c.shadowBlur=0;
   var signal=view&&view.querySelector("[data-amp-spectrum-status]");
-  if(signal)signal.textContent=audio.paused?"VEILLE":analyser&&bassEnergy>.02?"SIGNAL":"ANALYSE…";
+  if(signal)signal.textContent=audio.paused?"VEILLE":analyser&&bassEnergy>.02?"SIGNAL":analyser?"ANALYSE…":"LECTURE DIRECTE";
  }
  spectrumRefresh=function(){
   pausedFramePainted=false;
