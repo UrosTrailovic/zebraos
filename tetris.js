@@ -87,7 +87,7 @@ function mount(root){
  start.classList.add("zt-image-button","zt-play");
  const restart=btn("RECOMMENCER",()=>{sound("ui");reset();});
  restart.classList.add("zt-image-button","zt-restart");
- const menu=btn("MENU",()=>{sound("ui");if(!menuOpen){menuOpen=true;paused=true;}else menuOpen=false;updateStatus();});
+ const menu=btn("MENU",()=>{sound("ui");if(started||over)showTitleScreen();});
  menu.classList.add("zt-image-button","zt-menu");
  let menuOpen=false;
  controls.append(start,restart,menu);
@@ -106,11 +106,12 @@ function mount(root){
  function control(label,cls,action,repeat){
   let b=make("button","zt-control "+cls,label);
   b.type="button";b.setAttribute("aria-label",label);
-  b.onclick=function(e){if(e.detail===0)action();}; // Activation clavier ; ne double pas le toucher.
+  function run(){if(!started&&!over)playFromTitle();else action();}
+  b.onclick=function(e){if(e.detail===0)run();}; // Activation clavier ; ne double pas le toucher.
   b.addEventListener("pointerdown",function(e){
    if(e.button!==undefined&&e.button!==0)return;
    e.preventDefault();
-   clearHeld();heldControl=b;action();
+   clearHeld();heldControl=b;run();
    if(repeat){
     repeatDelay=setTimeout(function(){
      repeatDelay=null;repeatTimer=setInterval(function(){if(active&&!paused&&!over)action();},95);
@@ -430,9 +431,6 @@ function mount(root){
   if(!root.closest(".window")?.classList.contains("focused"))return;
   if(["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName))return;
   if(e.ctrlKey||e.metaKey||e.altKey)return;
-  if(!started&&(e.key==="Enter"||e.key===" ")){
-   e.preventDefault();if(!e.repeat)playFromTitle();return;
-  }
   const action={
    a:()=>move(-1,0),d:()=>move(1,0),s:soft,w:rotate,
    q:holdPiece," ":hardDrop,
@@ -442,6 +440,9 @@ function mount(root){
    arrowdown:soft,arrowup:rotate
   };
   const pressed=e.key===" "?" ":e.key.toLowerCase();
+  if(!started&&(pressed==="enter"||action[pressed])){
+   e.preventDefault();if(!e.repeat)playFromTitle();return;
+  }
   if(!action[pressed])return;
   e.preventDefault();
   if(e.repeat&&[" ","q","w","p","arrowup"].includes(pressed))return;
