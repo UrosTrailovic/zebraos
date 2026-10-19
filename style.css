@@ -1253,10 +1253,10 @@
 }
 .zebra-game-body .zg-retro .zg-overlay[data-state="intro"]{
  overflow:hidden;pointer-events:auto;cursor:pointer;
- background-color:#06040f;
+ background-color:rgba(6,4,15,.38);
  background-image:
   repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 4px),
-  radial-gradient(circle at 50% 42%,#351060 0,#130724 46%,#040309 78%);
+  radial-gradient(circle at 50% 42%,rgba(53,16,96,.66) 0,rgba(19,7,36,.54) 46%,rgba(4,3,9,.72) 78%);
  isolation:isolate;
 }
 .zebra-game-body .zg-retro .zg-overlay[data-state="intro"]::before{
@@ -1264,7 +1264,7 @@
  border:2px solid #3ce4f1;box-shadow:0 0 0 2px #301be2,0 0 15px #bd12e4aa,inset 0 0 18px #27165d;
 }
 .zebra-game-body .zg-retro .zg-overlay[data-state="intro"] .zt-overlay-art{
- width:88%;max-width:195px;max-height:145px;
+ width:92%;max-width:205px;max-height:150px;
  filter:drop-shadow(3px 4px 0 #09020c) drop-shadow(0 0 7px #db21f2);
  animation:zt-title-hover 2.6s steps(2,end) infinite;
 }
@@ -1272,7 +1272,7 @@
  position:relative;padding:7px 10px 6px;
  color:#fff36d;background:#130724;border:2px solid #f42fd5;
  box-shadow:2px 2px 0 #241acb,-2px -2px 0 #37dfe9;
- font:bold clamp(13px,5vw,20px)/1 "Courier New",monospace;
+ font:bold clamp(11px,4.2vw,17px)/1 "Courier New",monospace;
  letter-spacing:1px;text-shadow:2px 2px 0 #a20c9e;
  animation:zt-press-blink 1s steps(1,end) infinite;
 }
