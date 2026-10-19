@@ -23,7 +23,9 @@ function mount(root){
  root.innerHTML="";
  let active=true,paused=true,started=false,over=false,lines=0,score=0,level=1,records=best(),held=null,holdUsed=false;
  let grid,upcoming=[],bag=[],current=null,clock=null,observer=null,introFrame=0,introStartedAt=0;
- let clearRows=[],clearDeadline=0,audioContext=null,lastSound={};
+ let clearRows=[],clearDeadline=0,audioContext=null,gameMusic=null,lastSound={};
+ let musicEnabled=true;
+ try{musicEnabled=localStorage.getItem("zebra.tetris.music")==="off"?false:true;}catch(_){}
  let wrap=make("div","zg zg-tetris zg-retro zt-assembling");
  let bar=make("div","zg-topline");
  let logo=make("img","zt-logo");
@@ -89,8 +91,14 @@ function mount(root){
  restart.classList.add("zt-image-button","zt-restart");
  const menu=btn("MENU",()=>{sound("ui");if(started||over)showTitleScreen();});
  menu.classList.add("zt-image-button","zt-menu");
+ const music=btn("MUSIC ON",()=>{
+  sound("ui");musicEnabled=!musicEnabled;
+  try{localStorage.setItem("zebra.tetris.music",musicEnabled?"on":"off");}catch(_){}
+  updateMusicButton();syncGameMusic();
+ });
+ music.classList.add("zt-image-button","zt-music-button");
  let menuOpen=false;
- controls.append(start,restart,menu);
+ controls.append(start,restart,music,menu);
  // Manette tactile Zebra Tetris 6.0 : les vrais PNG de l'auteur habillent
  // les sept commandes. Les zones interactives et le repeat restent natifs.
  let pad=make("div","zt-handheld");
@@ -178,6 +186,38 @@ function mount(root){
  wrap.appendChild(pad);
  wrap.appendChild(make("div","zg-help","WASD : tourner / bouger / descendre · Q : réserve · ESPACE : poser · P : pause"));
  root.appendChild(wrap);
+ // Musique du créateur : préchargée avec le jeu, mais lancée uniquement
+ // après l'action qui démarre réellement une partie.
+ function ensureGameMusic(){
+  if(gameMusic)return gameMusic;
+  try{
+   gameMusic=new Audio("assets/games/TETRISv1song.mp3?v=1");
+   gameMusic.preload="auto";gameMusic.loop=true;gameMusic.volume=.42;
+  }catch(_){gameMusic=null;}
+  return gameMusic;
+ }
+ function musicMuted(){
+  if(!musicEnabled)return true;
+  try{return localStorage.getItem("zebra.sfx.muted")==="1"}catch(_){return false}
+ }
+ function updateMusicButton(){
+  const label=musicEnabled?"MUSIC ON":"MUSIC OFF";
+  music.textContent=label;music.title=label;
+  music.setAttribute("aria-label",musicEnabled?"Couper la musique":"Activer la musique");
+  music.setAttribute("aria-pressed",musicEnabled?"true":"false");
+  music.classList.toggle("is-off",!musicEnabled);
+ }
+ function stopGameMusic(rewind){
+  if(!gameMusic)return;
+  try{gameMusic.pause();if(rewind)gameMusic.currentTime=0;}catch(_){}
+ }
+ function syncGameMusic(){
+  const music=ensureGameMusic();if(!music)return;
+  if(!started||paused||over||musicMuted()){stopGameMusic(false);return;}
+  const promise=music.play();if(promise&&promise.catch)promise.catch(function(){});
+ }
+ updateMusicButton();
+ ensureGameMusic();
  // Tous les éléments visuels doivent se révéler ENSEMBLE après l'ouverture
  // Windows 95, et non le logo / PAUSE avant les panneaux et le plateau.
  const startupLoader=make("div","zt-startup-loader","CHARGEMENT DE ZEBRA TETRIS…");
@@ -269,10 +309,12 @@ function mount(root){
  }
  function reset(){
   cancelAnimationFrame(introFrame);introFrame=0;
+  stopGameMusic(true);
   grid=blank();bag=[];upcoming=[];lines=0;score=0;level=1;held=null;holdUsed=false;
   started=true;over=false;paused=false;menuOpen=false;current=null;clearRows=[];clearDeadline=0;spawn();render();updateStatus();
  }
  function showTitleScreen(){
+  stopGameMusic(true);
   grid=blank();bag=[];upcoming=[];lines=0;score=0;level=1;held=null;holdUsed=false;
   started=false;over=false;paused=true;menuOpen=false;current=null;clearRows=[];clearDeadline=0;
   refill();introStartedAt=performance.now();render(introStartedAt);updateStatus();
@@ -356,6 +398,7 @@ function mount(root){
   stage.tabIndex=titleScreen?0:-1;
   if(window.ZebraTetrisArtwork&&atlasReady)
    window.ZebraTetrisArtwork.setState(overlayArt,start,over?"gameover":titleScreen?"intro":menuOpen?"menu":"pause",started&&!paused);
+  syncGameMusic();
  }
  function rect(context,x,y,size,val,alpha){
   if(!val)return;
@@ -481,6 +524,7 @@ function mount(root){
  function dispose(){
   active=false;clearHeld();clearInterval(clock);clearTimeout(startupWatchdog);
   cancelAnimationFrame(introFrame);
+  stopGameMusic(true);gameMusic=null;
   cancelAnimationFrame(startupFrame);cancelAnimationFrame(startupFrame2);
   document.removeEventListener("keydown",key);
   if(audioContext){audioContext.close().catch(()=>{});audioContext=null;}

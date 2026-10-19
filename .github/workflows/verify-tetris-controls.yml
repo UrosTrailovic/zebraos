@@ -9,6 +9,7 @@ on:
       - 'app.js'
       - 'index.html'
       - 'assets/games/zebra-tetris-ui.png'
+      - 'assets/games/TETRISv1song.mp3'
       - 'assets/games/tetris-controls/**'
   workflow_dispatch:
 permissions:
@@ -23,6 +24,8 @@ jobs:
           # Toutes les fenêtres partagent windowBox(): la barre décorative a disparu.
           ! grep -q 'window-status' app.js
           grep -q 'window > .window-status{display:none!important}' style.css
+          test -s assets/games/TETRISv1song.mp3
+          file assets/games/TETRISv1song.mp3 | grep -q 'MPEG'
           cat > _verify_tetris_controls.html <<'HTML'
           <!doctype html><html lang="fr"><head><meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">

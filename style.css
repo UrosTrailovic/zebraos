@@ -1313,6 +1313,23 @@
 .zebra-game-body .zg-retro.zt-art-loaded .zt-image-button{
  font-size:0;background-color:transparent;
 }
+.zebra-game-body .zg-retro .zt-music-button,
+.zebra-game-body .zg-retro.zt-art-loaded .zt-music-button{
+ position:relative;padding-left:29px!important;
+ border:3px outset #eef0ee!important;
+ background:linear-gradient(180deg,#f5f5f5 0 12%,#cfcfcf 13% 72%,#989898 73% 100%)!important;
+ box-shadow:inset 1px 1px #fff,inset -2px -2px #565656,2px 2px 0 #100716!important;
+ color:#080916!important;font:900 10px/1 "Courier New",monospace!important;
+ letter-spacing:-.55px;text-shadow:1px 0 #777!important;
+}
+.zebra-game-body .zg-retro .zt-music-button:before{
+ content:"♫";position:absolute;left:9px;top:50%;transform:translateY(-53%);
+ color:#f20aca;font:900 21px/1 Arial,sans-serif;text-shadow:2px 1px #12133a;
+}
+.zebra-game-body .zg-retro .zt-music-button.is-off:before{content:"×";color:#ff2727;font-size:24px}
+.zebra-game-body .zg-retro .zt-music-button:active{
+ border-style:inset!important;transform:translate(2px,2px);box-shadow:inset 2px 2px #555!important;
+}
 .zebra-game-body .zg-retro .zg-button.zt-image-button:hover{
  background-color:transparent;filter:brightness(1.12);
 }
@@ -1621,6 +1638,12 @@
   width:auto;max-width:none;
   box-shadow:1px 2px 0 #50464a;
  }
+ .zebra-game-body .zg-retro .zt-music-button,
+ .zebra-game-body .zg-retro.zt-art-loaded .zt-music-button{
+  padding-left:15px!important;font-size:7px!important;letter-spacing:-.8px;border-width:2px!important;
+ }
+ .zebra-game-body .zg-retro .zt-music-button:before{left:4px;font-size:13px}
+ .zebra-game-body .zg-retro .zt-music-button.is-off:before{font-size:16px}
  .zebra-game-body .zg-retro .zt-dpad{
   grid-column:1;grid-row:2;display:flex;
   flex:1 1 auto;max-width:100%;min-width:0;
