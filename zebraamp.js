@@ -397,6 +397,28 @@ function renderCover(){
  }
  if(coverCache.has(id))applyCoverImage(art,cover,coverCache.get(id));
 }
+function closeCoverViewer(){
+ if(!view)return;
+ var viewer=view.querySelector(".amp3-cover-viewer");
+ if(viewer)viewer.remove();
+}
+function openCoverViewer(){
+ if(!view||!view.isConnected)return;
+ var cover=view.querySelector(".amp3-cover"),art=cover&&cover.querySelector(".amp3-cover-image");
+ if(!cover||cover.classList.contains("amp3-cover-empty")||!art||!art.currentSrc&&!art.src)return;
+ closeCoverViewer();
+ var overlay=el("div","amp3-cover-viewer"),dialog=el("div","amp3-cover-viewer-dialog");
+ overlay.setAttribute("role","dialog");overlay.setAttribute("aria-modal","true");
+ overlay.setAttribute("aria-label","Pochette agrandie de "+getList().name);
+ var image=el("img","amp3-cover-viewer-image");
+ image.src=art.currentSrc||art.src;image.alt="Pochette de la playlist "+getList().name;
+ var closeBtn=b("×",closeCoverViewer,"amp3-cover-viewer-close");
+ closeBtn.title="Fermer la pochette";closeBtn.setAttribute("aria-label",closeBtn.title);
+ dialog.append(image,closeBtn);overlay.appendChild(dialog);
+ overlay.addEventListener("pointerdown",function(e){if(e.target===overlay||e.target===image)closeCoverViewer();});
+ overlay.addEventListener("keydown",function(e){if(e.key==="Escape")closeCoverViewer();});
+ view.querySelector(".amp3").appendChild(overlay);closeBtn.focus();
+}
 function editPlaylist(){
  var p=getList();if(p.readonly||!view)return;
  var root=view.querySelector(".amp3");
@@ -458,6 +480,11 @@ function editPlaylist(){
     releaseCover(p.id);
     coverCache.set(p.id,compressed);
     p.coverKey="cover:"+p.id;
+    // Mise à jour immédiate : ne pas attendre un second passage dans
+    // l'éditeur ni le prochain événement timeupdate du lecteur.
+    var mainCover=view&&view.querySelector(".amp3-cover");
+    var mainArt=mainCover&&mainCover.querySelector(".amp3-cover-image");
+    if(mainCover&&mainArt)applyCoverImage(mainArt,mainCover,compressed);
    }else if(remove){
     localStorage.removeItem(coverStorageKey(p.id));
     releaseCover(p.id);
@@ -909,6 +936,11 @@ function open(){
  var art=el("img","amp3-cover-image");
  art.alt="Pochette de la playlist";art.loading="lazy";
  cover.classList.add("amp3-cover-empty");
+ cover.tabIndex=0;cover.setAttribute("role","button");
+ cover.setAttribute("aria-label","Agrandir la pochette de la playlist");
+ cover.title="Agrandir la pochette";
+ cover.onclick=openCoverViewer;
+ cover.onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openCoverViewer();}};
  cover.appendChild(art);
  cover.appendChild(el("span","amp3-cover-fallback"));
  var readout=el("div","amp3-readout");
