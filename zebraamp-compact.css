@@ -30,7 +30,9 @@
  flex:0 0 55px;width:55px;height:55px;
  position:relative;overflow:hidden;display:grid;place-items:center;
  border:3px ridge #92c6a9;background:#062618;
+ cursor:zoom-in;
 }
+.amp3-cover:focus-visible{outline:1px solid #d7ffe5;box-shadow:0 0 8px #5dff9b}
 .amp3-cover-image{width:100%;height:100%;object-fit:cover;display:block}
 .amp3-cover-fallback{
  display:none;position:absolute;inset:0;align-items:center;justify-content:center;
@@ -39,6 +41,7 @@
 }
 .amp3-cover.amp3-cover-empty .amp3-cover-image{display:none}
 .amp3-cover.amp3-cover-empty .amp3-cover-fallback{display:flex}
+.amp3-cover.amp3-cover-empty{cursor:default}
 .amp3-mini-visual{
  flex:0 0 98px;width:98px;height:55px;
  display:flex;align-items:stretch;overflow:hidden;
@@ -386,6 +389,27 @@
   repeating-radial-gradient(circle at 50% 50%,#152b21 0 2px,#04120e 3px 5px,#234335 6px 6.5px,#020b07 7px 9px);
  border:1px solid #739682;
  box-shadow:0 2px 7px #000c,inset 0 0 6px #000c;
+}
+.amp3-cover-viewer{
+ position:absolute;inset:0;z-index:85;display:flex;align-items:center;justify-content:center;
+ padding:26px;background:radial-gradient(circle at 50% 45%,#123b2da8 0%,#020906ed 64%);
+ backdrop-filter:blur(2px);
+}
+.amp3-cover-viewer-dialog{position:relative;display:grid;place-items:center;max-width:100%;max-height:100%}
+.amp3-cover-viewer-image{
+ display:block;width:min(72vw,430px);height:min(72vw,430px);max-width:100%;max-height:calc(100dvh - 110px);
+ object-fit:contain;border:4px ridge #a5ddba;background:#03170e;cursor:zoom-out;
+ filter:drop-shadow(0 0 4px #c5ffdc) drop-shadow(0 0 12px #57ff9a) drop-shadow(0 0 30px #19d96b);
+ box-shadow:0 0 3px #e5ffec,0 0 15px #72ffaa,0 0 44px #14cb6099,0 14px 35px #000e;
+}
+.amp3-cover-viewer-close{
+ position:absolute;right:-13px;top:-13px;width:31px;height:31px;padding:0;
+ border:3px outset #bddbc8;background:linear-gradient(#e4f4e9,#88ad96);color:#173826;
+ font:bold 20px/24px Tahoma,Arial,sans-serif;cursor:pointer;box-shadow:0 0 12px #62ff9a;
+}
+@media(max-width:700px){
+ .amp3-cover-viewer{padding:20px}
+ .amp3-cover-viewer-image{width:min(76vw,330px);height:min(76vw,330px)}
 }
 .amp3-edit-overlay{
  position:absolute;inset:0;z-index:70;
