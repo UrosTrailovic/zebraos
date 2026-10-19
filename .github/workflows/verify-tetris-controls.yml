@@ -104,9 +104,10 @@ jobs:
               $(".zt-restart").click();
               report.restart=$(".zg-state").textContent==="EN COURS"&&Number($(".zg-stat strong").textContent)===0;
               $(".zt-menu").click();
-              report.menu=$(".zg-state").textContent==="MENU";
-              $(".zt-play").click();
-              report.exitMenu=$(".zg-state").textContent==="EN COURS";
+              report.menu=$(".zg-state").textContent==="PRÊT"
+                &&$(".zg-overlay").dataset.state==="intro";
+              pointer($(".zt-a"));
+              report.anyGameButtonStarts=$(".zg-state").textContent==="EN COURS";
               setTimeout(()=>{
                 report.loadedTextures=$(".zt-logo").naturalWidth>0&&root.querySelector(".zt-art-loaded")!==null;
                 report.readyTogether=!$(".zg-retro").classList.contains("zt-assembling")
