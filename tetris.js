@@ -22,7 +22,7 @@ function mount(root){
  if(root._zebraDispose)root._zebraDispose();
  root.innerHTML="";
  let active=true,paused=true,started=false,over=false,lines=0,score=0,level=1,records=best(),held=null,holdUsed=false;
- let grid,upcoming=[],bag=[],current=null,clock=null,observer=null;
+ let grid,upcoming=[],bag=[],current=null,clock=null,observer=null,introFrame=0,introStartedAt=0;
  let clearRows=[],clearDeadline=0,audioContext=null,lastSound={};
  let wrap=make("div","zg zg-tetris zg-retro zt-assembling");
  let bar=make("div","zg-topline");
@@ -43,7 +43,7 @@ function mount(root){
  let overlayArt=make("img","zt-overlay-art");
  overlayArt.alt="Zebra Tetris";
  overlay.appendChild(overlayArt);
- let overlayCaption=make("span","zt-overlay-caption","PRESS TO PLAY");
+ let overlayCaption=make("span","zt-overlay-caption","PRESS BUTTON TO PLAY");
  let overlaySubcaption=make("span","zt-overlay-subcaption","CLIQUE · ENTRÉE · ESPACE");
  overlay.append(overlayCaption,overlaySubcaption);
  stage.appendChild(overlay);main.appendChild(stage);
@@ -267,13 +267,15 @@ function mount(root){
   if(collision(mat,current.x,current.y)){over=true;paused=true;sound("gameover");updateStatus();}
  }
  function reset(){
+  cancelAnimationFrame(introFrame);introFrame=0;
   grid=blank();bag=[];upcoming=[];lines=0;score=0;level=1;held=null;holdUsed=false;
   started=true;over=false;paused=false;menuOpen=false;current=null;clearRows=[];clearDeadline=0;spawn();render();updateStatus();
  }
  function showTitleScreen(){
   grid=blank();bag=[];upcoming=[];lines=0;score=0;level=1;held=null;holdUsed=false;
   started=false;over=false;paused=true;menuOpen=false;current=null;clearRows=[];clearDeadline=0;
-  refill();render();updateStatus();
+  refill();introStartedAt=performance.now();render(introStartedAt);updateStatus();
+  introFrame=requestAnimationFrame(animateTitleScreen);
  }
  function playFromTitle(){
   if(started||over)return;
@@ -346,7 +348,7 @@ function mount(root){
   introBlocks.style.display=titleScreen?"block":"none";
   overlayCaption.textContent=over?"Recommencer pour rejouer":
     menuOpen?"P : pause · Q : réserve · ESPACE : poser":
-    titleScreen?"PRESS TO PLAY":"Appuie sur Jouer pour continuer";
+    titleScreen?"PRESS BUTTON TO PLAY":"Appuie sur Jouer pour continuer";
   overlaySubcaption.textContent=titleScreen?"CLIQUE · ENTRÉE · ESPACE":"";
   overlaySubcaption.style.display=titleScreen?"block":"none";
   stage.setAttribute("aria-label",titleScreen?"Zebra Tetris — appuyez pour jouer":"Plateau Zebra Tetris");
@@ -372,7 +374,36 @@ function mount(root){
   let mat=piece(index),size=20,x=Math.floor((96-mat[0].length*size)/2),y=Math.floor((96-mat.length*size)/2);
   mat.forEach((row,yy)=>row.forEach((v,xx)=>rect(context,x+xx*size,y+yy*size,size,v)));
  }
- function render(){
+ const introStack=[
+  [0,19,6],[1,19,6],[2,19,4],[3,19,4],[4,19,2],[5,19,2],[6,19,7],[7,19,7],[8,19,5],
+  [0,18,6],[1,18,3],[3,18,4],[4,18,2],[6,18,7],[8,18,5],[9,18,5],
+  [1,17,3],[2,17,3],[6,17,1],[7,17,1],[8,17,1],[9,17,1],
+  [4,16,5],[5,16,5],[5,15,5]
+ ];
+ const introDrops=[
+  {type:0,x:0,delay:0,duration:3300},
+  {type:5,x:5,delay:1150,duration:3600},
+  {type:2,x:2,delay:2350,duration:3900}
+ ];
+ function drawIntroGame(now){
+  introStack.forEach(function(cell){rect(ctx,cell[0]*BLOCK,cell[1]*BLOCK,BLOCK,cell[2],.72);});
+  const elapsed=Math.max(0,now-introStartedAt);
+  introDrops.forEach(function(drop){
+   const cycle=drop.duration+1200;
+   const local=(elapsed+drop.delay)%cycle;
+   if(local>drop.duration)return;
+   const mat=piece(drop.type),progress=local/drop.duration;
+   const y=-mat.length+progress*(H-mat.length-3);
+   mat.forEach(function(row,dy){row.forEach(function(v,dx){
+    if(v&&y+dy>=0)rect(ctx,(drop.x+dx)*BLOCK,(y+dy)*BLOCK,BLOCK,v,.82);
+   });});
+  });
+ }
+ function animateTitleScreen(now){
+  if(!active||started||over)return;
+  render(now);introFrame=requestAnimationFrame(animateTitleScreen);
+ }
+ function render(now){
   ctx.fillStyle="#040405";ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.strokeStyle="rgba(255,255,255,.025)";
   for(let x=0;x<=W;x++){ctx.beginPath();ctx.moveTo(x*BLOCK,0);ctx.lineTo(x*BLOCK,H*BLOCK);ctx.stroke();}
@@ -390,6 +421,7 @@ function mount(root){
     current.mat.forEach((row,y)=>row.forEach((v,x)=>{if(v&&ghostY+y>=0)rect(ctx,(current.x+x)*BLOCK,(ghostY+y)*BLOCK,BLOCK,v,.24);}));
     current.mat.forEach((row,y)=>row.forEach((v,x)=>{if(v&&current.y+y>=0)rect(ctx,(current.x+x)*BLOCK,(current.y+y)*BLOCK,BLOCK,v);}));
   }
+  if(!started&&!over)drawIntroGame(now||performance.now());
   preview(nextCtx,upcoming[0]);preview(holdCtx,held);
   scoreEl.textContent=score;levelEl.textContent=level;linesEl.textContent=lines;bestEl.textContent=records;
  }
@@ -447,6 +479,7 @@ function mount(root){
  }
  function dispose(){
   active=false;clearHeld();clearInterval(clock);clearTimeout(startupWatchdog);
+  cancelAnimationFrame(introFrame);
   cancelAnimationFrame(startupFrame);cancelAnimationFrame(startupFrame2);
   document.removeEventListener("keydown",key);
   if(audioContext){audioContext.close().catch(()=>{});audioContext=null;}
