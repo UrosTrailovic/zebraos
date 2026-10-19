@@ -704,7 +704,7 @@ var gameModules={
  tetris:{name:"Tetris.exe",width:735,height:770,global:"ZebraTetris",
   files:["tetris-artwork.js?v=1.7","tetris.js?v=2.3"]},
  snake:{name:"Znake.exe",width:650,height:700,global:"ZebraSnake",
-  files:["snake.js?v=5.4"],css:"snake.css?v=5.1"},
+  files:["snake.js?v=5.5"],css:"snake.css?v=5.2"},
  racer:{name:"Zebra Pursuit.exe",width:980,height:720,global:"ZebraRacer",
   files:["racer.js?v=1.0"],css:"racer.css?v=1.1"},
  paint:{name:"ZebraPaint.exe",width:850,height:640,global:"ZebraPaint",

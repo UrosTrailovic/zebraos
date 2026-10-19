@@ -4,7 +4,10 @@ on:
     paths:
       - snake.js
       - snake.css
+      - style.css
       - assets/games/snake/**
+      - assets/games/tetris-controls/**
+      - assets/games/zebra-tetris-ui.png
       - assets/fonts/zebra-videotex.woff
       - assets/fonts/redden.woff
       - tests/snake.test.cjs
@@ -92,8 +95,9 @@ jobs:
               return Math.abs(actual.width-expected.width)<1&&Math.abs(actual.height-expected.height)<1&&Math.abs((actual.left-origin.left)-(expected.left-refOrigin.left))<1&&Math.abs((actual.top-origin.top)-(expected.top-refOrigin.top))<1;
              });
              out.diagonal=$('.zs-a').getBoundingClientRect().top<$('.zs-b').getBoundingClientRect().top;
-             out.visibleControls=Array.from(host.querySelectorAll('.zs-dir,.zs-ab button')).every(b=>{const r=b.getBoundingClientRect();const s=getComputedStyle(b);return r.width>=30&&r.height>=30&&r.left>=0&&r.right<=innerWidth&&s.color!=='rgba(0, 0, 0, 0)'});
-             out.noControlPanel=getComputedStyle($('.zs-handheld'),'::before').display==='none';
+             out.visibleControls=Array.from(host.querySelectorAll('.zs-dir,.zs-ab button,.zs-select')).every(b=>{const r=b.getBoundingClientRect();return r.width>=29&&r.height>=29&&r.left>=0&&r.right<=innerWidth});
+             const sprites=Array.from(host.querySelectorAll('.zs-handheld .zt-control-sprite'));
+             out.sameTetrisTextures=$('.zs-handheld').classList.contains('zt-skin-ready')&&sprites.length===7&&sprites.every(i=>i.complete&&i.naturalWidth>0)&&getComputedStyle($('.zs-handheld'),'::before').backgroundImage.includes('interfaceTetris.png')&&$('.zs-console').classList.contains('zt-art-loaded');
              ref.remove();
             }
             await wait(1950);

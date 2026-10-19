@@ -243,6 +243,9 @@ function mount(root){
  root.appendChild(wrap);
  const $=s=>wrap.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d');canvas.width=CW;canvas.height=CH;
  const stage=$('.zs-stage'),arena=$('.zs-arena'),hud=$('.zs-hud'),overlay=$('.zs-overlay'),status=$('.zs-state');
+ $('.zs-handheld').classList.remove('zt-skin-ready');
+ $('.zs-cross').appendChild(make('div','zt-cross-shape'));
+ $('.zs-select-space').remove();
  function button(label,cls,fn,parent){const e=make('button','zs-button '+cls,label);e.type='button';e.onclick=function(event){sounds.unlock();fn(event);};parent.appendChild(e);return e;}
  const background=document.createElement('canvas');background.width=CW;background.height=CH;
  drawBackground(background.getContext('2d'));
@@ -259,16 +262,38 @@ function mount(root){
  function restart(){if(g.state==='hurt')return;clearCrash();sounds.stop();lastState='ready';lastScore=0;elapsed=0;g=g.state==='ready'?selectedGame():g;g.reset();g.toggle();render();}
  function action(){if(g.state==='ready'){chooseMenu();return;}if(g.state==='over'||g.state==='won')restart();else{g.toggle();render();}}
  function menu(){if(g.state==='hurt')return;clearCrash();sounds.stop();g.reset();sounds.play('menu');elapsed=0;menuPage='mode';menuIndex=0;render();}
- const play=button('Jouer','zs-play',action,$('.zs-toolbar'));
- button('Recommencer','zs-restart',restart,$('.zs-toolbar'));
- button('Menu','zs-menu',menu,$('.zs-toolbar'));
+ const play=button('Jouer','zs-play zg-button zt-image-button zt-play',action,$('.zs-toolbar'));
+ const restartButton=button('Recommencer','zs-restart zg-button zt-image-button zt-restart',restart,$('.zs-toolbar'));
+ const menuButton=button('Menu','zs-menu zg-button zt-image-button zt-menu',menu,$('.zs-toolbar'));
  for(const [d,label]of Object.entries({up:'▲',left:'◀',right:'▶',down:'▼'})){
   const b=button(label,'zs-dir zt-control zt-dir zt-dir-'+d+' zs-'+d,e=>{if(e.detail===0){turn(d);}},$('.zs-cross'));
   b.setAttribute('aria-label',({up:'Haut',down:'Bas',left:'Gauche',right:'Droite'})[d]);
   b.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();sounds.unlock();turn(d);};
  }
+ $('.zs-cross').appendChild(make('span','zt-cross-center'));
  const a=button('A','zs-a zt-control zt-ab-button zt-a',action,$('.zs-ab'));a.setAttribute('aria-label','Jouer ou pause');
  const b=button('B','zs-b zt-control zt-ab-button zt-b',restart,$('.zs-ab'));b.setAttribute('aria-label','Recommencer');
+ const select=button('SELECT','zs-select zt-control zt-select',menu,$('.zs-action-side'));select.setAttribute('aria-label','Retour au menu');
+ $('.zs-action-side').appendChild(make('span','zt-control-caption','B : RECOMMENCER · A : PAUSE'));
+ const spriteRoot='/assets/games/tetris-controls/';
+ const spriteItems=[[$('.zs-up'),'upTetris.png'],[$('.zs-down'),'downTetris.png'],[$('.zs-left'),'leftTetris.png'],[$('.zs-right'),'rightTetris.png'],[a,'btnAtetris.png'],[b,'btnBtetris.png'],[select,'selectTetris.png']];
+ const spriteLoads=spriteItems.map(([control,file])=>new Promise((resolve,reject)=>{
+  const image=make('img','zt-control-sprite');image.alt='';image.draggable=false;image.decoding='async';
+  image.onload=resolve;image.onerror=reject;image.src=spriteRoot+file;control.appendChild(image);
+ }));
+ const panelImage=new Image();spriteLoads.push(new Promise((resolve,reject)=>{panelImage.onload=resolve;panelImage.onerror=reject;panelImage.src=spriteRoot+'interfaceTetris.png';}));
+ Promise.all(spriteLoads).then(()=>{if(alive&&$('.zs-handheld').isConnected)$('.zs-handheld').classList.add('zt-skin-ready');}).catch(()=>{});
+ const ATLAS='/assets/games/zebra-tetris-ui.png?v=57',AW=280,AH=252;
+ function atlasSprite(node,[x,y,w,h]){
+  node.style.backgroundImage='url("'+ATLAS+'")';node.style.backgroundRepeat='no-repeat';
+  node.style.backgroundSize=(100*AW/w)+'% '+(100*AH/h)+'%';
+  node.style.backgroundPosition=(100*x/(AW-w))+'% '+(100*y/(AH-h))+'%';node.style.imageRendering='pixelated';
+ }
+ function skinToolbar(){
+  atlasSprite(play,g.state==='running'?[168,35,108,32]:[168,0,108,32]);
+  atlasSprite(restartButton,[168,70,108,32]);atlasSprite(menuButton,[168,105,108,32]);
+ }
+ const toolbarAtlas=new Image();toolbarAtlas.onload=()=>{if(alive){$('.zs-console').classList.add('zt-art-loaded');skinToolbar();}};toolbarAtlas.src=ATLAS;
  $('.zs-start').onclick=()=>{sounds.unlock();action();};
  const launch=$('.zs-launch');
  function renderMenu(){
@@ -304,6 +329,7 @@ function mount(root){
  for(const [d,label]of Object.entries({up:'▲',left:'◀',right:'▶',down:'▼'})){
   const control=button(label,'zs-p2-dir zs-p2-'+d,e=>{if(e.detail===0)turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);},second);
   control.setAttribute('aria-label','Joueur 2 : '+({up:'Haut',left:'Gauche',right:'Droite',down:'Bas'})[d]);
+  const image=make('img','zt-control-sprite');image.alt='';image.draggable=false;image.decoding='async';image.src=spriteRoot+d+'Tetris.png';control.appendChild(image);
   control.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();sounds.unlock();turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);};
  }
  wrap.insertBefore(second,$('.zs-hud'));
@@ -325,6 +351,7 @@ function mount(root){
   const duelResult=g.kind==='duel'&&g.state==='over'?(g.winner===0?'DRAW':g.winner===1?'PLAYER 1 WIN':settings.players===1?'ZNAKEBOT WIN':'PLAYER 2 WIN'):'';
   status.textContent=duelResult||({ready:'PRÊT',running:'EN JEU',paused:'PAUSE',hurt:'AÏE',over:'GAME OVER',won:'VICTOIRE'})[g.state];
   play.textContent=g.state==='running'?'Pause':g.state==='paused'?'Reprendre':g.state==='ready'?'Jouer':'Rejouer';
+  if($('.zs-console').classList.contains('zt-art-loaded'))skinToolbar();
   wrap.dataset.state=g.state;wrap.dataset.duo=String(g.kind==='duel'&&settings.players===2&&g.state!=='ready');fit();
   launch.hidden=g.state!=='ready';renderMenu();
   $('.zs-result').textContent='';
