@@ -926,18 +926,22 @@ function openVisualizer(){
 function startAmpBootGreeting(node){
  if(!node)return;
  node.innerHTML="";node.classList.remove("amp3-boot-dim");
- var prefix="// ",hello="Hello :)",typed="",timers=[];
+ var prefix="// ",hello="Hello :)",timers=[];
  function later(fn,ms){var id=setTimeout(function(){if(node.isConnected)fn();},ms);timers.push(id);}
- function mountMessage(){
+ function begin(){
   if(!node.isConnected)return;
-  var prefixNode=el("span","amp3-boot-prefix",prefix);
+  var prefixNode=el("span","amp3-boot-prefix","");
   var helloNode=el("span","amp3-boot-word","");
   node.append(prefixNode,helloNode);
-  function typeAt(i){
+  var full=prefix+hello;
+  var index=0;
+  function typeNext(){
    if(!node.isConnected)return;
-   if(i>=hello.length){later(startBlink,900);return;}
-   typed+=hello.charAt(i);helloNode.textContent=typed;
-   later(function(){typeAt(i+1);},95+((i%3)*20));
+   if(index>=full.length){later(startBlink,900);return;}
+   var ch=full.charAt(index++);
+   if(index<=prefix.length)prefixNode.textContent+=ch;
+   else helloNode.textContent+=ch;
+   later(typeNext,95+((index%3)*20));
   }
   function startBlink(){
    var flashes=0;
@@ -951,23 +955,25 @@ function startAmpBootGreeting(node){
     helloNode.classList.remove("amp3-boot-dim");
     flashes++;
     if(flashes<2)later(hideWord,1250);
-    else later(function(){erase(hello.length);},1200);
+    else later(function(){eraseHello(hello.length);},1200);
    }
    hideWord();
   }
-  function erase(left){
+  function eraseHello(left){
    if(!node.isConnected)return;
-   if(left<=0){
-    helloNode.textContent="";
-    later(function(){node.innerHTML="";},180);
-    return;
-   }
-   typed=typed.slice(0,-1);helloNode.textContent=typed;
-   later(function(){erase(left-1);},88);
+   if(left<=0){later(function(){erasePrefix(prefixNode.textContent.length);},180);return;}
+   helloNode.textContent=helloNode.textContent.slice(0,-1);
+   later(function(){eraseHello(left-1);},88);
   }
-  typeAt(0);
+  function erasePrefix(left){
+   if(!node.isConnected)return;
+   if(left<=0){node.innerHTML="";return;}
+   prefixNode.textContent=prefixNode.textContent.slice(0,-1);
+   later(function(){erasePrefix(left-1);},105);
+  }
+  typeNext();
  }
- later(mountMessage,1000);
+ later(begin,1000);
 }
 function open(){
  init();
