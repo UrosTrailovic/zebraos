@@ -54,7 +54,7 @@ function mount(root){
  let statsPanel=make("div","zg-side zg-side-stats");
  let previewPanel=make("div","zg-side zg-side-previews");
  function stat(title){let box=make("div","zg-stat");box.appendChild(make("small","",title));let count=make("strong","","0");box.appendChild(count);statsPanel.appendChild(box);return count;}
- let scoreEl=stat("SCORE"),levelEl=stat("NIVEAU"),linesEl=stat("LIGNES"),bestEl=stat("RECORD");
+ let scoreEl=stat("SCORE"),levelEl=stat("NIVEAU"),linesEl=stat("LIGNES"),bestEl=stat("RECORD");\n const levelStat=levelEl.closest(".zg-stat");
  let nextBox=make("div","zg-preview-wrap");nextBox.appendChild(make("small","","SUIVANT"));
  let next=make("canvas","zg-mini");next.width=96;next.height=96;nextBox.appendChild(next);previewPanel.appendChild(nextBox);
  let holdBox=make("div","zg-preview-wrap");holdBox.appendChild(make("small","","RÉSERVE (Q)"));
@@ -457,6 +457,13 @@ function mount(root){
    if(completed.length===4){sound("tetris");tetrisImpact();}else sound("clear");
   }else{holdUsed=false;spawn();}
  }
+ function flashLevelUp(){
+  if(!levelStat)return;
+  levelStat.classList.remove("zt-level-up");
+  void levelStat.offsetWidth;
+  levelStat.classList.add("zt-level-up");
+  setTimeout(function(){if(active&&levelStat)levelStat.classList.remove("zt-level-up");},760);
+ }
  function completeClear(){
   if(!clearRows.length)return;
   const cleared=clearRows.length,oldLevel=level;
@@ -467,7 +474,7 @@ function mount(root){
   score+=([0,100,300,500,800][cleared]||800)*level;
   lines+=cleared;level=Math.floor(lines/10)+1;
   if(score>records){records=score;saveBest(records);}
-  if(level>oldLevel)sound("level");
+  if(level>oldLevel){sound("level");flashLevelUp();}
   holdUsed=false;spawn();
  }
  function move(dx,dy){
