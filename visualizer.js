@@ -107,8 +107,14 @@ function sampleBands(data,node,count,out){
       n++;
     }
     var db=power>0?10*Math.log10(power/Math.max(1,n)):-150;
-    var tilt=rounded(Math.log2(Math.sqrt(lo*hi)/150)*2.4,0,11);
-    out[i]=rounded((db+tilt+77)/53,0,1);
+    var center=Math.sqrt(lo*hi);
+    var tilt=rounded(Math.log2(center/150)*2.1,0,9);
+    var raw=rounded((db+tilt+76)/54,0,1);
+    // Les graves transportent beaucoup plus d'énergie : garder du headroom
+    // évite les premières bandes collées au plafond tout en laissant les kicks taper.
+    var headroom=center<140?.78:center<300?.86:center<650?.92:.96;
+    var shaped=raw/(1+.34*raw);
+    out[i]=rounded(shaped*1.18*headroom,0,headroom);
   }
   return out;
 }
@@ -129,7 +135,7 @@ function readMotion(m,node,playing,dt){
   sampleBands(spectrum,node,m.bands.length,m.bands);
   for(var j=0;j<m.bands.length;j++){
     var target=m.bands[j]*gate;
-    m.levels[j]=follow(m.levels[j],target,dt,.022,.16);
+    m.levels[j]=follow(m.levels[j],target,dt,.028,.19);
     if(m.levels[j]>=m.peaks[j]){m.peaks[j]=m.levels[j];m.holds[j]=.22;}
     else{m.holds[j]-=dt;if(m.holds[j]<=0)m.peaks[j]=Math.max(m.levels[j],m.peaks[j]-dt*.55);}
   }
