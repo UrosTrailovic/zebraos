@@ -92,7 +92,7 @@ function grid(ctx,w,h,space,color){
 function sampleBands(data,node,count,out){
   out=out||new Float32Array(count);
   var nyquist=(node.context?node.context.sampleRate:44100)/2;
-  var top=Math.min(14000,nyquist*.9),bottom=45;
+  var top=Math.min(14000,nyquist*.9),bottom=75;
   var minDb=Number.isFinite(node.minDecibels)?node.minDecibels:-100;
   var maxDb=Number.isFinite(node.maxDecibels)?node.maxDecibels:-30;
   for(var i=0;i<count;i++){
@@ -197,9 +197,9 @@ function drawSpectrum(ctx,w,h,m){
     ctx.fillStyle=reflection;ctx.fillRect(x,base+3,bw,3+value*h*.1);
   }
   ctx.font="10px monospace";ctx.fillStyle="#75b99b";ctx.textAlign="left";
-  ctx.fillText("SPECTRE / 45 Hz — 14 kHz",margin,22);
-  var labels=[[60,"60"],[250,"250"],[1000,"1k"],[4000,"4k"],[12000,"12k Hz"]];
-  labels.forEach(function(p){var x=margin+Math.log(p[0]/45)/Math.log(14000/45)*usable;ctx.fillText(p[1],Math.min(w-margin-30,x),h-12);});
+  ctx.fillText("SPECTRE / 75 Hz — 14 kHz",margin,22);
+  var labels=[[80,"80"],[250,"250"],[1000,"1k"],[4000,"4k"],[12000,"12k Hz"]];
+  labels.forEach(function(p){var x=margin+Math.log(p[0]/75)/Math.log(14000/75)*usable;ctx.fillText(p[1],Math.min(w-margin-30,x),h-12);});
 }
 function drawScope(ctx,w,h,bass,mids,time,zoom){
   var cy=h/2;
