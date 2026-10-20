@@ -1234,6 +1234,22 @@
  box-shadow:0 0 0 10px #1a1422,4px 6px 0 10px #130816;
  overflow:hidden;
 }
+.zebra-game-body .zg-retro .zg-stat.zt-level-up{
+ animation:zt-level-up-flash .76s steps(2,end);
+}
+.zebra-game-body .zg-retro .zg-stat.zt-level-up strong{
+ animation:zt-level-up-number .76s steps(2,end);
+}
+@keyframes zt-level-up-flash{
+ 0%,100%{filter:none;box-shadow:none}
+ 12%,34%,56%{filter:brightness(1.45);box-shadow:0 0 0 2px #fff36d,0 0 14px #37dfe9}
+ 22%,45%,68%{filter:brightness(.92);box-shadow:none}
+}
+@keyframes zt-level-up-number{
+ 0%,100%{transform:scale(1);text-shadow:none}
+ 12%,34%,56%{transform:scale(1.18);text-shadow:0 0 8px #fff36d}
+ 22%,45%,68%{transform:scale(1);text-shadow:none}
+}
 .zebra-game-body .zg-retro .zg-tetris-board{
  width:100%;height:100%;display:block;max-width:none;
  background:#000;image-rendering:pixelated;
