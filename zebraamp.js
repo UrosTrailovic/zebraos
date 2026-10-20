@@ -939,19 +939,19 @@ function startAmpBootGreeting(node){
  }
  function startBlink(){
   var flashes=0;
-  function fadeOut(){
+  function hideWord(){
    if(!node.isConnected)return;
    helloNode.classList.add("amp3-boot-dim");
-   later(fadeIn,650);
+   later(showWord,950);
   }
-  function fadeIn(){
+  function showWord(){
    if(!node.isConnected)return;
    helloNode.classList.remove("amp3-boot-dim");
    flashes++;
-   if(flashes<3)later(fadeOut,1200);
-   else later(function(){erase(hello.length);},1100);
+   if(flashes<3)later(hideWord,1250);
+   else later(function(){erase(hello.length);},1200);
   }
-  fadeOut();
+  hideWord();
  }
  function erase(left){
   if(!node.isConnected)return;
