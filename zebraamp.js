@@ -919,6 +919,7 @@ function openVisualizer(){
 }
 function startAmpBootGreeting(node){
  if(!node)return;
+ node.textContent="";node.classList.remove("amp3-boot-dim");
  var text="// Hello :)",typed="",timers=[];
  function later(fn,ms){var id=setTimeout(function(){if(node.isConnected)fn();},ms);timers.push(id);}
  function typeAt(i){
@@ -966,6 +967,7 @@ function open(){
  stripe.setAttribute("aria-hidden","true");
  stripe.appendChild(el("span","amp3-zebra-rivet amp3-zebra-rivet-left"));
  stripe.appendChild(el("span","amp3-zebra-rivet amp3-zebra-rivet-right"));
+ root.appendChild(stripe);
  var screen=el("div","amp3-screen");
  var displayRow=el("div","amp3-display-row");
  var cover=el("div","amp3-cover");
@@ -1146,9 +1148,8 @@ function open(){
  },"amp3-btn"));
  root.appendChild(actions);
  root.appendChild(el("div","amp3-status","")).setAttribute("data-amp-status","");
- root.appendChild(stripe);
  w.appendChild(root);
- startAmpBootGreeting(bootHello);
+ requestAnimationFrame(function(){requestAnimationFrame(function(){if(bootHello.isConnected)startAmpBootGreeting(bootHello);});});
  render();renderEq();visualize();
  // Actualise aussi après une réouverture de ZebraAMP, sans attendre un clic.
  updatePublic().then(function(result){
