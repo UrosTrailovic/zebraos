@@ -23,7 +23,8 @@ function mount(root){
  root.innerHTML="";
  let active=true,paused=true,started=false,over=false,lines=0,score=0,level=1,records=best(),held=null,holdUsed=false;
  let grid,upcoming=[],bag=[],current=null,clock=null,observer=null,introFrame=0,introStartedAt=0;
- let clearRows=[],clearDeadline=0,audioContext=null,gameMusic=null,lastSound={};
+ let clearRows=[],clearDeadline=0,audioContext=null,gameMusic=null,menuMusic=null,loseMusic=null,lastSound={};
+ let loseTimer=null,musicFades=new Map();
  let musicEnabled=true;
  try{musicEnabled=localStorage.getItem("zebra.tetris.music")==="off"?false:true;}catch(_){}
  let wrap=make("div","zg zg-tetris zg-retro zt-assembling");
@@ -94,7 +95,7 @@ function mount(root){
  const music=btn("MUSIC ON",()=>{
   sound("ui");musicEnabled=!musicEnabled;
   try{localStorage.setItem("zebra.tetris.music",musicEnabled?"on":"off");}catch(_){}
-  updateMusicButton();syncGameMusic();
+  updateMusicButton();syncMusicState();
  });
  music.classList.add("zt-image-button","zt-music-button");
  let menuOpen=false;
@@ -186,15 +187,26 @@ function mount(root){
  wrap.appendChild(pad);
  wrap.appendChild(make("div","zg-help","WASD : tourner / bouger / descendre · Q : réserve · ESPACE : poser · P : pause"));
  root.appendChild(wrap);
- // Musique du créateur : préchargée avec le jeu, mais lancée uniquement
- // après l'action qui démarre réellement une partie.
- function ensureGameMusic(){
-  if(gameMusic)return gameMusic;
+ // Trois états musicaux : menu, partie et défaite.
+ // Les pistes restent indépendantes des SFX et obéissent au même bouton MUSIC ON/OFF.
+ function makeMusic(path,loop,volume){
   try{
-   gameMusic=new Audio("assets/games/TETRISv1song.mp3?v=1");
-   gameMusic.preload="auto";gameMusic.loop=true;gameMusic.volume=.42;
-  }catch(_){gameMusic=null;}
+   const audio=new Audio(path);
+   audio.preload="auto";audio.loop=!!loop;audio.volume=volume;
+   return audio;
+  }catch(_){return null;}
+ }
+ function ensureGameMusic(){
+  if(!gameMusic)gameMusic=makeMusic("assets/games/TETRISv1song.mp3?v=2",true,.42);
   return gameMusic;
+ }
+ function ensureMenuMusic(){
+  if(!menuMusic)menuMusic=makeMusic("assets/games/TETRISv1smainmenuong.mp3?v=1",true,.36);
+  return menuMusic;
+ }
+ function ensureLoseMusic(){
+  if(!loseMusic)loseMusic=makeMusic("assets/games/TETRISlosev1.mp3?v=1",false,.50);
+  return loseMusic;
  }
  function musicMuted(){
   if(!musicEnabled)return true;
@@ -207,17 +219,102 @@ function mount(root){
   music.setAttribute("aria-pressed",musicEnabled?"true":"false");
   music.classList.toggle("is-off",!musicEnabled);
  }
- function stopGameMusic(rewind){
-  if(!gameMusic)return;
-  try{gameMusic.pause();if(rewind)gameMusic.currentTime=0;}catch(_){}
+ function cancelMusicFade(audio){
+  if(!audio)return;
+  const frame=musicFades.get(audio);
+  if(frame){cancelAnimationFrame(frame);musicFades.delete(audio);}
  }
- function syncGameMusic(){
-  const music=ensureGameMusic();if(!music)return;
-  if(!started||paused||over||musicMuted()){stopGameMusic(false);return;}
-  const promise=music.play();if(promise&&promise.catch)promise.catch(function(){});
+ function stopMusic(audio,rewind){
+  if(!audio)return;
+  cancelMusicFade(audio);
+  try{audio.pause();if(rewind)audio.currentTime=0;}catch(_){}
+ }
+ function playMusic(audio){
+  if(!audio||musicMuted())return;
+  const promise=audio.play();
+  if(promise&&promise.catch)promise.catch(function(){});
+ }
+ function fadeMusic(audio,target,duration,rewindAtEnd){
+  if(!audio)return;
+  cancelMusicFade(audio);
+  const from=Number.isFinite(audio.volume)?audio.volume:0;
+  const startedAt=performance.now();
+  function frame(now){
+   if(!active||!audio)return;
+   const p=Math.min(1,(now-startedAt)/Math.max(1,duration));
+   audio.volume=Math.max(0,Math.min(1,from+(target-from)*p));
+   if(p<1){
+    const id=requestAnimationFrame(frame);musicFades.set(audio,id);
+   }else{
+    musicFades.delete(audio);
+    if(target<=.001){try{audio.pause();if(rewindAtEnd)audio.currentTime=0;}catch(_){}}
+   }
+  }
+  const id=requestAnimationFrame(frame);musicFades.set(audio,id);
+ }
+ function loseTransitionSfx(){
+  sound("gameover");
+  try{
+   const AudioCtor=window.AudioContext||window.webkitAudioContext;
+   if(!AudioCtor)return;
+   if(!audioContext)audioContext=new AudioCtor();
+   if(audioContext.state==="suspended")audioContext.resume().catch(()=>{});
+   const sr=audioContext.sampleRate,seconds=.18;
+   const buffer=audioContext.createBuffer(1,Math.floor(sr*seconds),sr);
+   const data=buffer.getChannelData(0);
+   for(let i=0;i<data.length;i++){
+    const env=1-i/data.length;
+    data[i]=(Math.random()*2-1)*env*.22;
+   }
+   const src=audioContext.createBufferSource(),filter=audioContext.createBiquadFilter(),gain=audioContext.createGain();
+   filter.type="lowpass";filter.frequency.value=1450;gain.gain.value=.16;
+   src.buffer=buffer;src.connect(filter);filter.connect(gain);gain.connect(audioContext.destination);src.start();
+   src.onended=function(){try{src.disconnect();filter.disconnect();gain.disconnect();}catch(_){}};
+  }catch(_){}
+ }
+ function playLoseSequence(){
+  clearTimeout(loseTimer);loseTimer=null;
+  stopMusic(menuMusic,true);
+  const gameplay=ensureGameMusic(),lose=ensureLoseMusic();
+  loseTransitionSfx();
+  if(gameplay&&!gameplay.paused)fadeMusic(gameplay,0,240,true);
+  else stopMusic(gameplay,true);
+  if(!lose||musicMuted())return;
+  stopMusic(lose,true);lose.volume=.03;
+  loseTimer=setTimeout(function(){
+   loseTimer=null;
+   if(!active||!over||musicMuted())return;
+   playMusic(lose);
+   fadeMusic(lose,.50,430,false);
+  },110);
+ }
+ function syncMusicState(){
+  if(musicMuted()){
+   stopMusic(gameMusic,false);stopMusic(menuMusic,false);stopMusic(loseMusic,false);
+   return;
+  }
+  const titleScreen=!started&&!over;
+  if(over)return;
+  if(titleScreen){
+   stopMusic(gameMusic,true);stopMusic(loseMusic,true);
+   const menuTrack=ensureMenuMusic();if(menuTrack){menuTrack.volume=.36;playMusic(menuTrack);}
+   return;
+  }
+  if(paused){
+   stopMusic(gameMusic,false);stopMusic(menuMusic,false);stopMusic(loseMusic,false);
+   return;
+  }
+  stopMusic(menuMusic,true);stopMusic(loseMusic,true);
+  const gameplay=ensureGameMusic();if(gameplay){gameplay.volume=.42;playMusic(gameplay);}
+ }
+ function triggerGameOver(){
+  if(over)return;
+  over=true;paused=true;
+  playLoseSequence();
+  updateStatus();
  }
  updateMusicButton();
- ensureGameMusic();
+ ensureGameMusic();ensureMenuMusic();ensureLoseMusic();
  // Tous les éléments visuels doivent se révéler ENSEMBLE après l'ouverture
  // Windows 95, et non le logo / PAUSE avant les panneaux et le plateau.
  const startupLoader=make("div","zt-startup-loader","CHARGEMENT DE ZEBRA TETRIS…");
@@ -305,16 +402,18 @@ function mount(root){
   refill();let type=upcoming.shift();refill();
   let mat=piece(type);
   current={type,mat,x:Math.floor((W-mat[0].length)/2),y:-1};
-  if(collision(mat,current.x,current.y)){over=true;paused=true;sound("gameover");updateStatus();}
+  if(collision(mat,current.x,current.y)){triggerGameOver();}
  }
  function reset(){
   cancelAnimationFrame(introFrame);introFrame=0;
-  stopGameMusic(true);
+  clearTimeout(loseTimer);loseTimer=null;
+  stopMusic(gameMusic,true);stopMusic(menuMusic,true);stopMusic(loseMusic,true);
   grid=blank();bag=[];upcoming=[];lines=0;score=0;level=1;held=null;holdUsed=false;
   started=true;over=false;paused=false;menuOpen=false;current=null;clearRows=[];clearDeadline=0;spawn();render();updateStatus();
  }
  function showTitleScreen(){
-  stopGameMusic(true);
+  clearTimeout(loseTimer);loseTimer=null;
+  stopMusic(gameMusic,true);stopMusic(loseMusic,true);
   grid=blank();bag=[];upcoming=[];lines=0;score=0;level=1;held=null;holdUsed=false;
   started=false;over=false;paused=true;menuOpen=false;current=null;clearRows=[];clearDeadline=0;
   refill();introStartedAt=performance.now();render(introStartedAt);updateStatus();
@@ -374,7 +473,7 @@ function mount(root){
   else{
    let type=held;held=previous;let mat=piece(type);
    current={type,mat,x:Math.floor((W-mat[0].length)/2),y:-1};
-   if(collision(mat,current.x,current.y)){over=true;paused=true;}
+   if(collision(mat,current.x,current.y)){triggerGameOver();return;}
   }
   holdUsed=true;sound("hold");render();updateStatus();
  }
@@ -398,7 +497,7 @@ function mount(root){
   stage.tabIndex=titleScreen?0:-1;
   if(window.ZebraTetrisArtwork&&atlasReady)
    window.ZebraTetrisArtwork.setState(overlayArt,start,over?"gameover":titleScreen?"intro":menuOpen?"menu":"pause",started&&!paused);
-  syncGameMusic();
+  syncMusicState();
  }
  function rect(context,x,y,size,val,alpha){
   if(!val)return;
@@ -524,7 +623,10 @@ function mount(root){
  function dispose(){
   active=false;clearHeld();clearInterval(clock);clearTimeout(startupWatchdog);
   cancelAnimationFrame(introFrame);
-  stopGameMusic(true);gameMusic=null;
+  clearTimeout(loseTimer);loseTimer=null;
+  stopMusic(gameMusic,true);stopMusic(menuMusic,true);stopMusic(loseMusic,true);
+  gameMusic=null;menuMusic=null;loseMusic=null;
+  musicFades.forEach(function(frame){cancelAnimationFrame(frame);});musicFades.clear();
   cancelAnimationFrame(startupFrame);cancelAnimationFrame(startupFrame2);
   document.removeEventListener("keydown",key);
   if(audioContext){audioContext.close().catch(()=>{});audioContext=null;}
