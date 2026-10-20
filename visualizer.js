@@ -112,7 +112,7 @@ function sampleBands(data,node,count,out){
     var raw=rounded((db+tilt+76)/54,0,1);
     // Les graves transportent beaucoup plus d'énergie : garder du headroom
     // évite les premières bandes collées au plafond tout en laissant les kicks taper.
-    var headroom=center<140?.78:center<300?.86:center<650?.92:.96;
+    var headroom=center<140 ? .78 : center<300 ? .86 : center<650 ? .92 : .96;
     var shaped=raw/(1+.34*raw);
     out[i]=rounded(shaped*1.18*headroom,0,headroom);
   }
