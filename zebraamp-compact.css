@@ -482,3 +482,10 @@
  .amp3-edit-cover-actions>.amp3-btn{font-size:9px}
  .amp3-edit-note{font-size:9px}
 }
+
+/* ZebraAMP 3.8 — la bande zèbre ferme désormais la machine tout en bas. */
+.window-body>.amp3>.amp3-zebra-plate{order:999;margin-top:2px;flex-shrink:0}
+@media(max-width:700px){
+ .amp3-head .amp3-boot-title{margin-left:6px}
+ .amp3-head .amp3-boot-hello{margin-left:6px;font-size:9px;letter-spacing:.5px}
+}
