@@ -1308,16 +1308,16 @@
 }
 .zebra-game-body .zg-retro .zt-intro-blocks{position:absolute;inset:0;z-index:-1;pointer-events:none}
 .zebra-game-body .zg-retro .zt-intro-blocks i{
- position:absolute;width:12px;height:12px;background:#28def0;
+ position:absolute;width:12px;height:12px;background:#176b72;
  border:2px solid #050506;box-shadow:inset 2px 2px #ffffff80,inset -2px -2px #00000080;
 }
-.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(1){left:12%;top:12%;background:#ffde0c}
-.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(2){left:18%;top:15%;background:#ffde0c}
-.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(3){right:14%;top:21%;background:#bd12e4}
-.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(4){right:14%;top:24%;background:#bd12e4}
-.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(5){left:13%;bottom:15%;background:#3be931}
-.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(6){left:19%;bottom:15%;background:#3be931}
-.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(7){right:15%;bottom:12%;background:#ff3232}
+.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(1){left:12%;top:12%;background:#8b7621}
+.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(2){left:18%;top:15%;background:#8b7621}
+.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(3){right:14%;top:21%;background:#63246f}
+.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(4){right:14%;top:24%;background:#63246f}
+.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(5){left:13%;bottom:15%;background:#286a32}
+.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(6){left:19%;bottom:15%;background:#286a32}
+.zebra-game-body .zg-retro .zt-intro-blocks i:nth-child(7){right:15%;bottom:12%;background:#7a2e34}
 @keyframes zt-press-blink{0%,62%{visibility:visible}63%,100%{visibility:hidden}}
 @keyframes zt-title-hover{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 @media(prefers-reduced-motion:reduce){
