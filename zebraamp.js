@@ -919,36 +919,39 @@ function openVisualizer(){
 }
 function startAmpBootGreeting(node){
  if(!node)return;
- node.textContent="";node.classList.remove("amp3-boot-dim");
- var text="// Hello :)",typed="",timers=[];
+ node.innerHTML="";node.classList.remove("amp3-boot-dim");
+ var prefix="// ",hello="Hello :)",typed="",timers=[];
+ var prefixNode=el("span","amp3-boot-prefix",prefix);
+ var helloNode=el("span","amp3-boot-word","");
+ node.append(prefixNode,helloNode);
  function later(fn,ms){var id=setTimeout(function(){if(node.isConnected)fn();},ms);timers.push(id);}
  function typeAt(i){
   if(!node.isConnected)return;
-  if(i>=text.length){later(startBlink,620);return;}
-  typed+=text.charAt(i);node.textContent=typed;
-  later(function(){typeAt(i+1);},90+((i%3)*18));
+  if(i>=hello.length){later(startBlink,900);return;}
+  typed+=hello.charAt(i);helloNode.textContent=typed;
+  later(function(){typeAt(i+1);},95+((i%3)*20));
  }
  function startBlink(){
   var flashes=0;
-  function blinkOff(){
+  function fadeOut(){
    if(!node.isConnected)return;
-   node.classList.add("amp3-boot-dim");
-   later(blinkOn,430);
+   helloNode.classList.add("amp3-boot-dim");
+   later(fadeIn,650);
   }
-  function blinkOn(){
+  function fadeIn(){
    if(!node.isConnected)return;
-   node.classList.remove("amp3-boot-dim");
+   helloNode.classList.remove("amp3-boot-dim");
    flashes++;
-   if(flashes<3)later(blinkOff,760);
-   else later(function(){erase(text.length);},820);
+   if(flashes<3)later(fadeOut,1200);
+   else later(function(){erase(hello.length);},1100);
   }
-  blinkOff();
+  fadeOut();
  }
  function erase(left){
   if(!node.isConnected)return;
-  if(left<=0){node.textContent="";return;}
-  typed=typed.slice(0,-1);node.textContent=typed;
-  later(function(){erase(left-1);},82);
+  if(left<=0){helloNode.textContent="";return;}
+  typed=typed.slice(0,-1);helloNode.textContent=typed;
+  later(function(){erase(left-1);},88);
  }
  later(function(){typeAt(0);},720);
 }
