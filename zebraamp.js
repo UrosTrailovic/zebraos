@@ -917,6 +917,40 @@ function openVisualizer(){
   module.mount(box,audio,{analyser:analyser,previous:prev,next:function(){next(true);},toggle:togglePlayback});
  }).catch(function(err){status(err.message||"Visualiseur indisponible.");});
 }
+function startAmpBootGreeting(node){
+ if(!node)return;
+ var text="// Hello :)",typed="",timers=[];
+ function later(fn,ms){var id=setTimeout(function(){if(node.isConnected)fn();},ms);timers.push(id);}
+ function typeAt(i){
+  if(!node.isConnected)return;
+  if(i>=text.length){later(startBlink,620);return;}
+  typed+=text.charAt(i);node.textContent=typed;
+  later(function(){typeAt(i+1);},90+((i%3)*18));
+ }
+ function startBlink(){
+  var flashes=0;
+  function blinkOff(){
+   if(!node.isConnected)return;
+   node.classList.add("amp3-boot-dim");
+   later(blinkOn,430);
+  }
+  function blinkOn(){
+   if(!node.isConnected)return;
+   node.classList.remove("amp3-boot-dim");
+   flashes++;
+   if(flashes<3)later(blinkOff,760);
+   else later(function(){erase(text.length);},820);
+  }
+  blinkOff();
+ }
+ function erase(left){
+  if(!node.isConnected)return;
+  if(left<=0){node.textContent="";return;}
+  typed=typed.slice(0,-1);node.textContent=typed;
+  later(function(){erase(left-1);},82);
+ }
+ later(function(){typeAt(0);},720);
+}
 function open(){
  init();
  if(!window.ZebraAMPConfig||typeof window.ZebraAMPConfig.windowBox!=="function")return;
@@ -924,12 +958,14 @@ function open(){
  view=w;
  w.innerHTML="";displayedCover=null;
  var root=el("div","amp3");
- var top=el("div","amp3-head");top.appendChild(el("strong","","ZEBRAAMP 3.7"));top.appendChild(el("span","","STUDIO PLAYER"));root.appendChild(top);
+ var top=el("div","amp3-head");
+ var bootTitle=el("strong","amp3-boot-title","ZEBRAAMP 3.7");
+ var bootHello=el("span","amp3-boot-hello","");
+ top.append(bootTitle,bootHello);top.appendChild(el("span","amp3-studio-label","STUDIO PLAYER"));root.appendChild(top);
  var stripe=el("div","amp3-zebra-plate");
  stripe.setAttribute("aria-hidden","true");
  stripe.appendChild(el("span","amp3-zebra-rivet amp3-zebra-rivet-left"));
  stripe.appendChild(el("span","amp3-zebra-rivet amp3-zebra-rivet-right"));
- root.appendChild(stripe);
  var screen=el("div","amp3-screen");
  var displayRow=el("div","amp3-display-row");
  var cover=el("div","amp3-cover");
@@ -1110,7 +1146,9 @@ function open(){
  },"amp3-btn"));
  root.appendChild(actions);
  root.appendChild(el("div","amp3-status","")).setAttribute("data-amp-status","");
+ root.appendChild(stripe);
  w.appendChild(root);
+ startAmpBootGreeting(bootHello);
  render();renderEq();visualize();
  // Actualise aussi après une réouverture de ZebraAMP, sans attendre un clic.
  updatePublic().then(function(result){
