@@ -54,7 +54,8 @@ function mount(root){
  let statsPanel=make("div","zg-side zg-side-stats");
  let previewPanel=make("div","zg-side zg-side-previews");
  function stat(title){let box=make("div","zg-stat");box.appendChild(make("small","",title));let count=make("strong","","0");box.appendChild(count);statsPanel.appendChild(box);return count;}
- let scoreEl=stat("SCORE"),levelEl=stat("NIVEAU"),linesEl=stat("LIGNES"),bestEl=stat("RECORD");\n const levelStat=levelEl.closest(".zg-stat");
+ let scoreEl=stat("SCORE"),levelEl=stat("NIVEAU"),linesEl=stat("LIGNES"),bestEl=stat("RECORD");
+ const levelStat=levelEl.closest(".zg-stat");
  let nextBox=make("div","zg-preview-wrap");nextBox.appendChild(make("small","","SUIVANT"));
  let next=make("canvas","zg-mini");next.width=96;next.height=96;nextBox.appendChild(next);previewPanel.appendChild(nextBox);
  let holdBox=make("div","zg-preview-wrap");holdBox.appendChild(make("small","","RÉSERVE (Q)"));
