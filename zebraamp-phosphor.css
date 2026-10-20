@@ -103,3 +103,15 @@
  .amp3-head .amp3-boot-prefix,
  .amp3-head .amp3-boot-word{font-size:11px;letter-spacing:1.5px}
 }
+
+/* ZebraAMP 3.8e — greeting calé exactement sur le branding principal. */
+.amp3-head .amp3-boot-prefix,
+.amp3-head .amp3-boot-word{
+ font:inherit!important;
+ font-size:inherit!important;
+ font-weight:inherit!important;
+ line-height:inherit!important;
+ letter-spacing:inherit!important;
+ color:inherit!important;
+ text-shadow:inherit!important;
+}
