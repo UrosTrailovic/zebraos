@@ -3,6 +3,7 @@
 "use strict";
 const W=10,H=20,BLOCK=24;
 const COLORS=["","#28def0","#ffde0c","#bd12e4","#3be931","#ff3232","#2147ff","#ff9118"];
+const INTRO_COLORS=["","#176b72","#8b7621","#63246f","#286a32","#7a2e34","#2f3f7b","#7a4d24"];
 const SHAPES=[
  [[1,1,1,1]],
  [[2,0,0],[2,2,2]],
@@ -205,7 +206,7 @@ function mount(root){
   return menuMusic;
  }
  function ensureLoseMusic(){
-  if(!loseMusic)loseMusic=makeMusic("assets/games/TETRISlosev1.mp3?v=1",false,.50);
+  if(!loseMusic)loseMusic=makeMusic("assets/games/TETRISlosev1.mp3?v=2",true,.50);
   return loseMusic;
  }
  function musicMuted(){
@@ -297,6 +298,8 @@ function mount(root){
   if(over)return;
   if(titleScreen){
    stopMusic(gameMusic,true);stopMusic(loseMusic,true);
+   // Ne pas lancer la musique pendant le tracé / animation d’ouverture de la fenêtre.
+   if(!startupShown||wrap.classList.contains("zt-assembling")){stopMusic(menuMusic,false);return;}
    const menuTrack=ensureMenuMusic();if(menuTrack){menuTrack.volume=.36;playMusic(menuTrack);}
    return;
   }
@@ -339,6 +342,7 @@ function mount(root){
     if(!active||!wrap.isConnected)return;
     wrap.classList.remove("zt-assembling");
     startupLoader.remove();
+    syncMusicState();
    });
   });
  }
@@ -372,7 +376,7 @@ function mount(root){
     hold:[[390,0,.035],[270,.05,.06]],
     hard:[[300,0,.045],[135,.045,.085]],lock:[[125,0,.07]],
     clear:[[580,0,.065],[760,.105,.065],[950,.21,.12]],
-    tetris:[[530,0,.07],[690,.09,.07],[870,.18,.085],[1080,.29,.16]],
+    tetris:[[220,0,.10],[530,0,.08],[690,.075,.08],[870,.15,.09],[1080,.24,.11],[1320,.36,.17]],
     level:[[680,0,.09],[960,.12,.15]],
     gameover:[[420,0,.13],[300,.16,.13],[170,.32,.2]]
    }[type];
@@ -383,7 +387,8 @@ function mount(root){
     osc.type=type==="ui"||type==="move"?"square":"triangle";
     osc.frequency.setValueAtTime(freq,startTime+offset);
     gain.gain.setValueAtTime(.0001,startTime+offset);
-    gain.gain.linearRampToValueAtTime(type==="move"?.022:.045,startTime+offset+.007);
+    const peak=type==="move"?.022:type==="tetris"?.075:.045;
+    gain.gain.linearRampToValueAtTime(peak,startTime+offset+.007);
     gain.gain.exponentialRampToValueAtTime(.0001,startTime+offset+duration);
     osc.connect(gain);gain.connect(audioContext.destination);
     osc.start(startTime+offset);osc.stop(startTime+offset+duration+.015);
@@ -423,6 +428,20 @@ function mount(root){
   if(started||over)return;
   sound("ui");reset();
  }
+ function tetrisImpact(){
+  stage.classList.remove("zt-tetris-burst");
+  // Reflow volontaire pour rejouer l’impact même sur deux Tetris rapprochés.
+  void stage.offsetWidth;
+  stage.classList.add("zt-tetris-burst");
+  setTimeout(function(){if(active)stage.classList.remove("zt-tetris-burst");},520);
+  try{
+   if(gameMusic&&!gameMusic.paused&&!musicMuted()){
+    const base=gameMusic.volume;
+    gameMusic.volume=Math.max(.20,base*.56);
+    setTimeout(function(){if(active&&gameMusic&&!gameMusic.paused)fadeMusic(gameMusic,.42,260,false);},90);
+   }
+  }catch(_){}
+ }
  function merged(){
   current.mat.forEach((row,y)=>row.forEach((v,x)=>{if(v&&current.y+y>=0){grid[current.y+y][current.x+x]=v;}}));
   const completed=[];
@@ -431,7 +450,7 @@ function mount(root){
   if(completed.length){
    // Lignes figées pendant 420 ms ; on ne les efface pas avant les flashes.
    clearRows=completed;clearDeadline=performance.now()+420;current=null;
-   sound(completed.length===4?"tetris":"clear");
+   if(completed.length===4){sound("tetris");tetrisImpact();}else sound("clear");
   }else{holdUsed=false;spawn();}
  }
  function completeClear(){
@@ -511,6 +530,12 @@ function mount(root){
   context.fillStyle="rgba(0,0,0,.29)";context.fillRect(x0+n-5,y0+3,3,n-7);
   context.globalAlpha=1;
  }
+ function rectIntro(context,x,y,size,val,alpha){
+  if(!val)return;
+  const prev=COLORS[val];COLORS[val]=INTRO_COLORS[val]||prev;
+  rect(context,x,y,size,val,alpha);
+  COLORS[val]=prev;
+ }
  function preview(context,index){
   context.fillStyle="#050505";context.fillRect(0,0,96,96);
   if(index===null||index===undefined)return;
@@ -529,7 +554,7 @@ function mount(root){
   {type:2,x:2,delay:2350,duration:3900}
  ];
  function drawIntroGame(now){
-  introStack.forEach(function(cell){rect(ctx,cell[0]*BLOCK,cell[1]*BLOCK,BLOCK,cell[2],.72);});
+  introStack.forEach(function(cell){rectIntro(ctx,cell[0]*BLOCK,cell[1]*BLOCK,BLOCK,cell[2],.52);});
   const elapsed=Math.max(0,now-introStartedAt);
   introDrops.forEach(function(drop){
    const cycle=drop.duration+1200;
@@ -538,7 +563,7 @@ function mount(root){
    const mat=piece(drop.type),progress=local/drop.duration;
    const y=-mat.length+progress*(H-mat.length-3);
    mat.forEach(function(row,dy){row.forEach(function(v,dx){
-    if(v&&y+dy>=0)rect(ctx,(drop.x+dx)*BLOCK,(y+dy)*BLOCK,BLOCK,v,.82);
+    if(v&&y+dy>=0)rectIntro(ctx,(drop.x+dx)*BLOCK,(y+dy)*BLOCK,BLOCK,v,.62);
    });});
   });
  }
