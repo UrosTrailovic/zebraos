@@ -203,7 +203,7 @@ function mount(root){
   return gameMusic;
  }
  function ensureMenuMusic(){
-  if(!menuMusic)menuMusic=makeMusic("assets/games/TETRISv1smainmenuong.mp3?v=1",true,.36);
+  if(!menuMusic)menuMusic=makeMusic("assets/games/TETRISv1smainmenuong.mp3?v=2",true,.36);
   return menuMusic;
  }
  function ensureLoseMusic(){
