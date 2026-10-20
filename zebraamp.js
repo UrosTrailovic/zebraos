@@ -927,39 +927,47 @@ function startAmpBootGreeting(node){
  if(!node)return;
  node.innerHTML="";node.classList.remove("amp3-boot-dim");
  var prefix="// ",hello="Hello :)",typed="",timers=[];
- var prefixNode=el("span","amp3-boot-prefix",prefix);
- var helloNode=el("span","amp3-boot-word","");
- node.append(prefixNode,helloNode);
  function later(fn,ms){var id=setTimeout(function(){if(node.isConnected)fn();},ms);timers.push(id);}
- function typeAt(i){
+ function mountMessage(){
   if(!node.isConnected)return;
-  if(i>=hello.length){later(startBlink,900);return;}
-  typed+=hello.charAt(i);helloNode.textContent=typed;
-  later(function(){typeAt(i+1);},95+((i%3)*20));
- }
- function startBlink(){
-  var flashes=0;
-  function hideWord(){
+  var prefixNode=el("span","amp3-boot-prefix",prefix);
+  var helloNode=el("span","amp3-boot-word","");
+  node.append(prefixNode,helloNode);
+  function typeAt(i){
    if(!node.isConnected)return;
-   helloNode.classList.add("amp3-boot-dim");
-   later(showWord,950);
+   if(i>=hello.length){later(startBlink,900);return;}
+   typed+=hello.charAt(i);helloNode.textContent=typed;
+   later(function(){typeAt(i+1);},95+((i%3)*20));
   }
-  function showWord(){
+  function startBlink(){
+   var flashes=0;
+   function hideWord(){
+    if(!node.isConnected)return;
+    helloNode.classList.add("amp3-boot-dim");
+    later(showWord,950);
+   }
+   function showWord(){
+    if(!node.isConnected)return;
+    helloNode.classList.remove("amp3-boot-dim");
+    flashes++;
+    if(flashes<2)later(hideWord,1250);
+    else later(function(){erase(hello.length);},1200);
+   }
+   hideWord();
+  }
+  function erase(left){
    if(!node.isConnected)return;
-   helloNode.classList.remove("amp3-boot-dim");
-   flashes++;
-   if(flashes<3)later(hideWord,1250);
-   else later(function(){erase(hello.length);},1200);
+   if(left<=0){
+    helloNode.textContent="";
+    later(function(){node.innerHTML="";},180);
+    return;
+   }
+   typed=typed.slice(0,-1);helloNode.textContent=typed;
+   later(function(){erase(left-1);},88);
   }
-  hideWord();
+  typeAt(0);
  }
- function erase(left){
-  if(!node.isConnected)return;
-  if(left<=0){helloNode.textContent="";return;}
-  typed=typed.slice(0,-1);helloNode.textContent=typed;
-  later(function(){erase(left-1);},88);
- }
- later(function(){typeAt(0);},720);
+ later(mountMessage,1000);
 }
 function open(){
  init();
