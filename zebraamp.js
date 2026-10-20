@@ -394,7 +394,20 @@ function renderCover(){
  if(displayedCover===key)return;
  displayedCover=key;
  if(p.readonly){
-  applyCoverImage(art,cover,urlFor("STUDIO/BUREAU/Zebra Tape 2/Cover/front 2.webp")+"?v=cover-20261020-1");
+  var embeddedCover=window.ZebraTape2CoverData;
+  if(embeddedCover){
+   cover.classList.remove("amp3-cover-empty");
+   art.style.display="block";
+   art.alt="Pochette de Zebra Tape 2";
+   art.onload=function(){cover.classList.remove("amp3-cover-empty");};
+   art.onerror=function(){
+    cover.classList.add("amp3-cover-empty");
+    art.removeAttribute("src");
+   };
+   art.src=embeddedCover;
+  }else{
+   applyCoverImage(art,cover,"/STUDIO/BUREAU/Zebra%20Tape%202/Cover/front%202.webp?cover=2");
+  }
   return;
  }
  cover.classList.add("amp3-cover-empty");
