@@ -1261,23 +1261,18 @@
  mix-blend-mode:screen;
 }
 .zebra-game-body .zg-retro .zg-tetris-stage.zt-tetris-burst{
- animation:zt-tetris-shake .52s steps(2,end);
- box-shadow:0 0 0 2px #fff36d,0 0 28px #f42fd5,0 0 46px #37dfe999;
+ animation:zt-tetris-pulse .50s ease-out;
 }
-.zebra-game-body .zg-retro .zg-tetris-stage.zt-tetris-burst::after{animation:zt-tetris-flash .52s ease-out}
-@keyframes zt-tetris-shake{
- 0%{transform:translate(0,0)}
- 18%{transform:translate(-3px,2px)}
- 34%{transform:translate(3px,-2px)}
- 50%{transform:translate(-2px,-1px)}
- 68%{transform:translate(2px,1px)}
- 84%{transform:translate(-1px,0)}
- 100%{transform:translate(0,0)}
+.zebra-game-body .zg-retro .zg-tetris-stage.zt-tetris-burst::after{animation:zt-tetris-flash .50s ease-out}
+@keyframes zt-tetris-pulse{
+ 0%,100%{transform:scale(1)}
+ 24%{transform:scale(1.014)}
+ 52%{transform:scale(1.007)}
 }
 @keyframes zt-tetris-flash{
  0%{opacity:0}
- 8%{opacity:1}
- 30%{opacity:.56}
+ 10%{opacity:.50}
+ 34%{opacity:.22}
  100%{opacity:0}
 }
 .zebra-game-body .zg-retro .zg-overlay{
