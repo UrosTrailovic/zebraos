@@ -215,10 +215,14 @@ function mount(root){
  }
  function updateMusicButton(){
   const label=musicEnabled?"MUSIC ON":"MUSIC OFF";
-  music.textContent=label;music.title=label;
+  music.textContent="";
+  music.title=label;
   music.setAttribute("aria-label",musicEnabled?"Couper la musique":"Activer la musique");
   music.setAttribute("aria-pressed",musicEnabled?"true":"false");
   music.classList.toggle("is-off",!musicEnabled);
+  music.style.backgroundImage='url("'+(musicEnabled
+   ?"assets/games/musicOnbtnTetris.png?v=1"
+   :"assets/games/musicOffbtnTetris.png?v=1")+'")';
  }
  function cancelMusicFade(audio){
   if(!audio)return;
