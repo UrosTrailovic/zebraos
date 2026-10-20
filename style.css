@@ -1306,7 +1306,7 @@
  color:#9beaf2;font:bold 8px/1.25 "Courier New",monospace;
  letter-spacing:.5px;text-shadow:1px 1px #12031b;
 }
-.zebra-game-body .zg-retro .zt-intro-blocks{position:absolute;inset:0;z-index:-1;pointer-events:none}
+.zebra-game-body .zg-retro .zt-intro-blocks{display:none!important}
 .zebra-game-body .zg-retro .zt-intro-blocks i{
  position:absolute;width:12px;height:12px;background:#176b72;
  border:2px solid #050506;box-shadow:inset 2px 2px #ffffff80,inset -2px -2px #00000080;
