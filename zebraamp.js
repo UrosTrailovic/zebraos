@@ -370,7 +370,10 @@ function coverDataURL(file){
 function applyCoverImage(art,cover,src,fallback){
  cover.classList.add("amp3-cover-empty");
  var triedFallback=false;
- art.onload=function(){cover.classList.remove("amp3-cover-empty");};
+ art.onload=function(){
+  cover.classList.remove("amp3-cover-empty");
+  art.style.display="block";
+ };
  art.onerror=function(){
   if(fallback&&!triedFallback){
    triedFallback=true;art.src=fallback;return;
@@ -378,6 +381,8 @@ function applyCoverImage(art,cover,src,fallback){
   cover.classList.add("amp3-cover-empty");
  };
  art.alt="Pochette de la playlist "+getList().name;
+ art.decoding="async";
+ art.loading="eager";
  art.src=src;
 }
 function renderCover(){
@@ -389,7 +394,7 @@ function renderCover(){
  if(displayedCover===key)return;
  displayedCover=key;
  if(p.readonly){
-  applyCoverImage(art,cover,"STUDIO/BUREAU/Zebra%20Tape%202/Cover/front%202.webp",urlFor("STUDIO/BUREAU/Zebra Tape 2/Cover/front 2.webp"));
+  applyCoverImage(art,cover,urlFor("STUDIO/BUREAU/Zebra Tape 2/Cover/front 2.webp")+"?v=cover-20261020-1");
   return;
  }
  cover.classList.add("amp3-cover-empty");
