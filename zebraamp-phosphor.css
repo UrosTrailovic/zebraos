@@ -64,3 +64,15 @@
 @media(prefers-reduced-motion:reduce){
  .amp3 :is(.amp3-btn,.amp3-item-play,.amp3-small),.zviz button{transition:none}
 }
+
+/* ZebraAMP 3.8 — greeting de démarrage, style afficheur phosphore. */
+.amp3-head{align-items:center}
+.amp3-head .amp3-boot-title{margin-left:8px;flex:0 0 auto}
+.amp3-head .amp3-boot-hello{
+ margin-left:8px;min-width:0;white-space:pre;
+ color:#c7ffdc;text-shadow:var(--amp-phosphor);
+ font:700 11px/1 "Courier New",monospace;letter-spacing:1px;
+ opacity:1;transition:opacity 260ms ease;
+}
+.amp3-head .amp3-boot-hello.amp3-boot-dim{opacity:.08}
+.amp3-head .amp3-studio-label{margin-left:auto}
