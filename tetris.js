@@ -434,17 +434,9 @@ function mount(root){
  }
  function tetrisImpact(){
   stage.classList.remove("zt-tetris-burst");
-  // Reflow volontaire pour rejouer l’impact même sur deux Tetris rapprochés.
   void stage.offsetWidth;
   stage.classList.add("zt-tetris-burst");
-  setTimeout(function(){if(active)stage.classList.remove("zt-tetris-burst");},520);
-  try{
-   if(gameMusic&&!gameMusic.paused&&!musicMuted()){
-    const base=gameMusic.volume;
-    gameMusic.volume=Math.max(.20,base*.56);
-    setTimeout(function(){if(active&&gameMusic&&!gameMusic.paused)fadeMusic(gameMusic,.42,260,false);},90);
-   }
-  }catch(_){}
+  setTimeout(function(){if(active)stage.classList.remove("zt-tetris-burst");},500);
  }
  function merged(){
   current.mat.forEach((row,y)=>row.forEach((v,x)=>{if(v&&current.y+y>=0){grid[current.y+y][current.x+x]=v;}}));
@@ -453,7 +445,7 @@ function mount(root){
   sound("lock");
   if(completed.length){
    // Lignes figées pendant 420 ms ; on ne les efface pas avant les flashes.
-   clearRows=completed;clearDeadline=performance.now()+420;current=null;
+   clearRows=completed;clearDeadline=performance.now()+(completed.length===4?500:420);current=null;
    if(completed.length===4){sound("tetris");tetrisImpact();}else sound("clear");
   }else{holdUsed=false;spawn();}
  }
@@ -589,10 +581,23 @@ function mount(root){
   for(let y=0;y<=H;y++){ctx.beginPath();ctx.moveTo(0,y*BLOCK);ctx.lineTo(W*BLOCK,y*BLOCK);ctx.stroke();}
   if(grid)grid.forEach((row,y)=>row.forEach((v,x)=>rect(ctx,x*BLOCK,y*BLOCK,BLOCK,v)));
   if(clearRows.length){
-   // Trois flashes nets dans la grille (chaque phase dure ~70 ms).
-   const phase=Math.floor((420-Math.max(0,clearDeadline-performance.now()))/70);
-   ctx.fillStyle=phase%2===0?"rgba(255,255,235,.93)":"rgba(230,47,255,.48)";
-   clearRows.forEach(y=>ctx.fillRect(0,y*BLOCK,W*BLOCK,BLOCK));
+   const isTetris=clearRows.length===4;
+   const total=isTetris?500:420;
+   const remain=Math.max(0,clearDeadline-performance.now());
+   const phase=Math.floor((total-remain)/70);
+   if(isTetris){
+    const pulse=1+Math.sin(Math.min(1,(total-remain)/total)*Math.PI)*.045;
+    const extra=(W*BLOCK*(pulse-1))/2;
+    ctx.fillStyle=phase%2===0?"rgba(255,255,235,.94)":"rgba(230,47,255,.50)";
+    clearRows.forEach(y=>{
+     const cy=y*BLOCK+BLOCK/2;
+     const h=BLOCK*pulse;
+     ctx.fillRect(-extra,cy-h/2,W*BLOCK+extra*2,h);
+    });
+   }else{
+    ctx.fillStyle=phase%2===0?"rgba(255,255,235,.93)":"rgba(230,47,255,.48)";
+    clearRows.forEach(y=>ctx.fillRect(0,y*BLOCK,W*BLOCK,BLOCK));
+   }
   }
   if(current){
     let ghostY=current.y;
