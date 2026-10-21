@@ -316,17 +316,25 @@ function mount(root){
  const b=button('B','zs-b zt-control zt-ab-button zt-b',restart,$('.zs-ab'));b.setAttribute('aria-label','Recommencer');
  const select=button('SELECT','zs-select zt-control zt-select',menu,$('.zs-action-side'));select.setAttribute('aria-label','Retour au menu');
  $('.zs-action-side').appendChild(make('span','zt-control-caption','B : RECOMMENCER · A : PAUSE'));
- const controlTextures=window.ZnakeControlTextures||{};
- const spriteItems=[[$('.zs-up'),'up'],[$('.zs-down'),'down'],[$('.zs-left'),'left'],[$('.zs-right'),'right'],[a,'a'],[b,'b'],[select,'select']];
- const spriteLoads=spriteItems.map(([control,key])=>new Promise((resolve,reject)=>{
-  const image=make('img','zt-control-sprite');image.alt='';image.draggable=false;image.decoding='async';
-  image.onload=resolve;image.onerror=reject;image.src=controlTextures[key]||'';control.appendChild(image);
- }));
- const panelImage=new Image();
- if(controlTextures.panel){
-  spriteLoads.push(new Promise((resolve,reject)=>{panelImage.onload=()=>{wrap.style.setProperty('--zs-control-panel','url("'+controlTextures.panel+'")');resolve();};panelImage.onerror=reject;panelImage.src=controlTextures.panel;}));
+ const CONTROL_ATLAS='/assets/games/snake/znake-controls.webp?v=1';
+ const PANEL_TEXTURE='/assets/games/snake/znake-panel.webp?v=1';
+ const controlRects={
+  up:[0,0,64,64],down:[64,0,64,64],left:[128,0,64,64],right:[192,0,64,64],
+  a:[256,0,64,64],b:[320,0,64,64],select:[384,12,96,40]
+ };
+ function applyControlTexture(control,key){
+  const rect=controlRects[key];if(!rect)return;
+  const art=make('span','zs-control-art');art.setAttribute('aria-hidden','true');
+  art.style.setProperty('--zs-cx',String(rect[0]));
+  art.style.setProperty('--zs-cy',String(rect[1]));
+  art.style.setProperty('--zs-cw',String(rect[2]));
+  art.style.setProperty('--zs-ch',String(rect[3]));
+  art.style.backgroundImage='url("'+CONTROL_ATLAS+'")';
+  control.appendChild(art);
  }
- Promise.all(spriteLoads).then(()=>{if(alive&&$('.zs-handheld').isConnected)$('.zs-handheld').classList.add('zt-skin-ready');}).catch(()=>{});
+ [['up',$('.zs-up')],['down',$('.zs-down')],['left',$('.zs-left')],['right',$('.zs-right')],['a',a],['b',b],['select',select]].forEach(([key,node])=>applyControlTexture(node,key));
+ wrap.style.setProperty('--zs-control-panel','url("'+PANEL_TEXTURE+'")');
+ $('.zs-handheld').classList.add('zs-skin-ready');
  const ATLAS='/assets/games/zebra-tetris-ui.png?v=57',AW=280,AH=252;
  function atlasSprite(node,[x,y,w,h]){
   node.style.backgroundImage='url("'+ATLAS+'")';node.style.backgroundRepeat='no-repeat';
@@ -385,7 +393,7 @@ function mount(root){
  for(const [d,label]of Object.entries({up:'▲',left:'◀',right:'▶',down:'▼'})){
   const control=button(label,'zs-p2-dir zs-p2-'+d,e=>{if(e.detail===0)turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);},second);
   control.setAttribute('aria-label','Joueur 2 : '+({up:'Haut',left:'Gauche',right:'Droite',down:'Bas'})[d]);
-  const image=make('img','zt-control-sprite');image.alt='';image.draggable=false;image.decoding='async';image.src=(window.ZnakeControlTextures||{})[d]||'';control.appendChild(image);
+  applyControlTexture(control,d);
   control.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();sounds.unlock();turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);};
  }
  wrap.insertBefore(second,$('.zs-hud'));
@@ -427,7 +435,7 @@ function mount(root){
   const keys={w:'up',z:'up',s:'down',a:'left',q:'left',d:'right'},d=arrows[e.key]||keys[letter];
     if(d){e.preventDefault();if(!e.repeat){sounds.unlock();turn(d,g.state!=='ready'&&settings.players===2&&arrows[e.key]?1:0);}}
   else if(e.code==='Space'||e.key===' '||e.key==='Enter'||letter==='p'){e.preventDefault();if(!e.repeat){sounds.unlock();action();}}
-  else if(e.key==='Escape'){e.preventDefault();if(g.state==='ready'&&(menuPage==='level'||menuPage==='scores')){menuPage='mode';menuIndex=menuPage==='scores'?3:(settings.mode==='solo'?0:settings.mode==='robot'?1:2);renderMenu();}else menu();}
+  else if(e.key==='Escape'){e.preventDefault();if(g.state==='ready'&&(menuPage==='level'||menuPage==='scores')){const previousPage=menuPage;menuPage='mode';menuIndex=previousPage==='scores'?3:(settings.mode==='solo'?0:settings.mode==='robot'?1:2);renderMenu();}else menu();}
  }
  function hide(){if(document.hidden){sounds.stop();if(g.state==='running'){g.state='paused';render();}}}
  function blur(){sounds.stop();if(g.state==='running'){g.state='paused';render();}}
