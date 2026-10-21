@@ -2406,3 +2406,32 @@
 }
 @keyframes zebra-loading-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.zebra-lazy-loading::before{animation:none}}
+
+/* Zebra Tetris 6.6 — polish mobile final.
+   Seulement PLAY / RESTART / MUSIC / MENU gardent le ratio 108x32.
+   SELECT remonte sur la ligne visuelle de la flèche BAS. */
+@media (hover:none),(pointer:coarse){
+ .zebra-game-body .zg-retro .zt-handheld .zg-buttons.zt-buttons{
+  align-items:center!important;
+ }
+ .zebra-game-body .zg-retro .zt-handheld .zg-buttons.zt-buttons .zg-button.zt-image-button{
+  flex:1 1 0!important;
+  width:auto!important;
+  max-width:none!important;
+  height:auto!important;
+  min-height:0!important;
+  aspect-ratio:108 / 32;
+  align-self:center;
+  background-size:100% 100%!important;
+ }
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select,
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select:active{
+  transform:translateY(-40px)!important;
+ }
+}
+@media(max-height:650px) and (pointer:coarse){
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select,
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select:active{
+  transform:translateY(-28px)!important;
+ }
+}
