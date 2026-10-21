@@ -81,3 +81,9 @@
  text-align:left;
 }
 .amp3-eq-panel>summary::marker{line-height:1}
+
+/* Ajustement fin : aucun espace au-dessus du titre de l'égaliseur. */
+.amp3-eq-panel>summary{
+ padding-top:0!important;
+ margin-top:0!important;
+}
