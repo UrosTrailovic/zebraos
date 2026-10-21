@@ -2,8 +2,17 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const fs=require('node:fs');
-const context={window:{},Math};vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../snake.js'),'utf8'),context);
+const source=fs.readFileSync(require('node:path').join(__dirname,'../snake.js'),'utf8');
+const styles=fs.readFileSync(require('node:path').join(__dirname,'../snake.css'),'utf8');
+const context={window:{},Math};vm.runInNewContext(source,context);
 const {createGame}=context.window.ZebraSnake;
+test('Znake controls are code-only and independent from the Tetris controller skin',()=>{
+ assert.doesNotMatch(source,/zt-(?:handheld|dpad|control|image-button)|snake\/controls|zebra-tetris-ui/);
+ assert.doesNotMatch(styles,/zt-(?:handheld|dpad|control)|snake\/controls/);
+ assert.match(source,/class="zs-controls"/);
+ assert.match(source,/class="zs-dpad" role="group" aria-label="Direction"/);
+ assert.match(styles,/\.zs-dpad\{[^}]*border-radius:50%/);
+});
 test('classic start, pause, reset and constant one-cell movement',()=>{
  const g=createGame(()=>0);assert.equal(g.state,'ready');g.tick();assert.equal(g.snake[0].x,9);
  g.toggle();g.tick();assert.equal(g.snake[0].x,10);g.toggle();g.tick();assert.equal(g.snake[0].x,10);
