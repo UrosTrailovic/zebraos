@@ -26,6 +26,7 @@ function mount(root){
  let grid,upcoming=[],bag=[],current=null,clock=null,observer=null,introFrame=0,introStartedAt=0;
  let clearRows=[],clearDeadline=0,audioContext=null,gameMusic=null,menuMusic=null,loseMusic=null,lastSound={};
  let loseTimer=null,musicFades=new Map();
+ let gameOverReveal=false,gameOverFadeTimer=null,gameOverRevealTimer=null;
  let musicEnabled=true;
  try{musicEnabled=localStorage.getItem("zebra.tetris.music")==="off"?false:true;}catch(_){}
  let wrap=make("div","zg zg-tetris zg-retro zt-assembling");
@@ -40,6 +41,7 @@ function mount(root){
  let stage=make("div","zg-tetris-stage"),canvas=make("canvas","zg-tetris-board");
  canvas.width=W*BLOCK;canvas.height=H*BLOCK;canvas.setAttribute("aria-label","Plateau Tetris");
  stage.appendChild(canvas);
+ let gameOverFx=make("div","zt-gameover-fx");gameOverFx.setAttribute("aria-hidden","true");stage.appendChild(gameOverFx);
  let overlay=make("div","zg-overlay");
  let introBlocks=make("div","zt-intro-blocks");
  for(let i=0;i<7;i++)introBlocks.appendChild(make("i",""));
@@ -348,11 +350,29 @@ function mount(root){
   stopMusic(menuMusic,true);stopMusic(loseMusic,true);
   const gameplay=ensureGameMusic();if(gameplay){gameplay.volume=.42;playMusic(gameplay);}
  }
+ function clearGameOverFx(){
+  clearTimeout(gameOverFadeTimer);clearTimeout(gameOverRevealTimer);
+  gameOverFadeTimer=null;gameOverRevealTimer=null;gameOverReveal=false;
+  stage.classList.remove("zt-gameover-impact","zt-gameover-fade","zt-gameover-reveal");
+ }
  function triggerGameOver(){
   if(over)return;
-  over=true;paused=true;
+  over=true;paused=true;gameOverReveal=false;
   playLoseSequence();
+  stage.classList.remove("zt-gameover-impact","zt-gameover-fade","zt-gameover-reveal");
+  void stage.offsetWidth;
+  stage.classList.add("zt-gameover-impact");
   updateStatus();
+  gameOverFadeTimer=setTimeout(function(){
+   if(!active||!over)return;
+   stage.classList.add("zt-gameover-fade");
+  },430);
+  gameOverRevealTimer=setTimeout(function(){
+   if(!active||!over)return;
+   gameOverReveal=true;
+   stage.classList.add("zt-gameover-reveal");
+   updateStatus();
+  },980);
  }
  updateMusicButton();
  ensureGameMusic();ensureMenuMusic();ensureLoseMusic();
@@ -449,12 +469,14 @@ function mount(root){
  }
  function reset(){
   cancelAnimationFrame(introFrame);introFrame=0;
+  clearGameOverFx();
   clearTimeout(loseTimer);loseTimer=null;
   stopMusic(gameMusic,true);stopMusic(menuMusic,true);stopMusic(loseMusic,true);
   grid=blank();bag=[];upcoming=[];lines=0;score=0;level=1;held=null;holdUsed=false;
   started=true;over=false;paused=false;menuOpen=false;current=null;clearRows=[];clearDeadline=0;spawn();render();updateStatus();
  }
  function showTitleScreen(){
+  clearGameOverFx();
   clearTimeout(loseTimer);loseTimer=null;
   stopMusic(gameMusic,true);stopMusic(loseMusic,true);
   grid=blank();bag=[];upcoming=[];lines=0;score=0;level=1;held=null;holdUsed=false;
@@ -540,7 +562,7 @@ function mount(root){
   start.title=paused||titleScreen?"Jouer":"Pause";
   start.classList.toggle("zt-paused-button",started&&!paused);
   start.textContent=paused||titleScreen?"JOUER":"PAUSE";
-  overlay.style.display=titleScreen||paused?"flex":"none";
+  overlay.style.display=titleScreen||(paused&&(!over||gameOverReveal))?"flex":"none";
   overlay.dataset.state=over?"gameover":titleScreen?"intro":menuOpen?"menu":"pause";
   overlayArt.style.display=menuOpen?"none":"block";
   introBlocks.style.display=titleScreen?"block":"none";
@@ -697,6 +719,7 @@ function mount(root){
  }
  function dispose(){
   active=false;clearHeld();clearInterval(clock);clearTimeout(startupWatchdog);
+  clearGameOverFx();
   cancelAnimationFrame(introFrame);
   clearTimeout(loseTimer);loseTimer=null;
   stopMusic(gameMusic,true);stopMusic(menuMusic,true);stopMusic(loseMusic,true);
