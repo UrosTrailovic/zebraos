@@ -437,40 +437,118 @@ function mount(root){
  }
  second.appendChild(make('span','zs-pad-center'));
  $('.zs-pad-zone').appendChild(second);
- // Transparent, forgiving touch zones cover the spaces BETWEEN the four textures.
- // They do not move or stretch the retro PNGs. Center is reserved for OK.
+ // Full-size touch field: wide, invisible directional sectors around the
+ // original buttons. The 8-bit textures never move or change size.
  const padZone=$('.zs-pad-zone');
  const consoleArea=$('.zs-console');
- function padDirection(x,y,rect){
-  const dx=x-rect.left-rect.width/2,dy=y-rect.top-rect.height/2;
-  if(Math.hypot(dx,dy)<rect.width*.15)return 'ok';
+ const touchDebug=document.createElementNS('http://www.w3.org/2000/svg','svg');
+ touchDebug.classList.add('zs-touch-debug');
+ touchDebug.setAttribute('aria-hidden','true');
+ touchDebug.style.pointerEvents='none';
+ wrap.appendChild(touchDebug);
+ let padPointer=null,debugLayoutKey='';
+ const isTouchDevice=()=>window.matchMedia('(hover:none), (pointer:coarse)').matches;
+ function touchBox(pad){
+  const r=pad.getBoundingClientRect();
+  if(!r.width||!r.height)return null;
+  // Much larger than the previous 18px margins, particularly left and right.
+  const xExtra=Math.min(74,Math.max(42,r.width*.42));
+  const yExtra=Math.min(42,Math.max(24,r.height*.23));
+  return {left:r.left-xExtra,right:r.right+xExtra,
+    top:r.top-yExtra,bottom:r.bottom+yExtra,
+    cx:r.left+r.width/2,cy:r.top+r.height/2,
+    centerRadius:Math.max(22,r.width*.14),pad:pad};
+ }
+ function padDirection(x,y,box){
+  const dx=x-box.cx,dy=y-box.cy;
+  if(Math.hypot(dx,dy)<box.centerRadius)return 'ok';
   return Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
  }
- function onPadPointerDown(e){
-  if(e.button!==0||!alive||!window.matchMedia('(hover:none), (pointer:coarse)').matches)return;
-  // Let the physical center button and Settings keep their ordinary click behavior.
-  if(e.target.closest('.zs-ok,.zs-menu,.zs-action'))return;
-  const pads=[...padZone.querySelectorAll('.zs-dpad')].filter(p=>p.getClientRects().length);
-  let picked=null,shortest=Infinity;
+ function locateTouch(x,y){
+  const pads=[...padZone.querySelectorAll('.zs-dpad')];
+  let closest=null,distance=Infinity;
   for(const pad of pads){
-   const r=pad.getBoundingClientRect(),extra=Math.min(18,r.width*.12);
-   if(e.clientX<r.left-extra||e.clientX>r.right+extra||
-      e.clientY<r.top-extra||e.clientY>r.bottom+extra)continue;
-   const dist=Math.hypot(e.clientX-(r.left+r.width/2),e.clientY-(r.top+r.height/2));
-   if(dist<shortest){picked={pad,rect:r};shortest=dist;}
+   const box=touchBox(pad);
+   if(!box||x<box.left||x>box.right||y<box.top||y>box.bottom)continue;
+   const d=Math.hypot(x-box.cx,y-box.cy);
+   if(d<distance){closest={box,index:pad.classList.contains('zs-second-pad')?1:0};distance=d;}
   }
-  if(!picked)return;
-  e.preventDefault();
-  sounds.unlock();
-  const direction=padDirection(e.clientX,e.clientY,picked.rect);
-  if(direction==='ok'){
-   // The center's invisible margin is also a real OK tap.
-   if(!picked.pad.classList.contains('zs-second-pad'))confirmControl();
-  }else{
-   turn(direction,picked.pad.classList.contains('zs-second-pad')?1:0);
+  if(!closest)return null;
+  return {...closest,direction:padDirection(x,y,closest.box)};
+ }
+ // Draw the actual enlarged hit area. The red outlines are intentionally
+ // temporary so touch accuracy can be evaluated on a real phone.
+ function refreshTouchDebug(){
+  if(!isTouchDevice()){touchDebug.replaceChildren();debugLayoutKey='';return;}
+  const rootRect=wrap.getBoundingClientRect();
+  if(!rootRect.width||!rootRect.height)return;
+  const boxes=[...padZone.querySelectorAll('.zs-dpad')].map(touchBox).filter(Boolean);
+  const key=[rootRect.width,rootRect.height,...boxes.flatMap(b=>[b.left-rootRect.left,b.top-rootRect.top,b.right-rootRect.left,b.bottom-rootRect.top])].map(n=>Math.round(n*10)/10).join('|');
+  if(debugLayoutKey===key)return;
+  debugLayoutKey=key;
+  touchDebug.setAttribute('viewBox','0 0 '+rootRect.width+' '+rootRect.height);
+  touchDebug.setAttribute('width',rootRect.width);
+  touchDebug.setAttribute('height',rootRect.height);
+  const NS='http://www.w3.org/2000/svg';
+  const create=(tag,attrs)=>{
+   const e=document.createElementNS(NS,tag);
+   for(const [name,value]of Object.entries(attrs))e.setAttribute(name,String(value));
+   touchDebug.appendChild(e);return e;
+  };
+  touchDebug.replaceChildren();
+  for(const b of boxes){
+   const left=b.left-rootRect.left,right=b.right-rootRect.left,
+     top=b.top-rootRect.top,bottom=b.bottom-rootRect.top,
+     cx=b.cx-rootRect.left,cy=b.cy-rootRect.top,
+     reach=Math.min(cy-top,bottom-cy,cx-left,right-cx);
+   // Sectors use exactly the same 45-degree division as padDirection.
+   const polygons=[
+     [[cx-reach,top],[cx+reach,top],[cx,cy]],
+     [[cx+reach,top],[right,top],[right,bottom],[cx+reach,bottom],[cx,cy]],
+     [[cx,cy],[cx+reach,bottom],[cx-reach,bottom]],
+     [[left,top],[cx-reach,top],[cx,cy],[cx-reach,bottom],[left,bottom]]
+   ];
+   for(const points of polygons){
+    create('polygon',{points:points.map(p=>p.join(',')).join(' '),
+      fill:'rgba(255,50,45,0.045)',stroke:'#ff3028','stroke-width':1.8,
+      'stroke-dasharray':'5 3','vector-effect':'non-scaling-stroke'});
+   }
+   create('circle',{cx,cy,r:b.centerRadius,fill:'rgba(255,50,45,0.06)',
+      stroke:'#ff3028','stroke-width':1.8,'vector-effect':'non-scaling-stroke'});
   }
  }
- consoleArea.addEventListener('pointerdown',onPadPointerDown);
+ function onPadPointerDown(e){
+  if(!alive||!isTouchDevice()||e.button!==0)return;
+  // Do not steal taps from Settings / OK, or from the swipable board.
+  if(e.target.closest('.zs-ok,.zs-menu,.zs-action,.zs-stage,.zs-arena,.zs-header,.zs-hud,.zs-settings-overlay'))return;
+  const hit=locateTouch(e.clientX,e.clientY);
+  if(!hit)return;
+  e.preventDefault();sounds.unlock();
+  if(hit.direction==='ok'){
+   if(hit.index===0)confirmControl();
+   return;
+  }
+  turn(hit.direction,hit.index);
+  padPointer={id:e.pointerId,index:hit.index,last:hit.direction};
+  try{wrap.setPointerCapture(e.pointerId);}catch(_){}
+ }
+ function onPadPointerMove(e){
+  if(!padPointer||e.pointerId!==padPointer.id)return;
+  const hit=locateTouch(e.clientX,e.clientY);
+  if(!hit||hit.index!==padPointer.index||hit.direction==='ok')return;
+  if(hit.direction!==padPointer.last){
+   e.preventDefault();
+   padPointer.last=hit.direction;
+   turn(hit.direction,hit.index);
+  }
+ }
+ function onPadPointerEnd(e){
+  if(padPointer&&e.pointerId===padPointer.id)padPointer=null;
+ }
+ wrap.addEventListener('pointerdown',onPadPointerDown);
+ wrap.addEventListener('pointermove',onPadPointerMove);
+ wrap.addEventListener('pointerup',onPadPointerEnd);
+ wrap.addEventListener('pointercancel',onPadPointerEnd);
  // Optional swipes on the game board. Taps and menu overlays do not trigger turns.
  let boardSwipe=null;
  function boardPointerDown(e){
@@ -523,7 +601,7 @@ function mount(root){
   $('.zs-start').textContent=play.textContent;
   draw(ctx,g,settings.level===4?level4Background:settings.level===3?level3Background:background);
  }
- function fit(){const touch=window.matchMedia('(hover:none), (pointer:coarse)').matches;const freeHeight=Math.max(1,arena.clientHeight-(touch?30:0));const w=Math.max(1,Math.min(arena.clientWidth,freeHeight*CW/CH));stage.style.width=w+'px';stage.style.height=w*CH/CW+'px';hud.style.width=touch?'':w+'px';}
+ function fit(){const touch=window.matchMedia('(hover:none), (pointer:coarse)').matches;const freeHeight=Math.max(1,arena.clientHeight-(touch?30:0));const w=Math.max(1,Math.min(arena.clientWidth,freeHeight*CW/CH));stage.style.width=w+'px';stage.style.height=w*CH/CW+'px';hud.style.width=touch?'':w+'px';refreshTouchDebug();}
  function focused(){const w=root.closest('.window');return !w||w.classList.contains('active')||w.classList.contains('focused')||w.style.zIndex===String(Math.max(...Array.from(document.querySelectorAll('.window')).map(e=>Number(e.style.zIndex)||0)));}
  function key(e){
   if(!alive||!focused()||e.altKey||e.ctrlKey||e.metaKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable)return;
