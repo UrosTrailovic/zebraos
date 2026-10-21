@@ -263,11 +263,11 @@
   pointer-events:none;
 }
 .zebra-game-body .zs-machine .zs-up .zs-control-art{background-position-x:0%}
-.zebra-game-body .zs-machine .zs-down .zs-control-art{background-position-x:16.6667%}
-.zebra-game-body .zs-machine .zs-left .zs-control-art{background-position-x:33.3333%}
-.zebra-game-body .zs-machine .zs-right .zs-control-art{background-position-x:50%}
-.zebra-game-body .zs-machine .zs-a .zs-control-art{background-position-x:66.6667%}
-.zebra-game-body .zs-machine .zs-b .zs-control-art{background-position-x:83.3333%}
+.zebra-game-body .zs-machine .zs-down .zs-control-art{background-position-x:15.3846%}
+.zebra-game-body .zs-machine .zs-left .zs-control-art{background-position-x:30.7692%}
+.zebra-game-body .zs-machine .zs-right .zs-control-art{background-position-x:46.1538%}
+.zebra-game-body .zs-machine .zs-a .zs-control-art{background-position-x:61.5385%}
+.zebra-game-body .zs-machine .zs-b .zs-control-art{background-position-x:76.9231%}
 .zebra-game-body .zs-machine .zs-select .zs-control-art{
   background-size:500% 160%;
   background-position:100% center;
@@ -317,9 +317,9 @@
   background-repeat:no-repeat;background-size:750% 100%;pointer-events:none;
 }
 .zs-second-pad .zs-p2-up .zs-control-art{background-position-x:0%}
-.zs-second-pad .zs-p2-down .zs-control-art{background-position-x:16.6667%}
-.zs-second-pad .zs-p2-left .zs-control-art{background-position-x:33.3333%}
-.zs-second-pad .zs-p2-right .zs-control-art{background-position-x:50%}
+.zs-second-pad .zs-p2-down .zs-control-art{background-position-x:15.3846%}
+.zs-second-pad .zs-p2-left .zs-control-art{background-position-x:30.7692%}
+.zs-second-pad .zs-p2-right .zs-control-art{background-position-x:46.1538%}
 
 @media(max-width:420px){
  .zs-scoreboard-list{width:98%;font-size:clamp(7px,2.7cqw,11px)}
