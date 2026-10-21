@@ -5,13 +5,13 @@
 /* Contrôleur Znake autonome, dessiné entièrement en CSS. */
 .zs-controls{display:grid;grid-template-columns:52px minmax(142px,190px) 52px;align-items:center;justify-content:center;gap:clamp(12px,5vw,32px);width:100%;margin:0 auto;touch-action:none}
 .zs-pad-zone{display:flex;align-items:center;justify-content:center;gap:16px;min-width:0}
-.zs-dpad{--pad-ink:#4d5a43;--pad-paper:#cddba8;position:relative;display:block;flex:0 0 auto;width:clamp(166px,43vw,216px);aspect-ratio:1;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible;isolation:isolate}
-.zs-dir{--shape:polygon(22% 4%,78% 4%,71% 18%,62% 37%,57% 45%,43% 45%,38% 37%,29% 18%);appearance:none;position:absolute;inset:0;width:100%;height:100%;min-height:0;margin:0;padding:0;border:0;border-radius:0;background:var(--pad-ink);clip-path:var(--shape);cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;box-shadow:none;filter:drop-shadow(3px 3px 0 var(--pad-ink))}
-.zs-dir::before{content:'';position:absolute;inset:4px;background-color:var(--pad-paper);background-image:repeating-linear-gradient(0deg,transparent 0 5px,color-mix(in srgb,var(--pad-ink) 14%,transparent) 5px 6px),repeating-linear-gradient(90deg,transparent 0 9px,color-mix(in srgb,var(--pad-ink) 9%,transparent) 9px 10px);clip-path:var(--shape)}
-.zs-dir::after{content:'';position:absolute;z-index:2;left:50%;top:16%;width:42px;height:35px;background:var(--pad-ink);clip-path:polygon(50% 0,100% 48%,68% 48%,68% 100%,32% 100%,32% 48%,0 48%);transform:translateX(-50%)}
-.zs-right{transform:rotate(90deg)}.zs-down{transform:rotate(180deg)}.zs-left{transform:rotate(-90deg)}
-.zs-dir:active{filter:drop-shadow(1px 1px 0 var(--pad-ink));translate:2px 2px}.zs-dir:active::before{background-color:var(--pad-ink)}.zs-dir:active::after{background:var(--pad-paper)}
-.zs-dir:focus-visible{outline:0}.zs-dir:focus-visible::before{background-color:var(--pad-paper)}
+.zs-dpad{--pad-ink:#4d5a43;--pad-paper:#cddba8;position:relative;display:block;flex:0 0 auto;width:clamp(190px,50vw,250px);aspect-ratio:3/2;border:0;background:transparent;box-shadow:none;overflow:visible;isolation:isolate}
+.zs-dir{appearance:none;position:absolute;inset:0;width:100%;height:100%;min-height:0;margin:0;padding:0;border:0;background:transparent;cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;box-shadow:none;pointer-events:none}
+.zs-dir svg{display:block;width:100%;height:100%;overflow:visible;filter:drop-shadow(3px 3px 0 var(--pad-ink));pointer-events:none}
+.zs-slice{fill:var(--pad-paper);stroke:var(--pad-ink);stroke-width:4;stroke-linejoin:round;pointer-events:visiblePainted}
+.zs-arrow{fill:none;stroke:var(--pad-ink);stroke-width:7;stroke-linecap:square;stroke-linejoin:miter;pointer-events:none}
+.zs-dir:active .zs-slice{fill:var(--pad-ink)}.zs-dir:active .zs-arrow{stroke:var(--pad-paper)}
+.zs-dir:focus-visible{outline:0}.zs-dir:focus-visible .zs-slice{stroke-width:7}
 .zs-pad-center{display:none}
 .zs-round{appearance:none;width:52px;aspect-ratio:1;padding:0;border:4px solid #4d5a43;border-radius:50%;background:#cddba8;color:#4d5a43;box-shadow:3px 3px 0 #4d5a43;font:700 22px/1 'Zebra Videotex',monospace;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;text-shadow:none}
 .zs-round:active{transform:translate(2px,2px);background:#4d5a43;color:#cddba8;box-shadow:1px 1px 0 #4d5a43}.zs-round:focus-visible{outline:3px dashed #cddba8;outline-offset:3px}.zs-round:disabled,.zs-dir:disabled{filter:brightness(.65);cursor:default}
@@ -75,7 +75,7 @@
  .zs-machine[data-duo="true"] .zs-hud b{display:inline-block;font-size:15px;margin:0 0 0 6px;letter-spacing:0}
  .zs-machine[data-duo="true"] .zs-controls{grid-template-columns:40px 1fr 40px;gap:8px}
  .zs-machine[data-duo="true"] .zs-pad-zone{gap:12px}
- .zs-machine[data-duo="true"] .zs-dpad{width:min(32vw,128px)}
+ .zs-machine[data-duo="true"] .zs-dpad{width:min(38vw,152px)}
  .zs-machine[data-duo="true"] .zs-second-pad{display:block;transform:rotate(180deg)}
  .zs-machine[data-duo="true"] .zs-round{width:40px;font-size:17px}
  .zs-p2-label{position:absolute;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%) rotate(180deg);font-size:10px;color:#f4f8d9;pointer-events:none}
