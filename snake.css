@@ -131,3 +131,23 @@
  .zs-scoreboard-list{width:98%;font-size:clamp(7px,2.7cqw,11px)}
  .zs-scoreboard-list section{grid-template-columns:82px 1fr;gap:4px;padding:4px}
 }
+
+/* Znake controller: keyboard desktop, compact touch controls on mobile */
+.zs-controls{display:none}
+@media (hover:none),(pointer:coarse){
+  .zs-machine{padding:clamp(6px,2vw,10px);gap:clamp(4px,1.2vh,8px)}
+  .zs-console{width:100%;margin:0;padding:0}
+  .zs-controls{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;gap:clamp(6px,2vw,12px)}
+  .zs-pad-zone{gap:clamp(4px,2vw,10px)}
+  .zs-dpad{width:clamp(124px,38vw,164px)}
+  .zs-round{width:44px;border-width:3px;font-size:19px}
+  .zs-help{display:none}
+  .zs-machine[data-duo="true"] .zs-pad-zone{gap:clamp(4px,2vw,10px)}
+  .zs-machine[data-duo="true"] .zs-dpad{width:clamp(92px,29vw,132px)}
+}
+@media (hover:none) and (max-height:680px),(pointer:coarse) and (max-height:680px){
+  .zs-controls{grid-template-columns:40px minmax(0,1fr) 40px}
+  .zs-dpad{width:clamp(112px,30vw,136px)}
+  .zs-round{width:40px;min-height:40px}
+  .zs-machine[data-duo="true"] .zs-dpad{width:clamp(88px,27vw,118px)}
+}
