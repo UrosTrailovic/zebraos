@@ -6,7 +6,7 @@
 <title>ZebraOs</title>
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
 <meta name="theme-color" content="#102431">
-<link rel="stylesheet" href="style.css?v=7.3">
+<link rel="stylesheet" href="style.css?v=7.4">
 <link rel="stylesheet" href="zebra-hardware.css?v=1.0">
 <link rel="stylesheet" href="zebra-notes.css?v=1.0">
 <link rel="stylesheet" href="zebra-tools.css?v=1.0">
@@ -91,7 +91,7 @@
 /* Cache local léger : JS/CSS seulement ; jamais le HTML, les photos ou les MP4. */
 if("serviceWorker" in navigator && location.protocol==="https:"){
  window.addEventListener("load",function(){
-  navigator.serviceWorker.register("/sw.js?v=14",{updateViaCache:"none"}).catch(function(){});
+  navigator.serviceWorker.register("/sw.js?v=15",{updateViaCache:"none"}).catch(function(){});
  },{once:true});
 }
 </script>
