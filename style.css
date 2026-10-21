@@ -2485,3 +2485,17 @@
   --zt-cross-h:97px;
  }
 }
+
+/* Zebra Tetris 6.8 — SELECT un cran plus bas, sans toucher A/B. */
+@media (hover:none),(pointer:coarse){
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select,
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select:active{
+  bottom:calc((100% - var(--zt-cross-h)) / 2 - 14px)!important;
+ }
+}
+@media(max-height:650px) and (pointer:coarse){
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select,
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select:active{
+  bottom:calc((100% - var(--zt-cross-h)) / 2 - 9px)!important;
+ }
+}
