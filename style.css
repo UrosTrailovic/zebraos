@@ -1254,6 +1254,53 @@
  width:100%;height:100%;display:block;max-width:none;
  background:#000;image-rendering:pixelated;
 }
+
+.zebra-game-body .zg-retro .zt-gameover-fx{
+ position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;
+ background:#000;
+}
+.zebra-game-body .zg-retro .zg-tetris-stage.zt-gameover-impact .zg-tetris-board{
+ animation:zt-gameover-hit .42s steps(2,end);
+}
+.zebra-game-body .zg-retro .zg-tetris-stage.zt-gameover-impact::after{
+ content:"";position:absolute;inset:0;z-index:4;pointer-events:none;
+ background:rgba(155,14,22,.42);
+ mix-blend-mode:screen;
+ animation:zt-gameover-redflash .46s ease-out both;
+}
+.zebra-game-body .zg-retro .zg-tetris-stage.zt-gameover-fade .zt-gameover-fx{
+ animation:zt-gameover-black .58s ease-in forwards;
+}
+.zebra-game-body .zg-retro .zg-tetris-stage.zt-gameover-reveal .zt-gameover-fx{
+ opacity:1;
+}
+.zebra-game-body .zg-retro .zg-tetris-stage.zt-gameover-reveal .zg-overlay{
+ z-index:7;
+ animation:zt-gameover-overlay-in .55s ease-out both;
+}
+@keyframes zt-gameover-hit{
+ 0%{transform:translate(0,0);filter:none}
+ 14%{transform:translate(-3px,1px);filter:contrast(1.35) saturate(1.7)}
+ 28%{transform:translate(3px,-1px);filter:contrast(1.5) saturate(1.85)}
+ 43%{transform:translate(-2px,1px);filter:sepia(.15) hue-rotate(320deg) saturate(2)}
+ 65%{transform:translate(1px,0);filter:contrast(1.25)}
+ 100%{transform:none;filter:none}
+}
+@keyframes zt-gameover-redflash{
+ 0%{opacity:0}
+ 10%{opacity:.9}
+ 30%{opacity:.52}
+ 100%{opacity:0}
+}
+@keyframes zt-gameover-black{
+ 0%{opacity:0}
+ 100%{opacity:1}
+}
+@keyframes zt-gameover-overlay-in{
+ 0%{opacity:0;transform:scale(.965)}
+ 45%{opacity:.35}
+ 100%{opacity:1;transform:scale(1)}
+}
 .zebra-game-body .zg-retro .zg-tetris-stage{position:relative}
 .zebra-game-body .zg-retro .zg-tetris-stage::after{
  content:"";position:absolute;inset:0;pointer-events:none;opacity:0;
