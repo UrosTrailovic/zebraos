@@ -1,7 +1,7 @@
-/* ZebraOS : cache léger des seuls scripts/styles ; jamais de vidéo, MP3,
-   photo personnelle, HTML ou index GitHub (toujours actualisé).
-   Les paramètres ?v= des fichiers assurent les mises à jour propres. */
-const CODE_CACHE="zebraos-code-v17";
+/* ZebraOS : cache de secours pour JS/CSS.
+   En développement, on privilégie toujours le réseau pour récupérer
+   immédiatement la dernière version ; le cache ne sert qu'hors ligne. */
+const CODE_CACHE="zebraos-code-v18";
 self.addEventListener("install",event=>{self.skipWaiting();});
 self.addEventListener("activate",event=>{
  event.waitUntil((async()=>{
@@ -16,15 +16,21 @@ self.addEventListener("fetch",event=>{
  if(req.method!=="GET"||req.mode==="navigate")return;
  const url=new URL(req.url);
  if(url.origin!==self.location.origin||!/\.(?:js|css)$/.test(url.pathname))return;
+
+ // DEV-FRIENDLY : toujours demander la dernière version au réseau.
+ // Le cache local ne sert que de secours si le réseau échoue.
  event.respondWith((async()=>{
   const cache=await caches.open(CODE_CACHE);
-  const saved=await cache.match(req);
-  if(saved)return saved;
-  const response=await fetch(req);
-  if(response.ok&&response.type==="basic"){
-   // Ne pas mémoriser une erreur, une réponse cross-origin ou un média.
-   event.waitUntil(cache.put(req,response.clone()).catch(()=>{}));
+  try{
+   const response=await fetch(req,{cache:"no-store"});
+   if(response.ok&&response.type==="basic"){
+    event.waitUntil(cache.put(req,response.clone()).catch(()=>{}));
+   }
+   return response;
+  }catch(err){
+   const saved=await cache.match(req);
+   if(saved)return saved;
+   throw err;
   }
-  return response;
  })());
 });
