@@ -298,14 +298,22 @@ function mount(root){
  const play=button('Jouer','zs-play zg-button zt-image-button zt-play',action,$('.zs-toolbar'));
  const restartButton=button('Recommencer','zs-restart zg-button zt-image-button zt-restart',restart,$('.zs-toolbar'));
  const menuButton=button('Menu','zs-menu zg-button zt-image-button zt-menu',menu,$('.zs-toolbar'));
- const musicButton=button(musicEnabled?'MUSIC ON':'MUSIC OFF','zs-music zg-button zt-image-button zt-music-button',()=>{
+ const musicButton=button('','zs-music zg-button zt-image-button zt-music-button',()=>{
   musicEnabled=!musicEnabled;
   try{localStorage.setItem('zebra.snake.music',musicEnabled?'on':'off');}catch(_){}
   sounds.setMusicEnabled(musicEnabled);
-  musicButton.textContent=musicEnabled?'MUSIC ON':'MUSIC OFF';
-  musicButton.classList.toggle('is-off',!musicEnabled);
+  updateMusicButton();
  },$('.zs-toolbar'));
- musicButton.classList.toggle('is-off',!musicEnabled);
+ function updateMusicButton(){
+  const label=musicEnabled?'MUSIC ON':'MUSIC OFF';
+  musicButton.textContent='';
+  musicButton.title=label;
+  musicButton.setAttribute('aria-label',musicEnabled?'Couper la musique':'Activer la musique');
+  musicButton.setAttribute('aria-pressed',musicEnabled?'true':'false');
+  musicButton.classList.toggle('is-off',!musicEnabled);
+  musicButton.style.backgroundImage='url("'+(musicEnabled?'/assets/games/musicOnbtnTetris.png?v=1':'/assets/games/musicOffbtnTetris.png?v=1')+'")';
+ }
+ updateMusicButton();
  $('.zs-toolbar').insertBefore(musicButton,menuButton);
  for(const [d,label]of Object.entries({up:'▲',left:'◀',right:'▶',down:'▼'})){
   const b=button(label,'zs-dir zt-control zt-dir zt-dir-'+d+' zs-'+d,e=>{if(e.detail===0){turn(d);}},$('.zs-cross'));
