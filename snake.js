@@ -35,13 +35,14 @@ const LEVEL_MS=[180,135,95,75];
 function createDuel(options={},random=Math.random){
  const level=Math.max(1,Math.min(4,Number(options.level)||1)),humans=options.players===2?2:1;
  const g={state:'ready',players:[],food:null,impact:null,winner:null,level,humans,ticks:0,kind:'duel'};
+ let aiWait=0;
  Object.defineProperties(g,{snake:{get:()=>g.players[0].snake},direction:{get:()=>g.players[0].direction},score:{get:()=>g.players[0].score}});
  const same=(a,b)=>a.x===b.x&&a.y===b.y;
  const inside=p=>p.x>=0&&p.x<W&&p.y>=0&&p.y<H;
  function food(){const free=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(!g.players.some(p=>p.snake.some(q=>q.x===x&&q.y===y)))free.push({x,y});g.food=free.length?free[Math.min(free.length-1,Math.floor(random()*free.length))]:null;}
  g.reset=function(){
   g.players=[{snake:Array.from({length:6},(_,i)=>({x:6-i,y:6})),direction:'right',queue:[],score:0,lost:false},{snake:Array.from({length:6},(_,i)=>({x:17+i,y:13})),direction:'left',queue:[],score:0,lost:false}];
-  g.state='ready';g.impact=null;g.winner=null;g.ticks=0;food();
+  g.state='ready';g.impact=null;g.winner=null;g.ticks=0;aiWait=0;food();
  };
  g.turn=function(d,index=0){
   if(g.state!=='running'&&g.state!=='ready')return false;
@@ -51,9 +52,11 @@ function createDuel(options={},random=Math.random){
   p.queue.push(d);return true;
  };
  function ai(){
+  if(aiWait>0){aiWait--;return;}
+  aiWait=[3,2,1,1][level-1];
   const p=g.players[1],head=p.snake[0],current=DIR[p.direction];
   const occupied=new Set(g.players.flatMap(p=>p.snake.slice(0,-1).map(q=>q.x+q.y*W)));
-  let best=null,bestScore=-Infinity;
+  const candidates=[];
   for(const [name,d]of Object.entries(DIR)){
    if(d[0]===-current[0]&&d[1]===-current[1])continue;
    const next={x:head.x+d[0],y:head.y+d[1]};if(!inside(next)||occupied.has(next.x+next.y*W))continue;
@@ -65,10 +68,18 @@ function createDuel(options={},random=Math.random){
    const target=g.food||g.players[0].snake[0];
    const distance=Math.abs(next.x-target.x)+Math.abs(next.y-target.y);
    const enemy=g.players[0].snake[0],near=Math.abs(next.x-enemy.x)+Math.abs(next.y-enemy.y);
-   const score=Math.min(seen.size,80)*(level>=3?2:.5)-distance+(name===p.direction?1:0)+(level===1?random()*12:0)-(near<2?25:0);
-   if(score>bestScore){bestScore=score;best=name;}
+   const score=Math.min(seen.size,80)*(level>=3?1.45:.55)-distance+(name===p.direction?1.5:0)-(near<2?20:0)+random()*3;
+   candidates.push({name,score});
   }
-  if(best&&best!==p.direction)g.turn(best,1);
+  candidates.sort((a,b)=>b.score-a.score);
+  if(!candidates.length)return;
+  const mistakeChance=[.34,.25,.17,.11][level-1];
+  let pick=candidates[0];
+  if(candidates.length>1&&random()<mistakeChance){
+   const pool=candidates.slice(1,Math.min(3,candidates.length));
+   pick=pool[Math.floor(random()*pool.length)]||pick;
+  }
+  if(pick.name!==p.direction)g.turn(pick.name,1);
  }
  g.tick=function(){
   if(g.state!=='running')return;if(humans===1)ai();g.ticks++;
@@ -165,7 +176,7 @@ function draw(ctx,g,background){
 }
 /* Small chip sounds, unlocked by an input gesture and disposed with the window. */
 function createSounds(){
- let context=null,unlocked=false,disposed=false,mode='silent',ambienceTimer=null,beat=0,track=null,assets={};
+ let context=null,unlocked=false,disposed=false,mode='silent',ambienceTimer=null,beat=0,track=null,assets={},musicEnabled=true;
  const voices=new Set();
  const notes={
   start:[[440,0,.07],[660,.09,.12]],eat:[[740,0,.045],[990,.05,.075]],turn:[[180,0,.022]],
@@ -210,6 +221,7 @@ function createSounds(){
  function clearTrack(){if(track){track.pause();track.removeAttribute('src');track.load();track=null;}}
  function stop(){if(ambienceTimer!==null){clearInterval(ambienceTimer);ambienceTimer=null;}clearTrack();stopVoices();mode='silent';}
  function file(name,loop){
+  if(name==='music'&&!musicEnabled)return false;
   if(!assets[name]||!window.Audio||!unlocked||muted()||document.hidden)return false;
   try{
    const audio=new window.Audio(assets[name]);track=audio;audio.loop=loop;audio.volume=loop?.23:.65;
@@ -225,21 +237,42 @@ function createSounds(){
  function setMode(next){
   stop();mode=next;
   if(!unlocked||muted()||document.hidden)return;
-  if(next==='running'){if(!file('music',true))startAmbience();}
+  if(next==='running'){if(musicEnabled){if(!file('music',true))startAmbience();}}
   else if(next==='hurt'){play('impact');if(!file('lose',false))play('lose');}
  }
  function configure(value){assets=value&&typeof value==='object'?value:{};}
+ function setMusicEnabled(value){
+  musicEnabled=!!value;
+  if(!musicEnabled){if(ambienceTimer!==null){clearInterval(ambienceTimer);ambienceTimer=null;}if(track&&mode==='running')clearTrack();}
+  else if(mode==='running'&&unlocked&&!muted()&&!document.hidden&&!track){if(!file('music',true))startAmbience();}
+ }
  function dispose(){disposed=true;stop();if(context){try{const closed=context.close();if(closed&&closed.catch)closed.catch(()=>{});}catch(_){}context=null;}}
  function sync(){if(muted()||document.hidden)stop();}
- return {unlock,play,stop,dispose,setMode,configure,sync};
+ return {unlock,play,stop,dispose,setMode,configure,setMusicEnabled,sync};
 }
 function mount(root){
  if(root._zebraDispose)root._zebraDispose();root.innerHTML='';
- const sounds=createSounds(),settings={mode:'solo',players:1,level:1};let g=createGame(),menuPage='mode',menuIndex=0,elapsed=0;let alive=true,best=0,observer,lastState=g.state,lastScore=0,crashTimer=null;
+ const sounds=createSounds(),settings={mode:'solo',players:1,level:1};let g=createGame(),menuPage='mode',menuIndex=0,elapsed=0;let alive=true,records={},observer,lastState=g.state,lastScore=0,crashTimer=null;
+ let musicEnabled=true;
  fetch('/assets/games/snake/audio.json?v=1',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(a=>{if(alive)sounds.configure(a);}).catch(()=>{});
- try{best=Number(localStorage.getItem('zebra.snake.best'))||0;}catch(_){}
+ try{
+  const saved=JSON.parse(localStorage.getItem('zebra.snake.records')||'{}');
+  if(saved&&typeof saved==='object')records=saved;
+  const legacy=Number(localStorage.getItem('zebra.snake.best'))||0;
+  if(legacy&&!records['solo-1'])records['solo-1']=legacy;
+  musicEnabled=localStorage.getItem('zebra.snake.music')!=='off';
+ }catch(_){}
+ sounds.setMusicEnabled(musicEnabled);
+ function recordKey(mode=settings.mode,level=settings.level){return mode+'-'+level;}
+ function currentBest(){return Number(records[recordKey()]||0);}
+ function saveRecord(value){
+  const key=recordKey(),score=Math.max(0,Number(value)||0);
+  if(score<=Number(records[key]||0))return;
+  records[key]=score;
+  try{localStorage.setItem('zebra.snake.records',JSON.stringify(records));}catch(_){}
+ }
  const wrap=make('div','zs-machine');
- wrap.innerHTML='<header class="zs-header"><img class="zs-logo" src="/assets/games/snake/znaklogo.png?v=1" alt="Znake" width="165" height="98"></header><div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div><label class="zs-score-label">SCORE</label> <b class="zs-score">0000</b></div><div><label class="zs-best-label">RECORD</label> <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znake : manger les pommes, éviter les murs et sa queue"></canvas><section class="zs-launch" aria-label="Menu de Znake"><div class="zs-menu-page zs-mode-page"><h1>Znake</h1><canvas class="zs-title-art" aria-hidden="true"></canvas><div class="zs-menu-list" role="group" aria-label="Mode de jeu"><button type="button" data-mode="solo">SOLO</button><button type="button" data-mode="robot">CONTRE ROBOT</button><button type="button" data-mode="local">VS LOCAL</button></div><small>FLÈCHES : CHOISIR · ESPACE : VALIDER</small></div><div class="zs-menu-page zs-level-page" hidden><h2>CHOISIS TON NIVEAU</h2><div class="zs-level-list" role="group" aria-label="Niveau"><button type="button" data-level="1">NIVEAU 1</button><button type="button" data-level="2">NIVEAU 2</button><button type="button" data-level="3">NIVEAU 3</button><button type="button" data-level="4">NIVEAU 4</button></div><button type="button" class="zs-menu-back">◀ RETOUR</button><small>ESPACE : JOUER</small></div></section><div class="zs-overlay"><strong role="heading" aria-level="2"></strong><em class="zs-result"></em><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console zg-retro"><div class="zs-handheld zt-handheld zt-skin-ready"><div class="zs-toolbar zg-buttons zt-buttons"></div><div class="zs-dpad zt-dpad" aria-label="Direction"><div class="zs-cross zt-cross"></div></div><div class="zs-action-side zt-action-side"><div class="zs-ab zt-ab"></div><span class="zs-select-space zt-select" aria-hidden="true"></span></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
+ wrap.innerHTML='<header class="zs-header"><img class="zs-logo" src="/assets/games/snake/znaklogo.png?v=1" alt="Znake" width="165" height="98"></header><div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div><label class="zs-score-label">SCORE</label> <b class="zs-score">0000</b></div><div><label class="zs-best-label">RECORD</label> <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znake : manger les pommes, éviter les murs et sa queue"></canvas><section class="zs-launch" aria-label="Menu de Znake"><div class="zs-menu-page zs-mode-page"><h1>Znake</h1><canvas class="zs-title-art" aria-hidden="true"></canvas><div class="zs-menu-list" role="group" aria-label="Mode de jeu"><button type="button" data-mode="solo">SOLO</button><button type="button" data-mode="robot">CONTRE ROBOT</button><button type="button" data-mode="local">VS LOCAL</button><button type="button" data-scoreboard="true">SCOREBOARD</button></div><small>FLÈCHES : CHOISIR · ESPACE : VALIDER</small></div><div class="zs-menu-page zs-level-page" hidden><h2>CHOISIS TON NIVEAU</h2><div class="zs-level-list" role="group" aria-label="Niveau"><button type="button" data-level="1">NIVEAU 1</button><button type="button" data-level="2">NIVEAU 2</button><button type="button" data-level="3">NIVEAU 3</button><button type="button" data-level="4">NIVEAU 4</button></div><button type="button" class="zs-menu-back">◀ RETOUR</button><small>ESPACE : JOUER</small></div><div class="zs-menu-page zs-scoreboard-page" hidden><h2>SCOREBOARD</h2><div class="zs-scoreboard-list"></div><button type="button" class="zs-scoreboard-back">◀ RETOUR</button><small>RECORDS PAR MODE ET NIVEAU</small></div></section><div class="zs-overlay"><strong role="heading" aria-level="2"></strong><em class="zs-result"></em><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console zg-retro"><div class="zs-handheld zt-handheld zt-skin-ready"><div class="zs-toolbar zg-buttons zt-buttons"></div><div class="zs-dpad zt-dpad" aria-label="Direction"><div class="zs-cross zt-cross"></div></div><div class="zs-action-side zt-action-side"><div class="zs-ab zt-ab"></div><span class="zs-select-space zt-select" aria-hidden="true"></span></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
  root.appendChild(wrap);
  const $=s=>wrap.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d');canvas.width=CW;canvas.height=CH;
  const stage=$('.zs-stage'),arena=$('.zs-arena'),hud=$('.zs-hud'),overlay=$('.zs-overlay'),status=$('.zs-state');
@@ -265,6 +298,14 @@ function mount(root){
  const play=button('Jouer','zs-play zg-button zt-image-button zt-play',action,$('.zs-toolbar'));
  const restartButton=button('Recommencer','zs-restart zg-button zt-image-button zt-restart',restart,$('.zs-toolbar'));
  const menuButton=button('Menu','zs-menu zg-button zt-image-button zt-menu',menu,$('.zs-toolbar'));
+ const musicButton=button(musicEnabled?'MUSIC ON':'MUSIC OFF','zs-music zg-button zt-image-button zt-music-button',()=>{
+  musicEnabled=!musicEnabled;
+  try{localStorage.setItem('zebra.snake.music',musicEnabled?'on':'off');}catch(_){}
+  sounds.setMusicEnabled(musicEnabled);
+  musicButton.textContent=musicEnabled?'MUSIC ON':'MUSIC OFF';
+  musicButton.classList.toggle('is-off',!musicEnabled);
+ },$('.zs-toolbar'));
+ musicButton.classList.toggle('is-off',!musicEnabled);
  for(const [d,label]of Object.entries({up:'▲',left:'◀',right:'▶',down:'▼'})){
   const b=button(label,'zs-dir zt-control zt-dir zt-dir-'+d+' zs-'+d,e=>{if(e.detail===0){turn(d);}},$('.zs-cross'));
   b.setAttribute('aria-label',({up:'Haut',down:'Bas',left:'Gauche',right:'Droite'})[d]);
@@ -275,13 +316,16 @@ function mount(root){
  const b=button('B','zs-b zt-control zt-ab-button zt-b',restart,$('.zs-ab'));b.setAttribute('aria-label','Recommencer');
  const select=button('SELECT','zs-select zt-control zt-select',menu,$('.zs-action-side'));select.setAttribute('aria-label','Retour au menu');
  $('.zs-action-side').appendChild(make('span','zt-control-caption','B : RECOMMENCER · A : PAUSE'));
- const spriteRoot='/assets/games/tetris-controls/';
- const spriteItems=[[$('.zs-up'),'upTetris.png'],[$('.zs-down'),'downTetris.png'],[$('.zs-left'),'leftTetris.png'],[$('.zs-right'),'rightTetris.png'],[a,'btnAtetris.png'],[b,'btnBtetris.png'],[select,'selectTetris.png']];
- const spriteLoads=spriteItems.map(([control,file])=>new Promise((resolve,reject)=>{
+ const controlTextures=window.ZnakeControlTextures||{};
+ const spriteItems=[[$('.zs-up'),'up'],[$('.zs-down'),'down'],[$('.zs-left'),'left'],[$('.zs-right'),'right'],[a,'a'],[b,'b'],[select,'select']];
+ const spriteLoads=spriteItems.map(([control,key])=>new Promise((resolve,reject)=>{
   const image=make('img','zt-control-sprite');image.alt='';image.draggable=false;image.decoding='async';
-  image.onload=resolve;image.onerror=reject;image.src=spriteRoot+file;control.appendChild(image);
+  image.onload=resolve;image.onerror=reject;image.src=controlTextures[key]||'';control.appendChild(image);
  }));
- const panelImage=new Image();spriteLoads.push(new Promise((resolve,reject)=>{panelImage.onload=resolve;panelImage.onerror=reject;panelImage.src=spriteRoot+'interfaceTetris.png';}));
+ const panelImage=new Image();
+ if(controlTextures.panel){
+  spriteLoads.push(new Promise((resolve,reject)=>{panelImage.onload=()=>{wrap.style.setProperty('--zs-control-panel','url("'+controlTextures.panel+'")');resolve();};panelImage.onerror=reject;panelImage.src=controlTextures.panel;}));
+ }
  Promise.all(spriteLoads).then(()=>{if(alive&&$('.zs-handheld').isConnected)$('.zs-handheld').classList.add('zt-skin-ready');}).catch(()=>{});
  const ATLAS='/assets/games/zebra-tetris-ui.png?v=57',AW=280,AH=252;
  function atlasSprite(node,[x,y,w,h]){
@@ -297,26 +341,38 @@ function mount(root){
  $('.zs-start').onclick=()=>{sounds.unlock();action();};
  const launch=$('.zs-launch');
  function renderMenu(){
-  const modePage=$('.zs-mode-page'),levelPage=$('.zs-level-page');
-  modePage.hidden=menuPage!=='mode';levelPage.hidden=menuPage!=='level';launch.dataset.page=menuPage;
-  const choices=menuPage==='mode'?Array.from(launch.querySelectorAll('[data-mode]')):Array.from(launch.querySelectorAll('[data-level]'));
+  const modePage=$('.zs-mode-page'),levelPage=$('.zs-level-page'),scorePage=$('.zs-scoreboard-page');
+  modePage.hidden=menuPage!=='mode';levelPage.hidden=menuPage!=='level';scorePage.hidden=menuPage!=='scores';launch.dataset.page=menuPage;
+  if(menuPage==='scores'){
+   const names=[['solo','SOLO'],['robot','CONTRE ROBOT'],['local','VS LOCAL']];
+   $('.zs-scoreboard-list').innerHTML=names.map(([mode,label])=>'<section><b>'+label+'</b><div>'+[1,2,3,4].map(level=>'<span>N'+level+' <strong>'+String(Number(records[mode+'-'+level]||0)).padStart(4,'0')+'</strong></span>').join('')+'</div></section>').join('');
+   return;
+  }
+  const choices=menuPage==='mode'?Array.from(launch.querySelectorAll('.zs-mode-page [data-mode],.zs-mode-page [data-scoreboard]')):Array.from(launch.querySelectorAll('[data-level]'));
   choices.forEach((b,i)=>b.setAttribute('aria-current',i===menuIndex?'true':'false'));
  }
  function chooseMode(mode){settings.mode=mode;settings.players=mode==='local'?2:1;menuPage='level';menuIndex=0;sounds.play('turn');renderMenu();}
  function chooseLevel(level){settings.level=Math.max(1,Math.min(4,Number(level)||1));sounds.unlock();restart();}
  function chooseMenu(){
-  if(menuPage==='mode'){chooseMode(['solo','robot','local'][menuIndex]);return;}
+  if(menuPage==='scores')return;
+  if(menuPage==='mode'){
+   if(menuIndex===3){menuPage='scores';sounds.play('menu');renderMenu();return;}
+   chooseMode(['solo','robot','local'][menuIndex]);return;
+  }
   chooseLevel(menuIndex+1);
  }
  function navigate(d){
-  const count=menuPage==='mode'?3:4;
+  if(menuPage==='scores')return;
+  const count=menuPage==='mode'?4:4;
   if(d==='up'||d==='left')menuIndex=(menuIndex-1+count)%count;
   else if(d==='down'||d==='right')menuIndex=(menuIndex+1)%count;
   sounds.play('turn');renderMenu();
  }
  launch.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{sounds.unlock();chooseMode(b.dataset.mode);});
+ launch.querySelector('[data-scoreboard]').onclick=()=>{sounds.unlock();menuPage='scores';sounds.play('menu');renderMenu();};
  launch.querySelectorAll('[data-level]').forEach(b=>b.onclick=()=>chooseLevel(b.dataset.level));
  $('.zs-menu-back').onclick=()=>{sounds.unlock();menuPage='mode';menuIndex=settings.mode==='solo'?0:settings.mode==='robot'?1:2;sounds.play('menu');renderMenu();};
+ $('.zs-scoreboard-back').onclick=()=>{sounds.unlock();menuPage='mode';menuIndex=3;sounds.play('menu');renderMenu();};
  // An original, simple two-ink title illustration, drawn at handheld resolution.
  const art=$('.zs-title-art');art.width=384;art.height=100;const ac=art.getContext('2d');
  ac.fillStyle=DECOR;for(let y=0;y<35;y+=12)for(let x=-24;x<384;x+=48)ac.fillRect(x+(y%24?24:0),y,44,9);
@@ -329,7 +385,7 @@ function mount(root){
  for(const [d,label]of Object.entries({up:'▲',left:'◀',right:'▶',down:'▼'})){
   const control=button(label,'zs-p2-dir zs-p2-'+d,e=>{if(e.detail===0)turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);},second);
   control.setAttribute('aria-label','Joueur 2 : '+({up:'Haut',left:'Gauche',right:'Droite',down:'Bas'})[d]);
-  const image=make('img','zt-control-sprite');image.alt='';image.draggable=false;image.decoding='async';image.src=spriteRoot+d+'Tetris.png';control.appendChild(image);
+  const image=make('img','zt-control-sprite');image.alt='';image.draggable=false;image.decoding='async';image.src=(window.ZnakeControlTextures||{})[d]||'';control.appendChild(image);
   control.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();sounds.unlock();turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);};
  }
  wrap.insertBefore(second,$('.zs-hud'));
@@ -345,7 +401,8 @@ function mount(root){
    lastState=g.state;
   }
   if(g.score>lastScore&&g.state==='running')sounds.play('eat');lastScore=g.score;
-  if(g.score>best){best=g.score;try{localStorage.setItem('zebra.snake.best',String(best));}catch(_){}}
+  if(g.score>currentBest())saveRecord(g.score);
+  const best=currentBest();
   $('.zs-score-label').textContent=g.kind==='duel'&&g.state!=='ready'?'J1':'SCORE';$('.zs-best-label').textContent=g.kind==='duel'&&g.state!=='ready'?(settings.players===1?'ORDI':'J2'):'RECORD';
   $('.zs-score').textContent=String(g.score).padStart(4,'0');$('.zs-best').textContent=String(g.kind==='duel'&&g.state!=='ready'?g.players[1].score:best).padStart(4,'0');
   const duelResult=g.kind==='duel'&&g.state==='over'?(g.winner===0?'DRAW':g.winner===1?'PLAYER 1 WIN':settings.players===1?'ZNAKEBOT WIN':'PLAYER 2 WIN'):'';
@@ -370,7 +427,7 @@ function mount(root){
   const keys={w:'up',z:'up',s:'down',a:'left',q:'left',d:'right'},d=arrows[e.key]||keys[letter];
     if(d){e.preventDefault();if(!e.repeat){sounds.unlock();turn(d,g.state!=='ready'&&settings.players===2&&arrows[e.key]?1:0);}}
   else if(e.code==='Space'||e.key===' '||e.key==='Enter'||letter==='p'){e.preventDefault();if(!e.repeat){sounds.unlock();action();}}
-  else if(e.key==='Escape'){e.preventDefault();if(g.state==='ready'&&menuPage==='level'){menuPage='mode';menuIndex=settings.mode==='solo'?0:settings.mode==='robot'?1:2;renderMenu();}else menu();}
+  else if(e.key==='Escape'){e.preventDefault();if(g.state==='ready'&&(menuPage==='level'||menuPage==='scores')){menuPage='mode';menuIndex=menuPage==='scores'?3:(settings.mode==='solo'?0:settings.mode==='robot'?1:2);renderMenu();}else menu();}
  }
  function hide(){if(document.hidden){sounds.stop();if(g.state==='running'){g.state='paused';render();}}}
  function blur(){sounds.stop();if(g.state==='running'){g.state='paused';render();}}
