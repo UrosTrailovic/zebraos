@@ -332,13 +332,12 @@ function mount(root){
  };
  function applyControlTexture(control,key){
   const file=controlFiles[key];if(!file)return;
-  const image=make('img','zs-control-art');image.alt='';image.draggable=false;image.decoding='async';
-  image.src=CONTROL_ROOT+file+'?v=2';
+  const image=make('img','zt-control-sprite');image.alt='';image.draggable=false;image.decoding='async';
+  image.src=CONTROL_ROOT+file+'?v=3';
   control.appendChild(image);
  }
  [['up',$('.zs-up')],['down',$('.zs-down')],['left',$('.zs-left')],['right',$('.zs-right')],['a',a],['b',b],['select',select]].forEach(([key,node])=>applyControlTexture(node,key));
- wrap.style.setProperty('--zs-control-panel','url("'+CONTROL_ROOT+'INTfond.png?v=2")');
- $('.zs-handheld').classList.add('zs-skin-ready');
+ $('.zs-handheld').classList.add('zt-skin-ready');
  const ATLAS='/assets/games/zebra-tetris-ui.png?v=57',AW=280,AH=252;
  function atlasSprite(node,[x,y,w,h]){
   node.style.backgroundImage='url("'+ATLAS+'")';node.style.backgroundRepeat='no-repeat';
