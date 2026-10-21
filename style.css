@@ -2435,3 +2435,53 @@
   transform:translateY(-28px)!important;
  }
 }
+
+/* Zebra Tetris 6.7 — appareil fixe.
+   SELECT partage exactement la ligne basse de la flèche BAS.
+   Le plateau ne bouge JAMAIS : feedback Tetris uniquement lumineux. */
+.zebra-game-body .zg-retro .zg-tetris-stage,
+.zebra-game-body .zg-retro .zg-tetris-stage.zt-tetris-burst{
+ transform:none!important;
+ animation:none!important;
+}
+.zebra-game-body .zg-retro .zg-tetris-stage.zt-tetris-burst::after{
+ animation:zt-tetris-flash-fixed .72s steps(1,end)!important;
+}
+@keyframes zt-tetris-flash-fixed{
+ 0%{opacity:0}
+ 8%{opacity:.72}
+ 18%{opacity:.12}
+ 29%{opacity:.62}
+ 41%{opacity:.08}
+ 55%{opacity:.42}
+ 70%{opacity:.05}
+ 100%{opacity:0}
+}
+
+@media (hover:none),(pointer:coarse){
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready{
+  --zt-cross-h:124px;
+ }
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-action-side{
+  position:relative!important;
+ }
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select,
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select:active{
+  position:absolute!important;
+  left:50%!important;
+  top:auto!important;
+  bottom:calc((100% - var(--zt-cross-h)) / 2)!important;
+  transform:translateX(-50%)!important;
+  margin:0!important;
+ }
+}
+@media(max-width:370px) and (pointer:coarse){
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready{
+  --zt-cross-h:116px;
+ }
+}
+@media(max-height:650px) and (pointer:coarse){
+ .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready{
+  --zt-cross-h:97px;
+ }
+}
