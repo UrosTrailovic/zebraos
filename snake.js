@@ -427,7 +427,7 @@ function mount(root){
   $('.zs-start').textContent=play.textContent;
   draw(ctx,g,settings.level===4?level4Background:settings.level===3?level3Background:background);
  }
- function fit(){const w=Math.max(1,Math.min(arena.clientWidth,arena.clientHeight*CW/CH));stage.style.width=w+'px';stage.style.height=w*CH/CW+'px';hud.style.width=window.matchMedia('(hover:none), (pointer:coarse)').matches?'':w+'px';}
+ function fit(){const touch=window.matchMedia('(hover:none), (pointer:coarse)').matches;const freeHeight=Math.max(1,arena.clientHeight-(touch?30:0));const w=Math.max(1,Math.min(arena.clientWidth,freeHeight*CW/CH));stage.style.width=w+'px';stage.style.height=w*CH/CW+'px';hud.style.width=touch?'':w+'px';}
  function focused(){const w=root.closest('.window');return !w||w.classList.contains('active')||w.classList.contains('focused')||w.style.zIndex===String(Math.max(...Array.from(document.querySelectorAll('.window')).map(e=>Number(e.style.zIndex)||0)));}
  function key(e){
   if(!alive||!focused()||e.altKey||e.ctrlKey||e.metaKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable)return;
