@@ -295,8 +295,15 @@ function mount(root){
  const play=$('.zs-action'),menuButton=$('.zs-menu');
  play.onclick=()=>{sounds.unlock();action();};
  menuButton.onclick=()=>{sounds.unlock();menu();};
- for(const [d,label]of Object.entries({up:'▲',left:'◀',right:'▶',down:'▼'})){
+ const dpadArt={
+  up:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M57 55 Q120 5 183 55 L160 72 Q120 43 80 72 Z"/><path class="zs-arrow" d="M108 57 L120 44 L132 57"/></svg>',
+  right:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M177 34 Q231 80 177 126 L154 104 Q186 80 154 56 Z"/><path class="zs-arrow" d="M170 68 L183 80 L170 92"/></svg>',
+  down:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M57 105 Q120 155 183 105 L160 88 Q120 117 80 88 Z"/><path class="zs-arrow" d="M108 103 L120 116 L132 103"/></svg>',
+  left:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M63 34 Q9 80 63 126 L86 104 Q54 80 86 56 Z"/><path class="zs-arrow" d="M70 68 L57 80 L70 92"/></svg>'
+ };
+ for(const d of Object.keys(dpadArt)){
   const b=button('','zs-dir zs-'+d,e=>{if(e.detail===0){turn(d);}},$('.zs-dpad'));
+  b.innerHTML=dpadArt[d];
   b.setAttribute('aria-label',({up:'Haut',down:'Bas',left:'Gauche',right:'Droite'})[d]);
   b.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();sounds.unlock();turn(d);};
  }
@@ -345,8 +352,9 @@ function mount(root){
  // Two independent touch pads in local two-player games.
  const second=make('div','zs-dpad zs-second-pad');second.setAttribute('role','group');second.setAttribute('aria-label','Direction du joueur 2');
  second.appendChild(make('span','zs-p2-label','J2'));
- for(const [d,label]of Object.entries({up:'▲',left:'◀',right:'▶',down:'▼'})){
+ for(const d of Object.keys(dpadArt)){
   const control=button('','zs-dir zs-p2-dir zs-'+d,e=>{if(e.detail===0)turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);},second);
+  control.innerHTML=dpadArt[d];
   control.setAttribute('aria-label','Joueur 2 : '+({up:'Haut',left:'Gauche',right:'Droite',down:'Bas'})[d]);
   control.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();sounds.unlock();turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);};
  }
