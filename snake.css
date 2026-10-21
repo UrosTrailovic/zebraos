@@ -259,3 +259,9 @@
 @media (hover:none),(pointer:coarse){
  .zs-console{padding-top:8px;padding-bottom:14px}
 }
+
+/* Znake accessibility: full touch surface while keeping unchanged retro sprites. */
+@media (hover:none),(pointer:coarse){
+ .zs-console,.zs-pad-zone,.zs-dpad{touch-action:none}
+ .zs-stage{touch-action:none}
+}
