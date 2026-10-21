@@ -84,190 +84,7 @@
 }
 
 
-/* Znake custom control skin — supplied textures, independent from Tetris. */
-.zebra-game-body .zs-machine .zs-console{
-  width:100%;
-  margin:0;
-  padding:4px 0 0;
-}
-.zebra-game-body .zs-machine .zs-handheld{
-  container-type:inline-size;
-  position:relative!important;
-  display:block!important;
-  width:min(515px,100%)!important;
-  max-width:515px!important;
-  min-height:0!important;
-  height:auto!important;
-  aspect-ratio:515/256;
-  margin:0 auto!important;
-  padding:0!important;
-  border:0!important;
-  border-radius:0!important;
-  box-shadow:none!important;
-  overflow:visible!important;
-  background-image:var(--zs-control-panel)!important;
-  background-size:100% 100%!important;
-  background-position:center!important;
-  background-repeat:no-repeat!important;
-  image-rendering:auto;
-}
-.zebra-game-body .zs-machine .zs-handheld::before,
-.zebra-game-body .zs-machine .zs-handheld::after{display:none!important}
-
-/* Toolbar sits in the upper rail of the supplied panel. */
-.zebra-game-body .zs-machine .zs-toolbar{
-  position:absolute!important;
-  z-index:6;
-  left:4.2%;right:4.2%;top:5.5%;
-  height:13.5%;
-  display:flex!important;
-  flex-direction:row!important;
-  align-items:center;
-  justify-content:center;
-  gap:1.2%;
-  padding:0!important;
-}
-.zebra-game-body .zs-machine .zs-toolbar .zs-button{
-  flex:1 1 0!important;
-  width:auto!important;
-  max-width:108px;
-  height:100%!important;
-  min-height:0!important;
-  padding:0!important;
-  margin:0!important;
-}
-.zebra-game-body .zs-machine .zs-toolbar .zs-music{
-  font:700 clamp(7px,1.7cqw,10px)/1 "Courier New",monospace!important;
-  letter-spacing:.2px;
-}
-
-/* 64px source textures are reassembled as the physical D-pad. */
-.zebra-game-body .zs-machine .zs-dpad{
-  position:absolute!important;
-  z-index:4;
-  display:block!important;
-  left:5.4%!important;
-  top:24.5%!important;
-  width:37.28cqw!important;
-  height:37.28cqw!important;
-  max-width:none!important;
-  min-width:0!important;
-  margin:0!important;
-  filter:none!important;
-}
-.zebra-game-body .zs-machine .zs-cross{
-  position:absolute!important;
-  inset:0!important;
-  display:block!important;
-  width:100%!important;
-  height:100%!important;
-  transform:none!important;
-  filter:none!important;
-}
-.zebra-game-body .zs-machine .zs-cross-shape,
-.zebra-game-body .zs-machine .zs-cross-center{display:none!important}
-.zebra-game-body .zs-machine .zs-dir{
-  position:absolute!important;
-  width:12.43cqw!important;
-  height:12.43cqw!important;
-  min-height:0!important;
-  padding:0!important;
-  margin:0!important;
-  border:0!important;
-  border-radius:0!important;
-  background:transparent!important;
-  box-shadow:none!important;
-  overflow:visible!important;
-  transform:none!important;
-  font-size:0!important;
-}
-.zebra-game-body .zs-machine .zs-dir::before{display:none!important}
-.zebra-game-body .zs-machine .zs-up{left:12.43cqw!important;top:0!important}
-.zebra-game-body .zs-machine .zs-down{left:12.43cqw!important;top:24.85cqw!important}
-.zebra-game-body .zs-machine .zs-left{left:0!important;top:12.43cqw!important}
-.zebra-game-body .zs-machine .zs-right{left:24.85cqw!important;top:12.43cqw!important}
-
-/* A/B + SELECT occupy the right side of the panel. */
-.zebra-game-body .zs-machine .zs-action-side{
-  position:absolute!important;
-  z-index:4;
-  display:flex!important;
-  flex-direction:column!important;
-  align-items:center!important;
-  justify-content:center!important;
-  right:5.5%!important;
-  top:29%!important;
-  width:39%!important;
-  height:60%!important;
-  gap:3%!important;
-  margin:0!important;
-}
-.zebra-game-body .zs-machine .zs-ab{
-  position:relative!important;
-  display:block!important;
-  width:100%!important;
-  max-width:none!important;
-  height:62%!important;
-  border:0!important;
-  border-radius:0!important;
-  background:none!important;
-  transform:none!important;
-}
-.zebra-game-body .zs-machine .zs-ab-button{
-  position:absolute!important;
-  width:12.43cqw!important;
-  height:12.43cqw!important;
-  min-height:0!important;
-  padding:0!important;
-  border:0!important;
-  border-radius:0!important;
-  background:transparent!important;
-  box-shadow:none!important;
-  color:transparent!important;
-  text-shadow:none!important;
-  font-size:0!important;
-  overflow:visible!important;
-  transform:none!important;
-}
-.zebra-game-body .zs-machine .zs-b{left:12%!important;bottom:2%!important}
-.zebra-game-body .zs-machine .zs-a{right:9%!important;top:2%!important}
-.zebra-game-body .zs-machine .zs-select{
-  position:relative!important;
-  width:18.64cqw!important;
-  height:7.77cqw!important;
-  min-height:0!important;
-  flex:none!important;
-  padding:0!important;
-  border:0!important;
-  border-radius:0!important;
-  background:transparent!important;
-  box-shadow:none!important;
-  color:transparent!important;
-  font-size:0!important;
-  overflow:visible!important;
-  transform:none!important;
-}
-.zebra-game-body .zs-machine .zs-control-caption{display:none!important}
-
-/* Original Znake control PNGs supplied by the author. */
-.zebra-game-body .zs-machine .zs-control-art{
-  position:absolute;
-  inset:0;
-  display:block;
-  width:100%;
-  height:100%;
-  object-fit:contain;
-  image-rendering:auto;
-  pointer-events:none;
-}
-.zebra-game-body .zs-machine .zs-dir:active .zs-control-art,
-.zebra-game-body .zs-machine .zs-ab-button:active .zs-control-art,
-.zebra-game-body .zs-machine .zs-select:active .zs-control-art{
-  transform:translateY(2px);
-  filter:brightness(.82);
-}
-
-/* Scoreboard: one record per mode and per level. */
+/* Znake scoreboard — isolated from controller geometry. */
 .zs-scoreboard-page{
   padding:4% 6%!important;
   gap:clamp(5px,1.8cqw,10px)!important;
@@ -298,11 +115,18 @@
 .zs-scoreboard-list span{display:flex;flex-direction:column;font-size:.82em}
 .zs-scoreboard-list strong{font-size:1.15em;font-weight:700}
 .zs-scoreboard-back{margin-top:2px!important}
-
-/* Local player 2 remains compact but uses the same Znake directional artwork. */
-.zs-second-pad .zs-control-art{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
-
 @media(max-width:420px){
  .zs-scoreboard-list{width:98%;font-size:clamp(7px,2.7cqw,11px)}
  .zs-scoreboard-list section{grid-template-columns:82px 1fr;gap:4px;padding:4px}
+}
+
+/* Znake uses the exact Tetris control geometry; only the artwork changes. */
+@media (hover:none),(pointer:coarse){
+ .zebra-game-body .zs-machine .zt-handheld.zt-skin-ready::before{
+  background:url("/assets/games/snake/controls/INTfond.png?v=3") center/100% 100% no-repeat!important;
+  image-rendering:auto;
+ }
+ .zebra-game-body .zs-machine .zt-control-sprite{
+  image-rendering:auto!important;
+ }
 }
