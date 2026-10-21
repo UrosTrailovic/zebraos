@@ -35,14 +35,13 @@ const LEVEL_MS=[180,135,95,75];
 function createDuel(options={},random=Math.random){
  const level=Math.max(1,Math.min(4,Number(options.level)||1)),humans=options.players===2?2:1;
  const g={state:'ready',players:[],food:null,impact:null,winner:null,level,humans,ticks:0,kind:'duel'};
- let aiWait=0;
  Object.defineProperties(g,{snake:{get:()=>g.players[0].snake},direction:{get:()=>g.players[0].direction},score:{get:()=>g.players[0].score}});
  const same=(a,b)=>a.x===b.x&&a.y===b.y;
  const inside=p=>p.x>=0&&p.x<W&&p.y>=0&&p.y<H;
  function food(){const free=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(!g.players.some(p=>p.snake.some(q=>q.x===x&&q.y===y)))free.push({x,y});g.food=free.length?free[Math.min(free.length-1,Math.floor(random()*free.length))]:null;}
  g.reset=function(){
   g.players=[{snake:Array.from({length:6},(_,i)=>({x:6-i,y:6})),direction:'right',queue:[],score:0,lost:false},{snake:Array.from({length:6},(_,i)=>({x:17+i,y:13})),direction:'left',queue:[],score:0,lost:false}];
-  g.state='ready';g.impact=null;g.winner=null;g.ticks=0;aiWait=0;food();
+  g.state='ready';g.impact=null;g.winner=null;g.ticks=0;food();
  };
  g.turn=function(d,index=0){
   if(g.state!=='running'&&g.state!=='ready')return false;
@@ -52,34 +51,71 @@ function createDuel(options={},random=Math.random){
   p.queue.push(d);return true;
  };
  function ai(){
-  if(aiWait>0){aiWait--;return;}
-  aiWait=[3,2,1,1][level-1];
-  const p=g.players[1],head=p.snake[0],current=DIR[p.direction];
-  const occupied=new Set(g.players.flatMap(p=>p.snake.slice(0,-1).map(q=>q.x+q.y*W)));
+  // Decide every tick; even level one must avoid obvious collisions.
+  const bot=g.players[1],human=g.players[0],head=bot.snake[0];
+  const hd=DIR[human.queue[0]||human.direction];
+  const humanNext={x:human.snake[0].x+hd[0],y:human.snake[0].y+hd[1]};
+  const humanEats=!!g.food&&same(humanNext,g.food);
+  const occupiedHuman=humanEats?human.snake:human.snake.slice(0,-1);
+  const forward=DIR[bot.direction];
+  const foodWeight=[.75,1.25,2.0,3.0][level-1];
+  const spaceWeight=[.65,.8,1.0,1.2][level-1];
+  const noise=[2.1,1.5,.65,.2][level-1];
   const candidates=[];
-  for(const [name,d]of Object.entries(DIR)){
-   if(d[0]===-current[0]&&d[1]===-current[1])continue;
-   const next={x:head.x+d[0],y:head.y+d[1]};if(!inside(next)||occupied.has(next.x+next.y*W))continue;
-   const seen=new Set(),queue=[next];
-   for(let i=0;i<queue.length;i++){
-    const q=queue[i],key=q.x+q.y*W;if(seen.has(key))continue;seen.add(key);
-    for(const v of Object.values(DIR)){const n={x:q.x+v[0],y:q.y+v[1]},k=n.x+n.y*W;if(inside(n)&&!occupied.has(k)&&!seen.has(k))queue.push(n);}
+  for(const [name,d] of Object.entries(DIR)){
+   if(d[0]===-forward[0]&&d[1]===-forward[1])continue;
+   const next={x:head.x+d[0],y:head.y+d[1]};
+   if(!inside(next))continue;
+   const eats=!!g.food&&same(next,g.food);
+   const botBody=eats?bot.snake:bot.snake.slice(0,-1);
+   if(botBody.some(q=>same(q,next))||occupiedHuman.some(q=>same(q,next)))continue;
+   if(same(next,humanNext)||(same(next,human.snake[0])&&same(humanNext,head)))continue;
+   // Evaluate room after both snakes make their next step.
+   const blocked=new Set();
+   for(const q of botBody)blocked.add(q.x+q.y*W);
+   for(const q of occupiedHuman)blocked.add(q.x+q.y*W);
+   if(inside(humanNext))blocked.add(humanNext.x+humanNext.y*W);
+   blocked.add(next.x+next.y*W);
+   const seen=new Set([next.x+next.y*W]),cells=[next];
+   let foodDistance=eats?0:-1,exits=0;
+   for(let i=0;i<cells.length;i++){
+    const cell=cells[i];
+    if(foodDistance<0&&g.food&&same(cell,g.food))foodDistance=cell.dist||0;
+    for(const dv of Object.values(DIR)){
+     const q={x:cell.x+dv[0],y:cell.y+dv[1]};
+     if(!inside(q))continue;
+     const k=q.x+q.y*W;
+     if(blocked.has(k)||seen.has(k))continue;
+     if(i===0)exits++;
+     seen.add(k);cells.push({x:q.x,y:q.y,dist:(cell.dist||0)+1});
+    }
    }
-   const target=g.food||g.players[0].snake[0];
-   const distance=Math.abs(next.x-target.x)+Math.abs(next.y-target.y);
-   const enemy=g.players[0].snake[0],near=Math.abs(next.x-enemy.x)+Math.abs(next.y-enemy.y);
-   const score=Math.min(seen.size,80)*(level>=3?1.45:.55)-distance+(name===p.direction?1.5:0)-(near<2?20:0)+random()*3;
-   candidates.push({name,score});
+   const area=seen.size;
+   const target=g.food||human.snake[0];
+   const distance=foodDistance>=0?foodDistance:Math.abs(next.x-target.x)+Math.abs(next.y-target.y)+20;
+   const room=bot.snake.length+4;
+   const danger=(area<room?-150-(room-area)*9:area<room*2?-24:0)
+     +(exits===0?-50:0);
+   const enemyGap=Math.abs(next.x-humanNext.x)+Math.abs(next.y-humanNext.y);
+   const nearbyEnemy=enemyGap<=2?-15:enemyGap===3?-3:0;
+   const score=Math.min(area,65)*spaceWeight-distance*foodWeight
+     +exits*3+danger+nearbyEnemy+(name===bot.direction?2:0)
+     +(eats?65:0)+random()*noise;
+   candidates.push({name,score,area,exits});
   }
+  if(!candidates.length)return; // Truly trapped, not a missed wall.
   candidates.sort((a,b)=>b.score-a.score);
-  if(!candidates.length)return;
-  const mistakeChance=[.34,.25,.17,.11][level-1];
-  let pick=candidates[0];
-  if(candidates.length>1&&random()<mistakeChance){
-   const pool=candidates.slice(1,Math.min(3,candidates.length));
-   pick=pool[Math.floor(random()*pool.length)]||pick;
+  const safe=candidates.filter(c=>c.area>=bot.snake.length+4&&c.exits>0);
+  const pool=safe.length?safe:candidates;
+  let choice=pool[0];
+  const mistake=[.18,.10,.045,.01][level-1];
+  if(pool.length>1&&random()<mistake){
+   // Easier levels choose a less optimal safe route, not a suicidal turn.
+   const alternatives=pool.slice(1).filter(c=>c.score>=pool[0].score-16);
+   if(alternatives.length)choice=alternatives[Math.floor(random()*alternatives.length)];
   }
-  if(pick.name!==p.direction)g.turn(pick.name,1);
+  bot.queue.length=0;
+  if(choice.name!==bot.direction)bot.queue.push(choice.name);
  }
  g.tick=function(){
   if(g.state!=='running')return;if(humans===1)ai();g.ticks++;
