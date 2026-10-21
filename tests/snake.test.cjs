@@ -11,8 +11,11 @@ test('Znake controls are code-only and independent from the Tetris controller sk
  assert.doesNotMatch(styles,/zt-(?:handheld|dpad|control)|snake\/controls/);
  assert.match(source,/class="zs-controls"/);
  assert.match(source,/class="zs-dpad" role="group" aria-label="Direction"/);
+ assert.match(source,/class="zs-slice"/);
+ assert.match(source,/class="zs-arrow"/);
  assert.match(styles,/\.zs-dpad\{[^}]*background:transparent/);
- assert.match(styles,/\.zs-dir\{[^}]*--shape:polygon/);
+ assert.match(styles,/\.zs-dpad\{[^}]*aspect-ratio:3\/2/);
+ assert.match(styles,/\.zs-slice\{[^}]*fill:var\(--pad-paper\)/);
  assert.match(styles,/\.zs-pad-center\{display:none\}/);
 });
 test('classic start, pause, reset and constant one-cell movement',()=>{
