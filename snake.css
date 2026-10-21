@@ -82,3 +82,246 @@
  .zs-p2-up{grid-area:1/2}.zs-p2-down{grid-area:3/2}.zs-p2-left{grid-area:2/1}.zs-p2-right{grid-area:2/3}
  .zs-machine[data-duo="true"] .zs-second-pad::before{content:'';position:absolute;left:38px;top:38px;width:38px;height:38px;background:#060564;z-index:-1}
 }
+
+
+/* Znake custom control skin — supplied textures, independent from Tetris. */
+.zebra-game-body .zs-machine .zs-console{
+  width:100%;
+  margin:0;
+  padding:4px 0 0;
+}
+.zebra-game-body .zs-machine .zs-handheld{
+  container-type:inline-size;
+  position:relative!important;
+  display:block!important;
+  width:min(515px,100%)!important;
+  max-width:515px!important;
+  min-height:0!important;
+  height:auto!important;
+  aspect-ratio:515/256;
+  margin:0 auto!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+  background-image:var(--zs-control-panel)!important;
+  background-size:100% 100%!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  image-rendering:auto;
+}
+.zebra-game-body .zs-machine .zs-handheld::before,
+.zebra-game-body .zs-machine .zs-handheld::after{display:none!important}
+
+/* Toolbar sits in the upper rail of the supplied panel. */
+.zebra-game-body .zs-machine .zs-toolbar{
+  position:absolute!important;
+  z-index:6;
+  left:4.2%;right:4.2%;top:5.5%;
+  height:13.5%;
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center;
+  justify-content:center;
+  gap:1.2%;
+  padding:0!important;
+}
+.zebra-game-body .zs-machine .zs-toolbar .zs-button{
+  flex:1 1 0!important;
+  width:auto!important;
+  max-width:108px;
+  height:100%!important;
+  min-height:0!important;
+  padding:0!important;
+  margin:0!important;
+}
+.zebra-game-body .zs-machine .zs-toolbar .zs-music{
+  font:700 clamp(7px,1.7cqw,10px)/1 "Courier New",monospace!important;
+  letter-spacing:.2px;
+}
+
+/* 64px source textures are reassembled as the physical D-pad. */
+.zebra-game-body .zs-machine .zs-dpad{
+  position:absolute!important;
+  z-index:4;
+  display:block!important;
+  left:5.4%!important;
+  top:24.5%!important;
+  width:37.28cqw!important;
+  height:37.28cqw!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin:0!important;
+  filter:none!important;
+}
+.zebra-game-body .zs-machine .zs-cross{
+  position:absolute!important;
+  inset:0!important;
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  transform:none!important;
+  filter:none!important;
+}
+.zebra-game-body .zs-machine .zs-cross-shape,
+.zebra-game-body .zs-machine .zs-cross-center{display:none!important}
+.zebra-game-body .zs-machine .zs-dir{
+  position:absolute!important;
+  width:12.43cqw!important;
+  height:12.43cqw!important;
+  min-height:0!important;
+  padding:0!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+  transform:none!important;
+  font-size:0!important;
+}
+.zebra-game-body .zs-machine .zs-dir::before{display:none!important}
+.zebra-game-body .zs-machine .zs-up{left:12.43cqw!important;top:0!important}
+.zebra-game-body .zs-machine .zs-down{left:12.43cqw!important;top:24.85cqw!important}
+.zebra-game-body .zs-machine .zs-left{left:0!important;top:12.43cqw!important}
+.zebra-game-body .zs-machine .zs-right{left:24.85cqw!important;top:12.43cqw!important}
+
+/* A/B + SELECT occupy the right side of the panel. */
+.zebra-game-body .zs-machine .zs-action-side{
+  position:absolute!important;
+  z-index:4;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  right:5.5%!important;
+  top:29%!important;
+  width:39%!important;
+  height:60%!important;
+  gap:3%!important;
+  margin:0!important;
+}
+.zebra-game-body .zs-machine .zs-ab{
+  position:relative!important;
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  height:62%!important;
+  border:0!important;
+  border-radius:0!important;
+  background:none!important;
+  transform:none!important;
+}
+.zebra-game-body .zs-machine .zs-ab-button{
+  position:absolute!important;
+  width:12.43cqw!important;
+  height:12.43cqw!important;
+  min-height:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:transparent!important;
+  text-shadow:none!important;
+  font-size:0!important;
+  overflow:visible!important;
+  transform:none!important;
+}
+.zebra-game-body .zs-machine .zs-b{left:12%!important;bottom:2%!important}
+.zebra-game-body .zs-machine .zs-a{right:9%!important;top:2%!important}
+.zebra-game-body .zs-machine .zs-select{
+  position:relative!important;
+  width:18.64cqw!important;
+  height:7.77cqw!important;
+  min-height:0!important;
+  flex:none!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:transparent!important;
+  font-size:0!important;
+  overflow:visible!important;
+  transform:none!important;
+}
+.zebra-game-body .zs-machine .zs-control-caption{display:none!important}
+
+/* One WebP atlas: up/down/left/right/A/B at 64px, SELECT at 96x40. */
+.zebra-game-body .zs-machine .zs-control-art{
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  background-repeat:no-repeat;
+  background-size:750% 100%;
+  background-position-y:center;
+  image-rendering:auto;
+  pointer-events:none;
+}
+.zebra-game-body .zs-machine .zs-up .zs-control-art{background-position-x:0%}
+.zebra-game-body .zs-machine .zs-down .zs-control-art{background-position-x:16.6667%}
+.zebra-game-body .zs-machine .zs-left .zs-control-art{background-position-x:33.3333%}
+.zebra-game-body .zs-machine .zs-right .zs-control-art{background-position-x:50%}
+.zebra-game-body .zs-machine .zs-a .zs-control-art{background-position-x:66.6667%}
+.zebra-game-body .zs-machine .zs-b .zs-control-art{background-position-x:83.3333%}
+.zebra-game-body .zs-machine .zs-select .zs-control-art{
+  background-size:500% 160%;
+  background-position:100% center;
+}
+.zebra-game-body .zs-machine .zs-dir:active .zs-control-art,
+.zebra-game-body .zs-machine .zs-ab-button:active .zs-control-art,
+.zebra-game-body .zs-machine .zs-select:active .zs-control-art{
+  transform:translateY(2px);
+  filter:brightness(.82);
+}
+
+/* Scoreboard: one record per mode and per level. */
+.zs-scoreboard-page{
+  padding:4% 6%!important;
+  gap:clamp(5px,1.8cqw,10px)!important;
+}
+.zs-scoreboard-page h2{margin-bottom:2%!important}
+.zs-scoreboard-list{
+  width:min(92%,330px);
+  display:flex;
+  flex-direction:column;
+  gap:clamp(4px,1.4cqw,8px);
+  font:clamp(8px,2.7cqw,13px)/1.2 "Courier New",monospace;
+}
+.zs-scoreboard-list section{
+  display:grid;
+  grid-template-columns:minmax(90px,1.25fr) 2fr;
+  align-items:center;
+  gap:8px;
+  padding:5px 7px;
+  border:1px solid #50633f;
+  background:rgba(38,60,43,.08);
+}
+.zs-scoreboard-list section>b{text-align:left}
+.zs-scoreboard-list section>div{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:4px;
+}
+.zs-scoreboard-list span{display:flex;flex-direction:column;font-size:.82em}
+.zs-scoreboard-list strong{font-size:1.15em;font-weight:700}
+.zs-scoreboard-back{margin-top:2px!important}
+
+/* Local player 2 remains compact but uses the same Znake directional artwork. */
+.zs-second-pad .zs-control-art{
+  position:absolute;inset:0;display:block;width:100%;height:100%;
+  background-repeat:no-repeat;background-size:750% 100%;pointer-events:none;
+}
+.zs-second-pad .zs-p2-up .zs-control-art{background-position-x:0%}
+.zs-second-pad .zs-p2-down .zs-control-art{background-position-x:16.6667%}
+.zs-second-pad .zs-p2-left .zs-control-art{background-position-x:33.3333%}
+.zs-second-pad .zs-p2-right .zs-control-art{background-position-x:50%}
+
+@media(max-width:420px){
+ .zs-scoreboard-list{width:98%;font-size:clamp(7px,2.7cqw,11px)}
+ .zs-scoreboard-list section{grid-template-columns:82px 1fr;gap:4px;padding:4px}
+}
