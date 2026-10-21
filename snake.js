@@ -295,15 +295,10 @@ function mount(root){
  const play=$('.zs-action'),menuButton=$('.zs-menu');
  play.onclick=()=>{sounds.unlock();action();};
  menuButton.onclick=()=>{sounds.unlock();menu();};
- const dpadArt={
-  up:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M58 52 Q120 0 182 52 L152 72 Q120 61 88 72 Z"/><path class="zs-arrow" d="M106 54 L120 40 L134 54"/></svg>',
-  right:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M188 38 Q238 80 188 122 L155 100 Q125 80 155 60 Z"/><path class="zs-arrow" d="M183 65 L198 80 L183 95"/></svg>',
-  down:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M58 108 Q120 160 182 108 L152 88 Q120 99 88 88 Z"/><path class="zs-arrow" d="M106 106 L120 120 L134 106"/></svg>',
-  left:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M52 38 Q2 80 52 122 L85 100 Q115 80 85 60 Z"/><path class="zs-arrow" d="M57 65 L42 80 L57 95"/></svg>'
- };
+ const dpadArt={up:true,right:true,down:true,left:true};
  for(const d of Object.keys(dpadArt)){
   const b=button('','zs-dir zs-'+d,e=>{if(e.detail===0){turn(d);}},$('.zs-dpad'));
-  b.innerHTML=dpadArt[d];
+  b.innerHTML='';
   b.setAttribute('aria-label',({up:'Haut',down:'Bas',left:'Gauche',right:'Droite'})[d]);
   b.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();sounds.unlock();turn(d);};
  }
@@ -354,7 +349,7 @@ function mount(root){
  second.appendChild(make('span','zs-p2-label','J2'));
  for(const d of Object.keys(dpadArt)){
   const control=button('','zs-dir zs-p2-dir zs-'+d,e=>{if(e.detail===0)turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);},second);
-  control.innerHTML=dpadArt[d];
+  control.innerHTML='';
   control.setAttribute('aria-label','Joueur 2 : '+({up:'Haut',left:'Gauche',right:'Droite',down:'Bas'})[d]);
   control.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();sounds.unlock();turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);};
  }
