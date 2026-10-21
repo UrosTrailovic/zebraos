@@ -86,12 +86,12 @@
 <script src="control-panel.js?v=1.2"></script>
 <script src="zebra-tools.js?v=1.1"></script>
 <script src="desktop-layout.js?v=1.0"></script>
-<script src="app.js?v=9.3"></script>
+<script src="app.js?v=9.4"></script>
 <script>
 /* Cache local léger : JS/CSS seulement ; jamais le HTML, les photos ou les MP4. */
 if("serviceWorker" in navigator && location.protocol==="https:"){
  window.addEventListener("load",function(){
-  navigator.serviceWorker.register("/sw.js?v=16",{updateViaCache:"none"}).catch(function(){});
+  navigator.serviceWorker.register("/sw.js?v=17",{updateViaCache:"none"}).catch(function(){});
  },{once:true});
 }
 </script>
