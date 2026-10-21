@@ -296,10 +296,10 @@ function mount(root){
  play.onclick=()=>{sounds.unlock();action();};
  menuButton.onclick=()=>{sounds.unlock();menu();};
  const dpadArt={
-  up:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M57 55 Q120 5 183 55 L160 72 Q120 43 80 72 Z"/><path class="zs-arrow" d="M108 57 L120 44 L132 57"/></svg>',
-  right:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M177 34 Q231 80 177 126 L154 104 Q186 80 154 56 Z"/><path class="zs-arrow" d="M170 68 L183 80 L170 92"/></svg>',
-  down:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M57 105 Q120 155 183 105 L160 88 Q120 117 80 88 Z"/><path class="zs-arrow" d="M108 103 L120 116 L132 103"/></svg>',
-  left:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M63 34 Q9 80 63 126 L86 104 Q54 80 86 56 Z"/><path class="zs-arrow" d="M70 68 L57 80 L70 92"/></svg>'
+  up:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M58 52 Q120 0 182 52 L152 72 Q120 61 88 72 Z"/><path class="zs-arrow" d="M106 54 L120 40 L134 54"/></svg>',
+  right:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M188 38 Q238 80 188 122 L155 100 Q125 80 155 60 Z"/><path class="zs-arrow" d="M183 65 L198 80 L183 95"/></svg>',
+  down:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M58 108 Q120 160 182 108 L152 88 Q120 99 88 88 Z"/><path class="zs-arrow" d="M106 106 L120 120 L134 106"/></svg>',
+  left:'<svg viewBox="0 0 240 160" aria-hidden="true"><path class="zs-slice" d="M52 38 Q2 80 52 122 L85 100 Q115 80 85 60 Z"/><path class="zs-arrow" d="M57 65 L42 80 L57 95"/></svg>'
  };
  for(const d of Object.keys(dpadArt)){
   const b=button('','zs-dir zs-'+d,e=>{if(e.detail===0){turn(d);}},$('.zs-dpad'));
