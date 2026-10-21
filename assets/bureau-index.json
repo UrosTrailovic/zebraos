@@ -40,13 +40,6 @@
       "size": 18121
     },
     {
-      "path": "STUDIO/BUREAU/Jeux/Zebra Pursuit.exe.zebraos.json",
-      "type": "app",
-      "name": "Zebra Pursuit.exe",
-      "app": "racer",
-      "icon": "racer"
-    },
-    {
       "path": "STUDIO/BUREAU/Jeux/Znake.exe.zebraos.json",
       "type": "app",
       "name": "Znake.exe",
