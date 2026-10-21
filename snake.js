@@ -334,6 +334,20 @@ function mount(root){
  root.appendChild(wrap);
  const $=s=>wrap.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d');canvas.width=CW;canvas.height=CH;
  const stage=$('.zs-stage'),arena=$('.zs-arena'),hud=$('.zs-hud'),overlay=$('.zs-overlay'),status=$('.zs-state');
+ const duelField=make('div','zs-duo-field');
+ arena.insertBefore(duelField,stage);
+ const duelScoreTop=make('div','zs-duo-score zs-duo-score-top'),duelScoreBottom=make('div','zs-duo-score zs-duo-score-bottom');
+ const duelScoreTopText=make('span','zs-duo-score-text'),duelScoreBottomText=make('span','zs-duo-score-text');
+ duelScoreTop.appendChild(duelScoreTopText);duelScoreBottom.appendChild(duelScoreBottomText);
+ duelField.appendChild(duelScoreTop);duelField.appendChild(stage);duelField.appendChild(duelScoreBottom);
+ const duelNoticeTop=make('div','zs-duo-notice zs-duo-notice-top');
+ const duelNoticeBottom=make('div','zs-duo-notice zs-duo-notice-bottom');
+ for(const notice of [duelNoticeTop,duelNoticeBottom]){
+  notice.hidden=true;
+  notice.appendChild(make('strong','zs-duo-notice-title'));
+  notice.appendChild(make('span','zs-duo-notice-instruction'));
+  stage.appendChild(notice);
+ }
  function button(label,cls,fn,parent){const e=make('button','zs-button '+cls,label);e.type='button';e.onclick=function(event){sounds.unlock();fn(event);};parent.appendChild(e);return e;}
  const background=document.createElement('canvas');background.width=CW;background.height=CH;
  drawBackground(background.getContext('2d'));
@@ -473,12 +487,7 @@ function mount(root){
  // original buttons. The 8-bit textures never move or change size.
  const padZone=$('.zs-pad-zone');
  const consoleArea=$('.zs-console');
- const touchDebug=document.createElementNS('http://www.w3.org/2000/svg','svg');
- touchDebug.classList.add('zs-touch-debug');
- touchDebug.setAttribute('aria-hidden','true');
- touchDebug.style.pointerEvents='none';
- wrap.appendChild(touchDebug);
- let padPointer=null,debugLayoutKey='';
+ let padPointer=null;
  const isTouchDevice=()=>window.matchMedia('(hover:none), (pointer:coarse)').matches;
  function touchBox(pad){
   const r=pad.getBoundingClientRect();
@@ -508,51 +517,10 @@ function mount(root){
   if(!closest)return null;
   return {...closest,direction:padDirection(x,y,closest.box)};
  }
- // Draw the actual enlarged hit area. The red outlines are intentionally
- // temporary so touch accuracy can be evaluated on a real phone.
- function refreshTouchDebug(){
-  if(!isTouchDevice()){touchDebug.replaceChildren();debugLayoutKey='';return;}
-  const rootRect=wrap.getBoundingClientRect();
-  if(!rootRect.width||!rootRect.height)return;
-  const boxes=[...wrap.querySelectorAll('.zs-dpad')].map(touchBox).filter(Boolean);
-  const key=[rootRect.width,rootRect.height,...boxes.flatMap(b=>[b.left-rootRect.left,b.top-rootRect.top,b.right-rootRect.left,b.bottom-rootRect.top])].map(n=>Math.round(n*10)/10).join('|');
-  if(debugLayoutKey===key)return;
-  debugLayoutKey=key;
-  touchDebug.setAttribute('viewBox','0 0 '+rootRect.width+' '+rootRect.height);
-  touchDebug.setAttribute('width',rootRect.width);
-  touchDebug.setAttribute('height',rootRect.height);
-  const NS='http://www.w3.org/2000/svg';
-  const create=(tag,attrs)=>{
-   const e=document.createElementNS(NS,tag);
-   for(const [name,value]of Object.entries(attrs))e.setAttribute(name,String(value));
-   touchDebug.appendChild(e);return e;
-  };
-  touchDebug.replaceChildren();
-  for(const b of boxes){
-   const left=b.left-rootRect.left,right=b.right-rootRect.left,
-     top=b.top-rootRect.top,bottom=b.bottom-rootRect.top,
-     cx=b.cx-rootRect.left,cy=b.cy-rootRect.top,
-     reach=Math.min(cy-top,bottom-cy,cx-left,right-cx);
-   // Sectors use exactly the same 45-degree division as padDirection.
-   const polygons=[
-     [[cx-reach,top],[cx+reach,top],[cx,cy]],
-     [[cx+reach,top],[right,top],[right,bottom],[cx+reach,bottom],[cx,cy]],
-     [[cx,cy],[cx+reach,bottom],[cx-reach,bottom]],
-     [[left,top],[cx-reach,top],[cx,cy],[cx-reach,bottom],[left,bottom]]
-   ];
-   for(const points of polygons){
-    create('polygon',{points:points.map(p=>p.join(',')).join(' '),
-      fill:'rgba(255,50,45,0.045)',stroke:'#ff3028','stroke-width':1.8,
-      'stroke-dasharray':'5 3','vector-effect':'non-scaling-stroke'});
-   }
-   create('circle',{cx,cy,r:b.centerRadius,fill:'rgba(255,50,45,0.06)',
-      stroke:'#ff3028','stroke-width':1.8,'vector-effect':'non-scaling-stroke'});
-  }
- }
  function onPadPointerDown(e){
   if(!alive||!isTouchDevice()||e.button!==0)return;
   // Do not steal taps from Settings / OK, or from the swipable board.
-  if(e.target.closest('.zs-ok,.zs-menu,.zs-action,.zs-stage,.zs-arena,.zs-header,.zs-hud,.zs-settings-overlay'))return;
+  if(e.target.closest('.zs-ok,.zs-menu,.zs-action,.zs-stage,.zs-arena,.zs-header,.zs-hud,.zs-settings-overlay,.zs-duo-score'))return;
   const hit=locateTouch(e.clientX,e.clientY);
   if(!hit)return;
   e.preventDefault();sounds.unlock();
@@ -619,6 +587,8 @@ function mount(root){
   if(g.score>lastScore&&g.state==='running')sounds.play('eat');lastScore=g.score;
   if(g.score>currentBest())saveRecord(g.score);
   const best=currentBest();
+  duelScoreTopText.textContent='J2  '+String(g.kind==='duel'?g.players[1].score:0).padStart(4,'0');
+  duelScoreBottomText.textContent='J1  '+String(g.score).padStart(4,'0');
   $('.zs-score-label').textContent=g.kind==='duel'&&g.state!=='ready'?'J1':'SCORE';$('.zs-best-label').textContent=g.kind==='duel'&&g.state!=='ready'?(settings.players===1?'ORDI':'J2'):'RECORD';
   $('.zs-score').textContent=String(g.score).padStart(4,'0');$('.zs-best').textContent=String(g.kind==='duel'&&g.state!=='ready'?g.players[1].score:best).padStart(4,'0');
   const duelResult=g.kind==='duel'&&g.state==='over'?(g.winner===0?'DRAW':g.winner===1?'PLAYER 1 WIN':settings.players===1?'ZNAKEBOT WIN':'PLAYER 2 WIN'):'';
@@ -629,14 +599,27 @@ function mount(root){
   launch.hidden=g.state!=='ready'||settingsOpen;renderMenu();updateSettings();
   $('.zs-result').textContent='';
   wrap.querySelectorAll('button').forEach(b=>{b.disabled=g.state==='hurt';});
-  overlay.hidden=settingsOpen||g.state==='ready'||g.state==='running'||g.state==='hurt';overlay.dataset.state=g.state;
+  const localPortrait=wrap.dataset.duo==='true'&&window.matchMedia('(hover:none), (pointer:coarse)').matches;
+  overlay.hidden=localPortrait||settingsOpen||g.state==='ready'||g.state==='running'||g.state==='hurt';overlay.dataset.state=g.state;
   overlay.querySelector('strong').textContent=duelResult||({ready:'ZNAKE',paused:'PAUSE',hurt:'AÏE',over:'GAME OVER',won:'VICTOIRE'})[g.state]||'';
   const isTouch=window.matchMedia('(hover:none), (pointer:coarse)').matches;
   overlay.querySelector('span').textContent=g.state==='ready'?(isTouch?'OK : JOUER':'ESPACE : JOUER'):g.state==='paused'?(isTouch?'OK : REPRENDRE':'ESPACE : REPRENDRE'):g.state==='over'?(isTouch?'Appuie sur OK pour recommencer':'Appuyer sur espace pour recommencer'):'SCORE : '+g.score;
+  const showBoth=localPortrait&&!settingsOpen&&(g.state==='paused'||g.state==='over'||g.state==='won');
+  const noticeTitle=overlay.querySelector('strong').textContent,noticeHint=overlay.querySelector('span').textContent;
+  for(const n of [duelNoticeTop,duelNoticeBottom]){
+   n.hidden=!showBoth;n.querySelector('strong').textContent=noticeTitle;n.querySelector('span').textContent=noticeHint;
+  }
   $('.zs-start').textContent=play.textContent;
   draw(ctx,g,settings.level===4?level4Background:settings.level===3?level3Background:background);
  }
- function fit(){const touch=window.matchMedia('(hover:none), (pointer:coarse)').matches;const freeHeight=Math.max(1,arena.clientHeight-(touch?30:0));const w=Math.max(1,Math.min(arena.clientWidth,freeHeight*CW/CH));stage.style.width=w+'px';stage.style.height=w*CH/CW+'px';hud.style.width=touch?'':w+'px';refreshTouchDebug();}
+ function fit(){
+  const touch=window.matchMedia('(hover:none), (pointer:coarse)').matches;
+  const duo=touch&&wrap.dataset.duo==='true';
+  const freeHeight=Math.max(1,arena.clientHeight-(duo?60:touch?30:0));
+  const w=Math.max(1,Math.min(arena.clientWidth,freeHeight*CW/CH));
+  stage.style.width=w+'px';stage.style.height=w*CH/CW+'px';
+  duelField.style.width=w+'px';hud.style.width=touch?'':w+'px';
+ }
  function focused(){const w=root.closest('.window');return !w||w.classList.contains('active')||w.classList.contains('focused')||w.style.zIndex===String(Math.max(...Array.from(document.querySelectorAll('.window')).map(e=>Number(e.style.zIndex)||0)));}
  function key(e){
   if(!alive||!focused()||e.altKey||e.ctrlKey||e.metaKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable)return;
