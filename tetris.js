@@ -265,17 +265,48 @@ function mount(root){
    if(!AudioCtor)return;
    if(!audioContext)audioContext=new AudioCtor();
    if(audioContext.state==="suspended")audioContext.resume().catch(()=>{});
-   const sr=audioContext.sampleRate,seconds=.18;
-   const buffer=audioContext.createBuffer(1,Math.floor(sr*seconds),sr);
+   const ctx=audioContext,now=ctx.currentTime;
+
+   // Impact court, puis petite chute rétro pour relier les deux ambiances.
+   const sr=ctx.sampleRate,seconds=.16;
+   const buffer=ctx.createBuffer(1,Math.floor(sr*seconds),sr);
    const data=buffer.getChannelData(0);
    for(let i=0;i<data.length;i++){
-    const env=1-i/data.length;
-    data[i]=(Math.random()*2-1)*env*.22;
+    const env=Math.pow(1-i/data.length,2.2);
+    data[i]=(Math.random()*2-1)*env*.20;
    }
-   const src=audioContext.createBufferSource(),filter=audioContext.createBiquadFilter(),gain=audioContext.createGain();
-   filter.type="lowpass";filter.frequency.value=1450;gain.gain.value=.16;
-   src.buffer=buffer;src.connect(filter);filter.connect(gain);gain.connect(audioContext.destination);src.start();
-   src.onended=function(){try{src.disconnect();filter.disconnect();gain.disconnect();}catch(_){}};
+   const noise=ctx.createBufferSource(),noiseFilter=ctx.createBiquadFilter(),noiseGain=ctx.createGain();
+   noise.buffer=buffer;noiseFilter.type="lowpass";noiseFilter.frequency.value=1200;
+   noiseGain.gain.setValueAtTime(.13,now);
+   noiseGain.gain.exponentialRampToValueAtTime(.001,now+.16);
+   noise.connect(noiseFilter);noiseFilter.connect(noiseGain);noiseGain.connect(ctx.destination);noise.start(now);
+
+   [
+    {t:.06,f:392,d:.22,v:.065},
+    {t:.24,f:294,d:.24,v:.060},
+    {t:.44,f:196,d:.32,v:.055}
+   ].forEach(function(n){
+    const osc=ctx.createOscillator(),gain=ctx.createGain(),filter=ctx.createBiquadFilter();
+    osc.type="square";osc.frequency.setValueAtTime(n.f,now+n.t);
+    filter.type="lowpass";filter.frequency.value=1500;
+    gain.gain.setValueAtTime(.0001,now+n.t);
+    gain.gain.exponentialRampToValueAtTime(n.v,now+n.t+.018);
+    gain.gain.exponentialRampToValueAtTime(.001,now+n.t+n.d);
+    osc.connect(filter);filter.connect(gain);gain.connect(ctx.destination);
+    osc.start(now+n.t);osc.stop(now+n.t+n.d+.02);
+   });
+
+   const tail=ctx.createOscillator(),tailFilter=ctx.createBiquadFilter(),tailGain=ctx.createGain();
+   tail.type="triangle";
+   tail.frequency.setValueAtTime(138,now+.58);
+   tail.frequency.exponentialRampToValueAtTime(72,now+1.12);
+   tailFilter.type="lowpass";tailFilter.frequency.setValueAtTime(720,now+.58);
+   tailFilter.frequency.exponentialRampToValueAtTime(240,now+1.12);
+   tailGain.gain.setValueAtTime(.0001,now+.58);
+   tailGain.gain.exponentialRampToValueAtTime(.075,now+.64);
+   tailGain.gain.exponentialRampToValueAtTime(.001,now+1.16);
+   tail.connect(tailFilter);tailFilter.connect(tailGain);tailGain.connect(ctx.destination);
+   tail.start(now+.58);tail.stop(now+1.18);
   }catch(_){}
  }
  function playLoseSequence(){
@@ -283,16 +314,18 @@ function mount(root){
   stopMusic(menuMusic,true);
   const gameplay=ensureGameMusic(),lose=ensureLoseMusic();
   loseTransitionSfx();
-  if(gameplay&&!gameplay.paused)fadeMusic(gameplay,0,240,true);
+
+  if(gameplay&&!gameplay.paused)fadeMusic(gameplay,0,780,true);
   else stopMusic(gameplay,true);
+
   if(!lose||musicMuted())return;
-  stopMusic(lose,true);lose.volume=.03;
+  stopMusic(lose,true);lose.volume=.008;
   loseTimer=setTimeout(function(){
    loseTimer=null;
    if(!active||!over||musicMuted())return;
    playMusic(lose);
-   fadeMusic(lose,.50,430,false);
-  },110);
+   fadeMusic(lose,.50,900,false);
+  },640);
  }
  function syncMusicState(){
   if(musicMuted()){
