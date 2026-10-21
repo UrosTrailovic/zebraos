@@ -307,7 +307,7 @@ function mount(root){
   if(g.state==='running')g.toggle();
   settingsOpen=true;settingsIndex=0;sounds.play('menu');render();
  }
- function toggleSettings(){if(settingsOpen){settingsOpen=false;render();}else openSettings();}
+ function toggleSettings(){if(g.state==='ready'&&menuPage==='scores'){returnFromScoreboard();return;}if(settingsOpen){settingsOpen=false;render();}else openSettings();}
  function moveSettings(d){
   settingsIndex=(settingsIndex+(d==='up'||d==='left'?-1:1)+settingsItems.length)%settingsItems.length;
   sounds.play('turn');updateSettings();
@@ -350,6 +350,8 @@ function mount(root){
   const modePage=$('.zs-mode-page'),levelPage=$('.zs-level-page'),scorePage=$('.zs-scoreboard-page');
   modePage.hidden=menuPage!=='mode';levelPage.hidden=menuPage!=='level';scorePage.hidden=menuPage!=='scores';launch.dataset.page=menuPage;
   if(menuPage==='scores'){
+   const scoreboardHint=$('.zs-scoreboard-page small');
+   scoreboardHint.textContent=window.matchMedia('(hover:none), (pointer:coarse)').matches?'OK : RETOUR AU MENU':'ESPACE / ENTRÉE : RETOUR';
    const names=[['solo','SOLO'],['robot','CONTRE ROBOT'],['local','VS LOCAL']];
    $('.zs-scoreboard-list').innerHTML=names.map(([mode,label])=>'<section><b>'+label+'</b><div>'+[1,2,3,4].map(level=>'<span>N'+level+' <strong>'+String(Number(records[mode+'-'+level]||0)).padStart(4,'0')+'</strong></span>').join('')+'</div></section>').join('');
    return;
@@ -359,8 +361,11 @@ function mount(root){
  }
  function chooseMode(mode){settings.mode=mode;settings.players=mode==='local'?2:1;menuPage='level';menuIndex=0;sounds.play('turn');renderMenu();}
  function chooseLevel(level){settings.level=Math.max(1,Math.min(4,Number(level)||1));sounds.unlock();restart();}
+ function returnFromScoreboard(){
+  menuPage='mode';menuIndex=3;sounds.play('menu');renderMenu();
+ }
  function chooseMenu(){
-  if(menuPage==='scores')return;
+  if(menuPage==='scores'){returnFromScoreboard();return;}
   if(menuPage==='mode'){
    if(menuIndex===3){menuPage='scores';sounds.play('menu');renderMenu();return;}
    chooseMode(['solo','robot','local'][menuIndex]);return;
@@ -378,7 +383,7 @@ function mount(root){
  launch.querySelector('[data-scoreboard]').onclick=()=>{sounds.unlock();menuPage='scores';sounds.play('menu');renderMenu();};
  launch.querySelectorAll('[data-level]').forEach(b=>b.onclick=()=>chooseLevel(b.dataset.level));
  $('.zs-menu-back').onclick=()=>{sounds.unlock();menuPage='mode';menuIndex=settings.mode==='solo'?0:settings.mode==='robot'?1:2;sounds.play('menu');renderMenu();};
- $('.zs-scoreboard-back').onclick=()=>{sounds.unlock();menuPage='mode';menuIndex=3;sounds.play('menu');renderMenu();};
+ $('.zs-scoreboard-back').onclick=()=>{sounds.unlock();returnFromScoreboard();};
  // An original, simple two-ink title illustration, drawn at handheld resolution.
  const art=$('.zs-title-art');art.width=384;art.height=100;const ac=art.getContext('2d');
  ac.fillStyle=DECOR;for(let y=0;y<35;y+=12)for(let x=-24;x<384;x+=48)ac.fillRect(x+(y%24?24:0),y,44,9);
@@ -435,7 +440,7 @@ function mount(root){
   const keys={w:'up',z:'up',s:'down',a:'left',q:'left',d:'right'},d=arrows[e.key]||keys[letter];
     if(d){e.preventDefault();if(!e.repeat){sounds.unlock();turn(d,g.state!=='ready'&&settings.players===2&&arrows[e.key]?1:0);}}
   else if(e.code==='Space'||e.key===' '||e.key==='Enter'||letter==='p'){e.preventDefault();if(!e.repeat){sounds.unlock();confirmControl();}}
-  else if(e.key==='Escape'){e.preventDefault();if(settingsOpen){settingsOpen=false;render();}else if(g.state==='ready'&&(menuPage==='level'||menuPage==='scores')){const previousPage=menuPage;menuPage='mode';menuIndex=previousPage==='scores'?3:(settings.mode==='solo'?0:settings.mode==='robot'?1:2);renderMenu();}else openSettings();}
+  else if(e.key==='Escape'){e.preventDefault();if(settingsOpen){settingsOpen=false;render();}else if(g.state==='ready'&&menuPage==='scores'){returnFromScoreboard();}else if(g.state==='ready'&&menuPage==='level'){menuPage='mode';menuIndex=settings.mode==='solo'?0:settings.mode==='robot'?1:2;renderMenu();}else openSettings();}
  }
  function hide(){if(document.hidden){sounds.stop();if(g.state==='running'){g.state='paused';render();}}}
  function blur(){sounds.stop();if(g.state==='running'){g.state='paused';render();}}
