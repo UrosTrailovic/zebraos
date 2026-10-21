@@ -436,7 +436,18 @@ function mount(root){
   // Touch controls for both players use the same enlarged hit regions.
  }
  second.appendChild(make('span','zs-pad-center'));
- $('.zs-pad-zone').appendChild(second);
+ // Portrait face-to-face: the second player's controller belongs ABOVE the
+ // playing field, and is rotated toward the person at the top of the phone.
+ const p2Panel=make('div','zs-p2-panel');
+ p2Panel.setAttribute('aria-label','Commandes du joueur 2');
+ const p2Slot=make('div','zs-p2-pad-slot');
+ p2Slot.appendChild(second);
+ p2Panel.appendChild(p2Slot);
+ p2Panel.appendChild(make('span','zs-p2-name','J2'));
+ wrap.insertBefore(p2Panel,arena);
+ const p2OK=button('','zs-ok',()=>confirmControl(),second);
+ p2OK.setAttribute('aria-label','Joueur 2 : OK ou pause');
+ p2OK.title='OK';
  // Full-size touch field: wide, invisible directional sectors around the
  // original buttons. The 8-bit textures never move or change size.
  const padZone=$('.zs-pad-zone');
@@ -465,7 +476,7 @@ function mount(root){
   return Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
  }
  function locateTouch(x,y){
-  const pads=[...padZone.querySelectorAll('.zs-dpad')];
+  const pads=[...wrap.querySelectorAll('.zs-dpad')];
   let closest=null,distance=Infinity;
   for(const pad of pads){
    const box=touchBox(pad);
@@ -482,7 +493,7 @@ function mount(root){
   if(!isTouchDevice()){touchDebug.replaceChildren();debugLayoutKey='';return;}
   const rootRect=wrap.getBoundingClientRect();
   if(!rootRect.width||!rootRect.height)return;
-  const boxes=[...padZone.querySelectorAll('.zs-dpad')].map(touchBox).filter(Boolean);
+  const boxes=[...wrap.querySelectorAll('.zs-dpad')].map(touchBox).filter(Boolean);
   const key=[rootRect.width,rootRect.height,...boxes.flatMap(b=>[b.left-rootRect.left,b.top-rootRect.top,b.right-rootRect.left,b.bottom-rootRect.top])].map(n=>Math.round(n*10)/10).join('|');
   if(debugLayoutKey===key)return;
   debugLayoutKey=key;
@@ -525,7 +536,7 @@ function mount(root){
   if(!hit)return;
   e.preventDefault();sounds.unlock();
   if(hit.direction==='ok'){
-   if(hit.index===0)confirmControl();
+   confirmControl();
    return;
   }
   turn(hit.direction,hit.index);
