@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="zebraamp-compact.css?v=4.5">
 <link rel="stylesheet" href="zebravis-controls.css?v=1.1">
 <link rel="stylesheet" href="zebraamp-phosphor.css?v=1.5">
-<link rel="stylesheet" href="zebraamp-faders.css?v=1.0">
+<link rel="stylesheet" href="zebraamp-faders.css?v=1.1">
 <link rel="stylesheet" href="zebraamp-skin.css?v=1.1">
 </head>
 <body>
@@ -91,7 +91,7 @@
 /* Cache local léger : JS/CSS seulement ; jamais le HTML, les photos ou les MP4. */
 if("serviceWorker" in navigator && location.protocol==="https:"){
  window.addEventListener("load",function(){
-  navigator.serviceWorker.register("/sw.js?v=9",{updateViaCache:"none"}).catch(function(){});
+  navigator.serviceWorker.register("/sw.js?v=10",{updateViaCache:"none"}).catch(function(){});
  },{once:true});
 }
 </script>
