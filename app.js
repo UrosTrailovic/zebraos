@@ -697,7 +697,7 @@ var gameModules={
  tetris:{name:"Tetris.exe",width:735,height:770,global:"ZebraTetris",
   files:["tetris-artwork.js?v=1.8","tetris.js?v=3.0"]},
  snake:{name:"Znake.exe",width:650,height:700,global:"ZebraSnake",
-  files:["snake.js?v=8.0"],css:"snake.css?v=8.2"},
+  files:["snake.js?v=8.1"],css:"snake.css?v=8.3"},
  paint:{name:"ZebraPaint.exe",width:850,height:640,global:"ZebraPaint",
   files:["paint.js?v=1.4"],css:"paint-responsive.css?v=1.4"}
 };
