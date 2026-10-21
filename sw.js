@@ -1,7 +1,7 @@
 /* ZebraOS : cache léger des seuls scripts/styles ; jamais de vidéo, MP3,
    photo personnelle, HTML ou index GitHub (toujours actualisé).
    Les paramètres ?v= des fichiers assurent les mises à jour propres. */
-const CODE_CACHE="zebraos-code-v13";
+const CODE_CACHE="zebraos-code-v14";
 self.addEventListener("install",event=>{self.skipWaiting();});
 self.addEventListener("activate",event=>{
  event.waitUntil((async()=>{
