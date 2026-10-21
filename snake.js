@@ -272,13 +272,10 @@ function mount(root){
   try{localStorage.setItem('zebra.snake.records',JSON.stringify(records));}catch(_){}
  }
  const wrap=make('div','zs-machine');
- wrap.innerHTML='<header class="zs-header"><img class="zs-logo" src="/assets/games/snake/znaklogo.png?v=2" alt="Znake" width="165" height="98"></header><div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div><label class="zs-score-label">SCORE</label> <b class="zs-score">0000</b></div><div><label class="zs-best-label">RECORD</label> <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znake : manger les pommes, éviter les murs et sa queue"></canvas><section class="zs-launch" aria-label="Menu de Znake"><div class="zs-menu-page zs-mode-page"><h1>Znake</h1><canvas class="zs-title-art" aria-hidden="true"></canvas><div class="zs-menu-list" role="group" aria-label="Mode de jeu"><button type="button" data-mode="solo">SOLO</button><button type="button" data-mode="robot">CONTRE ROBOT</button><button type="button" data-mode="local">VS LOCAL</button><button type="button" data-scoreboard="true">SCOREBOARD</button></div><small>FLÈCHES : CHOISIR · ESPACE : VALIDER</small></div><div class="zs-menu-page zs-level-page" hidden><h2>CHOISIS TON NIVEAU</h2><div class="zs-level-list" role="group" aria-label="Niveau"><button type="button" data-level="1">NIVEAU 1</button><button type="button" data-level="2">NIVEAU 2</button><button type="button" data-level="3">NIVEAU 3</button><button type="button" data-level="4">NIVEAU 4</button></div><button type="button" class="zs-menu-back">◀ RETOUR</button><small>ESPACE : JOUER</small></div><div class="zs-menu-page zs-scoreboard-page" hidden><h2>SCOREBOARD</h2><div class="zs-scoreboard-list"></div><button type="button" class="zs-scoreboard-back">◀ RETOUR</button><small>RECORDS PAR MODE ET NIVEAU</small></div></section><div class="zs-overlay"><strong role="heading" aria-level="2"></strong><em class="zs-result"></em><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console zg-retro"><div class="zs-handheld zt-handheld zt-skin-ready"><div class="zs-toolbar zg-buttons zt-buttons"></div><div class="zs-dpad zt-dpad" aria-label="Direction"><div class="zs-cross zt-cross"></div></div><div class="zs-action-side zt-action-side"><div class="zs-ab zt-ab"></div><span class="zs-select-space zt-select" aria-hidden="true"></span></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
+ wrap.innerHTML='<header class="zs-header"><img class="zs-logo" src="/assets/games/snake/znaklogo.png?v=2" alt="Znake" width="165" height="98"></header><div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div><label class="zs-score-label">SCORE</label> <b class="zs-score">0000</b></div><div><label class="zs-best-label">RECORD</label> <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znake : manger les pommes, éviter les murs et sa queue"></canvas><section class="zs-launch" aria-label="Menu de Znake"><div class="zs-menu-page zs-mode-page"><h1>Znake</h1><canvas class="zs-title-art" aria-hidden="true"></canvas><div class="zs-menu-list" role="group" aria-label="Mode de jeu"><button type="button" data-mode="solo">SOLO</button><button type="button" data-mode="robot">CONTRE ROBOT</button><button type="button" data-mode="local">VS LOCAL</button><button type="button" data-scoreboard="true">SCOREBOARD</button></div><small>FLÈCHES : CHOISIR · ESPACE : VALIDER</small></div><div class="zs-menu-page zs-level-page" hidden><h2>CHOISIS TON NIVEAU</h2><div class="zs-level-list" role="group" aria-label="Niveau"><button type="button" data-level="1">NIVEAU 1</button><button type="button" data-level="2">NIVEAU 2</button><button type="button" data-level="3">NIVEAU 3</button><button type="button" data-level="4">NIVEAU 4</button></div><button type="button" class="zs-menu-back">◀ RETOUR</button><small>ESPACE : JOUER</small></div><div class="zs-menu-page zs-scoreboard-page" hidden><h2>SCOREBOARD</h2><div class="zs-scoreboard-list"></div><button type="button" class="zs-scoreboard-back">◀ RETOUR</button><small>RECORDS PAR MODE ET NIVEAU</small></div></section><div class="zs-overlay"><strong role="heading" aria-level="2"></strong><em class="zs-result"></em><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console"><div class="zs-controls"><button type="button" class="zs-round zs-menu" aria-label="Retour au menu" title="Menu">⚙</button><div class="zs-pad-zone"><div class="zs-dpad" role="group" aria-label="Direction"></div></div><button type="button" class="zs-round zs-action" aria-label="Jouer ou mettre en pause" title="Jouer ou pause">▶</button></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
  root.appendChild(wrap);
  const $=s=>wrap.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d');canvas.width=CW;canvas.height=CH;
  const stage=$('.zs-stage'),arena=$('.zs-arena'),hud=$('.zs-hud'),overlay=$('.zs-overlay'),status=$('.zs-state');
- $('.zs-handheld').classList.remove('zt-skin-ready');
- $('.zs-cross').appendChild(make('div','zt-cross-shape'));
- $('.zs-select-space').remove();
  function button(label,cls,fn,parent){const e=make('button','zs-button '+cls,label);e.type='button';e.onclick=function(event){sounds.unlock();fn(event);};parent.appendChild(e);return e;}
  const background=document.createElement('canvas');background.width=CW;background.height=CH;
  drawBackground(background.getContext('2d'));
@@ -295,60 +292,15 @@ function mount(root){
  function restart(){if(g.state==='hurt')return;clearCrash();sounds.stop();lastState='ready';lastScore=0;elapsed=0;g=g.state==='ready'?selectedGame():g;g.reset();g.toggle();render();}
  function action(){if(g.state==='ready'){chooseMenu();return;}if(g.state==='over'||g.state==='won')restart();else{g.toggle();render();}}
  function menu(){if(g.state==='hurt')return;clearCrash();sounds.stop();g.reset();sounds.play('menu');elapsed=0;menuPage='mode';menuIndex=0;render();}
- const play=button('Jouer','zs-play zg-button zt-image-button zt-play',action,$('.zs-toolbar'));
- const restartButton=button('Recommencer','zs-restart zg-button zt-image-button zt-restart',restart,$('.zs-toolbar'));
- const menuButton=button('Menu','zs-menu zg-button zt-image-button zt-menu',menu,$('.zs-toolbar'));
- const musicButton=button('','zs-music zg-button zt-image-button zt-music-button',()=>{
-  musicEnabled=!musicEnabled;
-  try{localStorage.setItem('zebra.snake.music',musicEnabled?'on':'off');}catch(_){}
-  sounds.setMusicEnabled(musicEnabled);
-  updateMusicButton();
- },$('.zs-toolbar'));
- function updateMusicButton(){
-  const label=musicEnabled?'MUSIC ON':'MUSIC OFF';
-  musicButton.textContent='';
-  musicButton.title=label;
-  musicButton.setAttribute('aria-label',musicEnabled?'Couper la musique':'Activer la musique');
-  musicButton.setAttribute('aria-pressed',musicEnabled?'true':'false');
-  musicButton.classList.toggle('is-off',!musicEnabled);
-  musicButton.style.backgroundImage='url("'+(musicEnabled?'/assets/games/musicOnbtnTetris.png?v=2':'/assets/games/musicOffbtnTetris.png?v=2')+'")';
- }
- updateMusicButton();
- $('.zs-toolbar').insertBefore(musicButton,menuButton);
+ const play=$('.zs-action'),menuButton=$('.zs-menu');
+ play.onclick=()=>{sounds.unlock();action();};
+ menuButton.onclick=()=>{sounds.unlock();menu();};
  for(const [d,label]of Object.entries({up:'▲',left:'◀',right:'▶',down:'▼'})){
-  const b=button(label,'zs-dir zt-control zt-dir zt-dir-'+d+' zs-'+d,e=>{if(e.detail===0){turn(d);}},$('.zs-cross'));
+  const b=button('','zs-dir zs-'+d,e=>{if(e.detail===0){turn(d);}},$('.zs-dpad'));
   b.setAttribute('aria-label',({up:'Haut',down:'Bas',left:'Gauche',right:'Droite'})[d]);
   b.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();sounds.unlock();turn(d);};
  }
- $('.zs-cross').appendChild(make('span','zt-cross-center'));
- const a=button('A','zs-a zt-control zt-ab-button zt-a',action,$('.zs-ab'));a.setAttribute('aria-label','Jouer ou pause');
- const b=button('B','zs-b zt-control zt-ab-button zt-b',restart,$('.zs-ab'));b.setAttribute('aria-label','Recommencer');
- const select=button('SELECT','zs-select zt-control zt-select',menu,$('.zs-action-side'));select.setAttribute('aria-label','Retour au menu');
- $('.zs-action-side').appendChild(make('span','zt-control-caption','B : RECOMMENCER · A : PAUSE'));
- const CONTROL_ROOT='/assets/games/snake/controls/';
- const controlFiles={
-  up:'Upad.png',down:'Dpad.png',left:'Lpad.png',right:'Rpad.png',
-  a:'Abtn.png',b:'Bbtn.png',select:'select.png'
- };
- function applyControlTexture(control,key){
-  const file=controlFiles[key];if(!file)return;
-  const image=make('img','zt-control-sprite');image.alt='';image.draggable=false;image.decoding='async';
-  image.src=CONTROL_ROOT+file+'?v=3';
-  control.appendChild(image);
- }
- [['up',$('.zs-up')],['down',$('.zs-down')],['left',$('.zs-left')],['right',$('.zs-right')],['a',a],['b',b],['select',select]].forEach(([key,node])=>applyControlTexture(node,key));
- $('.zs-handheld').classList.add('zt-skin-ready');
- const ATLAS='/assets/games/zebra-tetris-ui.png?v=57',AW=280,AH=252;
- function atlasSprite(node,[x,y,w,h]){
-  node.style.backgroundImage='url("'+ATLAS+'")';node.style.backgroundRepeat='no-repeat';
-  node.style.backgroundSize=(100*AW/w)+'% '+(100*AH/h)+'%';
-  node.style.backgroundPosition=(100*x/(AW-w))+'% '+(100*y/(AH-h))+'%';node.style.imageRendering='pixelated';
- }
- function skinToolbar(){
-  atlasSprite(play,g.state==='running'?[168,35,108,32]:[168,0,108,32]);
-  atlasSprite(restartButton,[168,70,108,32]);atlasSprite(menuButton,[168,105,108,32]);
- }
- const toolbarAtlas=new Image();toolbarAtlas.onload=()=>{if(alive){$('.zs-console').classList.add('zt-art-loaded');skinToolbar();}};toolbarAtlas.src=ATLAS;
+ $('.zs-dpad').appendChild(make('span','zs-pad-center'));
  $('.zs-start').onclick=()=>{sounds.unlock();action();};
  const launch=$('.zs-launch');
  function renderMenu(){
@@ -391,15 +343,15 @@ function mount(root){
  ac.fillRect(38,52,95,33);ac.fillRect(55,43,70,10);ac.fillRect(26,65,15,17);ac.fillRect(42,85,84,6);
  ac.fillStyle=STRIPE;ac.fillRect(39,70,68,10);ac.fillRect(75,47,22,20);ac.fillStyle=INK;ac.fillRect(82,51,8,12);ac.fillRect(44,61,4,4);
  // Two independent touch pads in local two-player games.
- const second=make('div','zs-second-pad');second.setAttribute('aria-label','Direction du joueur 2');
+ const second=make('div','zs-dpad zs-second-pad');second.setAttribute('role','group');second.setAttribute('aria-label','Direction du joueur 2');
  second.appendChild(make('span','zs-p2-label','J2'));
  for(const [d,label]of Object.entries({up:'▲',left:'◀',right:'▶',down:'▼'})){
-  const control=button(label,'zs-p2-dir zs-p2-'+d,e=>{if(e.detail===0)turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);},second);
+  const control=button('','zs-dir zs-p2-dir zs-'+d,e=>{if(e.detail===0)turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);},second);
   control.setAttribute('aria-label','Joueur 2 : '+({up:'Haut',left:'Gauche',right:'Droite',down:'Bas'})[d]);
-  applyControlTexture(control,d);
   control.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();sounds.unlock();turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);};
  }
- wrap.insertBefore(second,$('.zs-hud'));
+ second.appendChild(make('span','zs-pad-center'));
+ $('.zs-pad-zone').appendChild(second);
  renderMenu();
  function turn(d,index=0){if(g.state==='ready'){navigate(d);return;}const wasRunning=g.state==='running';if(g.turn(d,index)&&wasRunning)sounds.play('turn');render();}
  function render(){
@@ -418,8 +370,8 @@ function mount(root){
   $('.zs-score').textContent=String(g.score).padStart(4,'0');$('.zs-best').textContent=String(g.kind==='duel'&&g.state!=='ready'?g.players[1].score:best).padStart(4,'0');
   const duelResult=g.kind==='duel'&&g.state==='over'?(g.winner===0?'DRAW':g.winner===1?'PLAYER 1 WIN':settings.players===1?'ZNAKEBOT WIN':'PLAYER 2 WIN'):'';
   status.textContent=duelResult||({ready:'PRÊT',running:'EN JEU',paused:'PAUSE',hurt:'AÏE',over:'GAME OVER',won:'VICTOIRE'})[g.state];
-  play.textContent=g.state==='running'?'Pause':g.state==='paused'?'Reprendre':g.state==='ready'?'Jouer':'Rejouer';
-  if($('.zs-console').classList.contains('zt-art-loaded'))skinToolbar();
+  const actionLabel=g.state==='running'?'Mettre en pause':g.state==='paused'?'Reprendre':g.state==='ready'?'Jouer':'Rejouer';
+  play.textContent=g.state==='running'?'Ⅱ':'▶';play.title=actionLabel;play.setAttribute('aria-label',actionLabel);
   wrap.dataset.state=g.state;wrap.dataset.duo=String(g.kind==='duel'&&settings.players===2&&g.state!=='ready');fit();
   launch.hidden=g.state!=='ready';renderMenu();
   $('.zs-result').textContent='';
