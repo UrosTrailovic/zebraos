@@ -317,24 +317,19 @@ function mount(root){
  const b=button('B','zs-b zt-control zt-ab-button zt-b',restart,$('.zs-ab'));b.setAttribute('aria-label','Recommencer');
  const select=button('SELECT','zs-select zt-control zt-select',menu,$('.zs-action-side'));select.setAttribute('aria-label','Retour au menu');
  $('.zs-action-side').appendChild(make('span','zt-control-caption','B : RECOMMENCER · A : PAUSE'));
- const CONTROL_ATLAS='/assets/games/snake/znake-controls.webp?v=1';
- const PANEL_TEXTURE='/assets/games/snake/znake-panel.webp?v=1';
- const controlRects={
-  up:[0,0,64,64],down:[64,0,64,64],left:[128,0,64,64],right:[192,0,64,64],
-  a:[256,0,64,64],b:[320,0,64,64],select:[384,12,96,40]
+ const CONTROL_ROOT='/assets/games/snake/controls/';
+ const controlFiles={
+  up:'Upad.png',down:'Dpad.png',left:'Lpad.png',right:'Rpad.png',
+  a:'Abtn.png',b:'Bbtn.png',select:'select.png'
  };
  function applyControlTexture(control,key){
-  const rect=controlRects[key];if(!rect)return;
-  const art=make('span','zs-control-art');art.setAttribute('aria-hidden','true');
-  art.style.setProperty('--zs-cx',String(rect[0]));
-  art.style.setProperty('--zs-cy',String(rect[1]));
-  art.style.setProperty('--zs-cw',String(rect[2]));
-  art.style.setProperty('--zs-ch',String(rect[3]));
-  art.style.backgroundImage='url("'+CONTROL_ATLAS+'")';
-  control.appendChild(art);
+  const file=controlFiles[key];if(!file)return;
+  const image=make('img','zs-control-art');image.alt='';image.draggable=false;image.decoding='async';
+  image.src=CONTROL_ROOT+file+'?v=1';
+  control.appendChild(image);
  }
  [['up',$('.zs-up')],['down',$('.zs-down')],['left',$('.zs-left')],['right',$('.zs-right')],['a',a],['b',b],['select',select]].forEach(([key,node])=>applyControlTexture(node,key));
- wrap.style.setProperty('--zs-control-panel','url("'+PANEL_TEXTURE+'")');
+ wrap.style.setProperty('--zs-control-panel','url("'+CONTROL_ROOT+'INTfond.png?v=1")');
  $('.zs-handheld').classList.add('zs-skin-ready');
  const ATLAS='/assets/games/zebra-tetris-ui.png?v=57',AW=280,AH=252;
  function atlasSprite(node,[x,y,w,h]){
