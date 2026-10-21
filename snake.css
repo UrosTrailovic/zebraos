@@ -247,3 +247,10 @@
 }
 .zs-settings-list button:focus-visible{outline:1px dashed #344b36;outline-offset:2px}
 .zs-settings-overlay small{font:clamp(7px,2.2cqw,11px)/1.3 monospace;margin-top:auto}
+
+/* Znake: keep the expanded D-pad clear of the bottom screen edge. */
+@media (hover:none),(pointer:coarse){
+ .zs-console{padding-bottom:14px}
+ /* Handheld navigation: menu selection is made with directional keys + OK. */
+ .zs-settings-list button{pointer-events:none}
+}
