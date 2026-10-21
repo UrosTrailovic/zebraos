@@ -272,7 +272,7 @@ function mount(root){
   try{localStorage.setItem('zebra.snake.records',JSON.stringify(records));}catch(_){}
  }
  const wrap=make('div','zs-machine');
- wrap.innerHTML='<header class="zs-header"><img class="zs-logo" src="/assets/games/snake/znaklogo.png?v=1" alt="Znake" width="165" height="98"></header><div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div><label class="zs-score-label">SCORE</label> <b class="zs-score">0000</b></div><div><label class="zs-best-label">RECORD</label> <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znake : manger les pommes, éviter les murs et sa queue"></canvas><section class="zs-launch" aria-label="Menu de Znake"><div class="zs-menu-page zs-mode-page"><h1>Znake</h1><canvas class="zs-title-art" aria-hidden="true"></canvas><div class="zs-menu-list" role="group" aria-label="Mode de jeu"><button type="button" data-mode="solo">SOLO</button><button type="button" data-mode="robot">CONTRE ROBOT</button><button type="button" data-mode="local">VS LOCAL</button><button type="button" data-scoreboard="true">SCOREBOARD</button></div><small>FLÈCHES : CHOISIR · ESPACE : VALIDER</small></div><div class="zs-menu-page zs-level-page" hidden><h2>CHOISIS TON NIVEAU</h2><div class="zs-level-list" role="group" aria-label="Niveau"><button type="button" data-level="1">NIVEAU 1</button><button type="button" data-level="2">NIVEAU 2</button><button type="button" data-level="3">NIVEAU 3</button><button type="button" data-level="4">NIVEAU 4</button></div><button type="button" class="zs-menu-back">◀ RETOUR</button><small>ESPACE : JOUER</small></div><div class="zs-menu-page zs-scoreboard-page" hidden><h2>SCOREBOARD</h2><div class="zs-scoreboard-list"></div><button type="button" class="zs-scoreboard-back">◀ RETOUR</button><small>RECORDS PAR MODE ET NIVEAU</small></div></section><div class="zs-overlay"><strong role="heading" aria-level="2"></strong><em class="zs-result"></em><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console zg-retro"><div class="zs-handheld zt-handheld zt-skin-ready"><div class="zs-toolbar zg-buttons zt-buttons"></div><div class="zs-dpad zt-dpad" aria-label="Direction"><div class="zs-cross zt-cross"></div></div><div class="zs-action-side zt-action-side"><div class="zs-ab zt-ab"></div><span class="zs-select-space zt-select" aria-hidden="true"></span></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
+ wrap.innerHTML='<header class="zs-header"><img class="zs-logo" src="/assets/games/snake/znaklogo.png?v=2" alt="Znake" width="165" height="98"></header><div class="zs-hud"><span class="zs-state" role="status" aria-live="polite">PRÊT</span><div><label class="zs-score-label">SCORE</label> <b class="zs-score">0000</b></div><div><label class="zs-best-label">RECORD</label> <b class="zs-best">0000</b></div></div><div class="zs-arena"><div class="zs-stage"><canvas aria-label="Terrain de Znake : manger les pommes, éviter les murs et sa queue"></canvas><section class="zs-launch" aria-label="Menu de Znake"><div class="zs-menu-page zs-mode-page"><h1>Znake</h1><canvas class="zs-title-art" aria-hidden="true"></canvas><div class="zs-menu-list" role="group" aria-label="Mode de jeu"><button type="button" data-mode="solo">SOLO</button><button type="button" data-mode="robot">CONTRE ROBOT</button><button type="button" data-mode="local">VS LOCAL</button><button type="button" data-scoreboard="true">SCOREBOARD</button></div><small>FLÈCHES : CHOISIR · ESPACE : VALIDER</small></div><div class="zs-menu-page zs-level-page" hidden><h2>CHOISIS TON NIVEAU</h2><div class="zs-level-list" role="group" aria-label="Niveau"><button type="button" data-level="1">NIVEAU 1</button><button type="button" data-level="2">NIVEAU 2</button><button type="button" data-level="3">NIVEAU 3</button><button type="button" data-level="4">NIVEAU 4</button></div><button type="button" class="zs-menu-back">◀ RETOUR</button><small>ESPACE : JOUER</small></div><div class="zs-menu-page zs-scoreboard-page" hidden><h2>SCOREBOARD</h2><div class="zs-scoreboard-list"></div><button type="button" class="zs-scoreboard-back">◀ RETOUR</button><small>RECORDS PAR MODE ET NIVEAU</small></div></section><div class="zs-overlay"><strong role="heading" aria-level="2"></strong><em class="zs-result"></em><span></span><button type="button" class="zs-button zs-start">Jouer</button></div></div></div><footer class="zs-console zg-retro"><div class="zs-handheld zt-handheld zt-skin-ready"><div class="zs-toolbar zg-buttons zt-buttons"></div><div class="zs-dpad zt-dpad" aria-label="Direction"><div class="zs-cross zt-cross"></div></div><div class="zs-action-side zt-action-side"><div class="zs-ab zt-ab"></div><span class="zs-select-space zt-select" aria-hidden="true"></span></div></div><p class="zs-help">FLÈCHES / ZQSD · ESPACE : PAUSE</p></footer>';
  root.appendChild(wrap);
  const $=s=>wrap.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d');canvas.width=CW;canvas.height=CH;
  const stage=$('.zs-stage'),arena=$('.zs-arena'),hud=$('.zs-hud'),overlay=$('.zs-overlay'),status=$('.zs-state');
@@ -287,7 +287,7 @@ function mount(root){
  drawLevel3Background(level3Background.getContext('2d'));
  drawLevel4Background(level4Background.getContext('2d'));
  const level3Tiles={};
- for(const [name,src]of Object.entries({tile1:'/assets/games/snake/tile1.png?v=1',tile2:'/assets/games/snake/tile2.png?v=1',tile3:'/assets/games/snake/tile3.png?v=1'})){
+ for(const [name,src]of Object.entries({tile1:'/assets/games/snake/tile1.png?v=2',tile2:'/assets/games/snake/tile2.png?v=2',tile3:'/assets/games/snake/tile3.png?v=2'})){
   const image=new Image();image.onload=()=>{level3Tiles[name]=image;if(Object.keys(level3Tiles).length===3){drawLevel3Background(level3Background.getContext('2d'),level3Tiles);drawLevel4Background(level4Background.getContext('2d'),level3Background);wrap.dataset.level3Ready='true';wrap.dataset.level4Ready='true';if(alive&&settings.level>=3)render();}};image.src=src;
  }
  function clearCrash(){if(crashTimer!==null){clearTimeout(crashTimer);crashTimer=null;}}
@@ -311,7 +311,7 @@ function mount(root){
   musicButton.setAttribute('aria-label',musicEnabled?'Couper la musique':'Activer la musique');
   musicButton.setAttribute('aria-pressed',musicEnabled?'true':'false');
   musicButton.classList.toggle('is-off',!musicEnabled);
-  musicButton.style.backgroundImage='url("'+(musicEnabled?'/assets/games/musicOnbtnTetris.png?v=1':'/assets/games/musicOffbtnTetris.png?v=1')+'")';
+  musicButton.style.backgroundImage='url("'+(musicEnabled?'/assets/games/musicOnbtnTetris.png?v=2':'/assets/games/musicOffbtnTetris.png?v=2')+'")';
  }
  updateMusicButton();
  $('.zs-toolbar').insertBefore(musicButton,menuButton);
@@ -333,11 +333,11 @@ function mount(root){
  function applyControlTexture(control,key){
   const file=controlFiles[key];if(!file)return;
   const image=make('img','zs-control-art');image.alt='';image.draggable=false;image.decoding='async';
-  image.src=CONTROL_ROOT+file+'?v=1';
+  image.src=CONTROL_ROOT+file+'?v=2';
   control.appendChild(image);
  }
  [['up',$('.zs-up')],['down',$('.zs-down')],['left',$('.zs-left')],['right',$('.zs-right')],['a',a],['b',b],['select',select]].forEach(([key,node])=>applyControlTexture(node,key));
- wrap.style.setProperty('--zs-control-panel','url("'+CONTROL_ROOT+'INTfond.png?v=1")');
+ wrap.style.setProperty('--zs-control-panel','url("'+CONTROL_ROOT+'INTfond.png?v=2")');
  $('.zs-handheld').classList.add('zs-skin-ready');
  const ATLAS='/assets/games/zebra-tetris-ui.png?v=57',AW=280,AH=252;
  function atlasSprite(node,[x,y,w,h]){
