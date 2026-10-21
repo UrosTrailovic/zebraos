@@ -2407,38 +2407,8 @@
 @keyframes zebra-loading-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.zebra-lazy-loading::before{animation:none}}
 
-/* Zebra Tetris 6.6 — polish mobile final.
-   Seulement PLAY / RESTART / MUSIC / MENU gardent le ratio 108x32.
-   SELECT remonte sur la ligne visuelle de la flèche BAS. */
-@media (hover:none),(pointer:coarse){
- .zebra-game-body .zg-retro .zt-handheld .zg-buttons.zt-buttons{
-  align-items:center!important;
- }
- .zebra-game-body .zg-retro .zt-handheld .zg-buttons.zt-buttons .zg-button.zt-image-button{
-  flex:1 1 0!important;
-  width:auto!important;
-  max-width:none!important;
-  height:auto!important;
-  min-height:0!important;
-  aspect-ratio:108 / 32;
-  align-self:center;
-  background-size:100% 100%!important;
- }
- .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select,
- .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select:active{
-  transform:translateY(-40px)!important;
- }
-}
-@media(max-height:650px) and (pointer:coarse){
- .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select,
- .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select:active{
-  transform:translateY(-28px)!important;
- }
-}
 
-/* Zebra Tetris 6.7 — appareil fixe.
-   SELECT partage exactement la ligne basse de la flèche BAS.
-   Le plateau ne bouge JAMAIS : feedback Tetris uniquement lumineux. */
+/* Tetris — plateau strictement fixe, indépendamment des contrôles restaurés. */
 .zebra-game-body .zg-retro .zg-tetris-stage,
 .zebra-game-body .zg-retro .zg-tetris-stage.zt-tetris-burst{
  transform:none!important;
@@ -2456,46 +2426,4 @@
  55%{opacity:.42}
  70%{opacity:.05}
  100%{opacity:0}
-}
-
-@media (hover:none),(pointer:coarse){
- .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready{
-  --zt-cross-h:124px;
- }
- .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-action-side{
-  position:relative!important;
- }
- .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select,
- .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select:active{
-  position:absolute!important;
-  left:50%!important;
-  top:auto!important;
-  bottom:calc((100% - var(--zt-cross-h)) / 2)!important;
-  transform:translateX(-50%)!important;
-  margin:0!important;
- }
-}
-@media(max-width:370px) and (pointer:coarse){
- .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready{
-  --zt-cross-h:116px;
- }
-}
-@media(max-height:650px) and (pointer:coarse){
- .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready{
-  --zt-cross-h:97px;
- }
-}
-
-/* Zebra Tetris 6.8 — SELECT un cran plus bas, sans toucher A/B. */
-@media (hover:none),(pointer:coarse){
- .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select,
- .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select:active{
-  bottom:calc((100% - var(--zt-cross-h)) / 2 - 14px)!important;
- }
-}
-@media(max-height:650px) and (pointer:coarse){
- .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select,
- .zebra-game-body .zg-retro .zt-handheld.zt-skin-ready .zt-select:active{
-  bottom:calc((100% - var(--zt-cross-h)) / 2 - 9px)!important;
- }
 }
