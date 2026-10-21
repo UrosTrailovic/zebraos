@@ -265,3 +265,13 @@
  .zs-console,.zs-pad-zone,.zs-dpad{touch-action:none}
  .zs-stage{touch-action:none}
 }
+
+/* Znake large touch-area test overlay: borders show real hit sectors. */
+.zs-touch-debug{display:none}
+@media (hover:none),(pointer:coarse){
+ .zs-machine{position:relative}
+ .zs-touch-debug{
+  display:block;position:absolute;inset:0;width:100%;height:100%;z-index:30;
+  overflow:visible;pointer-events:none!important;touch-action:none;
+ }
+}
