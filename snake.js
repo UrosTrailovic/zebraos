@@ -254,7 +254,7 @@ function mount(root){
  if(root._zebraDispose)root._zebraDispose();root.innerHTML='';
  const sounds=createSounds(),settings={mode:'solo',players:1,level:1};let g=createGame(),menuPage='mode',menuIndex=0,elapsed=0;let alive=true,records={},observer,lastState=g.state,lastScore=0,crashTimer=null;
  let musicEnabled=true;
- fetch('/assets/games/snake/audio.json?v=1',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(a=>{if(alive)sounds.configure(a);}).catch(()=>{});
+ fetch('/assets/games/snake/audio.json?v=2',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(a=>{if(alive)sounds.configure(a);}).catch(()=>{});
  try{
   const saved=JSON.parse(localStorage.getItem('zebra.snake.records')||'{}');
   if(saved&&typeof saved==='object')records=saved;
@@ -306,6 +306,7 @@ function mount(root){
   musicButton.classList.toggle('is-off',!musicEnabled);
  },$('.zs-toolbar'));
  musicButton.classList.toggle('is-off',!musicEnabled);
+ $('.zs-toolbar').insertBefore(musicButton,menuButton);
  for(const [d,label]of Object.entries({up:'▲',left:'◀',right:'▶',down:'▼'})){
   const b=button(label,'zs-dir zt-control zt-dir zt-dir-'+d+' zs-'+d,e=>{if(e.detail===0){turn(d);}},$('.zs-cross'));
   b.setAttribute('aria-label',({up:'Haut',down:'Bas',left:'Gauche',right:'Droite'})[d]);
