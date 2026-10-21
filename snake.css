@@ -275,3 +275,64 @@
   overflow:visible;pointer-events:none!important;touch-action:none;
  }
 }
+
+
+/* Znake local two-player portrait: one controller at each end of the phone.
+   Keep both existing textures, 8-bit arrows, enlarged hit geometry and red
+   touch diagnostics unmodified. Solo and robot layouts are unaffected. */
+.zs-p2-panel{display:none}
+@media (hover:none),(pointer:coarse){
+ .zs-machine[data-duo="true"]{
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:auto minmax(0,1fr) auto;
+  column-gap:0;
+  row-gap:clamp(5px,1vh,10px);
+  padding:clamp(6px,1.5vw,10px);
+ }
+ .zs-machine[data-duo="true"] .zs-header,
+ .zs-machine[data-duo="true"] .zs-hud{display:none!important}
+ .zs-machine[data-duo="true"] .zs-p2-panel{
+  display:flex;align-items:center;justify-content:center;
+  grid-column:1;grid-row:1;
+  width:100%;min-width:0;min-height:0;position:relative;
+  padding:0;margin:0;touch-action:none;
+ }
+ .zs-machine[data-duo="true"] .zs-p2-pad-slot{
+  display:flex;align-items:center;justify-content:center;touch-action:none
+ }
+ .zs-machine[data-duo="true"] .zs-p2-panel .zs-second-pad{
+  display:block;
+  width:clamp(104px,35vw,148px);
+  transform:rotate(180deg);
+  touch-action:none;
+ }
+ .zs-machine[data-duo="true"] .zs-p2-label{display:none}
+ .zs-machine[data-duo="true"] .zs-p2-name{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%) rotate(180deg);
+  color:#ffeb94;font:400 15px/1 'Zebra Videotex',monospace;
+  letter-spacing:1px;text-shadow:2px 2px #101020;
+  pointer-events:none
+ }
+ .zs-machine[data-duo="true"] .zs-arena{
+  grid-column:1;grid-row:2;min-width:0;min-height:0;
+  display:flex;align-items:center;justify-content:center;
+ }
+ .zs-machine[data-duo="true"] .zs-console{
+  grid-column:1;grid-row:3;width:100%;min-width:0;
+  padding:0 0 10px;margin:0;touch-action:none
+ }
+ .zs-machine[data-duo="true"] .zs-controls{
+  display:grid;grid-template-columns:44px minmax(0,1fr) 44px;
+  gap:clamp(6px,2vw,12px);align-items:center;width:100%
+ }
+ .zs-machine[data-duo="true"] .zs-pad-zone{display:flex;justify-content:center;gap:0}
+ .zs-machine[data-duo="true"] .zs-pad-zone>.zs-dpad{
+  width:clamp(104px,35vw,148px)
+ }
+ .zs-machine[data-duo="true"] .zs-controls::after{
+  content:"J1";display:flex;align-items:center;justify-content:center;
+  grid-column:3;grid-row:1;width:44px;height:44px;
+  color:#ffeb94;font:400 15px/1 'Zebra Videotex',monospace;
+  letter-spacing:1px;text-shadow:2px 2px #101020;pointer-events:none
+ }
+}
