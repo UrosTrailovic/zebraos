@@ -374,7 +374,7 @@ function mount(root){
   const b=button('','zs-dir zs-'+d,e=>{if(e.detail===0){turn(d);}},$('.zs-dpad'));
   b.innerHTML='';
   b.setAttribute('aria-label',({up:'Haut',down:'Bas',left:'Gauche',right:'Droite'})[d]);
-  b.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();sounds.unlock();turn(d);};
+  // Pointer touches are routed by the pad-zone's generous hit regions below.
  }
  const okButton=button('','zs-ok',()=>confirmControl(),$('.zs-dpad'));
  okButton.setAttribute('aria-label','OK : sélectionner, reprendre ou rejouer');
@@ -433,10 +433,65 @@ function mount(root){
   const control=button('','zs-dir zs-p2-dir zs-'+d,e=>{if(e.detail===0)turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);},second);
   control.innerHTML='';
   control.setAttribute('aria-label','Joueur 2 : '+({up:'Haut',left:'Gauche',right:'Droite',down:'Bas'})[d]);
-  control.onpointerdown=e=>{if(e.button!==0)return;e.preventDefault();sounds.unlock();turn(({up:'down',down:'up',left:'right',right:'left'})[d],1);};
+  // Touch controls for both players use the same enlarged hit regions.
  }
  second.appendChild(make('span','zs-pad-center'));
  $('.zs-pad-zone').appendChild(second);
+ // Transparent, forgiving touch zones cover the spaces BETWEEN the four textures.
+ // They do not move or stretch the retro PNGs. Center is reserved for OK.
+ const padZone=$('.zs-pad-zone');
+ const consoleArea=$('.zs-console');
+ function padDirection(x,y,rect){
+  const dx=x-rect.left-rect.width/2,dy=y-rect.top-rect.height/2;
+  if(Math.hypot(dx,dy)<rect.width*.15)return 'ok';
+  return Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
+ }
+ function onPadPointerDown(e){
+  if(e.button!==0||!alive||!window.matchMedia('(hover:none), (pointer:coarse)').matches)return;
+  // Let the physical center button and Settings keep their ordinary click behavior.
+  if(e.target.closest('.zs-ok,.zs-menu,.zs-action'))return;
+  const pads=[...padZone.querySelectorAll('.zs-dpad')].filter(p=>p.getClientRects().length);
+  let picked=null,shortest=Infinity;
+  for(const pad of pads){
+   const r=pad.getBoundingClientRect(),extra=Math.min(18,r.width*.12);
+   if(e.clientX<r.left-extra||e.clientX>r.right+extra||
+      e.clientY<r.top-extra||e.clientY>r.bottom+extra)continue;
+   const dist=Math.hypot(e.clientX-(r.left+r.width/2),e.clientY-(r.top+r.height/2));
+   if(dist<shortest){picked={pad,rect:r};shortest=dist;}
+  }
+  if(!picked)return;
+  e.preventDefault();
+  sounds.unlock();
+  const direction=padDirection(e.clientX,e.clientY,picked.rect);
+  if(direction==='ok'){
+   // The center's invisible margin is also a real OK tap.
+   if(!picked.pad.classList.contains('zs-second-pad'))confirmControl();
+  }else{
+   turn(direction,picked.pad.classList.contains('zs-second-pad')?1:0);
+  }
+ }
+ consoleArea.addEventListener('pointerdown',onPadPointerDown);
+ // Optional swipes on the game board. Taps and menu overlays do not trigger turns.
+ let boardSwipe=null;
+ function boardPointerDown(e){
+  if((e.pointerType!=='touch'&&e.pointerType!=='pen')||g.state!=='running'||
+     settingsOpen||e.target.closest('button'))return;
+  boardSwipe={id:e.pointerId,x:e.clientX,y:e.clientY};
+  try{stage.setPointerCapture(e.pointerId);}catch(_){}
+ }
+ function boardPointerUp(e){
+  if(!boardSwipe||e.pointerId!==boardSwipe.id)return;
+  const start=boardSwipe;boardSwipe=null;
+  if(g.state!=='running'||settingsOpen)return;
+  const dx=e.clientX-start.x,dy=e.clientY-start.y;
+  if(Math.max(Math.abs(dx),Math.abs(dy))<Math.max(22,stage.clientWidth*.055))return;
+  sounds.unlock();
+  turn(Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up'));
+ }
+ function boardPointerCancel(e){if(boardSwipe&&boardSwipe.id===e.pointerId)boardSwipe=null;}
+ stage.addEventListener('pointerdown',boardPointerDown);
+ stage.addEventListener('pointerup',boardPointerUp);
+ stage.addEventListener('pointercancel',boardPointerCancel);
  renderMenu();
  function turn(d,index=0){if(settingsOpen){moveSettings(d);return;}if(g.state==='ready'){navigate(d);return;}const wasRunning=g.state==='running';if(g.turn(d,index)&&wasRunning)sounds.play('turn');render();}
  function render(){
