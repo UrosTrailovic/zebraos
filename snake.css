@@ -139,7 +139,7 @@
   .zs-console{width:100%;margin:0;padding:0}
   .zs-controls{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;gap:clamp(6px,2vw,12px)}
   .zs-pad-zone{gap:clamp(4px,2vw,10px)}
-  .zs-dpad{width:clamp(124px,38vw,164px)}
+  .zs-dpad{width:clamp(138px,44vw,188px)}
   .zs-round{width:44px;border-width:3px;font-size:19px}
   .zs-help{display:none}
   .zs-machine[data-duo="true"] .zs-pad-zone{gap:clamp(4px,2vw,10px)}
@@ -147,7 +147,49 @@
 }
 @media (hover:none) and (max-height:680px),(pointer:coarse) and (max-height:680px){
   .zs-controls{grid-template-columns:40px minmax(0,1fr) 40px}
-  .zs-dpad{width:clamp(112px,30vw,136px)}
+  .zs-dpad{width:clamp(128px,39vw,152px)}
   .zs-round{width:40px;min-height:40px}
   .zs-machine[data-duo="true"] .zs-dpad{width:clamp(88px,27vw,118px)}
+}
+
+/* Znake touch layout: logo, score and record share one compact top row.
+   The arena expands into the freed vertical space. Desktop remains unchanged. */
+@media (hover:none),(pointer:coarse){
+ .zs-machine{
+  display:grid;
+  grid-template-columns:minmax(0,31%) minmax(0,1fr);
+  grid-template-rows:auto minmax(0,1fr) auto;
+  column-gap:4px;
+  row-gap:clamp(4px,1vh,8px);
+ }
+ .zs-header{
+  display:flex;
+  grid-column:1;grid-row:1;
+  align-items:center;justify-content:center;
+  width:100%;min-width:0;
+  height:clamp(48px,14vw,62px);
+ }
+ .zs-logo{width:100%;height:100%;object-fit:contain}
+ .zs-hud{
+  grid-column:2;grid-row:1;
+  width:100%;min-width:0;
+  display:flex;align-self:center;align-items:center;justify-content:space-between;
+  gap:2px;padding:0;
+  font-size:clamp(8px,2.3vw,10px);
+  letter-spacing:0;text-align:center;
+ }
+ .zs-hud>div{flex:1;min-width:0;text-align:center}
+ .zs-hud>div:last-child{text-align:center}
+ .zs-hud b{
+  display:block;font-size:clamp(18px,5.6vw,25px);
+  letter-spacing:1px;line-height:1.1;margin-top:3px;white-space:nowrap;
+ }
+ .zs-arena{grid-column:1/-1;grid-row:2;width:100%;min-height:0;min-width:0}
+ .zs-console{grid-column:1/-1;grid-row:3;width:100%;min-width:0}
+ .zs-machine[data-duo="true"] .zs-header{display:flex;height:38px}
+ .zs-machine[data-duo="true"] .zs-hud{justify-content:space-between}
+}
+@media (hover:none) and (max-height:480px),(pointer:coarse) and (max-height:480px){
+ .zs-header,.zs-machine[data-duo="true"] .zs-header{height:34px}
+ .zs-dpad{width:clamp(92px,27vw,112px)}
 }
