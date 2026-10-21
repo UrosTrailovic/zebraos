@@ -702,7 +702,7 @@ function openUtility(name){
    Le navigateur + Service Worker conservent les fichiers après ce chargement. */
 var gameModules={
  tetris:{name:"Tetris.exe",width:735,height:770,global:"ZebraTetris",
-  files:["tetris-artwork.js?v=1.8","tetris.js?v=2.8"]},
+  files:["tetris-artwork.js?v=1.8","tetris.js?v=2.9"]},
  snake:{name:"Znake.exe",width:650,height:700,global:"ZebraSnake",
   files:["snake.js?v=5.5"],css:"snake.css?v=5.2"},
  racer:{name:"Zebra Pursuit.exe",width:980,height:720,global:"ZebraRacer",
