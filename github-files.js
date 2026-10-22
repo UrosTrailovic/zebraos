@@ -288,7 +288,7 @@ function mount(host,path,opts){
  host._zebraPublicTicket=ticket;
  var admin=!!opts.canUpload;
  var account=typeof opts.session==="string"?opts.session:"visitor";
- var viewSizes={small:24,medium:32,large:64,list:20},view="medium";
+ var viewSizes={small:24,medium:32,large:64,list:20},view="large";
  var viewKey="zebraos.folder-view.v1."+account;
  try{var savedView=localStorage.getItem(viewKey);if(Object.keys(viewSizes).includes(savedView))view=savedView;}catch(_){}
  var place=path===ROOT?"Bureau":path.slice(ROOT.length+1).replace(/\//g," \\ ");
