@@ -316,7 +316,7 @@
   display:grid;grid-template-columns:44px minmax(0,1fr) 44px;
   gap:clamp(6px,2vw,12px);align-items:center;width:100%
  }
- .zs-machine[data-duo="true"] .zs-pad-zone{display:flex;justify-content:center;gap:0}
+ .zs-machine[data-duo="true"] .zs-pad-zone{display:flex;justify-content:center;gap:0;grid-column:2;grid-row:1;width:100%;min-width:0}
  .zs-machine[data-duo="true"] .zs-pad-zone>.zs-dpad{
   width:clamp(104px,35vw,148px)
  }
