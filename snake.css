@@ -425,3 +425,36 @@
  content:"▶";left:12px;font:18px/1 monospace;color:#e2edab;
 }
 .zs-settings-overlay small{display:none!important}
+
+/* Pause menu containment fix: fit four rows within the available stage. */
+.zs-settings-overlay{
+ inset:10% 9%;
+ padding:clamp(10px,2.8cqw,17px);
+ overflow:hidden;
+ justify-content:center;
+}
+.zs-settings-overlay::before{
+ flex:0 0 auto;
+ padding:0 0 5px;
+ margin:0 0 clamp(4px,1.3cqw,9px);
+ font-size:clamp(9px,2.5cqw,12px);
+}
+.zs-settings-overlay h2{
+ flex:0 0 auto;
+ font-size:clamp(28px,8.5cqw,46px);
+ margin:0 0 clamp(7px,2cqw,12px);
+}
+.zs-settings-list{
+ flex:0 1 auto;
+ min-height:0;
+ gap:clamp(4px,1.3cqw,8px);
+ max-width:100%;
+}
+.zs-settings-list button{
+ flex:0 1 auto;
+ min-height:0;
+ padding:clamp(7px,2cqw,10px) 8px clamp(7px,2cqw,10px) clamp(24px,7cqw,35px);
+ font-size:clamp(13px,4.1cqw,21px);
+ line-height:1.1;
+}
+.zs-settings-list button[aria-current="true"]::before{left:7px;font-size:15px}
