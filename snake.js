@@ -183,11 +183,9 @@ function drawLevel3Background(ctx,tiles={}){
 }
 function drawLevel4Background(ctx,source){
  ctx.imageSmoothingEnabled=false;
- ctx.fillStyle='#090a14';ctx.fillRect(0,0,CW,CH);
- if(!source)return;
- ctx.filter='contrast(1.22) saturate(1.35) brightness(.72)';ctx.drawImage(source,0,0);ctx.filter='none';
- const wash=ctx.createLinearGradient?ctx.createLinearGradient(0,0,CW,0):null;
- if(wash){wash.addColorStop(0,'rgba(0,50,190,.48)');wash.addColorStop(.5,'rgba(20,0,55,.16)');wash.addColorStop(1,'rgba(210,0,28,.46)');ctx.globalCompositeOperation='screen';ctx.fillStyle=wash;ctx.fillRect(0,0,CW,CH);ctx.globalCompositeOperation='source-over';}
+ ctx.clearRect(0,0,CW,CH);
+ if(source)ctx.drawImage(source,0,0);
+ else drawLevel3Background(ctx);
 }
 function draw(ctx,g,background){
  ctx.imageSmoothingEnabled=false;
