@@ -381,3 +381,47 @@
   transform:translateY(-50%) scale(.94)
  }
 }
+
+/* Znake pause panel redesign: compact, crisp retro console interface. */
+.zs-settings-overlay{
+ inset:12% 10%;z-index:9;gap:0;
+ padding:clamp(12px,4cqw,24px);
+ background:#b2c590;
+ border:4px solid #304c36;
+ box-shadow:inset 4px 4px #e1e9b8,inset -4px -4px #718755,0 0 0 3px #172c25;
+ justify-content:center;
+}
+.zs-settings-overlay::before{
+ content:"ZNAKE  /  SYSTEM";display:block;width:100%;
+ text-align:left;padding-bottom:10px;margin-bottom:clamp(10px,4cqw,23px);
+ border-bottom:3px solid #546e4a;
+ font:700 clamp(10px,3.1cqw,15px)/1.1 monospace;
+ letter-spacing:1px;color:#475d43;
+}
+.zs-settings-overlay h2{
+ margin:0 0 clamp(12px,4.6cqw,23px);
+ font:400 clamp(30px,11cqw,58px)/1 'Redden',serif;
+ text-shadow:2px 2px #dce5b2;
+}
+.zs-settings-list{
+ width:100%;max-width:380px;
+ gap:clamp(7px,2cqw,12px);
+}
+.zs-settings-list button{
+ display:block;min-height:clamp(40px,12cqw,58px);
+ padding:clamp(8px,2.5cqw,13px) 14px clamp(8px,2.5cqw,13px) 40px;
+ background:#d7e2b6;
+ border:2px solid #657e59;
+ color:#263a2c;
+ box-shadow:inset 2px 2px #f5f8de,inset -2px -2px #a0b38b;
+ font:700 clamp(16px,5.1cqw,25px)/1.1 'Zebra Videotex',monospace;
+ letter-spacing:.1px;
+}
+.zs-settings-list button[aria-current="true"]{
+ background:#294b37;color:#f3f9d1;border-color:#162b20;
+ box-shadow:inset 2px 2px #68876a,inset -2px -2px #152c1b;
+}
+.zs-settings-list button[aria-current="true"]::before{
+ content:"▶";left:12px;font:18px/1 monospace;color:#e2edab;
+}
+.zs-settings-overlay small{display:none!important}
