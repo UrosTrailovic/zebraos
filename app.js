@@ -183,7 +183,14 @@ function decorateSystemMenus(){
   if(tray){tray.textContent="";tray.appendChild(osIcon("network",16));}
 }
 function el(tag,cls,txt){var n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;}
-function show(id){["power-screen","boot-screen","login-screen","session-boot-screen","desktop-screen"].forEach(function(s){$(s).classList.toggle("active",s===id)});}
+function show(id){
+ ["power-screen","boot-screen","login-screen","session-boot-screen","desktop-screen"].forEach(function(s){$(s).classList.toggle("active",s===id)});
+ var v=$("zboot-cinematic-video");
+ if(v){
+  if(id==="power-screen"){var playing=v.play();if(playing&&playing.catch)playing.catch(function(){});}
+  else v.pause();
+ }
+}
 /* Power / studio startup audio. The user clicks POWER so playback is permitted on phones. */
 var studioBootAssets=window.ZebraBootAssets||{};
 var bootAudio=new Audio(studioBootAssets.startup||"");
@@ -192,7 +199,7 @@ document.querySelectorAll(".zboot-logo,.zboot-session-logo").forEach(function(im
   if(studioBootAssets.logo)img.src=studioBootAssets.logo;
 });
 bootAudio.preload="auto";sessionAudio.preload="auto";
-var bootTimer=0,sessionTimer=0,booting=false,sessionBooting=false,pendingSession=null;
+var bootTimer=0,sessionTimer=0,cinematicTimer=0,booting=false,sessionBooting=false,pendingSession=null;
 function playBootTrack(track){
   try {track.pause();track.currentTime=0;var p=track.play();if(p&&p.catch)p.catch(function(){});}catch(e){}
 }
@@ -204,9 +211,17 @@ function finishBoot(){
 function powerOn(){
   if(booting)return;
   booting=true;
-  show("boot-screen");
-  playBootTrack(bootAudio);
-  bootTimer=setTimeout(finishBoot,5200);
+  // Let the entire moving image disappear into black before booting the OS.
+  $("power-screen").classList.add("is-powering-on");
+  clearTimeout(cinematicTimer);
+  cinematicTimer=setTimeout(function(){
+   cinematicTimer=0;
+   if(!booting)return;
+   $("power-screen").classList.remove("is-powering-on");
+   show("boot-screen");
+   playBootTrack(bootAudio);
+   bootTimer=setTimeout(finishBoot,5200);
+  },2400);
 }
 function finishSessionBoot(){
   if(!sessionBooting)return;
@@ -237,7 +252,8 @@ function skipStartupKey(event){
 document.addEventListener("keydown",skipStartupKey,true);
 function stopBootSequences(){
   booting=false;sessionBooting=false;pendingSession=null;
-  clearTimeout(bootTimer);clearTimeout(sessionTimer);
+  clearTimeout(bootTimer);clearTimeout(sessionTimer);clearTimeout(cinematicTimer);
+  $("power-screen").classList.remove("is-powering-on");
   bootAudio.pause();sessionAudio.pause();
 }
 function login(){
