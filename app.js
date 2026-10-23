@@ -183,25 +183,23 @@ function decorateSystemMenus(){
   if(tray){tray.textContent="";tray.appendChild(osIcon("network",16));}
 }
 function el(tag,cls,txt){var n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;}
-/* Background film: attempt ambient audio when browser policy permits; fall back
-   to silent autoplay on browsers that block unprompted sound. No sound switch. */
+/* Keep the film reliably playing on phones. Browsers generally block
+   autoplay WITH sound, so start muted until there has been a user gesture.
+   After a user gesture (e.g. powering off and back on), try sound naturally. */
 function startAmbientBootVideo(){
  var video=$("zboot-backdrop-video");
  if(!video)return;
  video.volume=.35;
- video.muted=false;
- try{
-  var attempt=video.play();
-  if(attempt&&attempt.catch)attempt.catch(function(){
-   if(!$("power-screen").classList.contains("active"))return;
-   video.muted=true;
-   var retry=video.play();
-   if(retry&&retry.catch)retry.catch(function(){});
-  });
- }catch(err){
+ video.muted=!(navigator.userActivation&&navigator.userActivation.hasBeenActive);
+ function mutedFallback(){
+  if(!$("power-screen").classList.contains("active"))return;
   video.muted=true;
   try{var retry=video.play();if(retry&&retry.catch)retry.catch(function(){});}catch(ignored){}
  }
+ try{
+  var attempt=video.play();
+  if(attempt&&attempt.catch)attempt.catch(mutedFallback);
+ }catch(err){mutedFallback()}
 }
 function show(id){
  ["power-screen","boot-screen","login-screen","session-boot-screen","desktop-screen"].forEach(function(s){$(s).classList.toggle("active",s===id)});
