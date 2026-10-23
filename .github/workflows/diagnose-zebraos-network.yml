@@ -1,5 +1,7 @@
 name: Diagnostic ZebraOS — accès public
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -21,6 +23,25 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/UrosTrailovic/zebraos/pages" \
             | jq '{cname,https_enforced,https_certificate,public,status,build_type}'
+      - name: Test de secours Github.io en navigateur
+        shell: bash
+        run: |
+          set +e
+          echo '=== HTTP(S) fallback and critical assets ==='
+          for u in https://urostrailovic.github.io/zebraos/ https://urostrailovic.github.io/zebraos/app.js?v=10.0 https://urostrailovic.github.io/zebraos/assets/boot/logo.png; do
+            curl -sS -L -I --connect-timeout 7 --max-time 12 -o /dev/null -w 'FALLBACK_HTTP=%{http_code} DEST=%{url_effective} VERIFY=%{ssl_verify_result}\\n' "$u"
+          done
+          echo '=== Chrom(e|ium) screenshot DOM test ==='
+          BROWSER=$(command -v google-chrome || command -v chromium || true)
+          if [ -n "$BROWSER" ]; then
+            timeout 20 "$BROWSER" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=5000 --dump-dom https://urostrailovic.github.io/zebraos/ > /tmp/zebra-fallback.html 2>/tmp/zebra-fallback-err.log
+            echo 'CHROME_STATUS='$?
+            grep -o '<base href="/zebraos/"' /tmp/zebra-fallback.html | head -n 1
+            grep -o '<button id="power-btn"' /tmp/zebra-fallback.html | head -n 1
+            head -c 200 /tmp/zebra-fallback.html
+            echo
+            grep -iE 'ERROR|net::|ERR_' /tmp/zebra-fallback-err.log | tail -n 8
+          fi
       - name: DNS, HTTPS et navigateur Chromium
         shell: bash
         run: |
