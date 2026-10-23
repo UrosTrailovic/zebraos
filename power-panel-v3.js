@@ -3,7 +3,7 @@
  "use strict";
  var root=document.getElementById("power-screen"),oldBtn=document.getElementById("power-btn");
  if(!root||!oldBtn)return;
- var base="assets/power-v3/";
+ var base="assets/powerv3/";
  var names=["pcinterface.webp","pcoff.webp","pcon.webp","btnpcoff.webp","btnpcon.webp","zebraossticker.webp","intel sticker.webp"];
  function url(s){return base+encodeURIComponent(s).replace(/%2F/g,"/");}
  function load(s){return new Promise(function(resolve,reject){var im=new Image();im.onload=resolve;im.onerror=reject;im.src=url(s);});}
