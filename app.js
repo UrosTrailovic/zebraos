@@ -183,7 +183,35 @@ function decorateSystemMenus(){
   if(tray){tray.textContent="";tray.appendChild(osIcon("network",16));}
 }
 function el(tag,cls,txt){var n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;}
-function show(id){["power-screen","boot-screen","login-screen","session-boot-screen","desktop-screen"].forEach(function(s){$(s).classList.toggle("active",s===id)});}
+/* Background film: attempt ambient audio when browser policy permits; fall back
+   to silent autoplay on browsers that block unprompted sound. No sound switch. */
+function startAmbientBootVideo(){
+ var video=$("zboot-backdrop-video");
+ if(!video)return;
+ video.volume=.35;
+ video.muted=false;
+ try{
+  var attempt=video.play();
+  if(attempt&&attempt.catch)attempt.catch(function(){
+   if(!$("power-screen").classList.contains("active"))return;
+   video.muted=true;
+   var retry=video.play();
+   if(retry&&retry.catch)retry.catch(function(){});
+  });
+ }catch(err){
+  video.muted=true;
+  try{var retry=video.play();if(retry&&retry.catch)retry.catch(function(){});}catch(ignored){}
+ }
+}
+function show(id){
+ ["power-screen","boot-screen","login-screen","session-boot-screen","desktop-screen"].forEach(function(s){$(s).classList.toggle("active",s===id)});
+ var video=$("zboot-backdrop-video");
+ if(video){
+  if(id==="power-screen")startAmbientBootVideo();
+  else video.pause();
+ }
+}
+startAmbientBootVideo();
 /* Power / studio startup audio. The user clicks POWER so playback is permitted on phones. */
 var studioBootAssets=window.ZebraBootAssets||{};
 var bootAudio=new Audio(studioBootAssets.startup||"");
