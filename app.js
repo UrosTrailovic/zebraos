@@ -183,16 +183,7 @@ function decorateSystemMenus(){
   if(tray){tray.textContent="";tray.appendChild(osIcon("network",16));}
 }
 function el(tag,cls,txt){var n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;}
-function show(id){
- ["power-screen","boot-screen","login-screen","session-boot-screen","desktop-screen"].forEach(function(s){$(s).classList.toggle("active",s===id)});
- var v=$("zboot-cinematic-video");
- if(v){
-  if(id==="power-screen"){
-   v.volume=1;
-   var playing=v.play();if(playing&&playing.catch)playing.catch(function(){});
-  }else v.pause();
- }
-}
+function show(id){["power-screen","boot-screen","login-screen","session-boot-screen","desktop-screen"].forEach(function(s){$(s).classList.toggle("active",s===id)});}
 /* Power / studio startup audio. The user clicks POWER so playback is permitted on phones. */
 var studioBootAssets=window.ZebraBootAssets||{};
 var bootAudio=new Audio(studioBootAssets.startup||"");
@@ -201,43 +192,7 @@ document.querySelectorAll(".zboot-logo,.zboot-session-logo").forEach(function(im
   if(studioBootAssets.logo)img.src=studioBootAssets.logo;
 });
 bootAudio.preload="auto";sessionAudio.preload="auto";
-var bootTimer=0,sessionTimer=0,cinematicTimer=0,cinematicVolumeFrame=0,booting=false,sessionBooting=false,pendingSession=null;
-var cinematicVideo=$("zboot-cinematic-video");
-var cinematicAudioButton=$("zboot-audio-btn");
-function updateCinematicAudioButton(){
- if(!cinematicAudioButton||!cinematicVideo)return;
- var enabled=!cinematicVideo.muted;
- cinematicAudioButton.textContent=enabled?"SON : ON":"SON : OFF";
- cinematicAudioButton.setAttribute("aria-pressed",enabled?"true":"false");
- cinematicAudioButton.setAttribute("aria-label",enabled?"Couper le son de la vidéo":"Activer le son de la vidéo");
-}
-function toggleCinematicAudio(){
- if(!cinematicVideo||booting)return;
- cinematicVideo.muted=!cinematicVideo.muted;
- cinematicVideo.volume=1;
- updateCinematicAudioButton();
- if(!cinematicVideo.muted){
-  // Autoplay with sound is restricted. Clicking this control supplies the
-  // user activation required to start unmuted playback on mobile browsers.
-  var attempt=cinematicVideo.play();
-  if(attempt&&attempt.catch)attempt.catch(function(){
-   cinematicVideo.muted=true;
-   updateCinematicAudioButton();
-  });
- }
-}
-function fadeCinematicSound(duration){
- cancelAnimationFrame(cinematicVolumeFrame);
- if(!cinematicVideo||cinematicVideo.muted)return;
- var start=performance.now(),initial=cinematicVideo.volume;
- function frame(now){
-  if(!booting||!cinematicVideo)return;
-  cinematicVideo.volume=Math.max(0,initial*(1-Math.min(1,(now-start)/duration)));
-  if(now-start<duration)cinematicVolumeFrame=requestAnimationFrame(frame);
- }
- cinematicVolumeFrame=requestAnimationFrame(frame);
-}
-updateCinematicAudioButton();
+var bootTimer=0,sessionTimer=0,booting=false,sessionBooting=false,pendingSession=null;
 function playBootTrack(track){
   try {track.pause();track.currentTime=0;var p=track.play();if(p&&p.catch)p.catch(function(){});}catch(e){}
 }
@@ -249,18 +204,9 @@ function finishBoot(){
 function powerOn(){
   if(booting)return;
   booting=true;
-  // Let the entire moving image disappear into black before booting the OS.
-  $("power-screen").classList.add("is-powering-on");
-  fadeCinematicSound(2400);
-  clearTimeout(cinematicTimer);
-  cinematicTimer=setTimeout(function(){
-   cinematicTimer=0;
-   if(!booting)return;
-   $("power-screen").classList.remove("is-powering-on");
-   show("boot-screen");
-   playBootTrack(bootAudio);
-   bootTimer=setTimeout(finishBoot,5200);
-  },2400);
+  show("boot-screen");
+  playBootTrack(bootAudio);
+  bootTimer=setTimeout(finishBoot,5200);
 }
 function finishSessionBoot(){
   if(!sessionBooting)return;
@@ -291,10 +237,7 @@ function skipStartupKey(event){
 document.addEventListener("keydown",skipStartupKey,true);
 function stopBootSequences(){
   booting=false;sessionBooting=false;pendingSession=null;
-  clearTimeout(bootTimer);clearTimeout(sessionTimer);clearTimeout(cinematicTimer);
-  cancelAnimationFrame(cinematicVolumeFrame);
-  if(cinematicVideo)cinematicVideo.volume=1;
-  $("power-screen").classList.remove("is-powering-on");
+  clearTimeout(bootTimer);clearTimeout(sessionTimer);
   bootAudio.pause();sessionAudio.pause();
 }
 function login(){
@@ -822,7 +765,7 @@ function openGame(name){
 window.ZebraLazyApps={load:loadGameModule};
 function open(code){$("start-menu").classList.add("hidden");if(code==="tetris"||code==="snake"||code==="paint")openGame(code);else if(code==="folder:games"||code==="folder:tools"||code==="folder:atelier")appFolder(code.split(":")[1]);else if(code==="calc"||code==="sticky"||code==="planner")openUtility(code);else if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="datetime")dateTime();else if(code==="welcome")welcome();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
 decorateSystemMenus();
-$("power-btn").onclick=powerOn;$("zboot-audio-btn").onclick=toggleCinematicAudio;$("skip-boot").onclick=finishBoot;$("skip-session-boot").onclick=finishSessionBoot;$("restart-login").onclick=restartLogin;$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
+$("power-btn").onclick=powerOn;$("skip-boot").onclick=finishBoot;$("skip-session-boot").onclick=finishSessionBoot;$("restart-login").onclick=restartLogin;$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
 $("start-button").onclick=function(e){e.stopPropagation();$("start-menu").classList.toggle("hidden")};document.querySelectorAll("[data-start]").forEach(function(b){b.onclick=function(){open(b.dataset.start)}});document.addEventListener("pointerdown",function(e){if(!e.target.closest("#start-menu")&&!e.target.closest("#start-button"))$("start-menu").classList.add("hidden")});
 /* A physical mouse click exists independently of what the computer does afterwards.
    Play the main click on touch pointerup (mobile user activation), and on mouse pointerdown.
