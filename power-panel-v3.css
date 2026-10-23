@@ -6,7 +6,7 @@
 }
 #power-screen .zp3-machine {
   position:relative;isolation:isolate;
-  width:min(77vw,940px,calc(74dvh * 991 / 393));
+  width:77vw;max-width:940px;width:min(77vw,940px,186dvh);
   aspect-ratio:991 / 393;flex:none;
   opacity:0;
   filter:drop-shadow(0 23px 30px rgba(0,0,0,.57));
@@ -64,6 +64,6 @@
 }
 @media(max-width:700px){
  #power-screen.zp3-ready{padding:12px}
- #power-screen .zp3-machine{width:min(96vw,calc(80dvh * 991 / 393))}
+ #power-screen .zp3-machine{width:min(96vw,201dvh)}
 }
 @media(prefers-reduced-motion:reduce){#power-screen .zp3-ghost{transition:none}}
