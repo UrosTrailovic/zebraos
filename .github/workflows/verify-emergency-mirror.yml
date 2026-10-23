@@ -1,0 +1,54 @@
+name: Tester le miroir HTTPS ZebraOS
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mobile-chrome:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Installer le test Playwright
+        run: python3 -m pip install --quiet playwright
+      - name: Tester ZebraOS sur GitHub.io dans Chrome
+        run: |
+          cat > /tmp/test_zebra_fallback.py <<'PY'
+          import json,sys,time
+          from playwright.sync_api import sync_playwright
+          with sync_playwright() as p:
+              browser=p.chromium.launch(channel='chrome',headless=True,args=['--no-sandbox','--disable-dev-shm-usage'])
+              page=browser.new_page(viewport={'width':390,'height':844},device_scale_factor=1,is_mobile=True,has_touch=True)
+              errors=[];failed=[]
+              page.on('pageerror',lambda exc: errors.append(str(exc)))
+              page.on('requestfailed',lambda req: failed.append({'url':req.url,'error':req.failure}))
+              url='https://urostrailovic.github.io/zebraos/'
+              response=page.goto(url,wait_until='domcontentloaded',timeout=40000)
+              page.wait_for_timeout(3500)
+              state=page.evaluate("""() => ({
+                  url:location.href,base:document.baseURI,title:document.title,
+                  powered:!!document.querySelector('#power-btn'),
+                  powerVisible:!!document.querySelector('#power-btn')?.getClientRects().length,
+                  hasDesktop:!!document.querySelector('#desktop-screen'),
+                  images:[...document.images].slice(0,8).map(x=>({url:x.currentSrc||x.src,ok:x.complete&&x.naturalWidth>0})),
+                  scriptCount:[...document.scripts].filter(s=>s.src).length,
+                  appScript:[...document.scripts].find(s=>s.src.includes('/app.js'))?.src
+              })""")
+              print('MAIN_HTTP',response.status if response else None,flush=True)
+              print('MOBILE_STATE',json.dumps(state,ensure_ascii=False),flush=True)
+              print('PAGE_ERRORS',json.dumps(errors[:12],ensure_ascii=False),flush=True)
+              print('FAILED_REQUESTS',json.dumps(failed[:20],ensure_ascii=False),flush=True)
+              if state['powered'] and state['powerVisible']:
+                  page.locator('#power-btn').click(timeout=5000)
+                  page.wait_for_timeout(1400)
+                  print('AFTER_POWER',page.evaluate("() => ({power:document.querySelector('#power-screen')?.className,boot:document.querySelector('#boot-screen')?.className,login:document.querySelector('#login-screen')?.className})"),flush=True)
+              page.screenshot(path='/tmp/zebra-fallback.png')
+              browser.close()
+              assert response and response.status==200, 'HTML not served'
+              assert state['base'].endswith('/zebraos/'), 'wrong base'
+              assert state['powered'] and state['hasDesktop'], 'ZebraOS shell missing'
+              assert state['scriptCount']>5 and state['appScript'], 'JS assets missing'
+              assert not errors, 'Unexpected page errors'
+          PY
+          python3 /tmp/test_zebra_fallback.py
