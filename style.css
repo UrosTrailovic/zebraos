@@ -2474,3 +2474,76 @@
  70%{opacity:.05}
  100%{opacity:0}
 }
+
+/* ZebraOS subdued film / Windows 95 start-button.
+   Visual treatment ONLY: the existing startup action is not delayed. */
+#power-screen{
+ isolation:isolate;
+ background:#000;
+}
+#power-screen .zboot-backdrop-video{
+ position:absolute;inset:0;display:block;
+ width:100%;height:100%;object-fit:cover;object-position:center;
+ z-index:0;pointer-events:none;background:#000;
+ animation:zboot-film-gentle-reveal 3.3s ease-out both;
+}
+@keyframes zboot-film-gentle-reveal{
+ from{opacity:0}
+ to{opacity:1}
+}
+#power-screen .zboot-backdrop-dim{
+ position:absolute;inset:0;z-index:1;
+ pointer-events:none;background:rgba(0,0,0,.68);
+}
+/* Flat pixel bevels, not a round/glass/modern CTA. */
+#power-screen .zboot-power{
+ position:relative;z-index:2;box-sizing:border-box;
+ appearance:none;display:inline-flex;flex-direction:row;
+ align-items:center;justify-content:center;gap:11px;
+ width:186px;height:68px;padding:8px 15px;
+ color:#121212;background:#c1c1c1;border-radius:0;
+ border:3px solid;
+ border-color:#f4f4f4 #383838 #383838 #f4f4f4;
+ box-shadow:inset 1px 1px #fff,inset -1px -1px #888,
+             1px 2px 0 #060606,0 8px 24px rgba(0,0,0,.55);
+ font-family:Tahoma,"MS Sans Serif",Verdana,Arial,sans-serif;
+ font-weight:700;font-size:15px;letter-spacing:0;
+ text-shadow:none;outline:none;
+ transition:none;backdrop-filter:none;
+ -webkit-tap-highlight-color:transparent;
+}
+#power-screen .zboot-power-symbol{
+ display:flex;flex:0 0 32px;
+ align-items:center;justify-content:center;
+ width:32px;height:32px;color:#222;
+ font-size:unset;line-height:normal;
+}
+#power-screen .zboot-power-symbol svg{
+ display:block;width:32px;height:32px;image-rendering:pixelated;
+}
+#power-screen .zboot-power-label{
+ font:700 15px/1 Tahoma,"MS Sans Serif",Verdana,Arial,sans-serif;
+ color:#141414;letter-spacing:0;text-shadow:none;
+}
+#power-screen .zboot-power:hover{
+ color:#000;background:#d3d3d3;
+ border-color:#fff #383838 #383838 #fff;
+ box-shadow:inset 1px 1px #fff,inset -1px -1px #8a8a8a,
+             1px 2px 0 #050505,0 8px 24px rgba(0,0,0,.55);
+}
+#power-screen .zboot-power:active{
+ background:#b0b0b0;
+ border-color:#414141 #eee #eee #414141;
+ box-shadow:inset 1px 1px #808080,inset -1px -1px #ececec,
+             0 1px 0 #050505;
+ padding-top:10px;padding-left:17px;
+}
+#power-screen .zboot-power:focus-visible{
+ outline:1px dotted #191919;outline-offset:-9px;
+}
+@media(max-width:500px){
+ #power-screen .zboot-power{width:180px;height:66px}
+}
+@media(prefers-reduced-motion:reduce){
+ #power-screen .zboot-backdrop-video{animation-duration:.7s}
+}
