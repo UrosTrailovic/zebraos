@@ -1,5 +1,7 @@
-name: Tester le miroir HTTPS ZebraOS
+name: Vérifier navigateur sur domaine ZebraOS
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
@@ -10,7 +12,7 @@ jobs:
     steps:
       - name: Installer le test Playwright
         run: python3 -m pip install --quiet playwright
-      - name: Tester ZebraOS sur GitHub.io dans Chrome
+      - name: Tester zebratape2.net depuis Chrome mobile
         run: |
           cat > /tmp/test_zebra_fallback.py <<'PY'
           import json,sys,time
@@ -21,7 +23,7 @@ jobs:
               errors=[];failed=[]
               page.on('pageerror',lambda exc: errors.append(str(exc)))
               page.on('requestfailed',lambda req: failed.append({'url':req.url,'error':req.failure}))
-              url='https://urostrailovic.github.io/zebraos/'
+              url='https://www.zebratape2.net/'
               response=page.goto(url,wait_until='domcontentloaded',timeout=40000)
               page.wait_for_timeout(3500)
               state=page.evaluate("""() => ({
@@ -34,7 +36,8 @@ jobs:
                   appScript:[...document.scripts].find(s=>s.src.includes('/app.js'))?.src
               })""")
               print('MAIN_HTTP',response.status if response else None,flush=True)
-              print('MOBILE_STATE',json.dumps(state,ensure_ascii=False),flush=True)
+              print('MOBILE_STATE',json.dumps({k:v for k,v in state.items() if k!='images'},ensure_ascii=False),flush=True)
+              print('IMAGE_LOADS',json.dumps([{'ok':z['ok'],'url':z['url'][:120]} for z in state['images']],ensure_ascii=False),flush=True)
               print('PAGE_ERRORS',json.dumps(errors[:12],ensure_ascii=False),flush=True)
               print('FAILED_REQUESTS',json.dumps(failed[:20],ensure_ascii=False),flush=True)
               if state['powered'] and state['powerVisible']:
@@ -44,7 +47,7 @@ jobs:
               page.screenshot(path='/tmp/zebra-fallback.png')
               browser.close()
               assert response and response.status==200, 'HTML not served'
-              assert state['base'].endswith('/zebraos/'), 'wrong base'
+              assert state['base'].startswith('https://www.zebratape2.net/'), 'wrong canonical domain'
               assert state['powered'] and state['hasDesktop'], 'ZebraOS shell missing'
               assert state['scriptCount']>5 and state['appScript'], 'JS assets missing'
               assert not errors, 'Unexpected page errors'
