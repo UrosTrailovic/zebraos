@@ -7,6 +7,71 @@
 <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
 <meta name="theme-color" content="#102431">
 <script>
+/* ZebraOS project-site HTTPS fallback. This runs ONLY on GitHub's own domain;
+   it does not alter the regular custom-domain experience or stored user data. */
+(function(){
+ if(location.hostname!=="urostrailovic.github.io"||!/^\/zebraos(?:\/|$)/.test(location.pathname))return;
+ var base=document.createElement("base");base.href="/zebraos/";document.head.appendChild(base);
+ function fix(u){return typeof u==="string"&&u[0]==="/"&&u[1]!=="/"&&!u.startsWith("/zebraos/")?"/zebraos"+u:u;}
+ var originalFetch=window.fetch;
+ if(originalFetch)window.fetch=function(input,init){
+  if(typeof input==="string")input=fix(input);
+  else if(input instanceof Request&&input.url.startsWith(location.origin+"/")&&!input.url.startsWith(location.origin+"/zebraos/"))
+   input=new Request(location.origin+fix(input.url.slice(location.origin.length)),input);
+  return originalFetch.call(this,input,init);
+ };
+ var origSet=Element.prototype.setAttribute;
+ Element.prototype.setAttribute=function(name,value){
+  if(/^(src|href|poster)$/i.test(name))value=fix(value);
+  return origSet.call(this,name,value);
+ };
+ function patchSource(proto,prop){
+  if(!proto)return;
+  var descriptor=Object.getOwnPropertyDescriptor(proto,prop);
+  if(descriptor&&descriptor.set&&descriptor.get&&descriptor.configurable)
+   Object.defineProperty(proto,prop,{configurable:true,enumerable:descriptor.enumerable,
+    get:descriptor.get,set:function(v){return descriptor.set.call(this,fix(v));}});
+ }
+ [[HTMLImageElement,"src"],[HTMLScriptElement,"src"],[HTMLLinkElement,"href"],
+  [HTMLMediaElement,"src"],[HTMLSourceElement,"src"]].forEach(function(entry){patchSource(entry[0]&&entry[0].prototype,entry[1]);});
+ if(window.Audio){var OriginalAudio=window.Audio;window.Audio=function(src){return new OriginalAudio(fix(src));};window.Audio.prototype=OriginalAudio.prototype;}
+ var originalOpen=XMLHttpRequest.prototype.open;
+ XMLHttpRequest.prototype.open=function(method,url){arguments[1]=fix(url);return originalOpen.apply(this,arguments);};
+ function patchElement(el){
+  if(!el||el.nodeType!==1)return;
+  for(var i=0;i<3;i++){
+   var attr=["src","href","poster"][i],value=el.getAttribute(attr);
+   if(value&&fix(value)!==value)origSet.call(el,attr,fix(value));
+  }
+  if(el.hasAttribute("style")){
+   var style=el.getAttribute("style");
+   var changed=style.replace(/url\(\s*(['"]?)\/(?!\/|zebraos\/)/gi,"url($1/zebraos/");
+   if(style!==changed)origSet.call(el,"style",changed);
+  }
+ }
+ new MutationObserver(function(changes){
+  for(var i=0;i<changes.length;i++){
+   var m=changes[i];if(m.type==="attributes")patchElement(m.target);
+   else for(var j=0;j<m.addedNodes.length;j++){
+    var node=m.addedNodes[j];patchElement(node);
+    if(node.querySelectorAll)node.querySelectorAll("[src],[href],[poster],[style]").forEach(patchElement);
+   }
+  }
+ }).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:["src","href","poster","style"]});
+ document.addEventListener("DOMContentLoaded",function(){
+  document.querySelectorAll('link[rel="stylesheet"]').forEach(function(link){
+   var href=link.href;
+   originalFetch.call(window,href).then(function(r){return r.ok?r.text():null;}).then(function(css){
+    if(!css)return;
+    var fixed=css.replace(/url\(\s*(['"]?)\/(?!\/|zebraos\/)/gi,"url($1/zebraos/");
+    if(fixed===css)return;
+    var style=document.createElement("style");style.textContent=fixed;link.after(style);link.disabled=true;
+   }).catch(function(){});
+  });
+ });
+})();
+</script>
+<script>
 /* DEV MODE ZebraOS : aucun Service Worker pendant le développement.
    Nettoie les anciens caches avant que les ressources de l'app soient utilisées. */
 (function(){
