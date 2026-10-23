@@ -95,7 +95,7 @@
  });
 })();
 </script>
-<link rel="stylesheet" href="style.css?v=10.3">
+<link rel="stylesheet" href="style.css?v=10.4">
 <link rel="stylesheet" href="zebra-hardware.css?v=1.0">
 <link rel="stylesheet" href="zebra-notes.css?v=1.0">
 <link rel="stylesheet" href="zebra-tools.css?v=1.0">
@@ -112,16 +112,26 @@
 </head>
 <body>
 <div id="power-screen" class="screen active">
-  <button id="power-btn" class="zboot-power" aria-label="Allumer ZebraOS">
+  <video id="zboot-backdrop-video" class="zboot-backdrop-video"
+         autoplay loop playsinline webkit-playsinline preload="auto"
+         aria-hidden="true" tabindex="-1">
+    <source src="assets/boot/StartPCcomp%20%281%29.mp4?v=3" type="video/mp4">
+  </video>
+  <div class="zboot-backdrop-dim" aria-hidden="true"></div>
+  <button id="power-btn" class="zboot-power" type="button" aria-label="Allumer ZebraOS">
     <span class="zboot-power-symbol" aria-hidden="true">
-      <svg class="zboot-power-svg" viewBox="0 0 64 64" width="64" height="64"
-           xmlns="http://www.w3.org/2000/svg" fill="none">
-        <path d="M20 14 A23 23 0 1 0 44 14" stroke="currentColor" stroke-width="6"
-              stroke-linecap="round"/>
-        <path d="M32 5 V30" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+      <svg viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+        <rect x="2" y="2" width="26" height="21" fill="#3b3b3b"/>
+        <rect x="4" y="4" width="22" height="17" fill="#dadada"/>
+        <rect x="6" y="6" width="18" height="12" fill="#202a31"/>
+        <rect x="8" y="8" width="14" height="8" fill="#3f5363"/>
+        <rect x="20" y="19" width="3" height="2" fill="#519752"/>
+        <rect x="13" y="23" width="6" height="3" fill="#525252"/>
+        <rect x="9" y="26" width="14" height="3" fill="#3c3c3c"/>
+        <rect x="10" y="27" width="12" height="1" fill="#e4e4e4"/>
       </svg>
     </span>
-    <span class="zboot-power-label">ALLUMER</span>
+    <span class="zboot-power-label">DÉMARRER</span>
   </button>
 </div>
 <div id="boot-screen" class="screen" aria-label="Démarrage de ZebraOS">
@@ -175,7 +185,7 @@
 <script src="control-panel.js?v=1.2"></script>
 <script src="zebra-tools.js?v=1.1"></script>
 <script src="desktop-layout.js?v=1.0"></script>
-<script src="app.js?v=10.3"></script>
+<script src="app.js?v=10.4"></script>
 
 </body>
 </html>
