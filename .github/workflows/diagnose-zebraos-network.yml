@@ -1,0 +1,36 @@
+name: Diagnostic ZebraOS — accès public
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: DNS, HTTPS et navigateur Chromium
+        shell: bash
+        run: |
+          set +e
+          echo "==== DNS public ===="
+          for host in zebratape2.net www.zebratape2.net urostrailovic.github.io; do
+            echo "DNS $host"; dig +time=4 +tries=1 +short "$host" A; dig +time=4 +tries=1 +short "$host" AAAA; dig +time=4 +tries=1 +short "$host" CNAME
+          done
+          echo "==== Requêtes HTTP(S) externes ===="
+          for url in https://zebratape2.net/ https://www.zebratape2.net/ http://zebratape2.net/ http://www.zebratape2.net/ https://urostrailovic.github.io/zebraos/; do
+            echo "URL $url"; curl -sS -L -I -v --connect-timeout 7 --max-time 14 -o /dev/null -w 'HTTP %{http_code} IP %{remote_ip} URL_FINAL %{url_effective} SSL_VERIFY %{ssl_verify_result}\n' "$url" 2>&1 | tail -n 14
+          done
+          echo "==== Pages GitHub, route forcée au serveur officiel ===="
+          for name in zebratape2.net www.zebratape2.net; do
+            curl -sS -I --resolve "$name:443:185.199.108.153" --connect-timeout 5 --max-time 9 -w 'HTTP %{http_code} SSL_VERIFY %{ssl_verify_result}\n' "https://$name/" | head -n 14
+          done
+          echo "==== Chrome en mode headless ===="
+          BROWSER=$(command -v google-chrome || command -v chromium || true)
+          if [ -n "$BROWSER" ]; then
+            timeout 18 "$BROWSER" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --ignore-certificate-errors --disable-extensions --virtual-time-budget=3500 --dump-dom https://www.zebratape2.net/ >/tmp/zebra-browser.html 2>/tmp/zebra-browser.log
+            echo "Browser exit: $?"
+            head -c 420 /tmp/zebra-browser.html
+            echo
+            tail -n 12 /tmp/zebra-browser.log
+          fi
+          echo "==== FIN DIAGNOSTIC ===="
