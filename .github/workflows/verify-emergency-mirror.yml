@@ -40,17 +40,44 @@ jobs:
               print('IMAGE_LOADS',json.dumps([{'ok':z['ok'],'url':z['url'][:120]} for z in state['images']],ensure_ascii=False),flush=True)
               print('PAGE_ERRORS',json.dumps(errors[:12],ensure_ascii=False),flush=True)
               print('FAILED_REQUESTS',json.dumps(failed[:20],ensure_ascii=False),flush=True)
-              assert not page.locator('#zboot-cinematic-video').count(), 'startup video should be removed'
-              assert not page.locator('#zboot-audio-btn').count(), 'movie sound button should be removed'
+              assert not page.locator('#zboot-audio-btn').count(), 'no sound toggle wanted'
+              video=page.evaluate("""() => {
+                const v=document.querySelector('#zboot-backdrop-video'),
+                      b=document.querySelector('#power-btn'),
+                      dim=document.querySelector('.zboot-backdrop-dim');
+                if(!v||!b||!dim)return null;
+                const vr=v.getBoundingClientRect(),br=b.getBoundingClientRect();
+                return {src:v.currentSrc,ready:v.readyState,paused:v.paused,
+                  muted:v.muted,loop:v.loop,autoplay:v.autoplay,duration:v.duration,
+                  opacity:getComputedStyle(v).opacity,
+                  animation:getComputedStyle(v).animationName,
+                  dim:getComputedStyle(dim).backgroundColor,
+                  fit:getComputedStyle(v).objectFit,
+                  w:vr.width,h:vr.height,
+                  buttonWidth:br.width,buttonHeight:br.height,
+                  buttonRadius:getComputedStyle(b).borderRadius,
+                  buttonBackground:getComputedStyle(b).backgroundColor,
+                  buttonText:b.innerText};
+              }""")
+              print('SUBTLE_VIDEO_AND_RETRO_BUTTON',video,flush=True)
+              assert video and 'StartPCcomp%20' in video['src'], 'full-quality original movie not in use'
+              assert video['loop'] and video['autoplay'] and video['ready']>=2, 'video missing or unavailable'
+              assert not video['paused'], 'background video did not start'
+              assert video['duration']>55, 'unexpectedly shortened film'
+              assert video['fit']=='cover' and video['w']>=390 and video['h']>=800, 'video not fullscreen'
+              assert 'zboot-film-gentle-reveal' in video['animation'], 'soft fade in missing'
+              assert video['buttonRadius']=='0px' and 'DÉMARRER' in video['buttonText'], 'retro button missing'
               assert state['powered'] and state['powerVisible'], 'power control unavailable'
               page.locator('#power-btn').click(timeout=5000)
-              page.wait_for_timeout(250)
+              page.wait_for_timeout(180)
               boot=page.evaluate("""() => ({
                 power:document.querySelector('#power-screen')?.className,
-                boot:document.querySelector('#boot-screen')?.className
+                boot:document.querySelector('#boot-screen')?.className,
+                videoPaused:document.querySelector('#zboot-backdrop-video')?.paused
               })""")
-              print('ORIGINAL_BOOT',boot,flush=True)
-              assert 'active' not in boot['power'] and 'active' in boot['boot'], 'original boot did not start immediately'
+              print('IMMEDIATE_BOOT',boot,flush=True)
+              assert 'active' not in boot['power'] and 'active' in boot['boot'], 'boot should switch immediately with no click fade'
+              assert boot['videoPaused'], 'film should stop on boot'
               page.screenshot(path='/tmp/zebra-fallback.png')
               browser.close()
               assert response and response.status==200, 'HTML not served'
