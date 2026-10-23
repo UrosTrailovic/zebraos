@@ -1,17 +1,69 @@
-/* ZebraOS power boot panel v3. Loaded only when every asset is available. */
-#power-screen.zp3-ready{background:#050505;display:flex;align-items:center;justify-content:center;padding:18px;overflow:hidden}
-#power-screen .zp3-machine{width:min(94vw,1250px);position:relative;aspect-ratio:991/393;filter:drop-shadow(0 18px 26px #000a);opacity:0}
-#power-screen .zp3-machine.zp3-revealed{opacity:1}
-#power-screen .zp3-machine img{position:absolute;display:block;pointer-events:none;user-select:none;-webkit-user-drag:none;object-fit:contain}
-#power-screen .zp3-face{width:100%;height:100%;inset:0}
+/* ZebraOS — façade physique du démarrage (textures du studio). */
+#power-screen.zp3-ready {
+  display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse 64% 45% at 50% 50%,#111213 0%,#080909 51%,#020202 100%);
+  padding:clamp(14px,3vw,40px);overflow:hidden;
+}
+#power-screen .zp3-machine {
+  position:relative;isolation:isolate;
+  width:min(77vw,940px,calc(74dvh * 991 / 393));
+  aspect-ratio:991 / 393;flex:none;
+  opacity:0;
+  filter:drop-shadow(0 23px 30px rgba(0,0,0,.57));
+}
+#power-screen .zp3-machine.zp3-revealed {opacity:1}
+/* Épaisseur du boîtier, sous la véritable texture du panneau. */
+#power-screen .zp3-machine::before {
+  content:"";position:absolute;z-index:-1;pointer-events:none;
+  inset:.55% .7% -1.85%;border-radius:clamp(5px,1vw,13px);
+  background:linear-gradient(180deg,#414443 0%,#242625 5%,#111313 43%,#101212 89%,#4e5352 100%);
+  box-shadow:
+    inset 0 2px 2px rgba(248,249,246,.53),
+    inset 2px 0 2px rgba(243,244,241,.22),
+    inset -2px 0 4px rgba(0,0,0,.82),
+    inset 0 -3px 2px rgba(0,0,0,.7),
+    0 6px 0 #111313,
+    0 10px 1px #060707,
+    0 21px 23px rgba(0,0,0,.6),
+    0 34px 55px rgba(0,0,0,.38);
+}
+/* Très fin raccord / reflet métallique — aucun panneau futuriste ajouté. */
+#power-screen .zp3-machine::after {
+  content:"";position:absolute;inset:.65% .8% .5%;z-index:3;pointer-events:none;
+  border-radius:clamp(4px,.6vw,9px);
+  border:1px solid rgba(235,237,232,.19);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.28),inset 0 -2px 2px rgba(0,0,0,.2);
+}
+#power-screen .zp3-machine img{
+  position:absolute;display:block;pointer-events:none;
+  user-select:none;-webkit-user-drag:none;object-fit:contain;
+}
+#power-screen .zp3-face{inset:0;width:100%;height:100%}
 #power-screen .zp3-led{left:4.4%;width:12.4%;height:13.1%}
 #power-screen .zp3-led-power{top:15.8%}
 #power-screen .zp3-led-net{top:31.2%}
 #power-screen .zp3-sticker-z{left:4.7%;top:50.5%;width:10.5%;height:31%}
 #power-screen .zp3-sticker-i{left:17.7%;top:57.9%;width:12%;height:24%}
-#power-screen #power-btn.zp3-btn{position:absolute;left:70.7%;top:13.7%;width:25%;height:65%;background:none;border:0;box-shadow:none;transform:none;padding:0;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-#power-screen #power-btn.zp3-btn img{width:100%;height:100%;object-fit:contain}
-#power-screen #power-btn.zp3-btn:active{transform:scale(.979)}
-#power-screen #power-btn.zp3-btn:focus-visible{outline:2px solid #b0cdb7;outline-offset:4px;border-radius:50%}
-#power-screen .zp3-ghost{position:fixed;z-index:20;pointer-events:none;box-sizing:border-box;border:2px solid #f2f2e8;outline:1px solid #1b1b1b;box-shadow:1px 1px 0 #3a3a3a;background:transparent;transition:left 520ms steps(12,end),top 520ms steps(12,end),width 520ms steps(12,end),height 520ms steps(12,end)}
+#power-screen #power-btn.zp3-btn{
+  position:absolute;left:70.7%;top:13.7%;width:25%;height:65%;
+  background:none;border:0;box-shadow:none;transform:none;
+  margin:0;padding:0;cursor:pointer;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+/* IMPORTANT: image interne à ancrer, sinon sa position « auto » la décale en bas. */
+#power-screen #power-btn.zp3-btn img{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+}
+#power-screen #power-btn.zp3-btn:active{transform:scale(.98)}
+#power-screen #power-btn.zp3-btn:focus-visible{outline:2px solid #a4c7bc;outline-offset:3px;border-radius:50%}
+#power-screen .zp3-ghost{
+  position:fixed;z-index:20;pointer-events:none;box-sizing:border-box;
+  border:2px solid #f2f2e8;outline:1px solid #1b1b1b;
+  background:transparent;box-shadow:1px 1px 0 #3a3a3a;
+  transition:left 520ms steps(12,end),top 520ms steps(12,end),width 520ms steps(12,end),height 520ms steps(12,end);
+}
+@media(max-width:700px){
+ #power-screen.zp3-ready{padding:12px}
+ #power-screen .zp3-machine{width:min(96vw,calc(80dvh * 991 / 393))}
+}
 @media(prefers-reduced-motion:reduce){#power-screen .zp3-ghost{transition:none}}
