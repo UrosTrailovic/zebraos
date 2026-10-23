@@ -40,10 +40,41 @@ jobs:
               print('IMAGE_LOADS',json.dumps([{'ok':z['ok'],'url':z['url'][:120]} for z in state['images']],ensure_ascii=False),flush=True)
               print('PAGE_ERRORS',json.dumps(errors[:12],ensure_ascii=False),flush=True)
               print('FAILED_REQUESTS',json.dumps(failed[:20],ensure_ascii=False),flush=True)
-              if state['powered'] and state['powerVisible']:
-                  page.locator('#power-btn').click(timeout=5000)
-                  page.wait_for_timeout(1400)
-                  print('AFTER_POWER',page.evaluate("() => ({power:document.querySelector('#power-screen')?.className,boot:document.querySelector('#boot-screen')?.className,login:document.querySelector('#login-screen')?.className})"),flush=True)
+              # Verify the actual startup film, automatic muted playback,
+              # looping, full-viewport cover and cinematic fade before boot.
+              vid=page.evaluate("""() => {
+                const v=document.querySelector('#zboot-cinematic-video');
+                if(!v)return null;
+                const css=getComputedStyle(v),rect=v.getBoundingClientRect();
+                return {src:v.currentSrc||v.querySelector('source')?.src,
+                    ready:v.readyState,muted:v.muted,autoplay:v.autoplay,
+                    loop:v.loop,playsInline:v.playsInline,duration:v.duration,
+                    cover:css.objectFit,box:[rect.width,rect.height],
+                    paused:v.paused,currentTime:v.currentTime};
+              }""")
+              print('STARTUP_VIDEO',json.dumps(vid,ensure_ascii=False),flush=True)
+              assert vid, 'Startup video element not present'
+              assert vid['src'].split('?')[0].endswith('/assets/boot/StartPCcomp.mp4'), 'wrong source'
+              assert vid['muted'] and vid['autoplay'] and vid['loop'] and vid['playsInline'], 'autoplay or loop flags missing'
+              assert vid['cover']=='cover' and vid['box'][0]>=390 and vid['box'][1]>=800, 'not fullscreen'
+              assert vid['ready']>=2 and vid['duration']>55, 'media not loaded'
+              page.locator('#power-btn').click(timeout=5000)
+              page.wait_for_timeout(1000)
+              fading=page.evaluate("""() => ({
+                power:document.querySelector('#power-screen')?.className,
+                overlay:parseFloat(getComputedStyle(document.querySelector('.zboot-exit-black')).opacity),
+                boot:document.querySelector('#boot-screen')?.className
+              })""")
+              print('DURING_FADE',fading,flush=True)
+              assert 'is-powering-on' in fading['power'] and 'active' in fading['power'], 'did not start cinematic fade'
+              assert 'active' not in fading['boot'] and fading['overlay']>0, 'skipped fade'
+              page.wait_for_timeout(1800)
+              result=page.evaluate("""() => ({
+                power:document.querySelector('#power-screen')?.className,
+                boot:document.querySelector('#boot-screen')?.className
+              })""")
+              print('AFTER_FADE',result,flush=True)
+              assert 'active' not in result['power'] and 'active' in result['boot'], 'boot did not follow cinematic fade'
               page.screenshot(path='/tmp/zebra-fallback.png')
               browser.close()
               assert response and response.status==200, 'HTML not served'
