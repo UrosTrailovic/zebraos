@@ -1,0 +1,28 @@
+/* ZebraOS power facade v2 — isolated responsive hardware skin */
+#power-screen{background:#050606;display:none;align-items:center;justify-content:center;padding:clamp(18px,5vw,54px);box-sizing:border-box;overflow:auto}
+#power-screen.active{display:flex}
+#power-screen .zpower-tower{position:relative;box-sizing:border-box;width:min(94vw,660px);height:auto;min-height:0;aspect-ratio:1.95/1;padding:clamp(18px,4%,30px);display:flex;flex-direction:column;justify-content:space-between;gap:15px;border-radius:13px;border:2px solid #515a57;background:repeating-linear-gradient(90deg,transparent 0 2px,#ffffff04 2px 3px),linear-gradient(145deg,#424a47,#262d2b 44%,#191f1e 75%,#343b38);box-shadow:inset 2px 2px 1px #8c9991,inset -3px -4px 6px #080d0b,0 18px 65px #000}
+#power-screen .zpower-nameplate{position:relative;display:flex;align-items:baseline;gap:14px;padding:0 8px;background:none;border:0;box-shadow:none;min-height:0;height:auto}
+#power-screen .zpower-nameplate strong{font:700 clamp(16px,2.5vw,24px) Arial,sans-serif;letter-spacing:.32em;color:#b9c2bb;text-shadow:0 1px 1px #000}
+#power-screen .zpower-nameplate span{font:9px 'Courier New',monospace;letter-spacing:.22em;color:#89968d}
+#power-screen .zpower-nameplate small{margin-left:auto;font:8px 'Courier New',monospace;letter-spacing:.13em;color:#69776e}
+#power-screen .zpower-drive,#power-screen .zpower-bay{display:none}
+#power-screen .zpower-console{position:relative;display:flex;align-items:center;justify-content:center;flex:1;min-height:140px;height:auto;border:2px ridge #77847b;border-radius:6px;background:repeating-linear-gradient(90deg,transparent 0 3px,#00000006 3px 4px),linear-gradient(155deg,#adb5ad,#7e8881 45%,#555e58);box-shadow:inset 2px 2px 5px #e5ece288,inset -3px -4px 9px #131d18a6,0 4px 8px #0008}
+#power-screen .zpower-status{position:absolute;left:7%;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:12px;color:#25332c;font:9px 'Courier New',monospace;letter-spacing:.09em}
+#power-screen .zpower-status span{display:flex;align-items:center;gap:8px}
+#power-screen .zpower-led{display:inline-block;width:9px;height:6px;border:1px solid #34453c;background:#111b17;box-shadow:inset 1px 1px 2px #000}
+#power-screen .zboot-power{position:relative;display:grid;place-items:center;width:clamp(94px,15vw,132px);height:clamp(94px,15vw,132px);padding:0;border-radius:50%;border:5px ridge #b6beb6;background:radial-gradient(circle at 32% 23%,#e0e6df,#939d96 40%,#525d56 78%,#252e28);box-shadow:0 7px 10px #101b15a8,inset 0 2px 3px #fff8;cursor:pointer;transition:transform .12s,box-shadow .12s}
+#power-screen .zboot-power:active{transform:translateY(4px) scale(.97);box-shadow:0 2px 4px #1119,inset 0 3px 9px #1118}
+#power-screen .zboot-power:focus-visible{outline:2px solid #b9f7ce;outline-offset:6px}
+#power-screen .zboot-power-symbol{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;color:#26342d}
+#power-screen .zboot-power-svg{width:46%;height:46%}
+#power-screen .zpower-reset{position:absolute;right:7%;top:50%;transform:translateY(-50%);width:29px;height:10px;border-radius:10px;border:2px inset #dce3da;background:#536057}
+#power-screen .zpower-vents{display:flex;align-items:center;justify-content:center;gap:9px;height:25px;flex-wrap:wrap;overflow:hidden}
+#power-screen .zpower-vents i{width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:#050908;box-shadow:inset 1px 1px 2px #000,1px 1px 1px #69766d}
+#power-screen .zpower-hint{position:absolute;bottom:7px;left:0;right:0;margin:0;text-align:center;font:8px 'Courier New',monospace;letter-spacing:.25em;color:#7d8980}
+#power-screen .zpower-screw{position:absolute;z-index:3;width:17px;height:17px;border-radius:50%;border:1px solid #0d1511;background:linear-gradient(145deg,#a5b0a5,#58665c 47%,#202c24 78%);box-shadow:inset 1px 1px 1px #d4ded2,1px 2px 3px #000}
+#power-screen .zpower-screw:after{content:"";position:absolute;left:3px;right:3px;top:7px;height:2px;background:#18251c;transform:rotate(-35deg);box-shadow:0 1px #b4c2b5}
+#power-screen .zpower-screw-a{top:10px;left:10px}#power-screen .zpower-screw-b{top:10px;right:10px}#power-screen .zpower-screw-c{bottom:10px;left:10px}#power-screen .zpower-screw-d{bottom:10px;right:10px}
+@media(max-width:650px){#power-screen{padding:14px}#power-screen .zpower-tower{width:min(95vw,440px);aspect-ratio:0.93/1;padding:30px 19px 27px;gap:18px}#power-screen .zpower-nameplate{flex-direction:column;gap:5px;align-items:flex-start}#power-screen .zpower-nameplate small{margin-left:0}#power-screen .zpower-console{min-height:170px}#power-screen .zboot-power{width:112px;height:112px}#power-screen .zpower-vents{height:35px}#power-screen .zpower-hint{bottom:10px}}
+@media(max-width:360px){#power-screen .zpower-tower{padding:26px 13px}#power-screen .zboot-power{width:88px;height:88px}#power-screen .zpower-status{left:4%;font-size:7px}#power-screen .zpower-reset{right:4%}}
+@media(prefers-reduced-motion:reduce){#power-screen .zboot-power{transition:none}}
