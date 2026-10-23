@@ -2475,75 +2475,33 @@
  100%{opacity:0}
 }
 
-/* ZebraOS subdued film / Windows 95 start-button.
-   Visual treatment ONLY: the existing startup action is not delayed. */
-#power-screen{
- isolation:isolate;
- background:#000;
-}
-#power-screen .zboot-backdrop-video{
- position:absolute;inset:0;display:block;
- width:100%;height:100%;object-fit:cover;object-position:center;
- z-index:0;pointer-events:none;background:#000;
- animation:zboot-film-gentle-reveal 3.3s ease-out both;
-}
-@keyframes zboot-film-gentle-reveal{
- from{opacity:0}
- to{opacity:1}
-}
-#power-screen .zboot-backdrop-dim{
- position:absolute;inset:0;z-index:1;
- pointer-events:none;background:rgba(0,0,0,.68);
-}
-/* Flat pixel bevels, not a round/glass/modern CTA. */
-#power-screen .zboot-power{
- position:relative;z-index:2;box-sizing:border-box;
- appearance:none;display:inline-flex;flex-direction:row;
- align-items:center;justify-content:center;gap:11px;
- width:186px;height:68px;padding:8px 15px;
- color:#121212;background:#c1c1c1;border-radius:0;
- border:3px solid;
- border-color:#f4f4f4 #383838 #383838 #f4f4f4;
- box-shadow:inset 1px 1px #fff,inset -1px -1px #888,
-             1px 2px 0 #060606,0 8px 24px rgba(0,0,0,.55);
- font-family:Tahoma,"MS Sans Serif",Verdana,Arial,sans-serif;
- font-weight:700;font-size:15px;letter-spacing:0;
- text-shadow:none;outline:none;
- transition:none;backdrop-filter:none;
- -webkit-tap-highlight-color:transparent;
-}
-#power-screen .zboot-power-symbol{
- display:flex;flex:0 0 32px;
- align-items:center;justify-content:center;
- width:32px;height:32px;color:#222;
- font-size:unset;line-height:normal;
-}
-#power-screen .zboot-power-symbol svg{
- display:block;width:32px;height:32px;image-rendering:pixelated;
-}
-#power-screen .zboot-power-label{
- font:700 15px/1 Tahoma,"MS Sans Serif",Verdana,Arial,sans-serif;
- color:#141414;letter-spacing:0;text-shadow:none;
-}
-#power-screen .zboot-power:hover{
- color:#000;background:#d3d3d3;
- border-color:#fff #383838 #383838 #fff;
- box-shadow:inset 1px 1px #fff,inset -1px -1px #8a8a8a,
-             1px 2px 0 #050505,0 8px 24px rgba(0,0,0,.55);
-}
-#power-screen .zboot-power:active{
- background:#b0b0b0;
- border-color:#414141 #eee #eee #414141;
- box-shadow:inset 1px 1px #808080,inset -1px -1px #ececec,
-             0 1px 0 #050505;
- padding-top:10px;padding-left:17px;
-}
-#power-screen .zboot-power:focus-visible{
- outline:1px dotted #191919;outline-offset:-9px;
-}
-@media(max-width:500px){
- #power-screen .zboot-power{width:180px;height:66px}
-}
-@media(prefers-reduced-motion:reduce){
- #power-screen .zboot-backdrop-video{animation-duration:.7s}
-}
+/* ZebraOS power screen — close-up physical PC facade, early 2000s. */
+#power-screen{isolation:isolate;background:radial-gradient(ellipse at 50% 42%,#181a1b 0%,#080909 48%,#010101 82%);perspective:900px}
+#power-screen.active{display:grid;place-items:center;padding:clamp(12px,3vh,28px)}
+.zpower-tower{position:relative;width:min(430px,92vw);height:min(690px,91dvh);min-height:520px;overflow:hidden;border:1px solid #090a0a;border-radius:6px 6px 16px 16px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.012) 0 1px,transparent 1px 4px),linear-gradient(100deg,#151718 0%,#292c2d 17%,#1a1c1d 49%,#2e3031 80%,#111314 100%);box-shadow:inset 3px 0 2px #4d505055,inset -4px 0 3px #000c,inset 0 2px 1px #5c5e5e66,0 25px 70px #000,0 0 0 4px #050606;font-family:"Courier New",monospace;color:#aeb0ae;transform:rotateX(.5deg)}
+.zpower-tower:after{content:"";position:absolute;inset:0;pointer-events:none;z-index:10;background:linear-gradient(108deg,rgba(255,255,255,.07),transparent 19%,transparent 70%,rgba(0,0,0,.18));mix-blend-mode:screen;opacity:.45}
+.zpower-screw{position:absolute;z-index:12;width:11px;height:11px;border-radius:50%;border:1px solid #060707;background:radial-gradient(circle at 35% 30%,#777,#272929 48%,#080909 78%);box-shadow:inset 1px 1px 1px #a9aaaa55,1px 1px 2px #000}
+.zpower-screw:after{content:"";position:absolute;left:2px;right:2px;top:4px;height:1px;background:#090a0a;transform:rotate(-20deg)}
+.zpower-screw-a{left:12px;top:12px}.zpower-screw-b{right:12px;top:12px}.zpower-screw-c{left:12px;bottom:12px}.zpower-screw-d{right:12px;bottom:12px}
+.zpower-nameplate{position:relative;margin:27px 30px 20px;height:62px;padding:10px 13px;border:2px inset #383b3b;background:linear-gradient(#101313,#080a0a);box-shadow:inset 0 0 12px #000,0 1px #4a4d4d55;letter-spacing:1.2px}
+.zpower-nameplate strong{display:block;color:#d4d6d3;font:bold 20px/19px Arial,sans-serif;letter-spacing:5px}.zpower-nameplate span{font-size:8px;color:#737776;letter-spacing:2px}.zpower-nameplate small{position:absolute;right:11px;bottom:9px;font-size:7px;color:#666a69}
+.zpower-drive{position:relative;height:76px;margin:0 28px 12px;border:3px ridge #343738;background:linear-gradient(#17191a,#0b0c0d 62%,#181a1b);box-shadow:inset 0 0 9px #000,0 2px 2px #0009}
+.zpower-drive-door{position:absolute;left:15px;right:15px;top:13px;height:30px;border:2px inset #292b2c;border-radius:2px;background:linear-gradient(#111314,#060707 58%,#151718)}
+.zpower-drive-mark{position:absolute;left:17px;bottom:8px;font-size:7px;letter-spacing:1px;color:#5f6362}.zpower-drive-led{position:absolute;right:50px;bottom:11px;width:5px;height:3px;background:#202421;border:1px solid #080909}.zpower-eject{position:absolute;right:16px;bottom:8px;width:24px;height:8px;border:2px outset #303334;border-radius:5px;background:#181a1b}
+.zpower-bay{height:66px;margin:0 28px;border:3px ridge #343738;background:linear-gradient(95deg,#17191a,#101213 60%,#1d1f20);box-shadow:inset 0 0 8px #0009,0 2px 2px #0008}
+.zpower-console{position:relative;height:164px;margin:22px 0 0;border-top:2px solid #454849;border-bottom:2px solid #090a0a;background:linear-gradient(105deg,#777a79 0%,#b0b1ad 18%,#8b8d8b 53%,#b5b5b0 79%,#626564 100%);box-shadow:inset 0 2px 1px #d6d7d499,inset 0 -3px 3px #393b3a}
+.zpower-console:before{content:"";position:absolute;left:50%;top:18px;transform:translateX(-50%);width:196px;height:112px;border-radius:48% 48% 42% 42%;border:2px groove #d0d1cc;background:linear-gradient(145deg,#bfc0bb,#777a78);box-shadow:inset 1px 1px 2px #ecece7,inset -2px -2px 3px #4447}
+.zpower-status{position:absolute;z-index:2;left:31px;top:64px;display:flex;flex-direction:column;gap:14px;font-size:7px;color:#252827}.zpower-status span{display:flex;align-items:center;gap:6px}.zpower-led{display:block;width:8px;height:5px;border:1px solid #292b2a;background:#292f2b;box-shadow:inset 0 0 2px #000}
+#power-screen .zboot-power{appearance:none;position:absolute;z-index:3;left:50%;top:42px;transform:translateX(-50%);display:grid;place-items:center;width:78px;height:78px;padding:0;border:5px outset #c9cac6;border-radius:50%;outline:none;background:radial-gradient(circle at 40% 34%,#e4e4df 0%,#a0a29f 35%,#555958 72%,#292b2b 100%);color:#3e4241;box-shadow:0 5px 7px #252827,inset 2px 2px 3px #fff9;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+#power-screen .zboot-power:hover,#power-screen .zboot-power:focus-visible{color:#1d201f;filter:brightness(1.08);outline:2px solid #ecece8;outline-offset:5px}
+#power-screen .zboot-power:active,#power-screen.powering-on .zboot-power{top:45px;border-style:inset;filter:brightness(.88);box-shadow:0 2px 2px #252827,inset 2px 3px 5px #2c2e2d99}
+#power-screen .zboot-power-symbol{display:grid;place-items:center;width:auto;height:auto;line-height:1;color:currentColor;flex:none}
+#power-screen .zboot-power-symbol .zboot-power-svg{display:block;width:35px;height:35px;color:currentColor;stroke:currentColor;overflow:visible;flex:none}
+.zpower-reset{position:absolute;z-index:2;right:34px;top:67px;width:22px;height:9px;border:2px inset #a8aaa6;border-radius:5px;background:#666967;box-shadow:1px 2px 2px #3d3f3e}
+.zpower-vents{display:grid;grid-template-columns:repeat(8,9px);gap:10px 18px;justify-content:center;margin:31px auto 0}.zpower-vents i{width:9px;height:9px;border-radius:50%;background:#030404;box-shadow:inset 1px 1px 2px #000,1px 1px 0 #4a4d4c55}
+.zpower-hint{position:absolute;left:0;right:0;bottom:18px;margin:0;text-align:center;color:#666a68;font-size:8px;letter-spacing:2.7px;animation:zpower-hint 2.4s steps(1,end) infinite}
+#power-screen.powering-on .zpower-led-main{background:#70ef8b;box-shadow:0 0 5px #54ff78,0 0 12px #30c957}#power-screen.powering-on .zpower-hint{visibility:hidden}
+@keyframes zpower-hint{0%,72%{opacity:.72}73%,100%{opacity:.25}}
+@media(max-width:700px){#power-screen.active{padding:12px 9px}.zpower-tower{width:min(420px,94vw);height:min(690px,89dvh);min-height:500px}.zpower-nameplate{margin:25px 24px 16px}.zpower-drive,.zpower-bay{margin-left:22px;margin-right:22px}.zpower-vents{gap:9px 15px;margin-top:26px}}
+@media(max-height:580px){.zpower-tower{min-height:0;height:94dvh}.zpower-nameplate{margin-top:20px;margin-bottom:12px;height:54px}.zpower-drive{height:63px}.zpower-bay{height:48px}.zpower-console{height:142px;margin-top:14px}.zpower-console:before{top:10px}.zpower-status{top:56px}.zpower-reset{top:59px}#power-screen .zboot-power{top:34px}#power-screen .zboot-power:active,#power-screen.powering-on .zboot-power{top:37px}.zpower-vents{margin-top:18px;gap:7px 15px}.zpower-hint{bottom:10px}}
+@media(prefers-reduced-motion:reduce){.zpower-hint{animation:none}}

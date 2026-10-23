@@ -218,7 +218,7 @@ document.querySelectorAll(".zboot-logo,.zboot-session-logo").forEach(function(im
   if(studioBootAssets.logo)img.src=studioBootAssets.logo;
 });
 bootAudio.preload="auto";sessionAudio.preload="auto";
-var bootTimer=0,sessionTimer=0,booting=false,sessionBooting=false,pendingSession=null;
+var bootTimer=0,powerTimer=0,sessionTimer=0,booting=false,sessionBooting=false,pendingSession=null;
 function playBootTrack(track){
   try {track.pause();track.currentTime=0;var p=track.play();if(p&&p.catch)p.catch(function(){});}catch(e){}
 }
@@ -230,9 +230,15 @@ function finishBoot(){
 function powerOn(){
   if(booting)return;
   booting=true;
-  show("boot-screen");
-  playBootTrack(bootAudio);
-  bootTimer=setTimeout(finishBoot,5200);
+  $("power-screen").classList.add("powering-on");
+  clearTimeout(powerTimer);
+  powerTimer=setTimeout(function(){
+    if(!booting)return;
+    $("power-screen").classList.remove("powering-on");
+    show("boot-screen");
+    playBootTrack(bootAudio);
+    bootTimer=setTimeout(finishBoot,5200);
+  },230);
 }
 function finishSessionBoot(){
   if(!sessionBooting)return;
@@ -263,7 +269,8 @@ function skipStartupKey(event){
 document.addEventListener("keydown",skipStartupKey,true);
 function stopBootSequences(){
   booting=false;sessionBooting=false;pendingSession=null;
-  clearTimeout(bootTimer);clearTimeout(sessionTimer);
+  clearTimeout(powerTimer);clearTimeout(bootTimer);clearTimeout(sessionTimer);
+  $("power-screen").classList.remove("powering-on");
   bootAudio.pause();sessionAudio.pause();
 }
 function login(){
