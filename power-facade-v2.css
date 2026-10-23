@@ -26,3 +26,69 @@
 @media(max-width:650px){#power-screen{padding:14px}#power-screen .zpower-tower{width:min(95vw,440px);aspect-ratio:0.93/1;padding:30px 19px 27px;gap:18px}#power-screen .zpower-nameplate{flex-direction:column;gap:5px;align-items:flex-start}#power-screen .zpower-nameplate small{margin-left:0}#power-screen .zpower-console{min-height:170px}#power-screen .zboot-power{width:112px;height:112px}#power-screen .zpower-vents{height:35px}#power-screen .zpower-hint{bottom:10px}}
 @media(max-width:360px){#power-screen .zpower-tower{padding:26px 13px}#power-screen .zboot-power{width:88px;height:88px}#power-screen .zpower-status{left:4%;font-size:7px}#power-screen .zpower-reset{right:4%}}
 @media(prefers-reduced-motion:reduce){#power-screen .zboot-power{transition:none}}
+
+
+/* V3: single standalone brushed-aluminium power module, no computer tower */
+#power-screen{background:#050505!important;overflow:hidden!important}
+#power-screen .zpower-tower{
+ width:min(92vw,790px)!important;height:auto!important;min-height:0!important;
+ aspect-ratio:2.65/1!important;padding:0!important;gap:0!important;
+ display:block!important;overflow:visible!important;
+ background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+#power-screen .zpower-nameplate,#power-screen .zpower-drive,
+#power-screen .zpower-bay,#power-screen .zpower-vents,#power-screen .zpower-hint{display:none!important}
+#power-screen .zpower-console{
+ position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+ min-height:0!important;box-sizing:border-box!important;
+ border:3px solid #67706b!important;border-radius:12px!important;
+ background:
+ radial-gradient(ellipse at 35% 12%,#ffffff35,transparent 52%),
+ repeating-linear-gradient(0deg,#ffffff09 0 1px,#00000006 1px 2px,#ffffff03 2px 4px),
+ linear-gradient(108deg,#a6aaa6 0%,#d2d4cf 24%,#9da39f 54%,#7f8883 83%,#b9bfba 100%)!important;
+ box-shadow:inset 0 2px 1px #f5f7f1,inset 0 -4px 7px #434c47,
+ inset 3px 0 4px #f1f5ed66,inset -4px 0 6px #28322b66,
+ 0 0 0 2px #1a211e,0 3px 0 #444b47,0 16px 35px #000c!important;
+}
+#power-screen .zpower-console:before{
+ content:"";pointer-events:none;position:absolute;inset:11px;border:1px solid #edf1e87a;
+ border-radius:6px;box-shadow:0 1px 1px #3e49418c,inset 0 1px 1px #333d354d;
+}
+#power-screen .zpower-console:after{
+ content:"";pointer-events:none;position:absolute;inset:0;border-radius:inherit;
+ background:repeating-linear-gradient(90deg,transparent 0 3px,#ffffff04 3px 4px);
+ opacity:.4;
+}
+#power-screen .zpower-screw{z-index:5!important;width:16px!important;height:16px!important;
+ background:linear-gradient(135deg,#e1e5dc,#838e86 43%,#404a43 75%,#aeb8af)!important;
+ border:1px solid #404a43!important;box-shadow:inset 1px 1px 1px #fff9,1px 2px 3px #0008!important}
+#power-screen .zpower-screw-a{top:13px!important;left:13px!important}
+#power-screen .zpower-screw-b{top:13px!important;right:13px!important}
+#power-screen .zpower-screw-c{bottom:13px!important;left:13px!important}
+#power-screen .zpower-screw-d{bottom:13px!important;right:13px!important}
+#power-screen .zpower-status{left:9%!important;gap:13px!important;z-index:2}
+#power-screen .zpower-reset{right:9%!important;z-index:2}
+#power-screen .zboot-power{
+ z-index:3!important;width:clamp(90px,17vw,146px)!important;
+ height:clamp(90px,17vw,146px)!important;
+ border:5px ridge #e2e6df!important;
+ background:radial-gradient(circle at 34% 20%,#f5f6f0,#b8bfba 32%,#8a948e 65%,#4b5750 100%)!important;
+ box-shadow:0 0 0 13px #747e7866,0 0 0 15px #e2e8df91,
+ 0 9px 14px #28352b8a,inset 0 2px 3px #fff!important;
+}
+#power-screen .zboot-power:active{transform:translateY(3px) scale(.97)!important;
+ box-shadow:0 0 0 13px #747e7866,0 0 0 15px #e2e8df91,0 2px 3px #1118,inset 0 3px 9px #1118!important}
+@media(max-width:650px){
+ #power-screen .zpower-tower{width:min(94vw,660px)!important;aspect-ratio:2.35/1!important}
+ #power-screen .zboot-power{width:clamp(70px,20vw,112px)!important;height:clamp(70px,20vw,112px)!important;
+ box-shadow:0 0 0 8px #747e7866,0 0 0 10px #e2e8df91,0 7px 10px #28352b8a,inset 0 2px 3px #fff!important}
+ #power-screen .zpower-status{left:8%!important;font-size:8px!important;gap:10px!important}
+ #power-screen .zpower-reset{right:8%!important}
+ #power-screen .zpower-screw{width:12px!important;height:12px!important}
+ #power-screen .zpower-screw:after{top:5px!important}
+}
+@media(max-width:360px){
+ #power-screen .zpower-status{left:7%!important;font-size:7px!important}
+ #power-screen .zpower-reset{right:7%!important}
+ #power-screen .zboot-power{width:70px!important;height:70px!important}
+}
