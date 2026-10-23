@@ -100,5 +100,5 @@ jobs:
           PY
           curl -fL --retry 2 --connect-timeout 12 --max-time 65 'https://www.zebratape2.net/assets/boot/StartPCcomp%20%281%29.mp4' -o /tmp/zt-original-start.mp4
           echo 'MOVIE_BYTES:' $(wc -c </tmp/zt-original-start.mp4)
-          ffprobe -v error -show_entries stream=codec_type,codec_name -of compact=p=0 /tmp/zt-original-start.mp4
+          python3 -c "from pathlib import Path; p=Path('/tmp/zt-original-start.mp4').read_bytes(); print('MOVIE_AUDIO_TRACK:',b'soun' in p,'AAC:',b'mp4a' in p); assert b'soun' in p, 'No embedded movie audio track'"
           python3 /tmp/test_zebra_fallback.py
