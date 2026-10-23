@@ -54,10 +54,22 @@ jobs:
               }""")
               print('STARTUP_VIDEO',json.dumps(vid,ensure_ascii=False),flush=True)
               assert vid, 'Startup video element not present'
-              assert vid['src'].split('?')[0].endswith('/assets/boot/StartPCcomp.mp4'), 'wrong source'
+              assert 'StartPCcomp%20%281%29.mp4' in vid['src'], 'wrong video: old compressed source'
               assert vid['muted'] and vid['autoplay'] and vid['loop'] and vid['playsInline'], 'autoplay or loop flags missing'
               assert vid['cover']=='cover' and vid['box'][0]>=390 and vid['box'][1]>=800, 'not fullscreen'
-              assert vid['ready']>=2 and vid['duration']>55, 'media not loaded'
+              assert vid['ready']>=2 and vid['duration']>50 and not vid['paused'], 'new video not autoplaying'
+              assert page.locator('#zboot-audio-btn').is_visible(), 'sound button invisible'
+              page.locator('#zboot-audio-btn').click(timeout=5000)
+              page.wait_for_timeout(350)
+              audio=page.evaluate("""() => {
+                const v=document.querySelector('#zboot-cinematic-video');
+                const b=document.querySelector('#zboot-audio-btn');
+                return {muted:v.muted,paused:v.paused,volume:v.volume,
+                   pressed:b.getAttribute('aria-pressed'),label:b.textContent.trim(),
+                   time:v.currentTime};
+              }""")
+              print('AUDIO_ENABLED',audio,flush=True)
+              assert not audio['muted'] and not audio['paused'] and audio['pressed']=='true', 'sound did not activate'
               page.locator('#power-btn').click(timeout=5000)
               page.wait_for_timeout(1000)
               fading=page.evaluate("""() => ({
@@ -66,6 +78,9 @@ jobs:
                 boot:document.querySelector('#boot-screen')?.className
               })""")
               print('DURING_FADE',fading,flush=True)
+              fade_volume=page.eval_on_selector('#zboot-cinematic-video','v => v.volume')
+              print('FADE_VOLUME',fade_volume,flush=True)
+              assert fade_volume < audio['volume'], 'audio volume did not fade'
               assert 'is-powering-on' in fading['power'] and 'active' in fading['power'], 'did not start cinematic fade'
               assert 'active' not in fading['boot'] and fading['overlay']>0, 'skipped fade'
               page.wait_for_timeout(1800)
@@ -83,4 +98,7 @@ jobs:
               assert state['scriptCount']>5 and state['appScript'], 'JS assets missing'
               assert not errors, 'Unexpected page errors'
           PY
+          curl -fL --retry 2 --connect-timeout 12 --max-time 65 'https://www.zebratape2.net/assets/boot/StartPCcomp%20%281%29.mp4' -o /tmp/zt-original-start.mp4
+          echo 'MOVIE_BYTES:' $(wc -c </tmp/zt-original-start.mp4)
+          ffprobe -v error -show_entries stream=codec_type,codec_name -of compact=p=0 /tmp/zt-original-start.mp4
           python3 /tmp/test_zebra_fallback.py
