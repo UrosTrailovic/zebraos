@@ -26,14 +26,20 @@
   var blinking=false,timer=0,trigger=0,opening=false;
   function reset(){blinking=false;clearTimeout(timer);clearTimeout(trigger);powerLed.src=url("pcoff.webp");netLed.src=url("pcoff.webp");powerImage.src=url("btnpcoff.webp");button.disabled=false;}
   function tick(){if(!blinking||!root.classList.contains("active"))return;var lit=Math.random()>.43;netLed.src=url(lit?"pcon.webp":"pcoff.webp");var gap=lit?60+Math.random()*160:100+Math.random()*570;if(Math.random()<.18)gap+=800+Math.random()*600;timer=setTimeout(tick,gap);}
+  function startBlink(){if(blinking)return;blinking=true;tick();}
   button.onclick=function(){
     if(button.disabled)return;
     button.disabled=true;powerImage.src=url("btnpcon.webp");powerLed.src=url("pcon.webp");
-    blinking=true;tick();
+    startBlink();
     trigger=setTimeout(function(){if(root.classList.contains("active")&&typeof originalPower==="function")originalPower.call(button);},1050);
   };
-  var obs=new MutationObserver(function(){if(!root.classList.contains("active"))reset();});
+  var obs=new MutationObserver(function(){
+    if(root.classList.contains("active"))startBlink();
+    else reset();
+  });
   obs.observe(root,{attributes:true,attributeFilter:["class"]});
+  // INTERNET clignote dès que la machine est visible, même avant POWER.
+  if(root.classList.contains("active"))startBlink();
   function playOpenSound(){
     try{
       if(localStorage.getItem("zebra.sfx.muted")==="1")return;
