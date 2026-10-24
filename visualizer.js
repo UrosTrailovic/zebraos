@@ -126,7 +126,9 @@ function follow(value,target,dt,attack,release){
 function makeMotion(){
   return {bands:new Float32Array(48),levels:new Float32Array(48),
     peaks:new Float32Array(48),holds:new Float32Array(48),clock:0,tunnelClock:0,
-    bass:0,mids:0,treble:0,level:0,hit:0,previousBass:0,bed:0};
+    bass:0,mids:0,treble:0,level:0,hit:0,previousBass:0,bed:0,
+    fx:{kickFast:0,kickSlow:0,snareFast:0,snareSlow:0,highFast:0,highSlow:0,
+        kickPrev:0,snarePrev:0,highPrev:0,kick:0,snare:0,rise:0,air:0,velocity:0}};
 }
 function readMotion(m,node,playing,dt){
   var rms=0;
@@ -154,6 +156,40 @@ function readMotion(m,node,playing,dt){
   // Pauses freeze motion instead of letting the effect run on its own.
   m.clock+=dt*(.12*m.level+.3*m.mids+.2*m.bass);
   return gate>.02;
+}
+/* Frequency-sensitive tunnel response only. Kick, snare and treble each
+ * compare a quick envelope against their slower local baseline. The analyser
+ * and readMotion() remain unchanged for Spectrum 2000 / Oscilloscope. */
+function averageVizBand(a,first,last){
+  var sum=0;for(var n=first;n<last;n++)sum+=a[n];
+  return sum/(last-first);
+}
+function updateTunnelDynamics(m,playing,dt){
+  var f=m.fx,gate=playing?1:0;
+  var kick=averageVizBand(m.bands,0,12)*gate;
+  var snare=averageVizBand(m.bands,14,33)*gate;
+  var high=averageVizBand(m.bands,33,48)*gate;
+  f.kickFast=follow(f.kickFast,kick,dt,.019,.09);
+  f.kickSlow=follow(f.kickSlow,kick,dt,.24,.28);
+  f.snareFast=follow(f.snareFast,snare,dt,.016,.082);
+  f.snareSlow=follow(f.snareSlow,snare,dt,.19,.23);
+  f.highFast=follow(f.highFast,high,dt,.027,.12);
+  f.highSlow=follow(f.highSlow,high,dt,.31,.35);
+  var dKick=Math.max(0,kick-f.kickPrev);
+  var dSnare=Math.max(0,snare-f.snarePrev);
+  var dHigh=Math.max(0,high-f.highPrev);
+  f.kickPrev=kick;f.snarePrev=snare;f.highPrev=high;
+  var kickHit=playing?rounded(Math.max(0,f.kickFast-f.kickSlow-.012)*5.4+dKick*2.3,0,1):0;
+  var snareHit=playing?rounded(Math.max(0,f.snareFast-f.snareSlow-.01)*5.9+dSnare*2.6,0,1):0;
+  var melodyHit=playing?rounded(Math.max(0,f.highFast-f.highSlow-.015)*3.6+dHigh*2.1,0,1):0;
+  f.kick=Math.max(kickHit,f.kick*Math.exp(-dt/.17));
+  f.snare=Math.max(snareHit,f.snare*Math.exp(-dt/.15));
+  f.rise=Math.max(melodyHit,f.rise*Math.exp(-dt/.23));
+  f.air=follow(f.air,playing?rounded(high*1.45,0,1):0,dt,.055,.20);
+  var target=playing?.14+m.level*.44+m.bass*.75+f.kick*2.25+
+                     f.snare*.95+f.rise*.85+f.air*.45:0;
+  f.velocity=follow(f.velocity,target,dt,.032,.20);
+  if(playing)m.tunnelClock+=dt*f.velocity;
 }
 function drawSpectrum(ctx,w,h,m){
   var margin=w*.055,base=h*.84,usable=w-margin*2;
@@ -236,53 +272,68 @@ function glowStroke(ctx,color,width,blur){
  * Caps keep multiple crossing rings from overexposing the frame. */
 function phosphorLine(ctx,hue,width,alpha,pulse){
   var a=rounded(alpha,0,1),hit=rounded(pulse,0,1);
-  ctx.save();
-  ctx.globalCompositeOperation="lighter";
-  // 1. Wide colored light spill — the part missing from the old vector lines.
+  ctx.save();ctx.globalCompositeOperation="lighter";
   ctx.shadowColor="hsla("+hue+",100%,62%,1)";
-  ctx.shadowBlur=(lowPower?13:23)+hit*(lowPower?2:5);
-  ctx.lineWidth=width*4.2;
-  ctx.strokeStyle="hsla("+hue+",100%,53%,"+rounded(.12+a*.16,0,.31)+")";
-  ctx.stroke();
-  // 2. Brighter green/cyan/violet tube, with compact bloom.
-  ctx.shadowColor="hsla("+hue+",100%,68%,1)";
-  ctx.shadowBlur=(lowPower?6:12)+hit*(lowPower?1:3);
-  ctx.lineWidth=width*2.1;
-  ctx.strokeStyle="hsla("+hue+",100%,70%,"+rounded(.31+a*.28,0,.64)+")";
-  ctx.stroke();
-  // 3. A razor-thin pale phosphor core (colored, not pure white).
-  ctx.shadowColor="hsla("+hue+",100%,84%,1)";
-  ctx.shadowBlur=lowPower?3:5;
-  ctx.lineWidth=Math.max(.8,width*.8);
-  ctx.strokeStyle="hsla("+hue+",96%,84%,"+rounded(.49+a*.29+hit*.07,0,.82)+")";
-  ctx.stroke();
+  ctx.shadowBlur=(lowPower?12:19)+hit*(lowPower?2:4);
+  ctx.lineWidth=width*2.75;
+  ctx.strokeStyle="hsla("+hue+",100%,54%,"+rounded(.15+a*.17,0,.36)+")";ctx.stroke();
+  ctx.shadowColor="hsla("+hue+",100%,70%,1)";
+  ctx.shadowBlur=(lowPower?6:11)+hit*2;
+  ctx.lineWidth=width*1.65;
+  ctx.strokeStyle="hsla("+hue+",100%,73%,"+rounded(.38+a*.25,0,.7)+")";ctx.stroke();
+  ctx.shadowColor="hsla("+hue+",100%,86%,1)";
+  ctx.shadowBlur=lowPower?2:4;
+  ctx.lineWidth=Math.max(.7,width*.78);
+  ctx.strokeStyle="hsla("+hue+",96%,87%,"+rounded(.59+a*.27+hit*.08,0,.9)+")";ctx.stroke();
   ctx.restore();
 }
 function drawTunnel(ctx,w,h,m){
-  var clock=m.tunnelClock,cx=w/2,cy=h/2,extent=Math.hypot(w,h)*.65;
-  ctx.save();ctx.translate(cx,cy);
+  var clock=m.tunnelClock,cx=w/2,cy=h/2,extent=Math.hypot(w,h)*.65,f=m.fx;
+  ctx.save();
+  ctx.translate(cx+Math.sin(clock*12)*f.kick*2.1,
+                cy+Math.cos(clock*15)*f.kick*1.4);
   var rings=lowPower?18:26,points=64;
-  // A continuous depth phase: no phase jumps when a kick hits.
   for(var n=rings-1;n>=0;n--){
     var z=(n/rings+clock*.26)%1;
-    var radius=9+z*z*extent;
-    var twist=clock*.48+z*.65;
+    // Kick: physical tunnel pressure. Snare: very brief geometric twitch.
+    var radius=(9+z*z*extent)*(1+f.kick*.18);
+    var twist=clock*.48+z*.65+f.snare*.18*Math.sin(n*.7+clock*4);
     ctx.beginPath();
     for(var j=0;j<=points;j++){
       var angle=j/points*TAU;
       var band=m.levels[Math.floor(j/points*47)];
-      var shape=1+.08*Math.cos(angle*6+twist)+band*.13+m.hit*.035;
+      var snareRipple=f.snare*.035*Math.sin(angle*9+clock*5+n*.42);
+      var airRipple=f.rise*.025*Math.cos(angle*12+clock*3+n*.2);
+      var shape=1+.08*Math.cos(angle*6+twist)+band*.13+
+                m.hit*.035+snareRipple+airRipple;
       var x=Math.cos(angle+twist)*radius*shape,y=Math.sin(angle+twist)*radius*shape;
       if(j===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
     }
     var hue=178+z*100+Math.sin(clock*.3)*22;
-    var alpha=(.19+.73*z)*(.60+m.level*.50);
-    phosphorLine(ctx,hue,.7+z*1.2+m.hit*.4,alpha*(1+m.hit*.12),m.hit*.75+m.bass*.4);
+    var alpha=(.19+.73*z)*(.62+m.level*.47+f.air*.19+f.snare*.14+f.rise*.22);
+    // A thinner tube with a bright colored phosphor core.
+    var thin=.55+z*.77+f.kick*.11;
+    phosphorLine(ctx,hue,thin,alpha,rounded(f.kick*.65+f.snare*.45+f.rise*.34,0,1));
+    // High notes and snares briefly excite pixels ON the existing rings.
+    if(n%4===0&&(f.snare+f.rise)>.13){
+      var ang=clock*1.4+n*2.399963;
+      var px=Math.cos(ang+twist)*radius;
+      var py=Math.sin(ang+twist)*radius;
+      var size=1.2+f.snare*1.5+f.rise*.9;
+      ctx.shadowColor="#b1ffe1";ctx.shadowBlur=lowPower?2:6;
+      ctx.fillStyle="rgba(181,255,229,"+
+        rounded((f.snare+f.rise)*.44,0,.72)+")";
+      ctx.fillRect(px-size*.5,py-size*.5,size,size);
+      ctx.shadowBlur=0;
+    }
   }
   ctx.shadowBlur=0;
-  var core=ctx.createRadialGradient(0,0,0,0,0,32+m.bass*45+m.hit*28);
-  core.addColorStop(0,"rgba(177,255,238,"+(.1+m.hit*.7)+")");core.addColorStop(1,"rgba(45,101,255,0)");
-  ctx.fillStyle=core;circle(ctx,0,0,32+m.bass*45+m.hit*28);ctx.fill();
+  var coreRadius=32+m.bass*45+m.hit*28+f.kick*46;
+  var core=ctx.createRadialGradient(0,0,0,0,0,coreRadius);
+  core.addColorStop(0,"rgba(177,255,238,"+
+    rounded(.08+m.hit*.35+f.kick*.25+f.snare*.10,0,.7)+")");
+  core.addColorStop(1,"rgba(45,101,255,0)");
+  ctx.fillStyle=core;circle(ctx,0,0,coreRadius);ctx.fill();
   ctx.restore();
 }
 function makeStars(){
@@ -339,6 +390,8 @@ function mount(host,media,options){
   var canvas=element("canvas","zviz-canvas");
   canvas.setAttribute("aria-label","Visualisation audio animée de ZebraAMP");
   stage.appendChild(canvas);
+  var crt=element("div","zviz-crt");crt.setAttribute("aria-hidden","true");
+  stage.appendChild(crt);
   var overlay=element("div","zviz-overlay");
   overlay.appendChild(element("span","zviz-no-signal","AUCUN SIGNAL — LANCE UN MORCEAU DANS ZEBRAAMP"));
   stage.appendChild(overlay);
@@ -374,6 +427,7 @@ function mount(host,media,options){
     modeText.textContent=(mode+1)+"/"+presets.length+"  "+presets[mode][0];
     back.title="Mode précédent";next.title="Mode suivant";
     zoomPanel.hidden=mode!==1;
+    crt.hidden=mode<2;
     saveMode(mode);
   }
   back.onclick=function(){mode=(mode+presets.length-1)%presets.length;updatePreset();};
@@ -465,11 +519,7 @@ function mount(host,media,options){
     var mids=linked?energy(spectrum,20,170):0;
     var treble=linked?energy(spectrum,170,500):0;
     var sounding=playing&&hasSignal;
-    if(mode===2&&sounding){
-      // Audio-integrated travel only for Tunnel; Scope/Spectrum untouched.
-      motion.tunnelClock+=dt/1000*(.20*motion.level+.55*motion.mids+
-                                   .58*motion.bass+1.25*motion.hit);
-    }
+    if(mode===2)updateTunnelDynamics(motion,sounding,dt/1000);
     if(mode>=2&&reactiveEngine&&reactor)reactiveEngine.update(reactor,motion,sounding,dt/1000);
     overlay.style.opacity=sounding?"0":"1";
     led.classList.toggle("pulsing",sounding);

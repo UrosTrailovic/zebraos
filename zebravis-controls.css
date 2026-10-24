@@ -40,3 +40,37 @@
  .zviz-footer{display:none}.zviz-transport{padding-top:4px}.zviz-track{min-height:38px}
  .zviz-zoom{padding-top:1px;padding-bottom:1px}
 }
+
+
+/* ZebraVIS glass CRT layer: ONLY Tunnel & Hyperdrive; static GPU-friendly
+ * gradients, no full-frame canvas blur, animated noise or large repaints. */
+.zviz-stage{isolation:isolate}
+.zviz-crt{
+  position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;
+  border-radius:5px;
+  background:repeating-linear-gradient(to bottom,
+    rgba(0,0,0,.055) 0px,rgba(0,0,0,.055) 1px,
+    transparent 1px,transparent 4px);
+  box-shadow:inset 0 0 24px 6px rgba(0,1,5,.24),
+             inset 0 0 92px 19px rgba(0,1,7,.16);
+}
+.zviz-crt[hidden]{display:none!important}
+.zviz-crt::before,.zviz-crt::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+}
+.zviz-crt::before{
+  background:repeating-linear-gradient(to right,
+    rgba(230,69,89,.055) 0px,rgba(230,69,89,.055) 1px,
+    rgba(39,209,140,.028) 1px,rgba(39,209,140,.028) 2px,
+    rgba(85,121,244,.045) 2px,rgba(85,121,244,.045) 3px);
+  opacity:.4;
+}
+.zviz-crt::after{
+  background:linear-gradient(158deg,rgba(173,245,224,.075),transparent 23%,
+    transparent 76%,rgba(42,86,91,.028)),
+    radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(0,1,8,.20) 100%);
+}
+@media(max-width:700px){
+ .zviz-crt{box-shadow:inset 0 0 16px 3px rgba(0,1,6,.17),
+                       inset 0 0 45px 9px rgba(0,1,7,.12)}
+}
