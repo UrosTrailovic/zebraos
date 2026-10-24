@@ -12,6 +12,19 @@
   background-size:112px 112px;
   background-repeat:repeat;
   padding:clamp(14px,3vw,40px);overflow:hidden;
+  /* Suppress the blue mobile browser tap flash on the clickable plastic.
+     Selection and double-tap gestures must not obscure the boot texture. */
+  -webkit-tap-highlight-color:transparent;
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;user-select:none;
+  touch-action:manipulation;
+}
+#power-screen.zp3-ready, #power-screen.zp3-ready *{
+  -webkit-tap-highlight-color:transparent;
+}
+#power-screen.zp3-ready:focus:not(:focus-visible){outline:none;}
+#power-screen.zp3-ready:focus-visible{
+  outline:2px solid #8fae9d;outline-offset:-2px;
 }
 #power-screen .zp3-machine {
   position:relative;isolation:isolate;
