@@ -1,0 +1,21 @@
+/* ZebraOS wallpaper customization: classic UI and immediate preview. */
+.wallpaper-color-group{display:flex;flex-direction:column;gap:7px;padding:10px;border:1px solid #a9b0ad;background:#e2e7e3}
+.wallpaper-color-group[hidden]{display:none!important}
+.wallpaper-color-line{display:flex;align-items:center;gap:12px;min-height:38px}
+.wallpaper-color-picker{display:block;flex:none;width:72px;height:38px;padding:3px;border:2px inset #f2f2f2;background:#fff;cursor:pointer}
+.wallpaper-color-picker:focus-visible{outline:2px solid #1c4352;outline-offset:2px}
+.wallpaper-color-value{font:12px "Courier New",monospace;color:#243436}
+.wallpaper-signature-settings{min-width:0;margin:0 0 16px;padding:12px;display:flex;flex-direction:column;gap:9px;border:1px solid #aab2b1;background:#e2e7e3}
+.wallpaper-signature-settings legend{font:bold 12px Tahoma,Arial,sans-serif;padding:0 6px}
+.wallpaper-signature-field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.wallpaper-signature-input{box-sizing:border-box;width:100%;height:36px;min-width:0;padding:6px 8px;border:2px inset #f4f4f4;background:#fff;color:#202020;font:13px Tahoma,Arial,sans-serif}
+.wallpaper-signature-input:focus-visible,.wallpaper-font-select:focus-visible{outline:2px solid #1c4352}
+.wallpaper-font-select{width:100%}
+.wallpaper-signature-settings>.classic-button{align-self:flex-start;white-space:normal}
+.wallpaper-preview .wallpaper-preview-label{position:absolute;right:5%;bottom:11%;max-width:90%;z-index:2;font:bold 14px Tahoma,Arial,sans-serif;letter-spacing:1px;color:#e2e7e1de;text-shadow:1px 1px #172b31;text-align:right;overflow-wrap:anywhere;pointer-events:none}
+.wallpaper-preview .wallpaper-preview-title{display:block}
+.wallpaper-preview .wallpaper-preview-sub{display:block;font-size:9px;letter-spacing:.5px;margin-top:3px}
+.wallpaper-preview .wallpaper-preview-label[hidden]{display:none}
+#wallpaper .wallpaper-label[hidden]{display:none!important}
+#wallpaper .wallpaper-label{max-width:90%;overflow-wrap:anywhere}
+@media(max-width:700px){.wallpaper-color-picker{width:80px;height:44px}.wallpaper-color-line{min-height:44px}}
