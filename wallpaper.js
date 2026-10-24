@@ -9,6 +9,12 @@ var modes=[
   ["tile","Vignette"],["center","Centrer"],["span","Étendre"]
 ];
 var accounts=["visitor","zebra","admin","daniel"];
+var labelFonts={
+ tahoma:"Tahoma, Arial, sans-serif", arial:"Arial, Helvetica, sans-serif",
+ verdana:"Verdana, Geneva, sans-serif", trebuchet:"'Trebuchet MS', Arial, sans-serif",
+ courier:"'Courier New', Courier, monospace", georgia:"Georgia, serif",
+ times:"'Times New Roman', Times, serif"
+};
 var dbPromise=null,currentSession=null,applyToken=0,refreshGallery=null,selectedItem=null;
 // Aucun AVIF requis : le PNG existant s'affiche immédiatement.
  // Si une version WebP existe, elle prend le relais sans écran vide.
@@ -41,7 +47,7 @@ function el(tag,cls,label){
 }
 function key(name){return "zebra.wallpaper.v2."+name;}
 function read(name){
-  var state={imageId:null,mode:"fill",posX:50,posY:50};
+  var state={imageId:null,mode:"fill",posX:50,posY:50,bgColor:"#172029",labelTitle:"ZEBRA TAPE 2",labelSub:"STUDIO // 2026",labelFont:"tahoma"};
   try{
     var saved=JSON.parse(localStorage.getItem(key(name))||"null");
     if(saved&&typeof saved==="object"){
@@ -49,6 +55,10 @@ function read(name){
       if(modes.some(function(m){return m[0]===saved.mode}))state.mode=saved.mode;
       if(Number.isFinite(saved.posX))state.posX=Math.max(0,Math.min(100,saved.posX));
       if(Number.isFinite(saved.posY))state.posY=Math.max(0,Math.min(100,saved.posY));
+       if(typeof saved.bgColor==="string"&&/^#[0-9a-fA-F]{6}$/.test(saved.bgColor))state.bgColor=saved.bgColor.toLowerCase();
+       if(typeof saved.labelTitle==="string")state.labelTitle=saved.labelTitle.slice(0,90);
+       if(typeof saved.labelSub==="string")state.labelSub=saved.labelSub.slice(0,90);
+       if(typeof saved.labelFont==="string"&&Object.prototype.hasOwnProperty.call(labelFonts,saved.labelFont))state.labelFont=saved.labelFont;
     }
   }catch(e){}
   return state;
@@ -96,7 +106,7 @@ function loadOne(id){
   if(cache[id])return Promise.resolve(cache[id]);
   return query("get",id).then(function(item){if(item)cache[id]=item;return item;});
 }
-function paint(target,account,data,mode,posX,posY){
+function paint(target,account,data,mode,posX,posY,bgColor){
   if(target.id==="wallpaper")target.className="wallpaper wallpaper-"+account;
   else target.className="wallpaper-preview wallpaper-"+account;
   target.style.backgroundImage="";
@@ -106,7 +116,7 @@ function paint(target,account,data,mode,posX,posY){
   target.style.backgroundColor="";
   if(!data)return;
   target.style.backgroundImage="url("+JSON.stringify(data)+")";
-  target.style.backgroundColor="#172029";
+  target.style.backgroundColor=/^#[0-9a-fA-F]{6}$/.test(bgColor||"")?bgColor:"#172029";
   var settings={
     fill:["cover","center","no-repeat"],
     fit:["contain","center","no-repeat"],
@@ -120,24 +130,48 @@ function paint(target,account,data,mode,posX,posY){
   target.style.backgroundPosition=(mode==="tile"?"left top":((posX==null?50:posX)+"% "+(posY==null?50:posY)+"%"));
   target.style.backgroundRepeat=opts[2];
 }
+function updateLabel(cfg){
+ var label=document.querySelector("#wallpaper .wallpaper-label");
+ if(label){
+  var subtitle=label.querySelector("span");
+  if(!subtitle){subtitle=document.createElement("span");label.appendChild(subtitle);}
+  var titleNode=label.firstChild;
+  if(!titleNode||titleNode.nodeType!==3){titleNode=document.createTextNode("");label.insertBefore(titleNode,label.firstChild);}
+  titleNode.nodeValue=cfg.labelTitle+" ";
+  subtitle.textContent=cfg.labelSub;
+  label.style.fontFamily=labelFonts[cfg.labelFont]||labelFonts.tahoma;
+  subtitle.style.fontFamily=labelFonts[cfg.labelFont]||labelFonts.tahoma;
+  label.hidden=!cfg.labelTitle&&!cfg.labelSub;
+ }
+ var preview=document.getElementById("wallpaper-preview-label");
+ if(preview){
+  var a=preview.querySelector(".wallpaper-preview-title"),b=preview.querySelector(".wallpaper-preview-sub");
+  if(a)a.textContent=cfg.labelTitle;
+  if(b)b.textContent=cfg.labelSub;
+  preview.style.fontFamily=labelFonts[cfg.labelFont]||labelFonts.tahoma;
+  if(b)b.style.fontFamily=labelFonts[cfg.labelFont]||labelFonts.tahoma;
+  preview.hidden=!cfg.labelTitle&&!cfg.labelSub;
+ }
+}
 function apply(name){
   if(accounts.indexOf(name)<0)return;
   currentSession=name;
   var token=++applyToken;
   var cfg=read(name),wall=document.getElementById("wallpaper");
   if(!wall)return;
-  paint(wall,name,builtIn(name),cfg.mode,cfg.posX,cfg.posY);
+  updateLabel(cfg);
+  paint(wall,name,builtIn(name),cfg.mode,cfg.posX,cfg.posY,cfg.bgColor);
   if(name==="zebra"&&!cfg.imageId){
     checkWebp().then(function(available){
       if(available&&token===applyToken&&currentSession==="zebra"&&!read(name).imageId)
-        paint(wall,name,builtIn(name),read(name).mode,read(name).posX,read(name).posY);
+        (function(fresh){paint(wall,name,builtIn(name),fresh.mode,fresh.posX,fresh.posY,fresh.bgColor);})(read(name));
     });
   }
   if(!cfg.imageId)return;
   loadOne(cfg.imageId).then(function(item){
     if(token!==applyToken||currentSession!==name)return;
-    if(item&&item.data)paint(wall,name,item.data,cfg.mode,cfg.posX,cfg.posY);
-    else {cfg.imageId=null;save(name,cfg);paint(wall,name,builtIn(name),cfg.mode);}
+    if(item&&item.data){var fresh=read(name);paint(wall,name,item.data,fresh.mode,fresh.posX,fresh.posY,fresh.bgColor);}
+    else {cfg.imageId=null;save(name,cfg);paint(wall,name,builtIn(name),cfg.mode,cfg.posX,cfg.posY,cfg.bgColor);}
   }).catch(function(){
     if(token===applyToken)announce("Impossible de retrouver le fond d'écran enregistré.",true);
   });
@@ -164,7 +198,7 @@ function setMode(mode){
 }
 function previewImage(data,mode){
   var preview=document.getElementById("wallpaper-preview");
-  if(preview&&currentSession){var cfg=read(currentSession);paint(preview,currentSession,data,mode,cfg.posX,cfg.posY);}
+  if(preview&&currentSession){var cfg=read(currentSession);paint(preview,currentSession,data,mode,cfg.posX,cfg.posY,cfg.bgColor);updateLabel(cfg);}
 }
 function showGallery(target){
   if(!target||!target.isConnected||!currentSession)return;
@@ -295,6 +329,11 @@ function mount(parent){
   var preview=el("div","wallpaper-preview wallpaper-"+currentSession);
   preview.id="wallpaper-preview";
   preview.appendChild(el("span","wallpaper-preview-sticker","ZebraOS // "+currentSession.toUpperCase()));
+  var previewLabel=el("div","wallpaper-preview-label");
+  previewLabel.id="wallpaper-preview-label";
+  previewLabel.appendChild(el("span","wallpaper-preview-title"));
+  previewLabel.appendChild(el("span","wallpaper-preview-sub"));
+  preview.appendChild(previewLabel);
   stage.appendChild(preview);
   var controls=el("div","wallpaper-controls");
   controls.appendChild(el("label","wallpaper-label-setting","Choisir un ajustement"));
@@ -305,8 +344,26 @@ function mount(parent){
     var option=el("option","",mode[1]);option.value=mode[0];select.appendChild(option);
   });
   select.value=cfg.mode;
-  select.onchange=function(){setMode(select.value);};
+  select.onchange=function(){setMode(select.value);syncColorVisibility();};
   controls.appendChild(select);
+  var colorGroup=el("div","wallpaper-color-group");
+  colorGroup.appendChild(el("label","wallpaper-label-setting","Couleur derrière l’image"));
+  var colorLine=el("div","wallpaper-color-line");
+  var colorInput=el("input","wallpaper-color-picker");
+  colorInput.type="color";colorInput.id="wallpaper-bg-color";colorInput.value=cfg.bgColor;
+  colorInput.setAttribute("aria-label","Choisir la couleur autour de l’image");
+  var colorValue=el("output","wallpaper-color-value",cfg.bgColor.toUpperCase());
+  colorInput.oninput=function(){
+    var state=read(currentSession);state.bgColor=colorInput.value;
+    save(currentSession,state);colorValue.textContent=state.bgColor.toUpperCase();
+    apply(currentSession);previewImage(selectedItem&&selectedItem.data||builtIn(currentSession),state.mode);
+  };
+  colorLine.appendChild(colorInput);colorLine.appendChild(colorValue);
+  colorGroup.appendChild(colorLine);
+  colorGroup.appendChild(el("p","wallpaper-hint","Cette couleur remplit l’espace libre autour de l’image."));
+  controls.appendChild(colorGroup);
+  function syncColorVisibility(){colorGroup.hidden=!["fit","center","tile"].includes(select.value);}
+  syncColorVisibility();
   var positionGroup=el("div","wallpaper-position-group");
   positionGroup.appendChild(el("span","wallpaper-label-setting","Position de l’image"));
   [["posX","Horizontal", "↔"],["posY","Vertical","↕"]].forEach(function(spec){
@@ -323,6 +380,33 @@ function mount(parent){
   controls.appendChild(el("p","wallpaper-hint","« Étendre » correspond à l'affichage sur plusieurs moniteurs. Sur ce bureau unique, il utilise Remplir."));
   stage.appendChild(controls);
   parent.appendChild(stage);
+  var signature=el("fieldset","wallpaper-signature-settings");
+  signature.appendChild(el("legend","","Texte sur le bureau"));
+  signature.appendChild(el("p","wallpaper-hint","Personnalisez le marquage en bas à droite du bureau."));
+  function signatureField(caption,key,maxLength){
+    var line=el("label","wallpaper-signature-field");
+    line.appendChild(el("span","wallpaper-label-setting",caption));
+    var input=el("input","wallpaper-signature-input");
+    input.type="text";input.maxLength=maxLength;input.value=cfg[key];input.autocomplete="off";
+    input.oninput=function(){var state=read(currentSession);state[key]=input.value;save(currentSession,state);updateLabel(state);};
+    line.appendChild(input);signature.appendChild(line);
+  }
+  signatureField("Texte principal","labelTitle",90);
+  signatureField("Sous-texte","labelSub",90);
+  var fontLine=el("label","wallpaper-signature-field");
+  fontLine.appendChild(el("span","wallpaper-label-setting","Police de caractères"));
+  var fontSelect=el("select","wallpaper-mode wallpaper-font-select");
+  [["tahoma","Tahoma"],["arial","Arial"],["verdana","Verdana"],["trebuchet","Trebuchet MS"],["courier","Courier New"],["georgia","Georgia"],["times","Times New Roman"]].forEach(function(spec){
+    var opt=el("option","",spec[1]);opt.value=spec[0];fontSelect.appendChild(opt);
+  });
+  fontSelect.value=cfg.labelFont;
+  fontSelect.onchange=function(){var state=read(currentSession);state.labelFont=fontSelect.value;save(currentSession,state);updateLabel(state);};
+  fontLine.appendChild(fontSelect);signature.appendChild(fontLine);
+  var restore=el("button","classic-button","Rétablir le texte d’origine");
+  restore.type="button";
+  restore.onclick=function(){var state=read(currentSession);state.labelTitle="ZEBRA TAPE 2";state.labelSub="STUDIO // 2026";state.labelFont="tahoma";save(currentSession,state);mount(parent);updateLabel(state);};
+  signature.appendChild(restore);parent.appendChild(signature);
+  updateLabel(cfg);
 
   var shelf=el("div","wallpaper-section-head");
   shelf.appendChild(el("h4","", "Images récentes"));
