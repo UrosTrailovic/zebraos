@@ -328,6 +328,10 @@ function mount(host,media,options){
   var ctx=canvas.getContext("2d",{alpha:false});
   if(!ctx){host.appendChild(element("p","github-drive-error","Canvas 2D non disponible sur ce navigateur."));return;}
   function updatePreset(){
+    // No old tunnel sparks when returning from another visualizer.
+    if(mode!==2&&reactor&&reactor.tunnelFx){
+      reactor.tunnelFx.sparks.length=0;reactor.tunnelFx.credit=0;
+    }
     modeText.textContent=(mode+1)+"/"+presets.length+"  "+presets[mode][0];
     back.title="Mode précédent";next.title="Mode suivant";
     zoomPanel.hidden=mode!==1;
@@ -428,7 +432,7 @@ function mount(host,media,options){
     if(mode===0)drawSpectrum(ctx,w,h,motion);
     else if(mode===1)drawScope(ctx,w,h,bass,mids,t,scopeZoom);
     else if(mode===2){
-      if(reactiveEngine&&reactor)reactiveEngine.tunnel(ctx,w,h,motion,reactor);
+      if(reactiveEngine&&reactor)reactiveEngine.tunnel(ctx,w,h,motion,reactor,dt/1000);
       else drawTunnel(ctx,w,h,motion);
     }else{
       if(reactiveEngine&&reactor)reactiveEngine.hyper(ctx,w,h,motion,reactor,dt/1000);
