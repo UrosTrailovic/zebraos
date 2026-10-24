@@ -933,9 +933,7 @@ function visualize(){
  animation=requestAnimationFrame(frame);
 }
 function loadVisualizer(){
- // Visualizer is often preloaded by index.html. In that case verify that
- // the reactive engine is already present before reusing it.
- if(window.ZebraVisualizer&&window.ZebraVISReactive)return Promise.resolve(window.ZebraVisualizer);
+ if(window.ZebraVisualizer)return Promise.resolve(window.ZebraVisualizer);
  if(visualizerPromise)return visualizerPromise;
  function inject(url){
   return new Promise(function(resolve,reject){
@@ -948,8 +946,8 @@ function loadVisualizer(){
  }
  // Keep the approved spectrum and scope available even if the optional
  // reactive graphics module cannot be downloaded.
- visualizerPromise=inject("/visualizer-reactive.js?v=1.5").catch(function(){return null;})
-  .then(function(){return inject("/visualizer.js?v=4.8");})
+ visualizerPromise=inject("/visualizer-reactive.js?v=1.1").catch(function(){return null;})
+  .then(function(){return inject("/visualizer.js?v=4.6");})
   .then(function(){
    if(!window.ZebraVisualizer)throw Error("Module ZebraVIS introuvable.");
    return window.ZebraVisualizer;

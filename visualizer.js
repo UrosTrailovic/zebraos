@@ -328,10 +328,6 @@ function mount(host,media,options){
   var ctx=canvas.getContext("2d",{alpha:false});
   if(!ctx){host.appendChild(element("p","github-drive-error","Canvas 2D non disponible sur ce navigateur."));return;}
   function updatePreset(){
-    // No old tunnel sparks when returning from another visualizer.
-    if(mode!==2&&reactor&&reactor.tunnelFx){
-      reactor.tunnelFx.sparks.length=0;reactor.tunnelFx.credit=0;
-    }
     modeText.textContent=(mode+1)+"/"+presets.length+"  "+presets[mode][0];
     back.title="Mode précédent";next.title="Mode suivant";
     zoomPanel.hidden=mode!==1;
@@ -397,12 +393,12 @@ function mount(host,media,options){
     if(state.stopped||!shell.isConnected){state.stop();return;}
     state.request=requestAnimationFrame(frame);
     if(document.hidden||shell.closest(".window")?.classList.contains("minimized"))return;
-    var step=mode>=2?(lowPower?42:32):(lowPower?36:18);
+    var step=lowPower?36:18;
     if(t-lastFrame<step)return;
     var dt=rounded(t-lastFrame,1,50);lastFrame=t;
     var box=stage.getBoundingClientRect();
     var cw=Math.max(160,Math.round(box.width)),ch=Math.max(80,Math.round(box.height));
-    var pix=Math.min(window.devicePixelRatio||1,mode>=2?(lowPower?1:1.2):(lowPower?1.25:1.6));
+    var pix=Math.min(window.devicePixelRatio||1,lowPower?1.25:1.6);
     if(w!==cw||h!==ch||dpr!==pix){
       w=cw;h=ch;dpr=pix;
       canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
@@ -432,7 +428,7 @@ function mount(host,media,options){
     if(mode===0)drawSpectrum(ctx,w,h,motion);
     else if(mode===1)drawScope(ctx,w,h,bass,mids,t,scopeZoom);
     else if(mode===2){
-      if(reactiveEngine&&reactor)reactiveEngine.tunnel(ctx,w,h,motion,reactor,dt/1000);
+      if(reactiveEngine&&reactor)reactiveEngine.tunnel(ctx,w,h,motion,reactor);
       else drawTunnel(ctx,w,h,motion);
     }else{
       if(reactiveEngine&&reactor)reactiveEngine.hyper(ctx,w,h,motion,reactor,dt/1000);
