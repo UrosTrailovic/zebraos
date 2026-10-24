@@ -1,0 +1,71 @@
+/* ZebraOS: cathode-ray shutdown, then the approved physical WebP PC facade.
+   Purely visual; does not replace or hide the startup power button. */
+#shutdown-effect[hidden]{display:none!important}
+#shutdown-effect{
+ position:fixed;inset:0;z-index:99999;isolation:isolate;
+ pointer-events:none;overflow:hidden;background:transparent;
+}
+#shutdown-effect.running{pointer-events:all}
+#shutdown-effect::before{
+ content:"";position:absolute;inset:0;background:#000;
+ opacity:0;pointer-events:none;
+}
+#shutdown-effect.running::before{
+ animation:zshutdown-dark 1650ms linear forwards;
+}
+#shutdown-effect .shutdown-effect-line,
+#shutdown-effect .shutdown-effect-dot{
+ position:absolute;left:50%;top:50%;display:block;pointer-events:none;
+ transform:translate(-50%,-50%);opacity:0;
+}
+#shutdown-effect .shutdown-effect-line{
+ width:min(86vw,900px);height:3px;
+ background:#edfff2;border-radius:30px;
+ box-shadow:0 0 5px 2px #edfff9,0 0 20px 6px #aaffce,0 0 80px 12px #3df3a777;
+}
+#shutdown-effect .shutdown-effect-dot{
+ width:7px;height:7px;border-radius:50%;background:#f6fffa;
+ box-shadow:0 0 10px 4px #f7fff6,0 0 30px 12px #70ffbb,0 0 80px #3cefaa;
+}
+#shutdown-effect.running .shutdown-effect-line{
+ animation:zshutdown-line 1650ms cubic-bezier(.2,.7,.3,1) forwards;
+}
+#shutdown-effect.running .shutdown-effect-dot{
+ animation:zshutdown-dot 1650ms linear forwards;
+}
+.screen.active.zshutdown-collapse{
+ transform-origin:50% 50%;
+ animation:zshutdown-collapse 1650ms cubic-bezier(.3,.2,.1,1) forwards;
+ pointer-events:none;
+}
+@keyframes zshutdown-collapse{
+ 0%{transform:scale(1,1);filter:brightness(1);opacity:1}
+ 15%{transform:scale(1,1);filter:brightness(1.24) saturate(.7);opacity:1}
+ 27%{transform:scale(1,.93);filter:brightness(1.45) saturate(.35);opacity:1}
+ 39%{transform:scale(1,.013);filter:brightness(3) saturate(0);opacity:1}
+ 47%{transform:scale(.16,.008);filter:brightness(7) saturate(0);opacity:1}
+ 54%,100%{transform:scale(.002,.002);filter:brightness(8);opacity:0}
+}
+@keyframes zshutdown-dark{
+ 0%,34%{opacity:0}
+ 49%,100%{opacity:1}
+}
+@keyframes zshutdown-line{
+ 0%,27%{opacity:0;transform:translate(-50%,-50%) scaleX(1.05)}
+ 39%{opacity:.8;transform:translate(-50%,-50%) scaleX(1)}
+ 52%{opacity:1;transform:translate(-50%,-50%) scaleX(.84)}
+ 69%{opacity:1;transform:translate(-50%,-50%) scaleX(.025)}
+ 79%,100%{opacity:0;transform:translate(-50%,-50%) scaleX(0)}
+}
+@keyframes zshutdown-dot{
+ 0%,67%{opacity:0;transform:translate(-50%,-50%) scale(1)}
+ 76%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}
+ 87%{opacity:.65;transform:translate(-50%,-50%) scale(.6)}
+ 99%,100%{opacity:0;transform:translate(-50%,-50%) scale(.1)}
+}
+@media(prefers-reduced-motion:reduce){
+ .screen.active.zshutdown-collapse{animation:none!important;opacity:0}
+ #shutdown-effect.running::before{animation:none!important;opacity:1}
+ #shutdown-effect.running .shutdown-effect-line,
+ #shutdown-effect.running .shutdown-effect-dot{animation:none!important;opacity:0}
+}

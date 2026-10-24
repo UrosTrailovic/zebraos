@@ -340,7 +340,36 @@ function start(id){
   if(id==="admin"&&!adminLoginUnlocked){requestAdminPassword();return;}
   beginSessionBoot(id);
 }
-function end(){sfx("switch");stopBootSequences();if(window.ZebraAMP)window.ZebraAMP.stop();adminApproved=false;adminLoginUnlocked=false;closeAll();session=null;show("power-screen")}
+var shutdownRunning=false,shutdownTimer=0;
+function end(){
+ if(shutdownRunning)return;
+ shutdownRunning=true;
+ sfx("switch");
+ stopBootSequences();
+ if(window.ZebraAMP)window.ZebraAMP.stop();
+ var screen=document.querySelector(".screen.active");
+ var effect=$("shutdown-effect");
+ var reduceMotion=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+ if(screen)screen.classList.add("zshutdown-collapse");
+ document.body.classList.add("zshutdown-running");
+ if(effect){
+  effect.hidden=false;
+  effect.classList.remove("running");
+  void effect.offsetWidth;
+  effect.classList.add("running");
+ }
+ clearTimeout(shutdownTimer);
+ shutdownTimer=setTimeout(function(){
+  adminApproved=false;adminLoginUnlocked=false;
+  closeAll();session=null;
+  // Reveal only the approved textured physical machine once the CRT goes dark.
+  show("power-screen");
+  if(screen)screen.classList.remove("zshutdown-collapse");
+  document.body.classList.remove("zshutdown-running");
+  if(effect){effect.classList.remove("running");effect.hidden=true;}
+  shutdownRunning=false;
+ },reduceMotion?100:1650);
+}
 function restartLogin(){
  sfx("switch");
  if(window.ZebraAMP)window.ZebraAMP.stop();

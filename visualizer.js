@@ -8,8 +8,7 @@ var presets=[
   ["SPECTRE 2000","Analyseur à bandes logarithmiques"],
   ["OSCILLOSCOPE","Courbe analogique verte"],
   ["TUNNEL NÉON","Tunnels réactifs aux basses"],
-  ["KALÉIDOSCOPE","Prismes réfléchis et motifs organiques"],
-  ["HYPERVITESSE","Étoiles synchronisées au son"]
+  ["HYPERVITESSE","Traînées phosphorescentes synchronisées au son"]
 ];
 var audioContext=null,audioNode=null,analyser=null,mediaRef=null,active=null;
 var spectrum=new Uint8Array(1024),wave=new Uint8Array(2048),lowPower=window.matchMedia?matchMedia("(pointer:coarse)").matches:false;
@@ -58,10 +57,13 @@ function connect(media, externalAnalyser){
   }catch(e){return false;}
 }
 function readMode(){
-  try{return rounded(Number(localStorage.getItem("zebra.viz.preset"))||0,0,presets.length-1);}catch(e){return 0;}
+  try{var saved=localStorage.getItem("zebra.viz.preset.v2");
+    if(saved!==null)return rounded(Number(saved)||0,0,presets.length-1);
+    var old=Number(localStorage.getItem("zebra.viz.preset"));
+    return old===4?3:old===3?2:rounded(old||0,0,presets.length-1);}catch(e){return 0;}
 }
 function saveMode(mode){
-  try{localStorage.setItem("zebra.viz.preset",String(mode));}catch(e){}
+  try{localStorage.setItem("zebra.viz.preset.v2",String(mode));}catch(e){}
 }
 function energy(arr,from,to){
   if(!arr)return 0;
@@ -254,45 +256,6 @@ function drawTunnel(ctx,w,h,m){
   ctx.fillStyle=core;circle(ctx,0,0,32+m.bass*45+m.hit*28);ctx.fill();
   ctx.restore();
 }
-function drawKaleido(ctx,w,h,m){
-  var clock=m.clock,radius=Math.hypot(w,h)*.53;
-  var sectors=12,slice=TAU/sectors,layers=lowPower?9:14;
-  var hue=275+Math.sin(clock*.24)*55;
-  ctx.save();ctx.translate(w/2,h/2);ctx.rotate(clock*.17);
-  // Reflect the same wedge at each adjoining edge: genuine kaleidoscope
-  // symmetry, rather than unrelated triangles rotated around the centre.
-  for(var sector=0;sector<sectors;sector++){
-    ctx.save();ctx.rotate(sector*slice);
-    if(sector%2){ctx.rotate(slice);ctx.scale(1,-1);}
-    ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,radius,0,slice);ctx.closePath();ctx.clip();
-    for(var j=layers-1;j>=0;j--){
-      var f=(j+1)/layers,band=m.levels[Math.min(47,Math.floor(f*47))];
-      var r=radius*f*(.88+m.bass*.14+m.hit*.05);
-      var sway=Math.sin(clock*.8+j*.48)*.12;
-      var a=slice*(.44+sway+band*.15);
-      var x=Math.cos(a)*r,y=Math.sin(a)*r;
-      var spread=r*(.11+.12*m.mids+.08*band);
-      ctx.beginPath();ctx.moveTo(x-spread*.9,y-spread*.38);
-      ctx.bezierCurveTo(x-spread*1.8,y+spread*.7,x-spread*.5,y+spread*1.8,x+spread*.65,y+spread*.4);
-      ctx.bezierCurveTo(x+spread*1.5,y-spread*.7,x+spread*.2,y-spread*1.6,x-spread*.9,y-spread*.38);
-      var shade=(hue+j*22+band*45)%360;
-      ctx.fillStyle="hsla("+shade+",90%,"+(20+band*25)+"%,"+(.1+m.level*.4)+")";ctx.fill();
-      glowStroke(ctx,"hsla("+shade+",95%,"+(47+band*25+m.hit*10)+"%,"+(.3+m.level*.65)+")",.8+band*1.4,5+m.hit*8);
-      // A second flowing filament crosses every mirror seam and creates
-      // interlocking jewelled rosettes, including the outer screen area.
-      ctx.beginPath();ctx.moveTo(r*.6,-r*.13);
-      ctx.bezierCurveTo(r*(1.04+band*.13),r*.1,r*.47,r*(.5+m.treble*.12),r*.84,r*.58);
-      glowStroke(ctx,"hsla("+((shade+95)%360)+",96%,"+(52+m.treble*25)+"%,"+(.15+m.mids*.55)+")",.65+band,4);
-      ctx.shadowBlur=0;
-      if(j%2===0){
-        ctx.fillStyle="hsla("+((shade+55)%360)+",95%,80%,"+(.12+m.treble*.8)+")";
-        circle(ctx,x,y,1.2+band*3+m.hit*2);ctx.fill();
-      }
-    }
-    ctx.restore();
-  }
-  ctx.shadowBlur=0;ctx.restore();
-}
 function makeStars(){
   var particles=[],seed=261;
   function random(){seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296;}
@@ -467,9 +430,6 @@ function mount(host,media,options){
     else if(mode===2){
       if(reactiveEngine&&reactor)reactiveEngine.tunnel(ctx,w,h,motion,reactor);
       else drawTunnel(ctx,w,h,motion);
-    }else if(mode===3){
-      if(reactiveEngine&&reactor)reactiveEngine.kaleido(ctx,w,h,motion,reactor);
-      else drawKaleido(ctx,w,h,motion);
     }else{
       if(reactiveEngine&&reactor)reactiveEngine.hyper(ctx,w,h,motion,reactor,dt/1000);
       else drawHyperdrive(ctx,w,h,motion,dt/1000,stars);
