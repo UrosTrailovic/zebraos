@@ -119,17 +119,6 @@ function saveVizTuning(values){
 function vizGain(tune,key){
   return tune&&typeof tune[key]==="number"?rounded(tune[key],0,300)/100:1;
 }
-function shareVizTuning(values){
-  var lines=["ZebraVIS — ma configuration de test",""];
-  [2,3].forEach(function(mode){
-    lines.push(presets[mode][0]);
-    VIZ_TUNE_SPECS[mode].forEach(function(spec){
-      lines.push(spec[1]+" : "+values[mode][spec[0]]+" %");
-    });
-    lines.push("");
-  });
-  return lines.join("\n").trim();
-}
 function energy(arr,from,to){
   if(!arr)return 0;
   var sum=0,count=0;
@@ -508,6 +497,8 @@ function mount(host,media,options){
   var reactiveEngine=window.ZebraVISReactive||null,reactor=reactiveEngine&&reactiveEngine.create();
   var ctx=canvas.getContext("2d",{alpha:false});
   if(!ctx){host.appendChild(element("p","github-drive-error","Canvas 2D non disponible sur ce navigateur."));return;}
+  // ZebraVIS laboratory: exactly a stack of ZebraAMP VOL. controls.
+  // No decorative cards, export fields or extra per-slider metadata.
   var tuneButton=element("button","zviz-settings-toggle","⚙");
   tuneButton.type="button";tuneButton.title="Réglages du visualiseur";
   tuneButton.setAttribute("aria-label","Ouvrir les réglages ZebraVIS");
@@ -517,27 +508,16 @@ function mount(host,media,options){
   tunePanel.setAttribute("role","region");
   tunePanel.setAttribute("aria-label","Réglages interactifs du visualiseur");
   var tuneHead=element("div","zviz-tune-head");
-  var tuneTitleBox=element("div","zviz-tune-titlebox");
-  var tuneKicker=element("div","zviz-tune-kicker","ZEBRAVIS / TEST LAB");
-  var tuneHeading=element("div","zviz-tune-heading","RÉGLAGES");
-  tuneTitleBox.append(tuneKicker,tuneHeading);
+  var tuneHeading=element("span","zviz-tune-heading","RÉGLAGES");
   var tuneClose=element("button","zviz-tune-close","×");
   tuneClose.type="button";tuneClose.title="Fermer les réglages";
-  tuneHead.append(tuneTitleBox,tuneClose);
-  var tuneHelp=element("p","zviz-tune-help",
-    "RÉGLAGES EN DIRECT  •  ESSAYE, ÉCOUTE ET AFFINE.");
+  tuneHead.append(tuneHeading,tuneClose);
   var tuneList=element("div","zviz-tune-list");
   var tuneFoot=element("div","zviz-tune-foot");
-  var tuneReset=element("button","zviz-tune-action","RÉINITIALISER");
-  tuneReset.type="button";tuneReset.title="Restaurer les valeurs de ce visualiseur";
-  var tuneCopy=element("button","zviz-tune-action zviz-tune-copy","COPIER MES RÉGLAGES");
-  tuneCopy.type="button";tuneCopy.title="Partager les réglages des deux modes";
-  tuneFoot.append(tuneReset,tuneCopy);
-  var tuneStatus=element("div","zviz-tune-status","Sauvegardé automatiquement sur cet appareil");
-  var tuneExport=element("textarea","zviz-tune-export");
-  tuneExport.readOnly=true;tuneExport.hidden=true;
-  tuneExport.setAttribute("aria-label","Mes valeurs ZebraVIS à copier");
-  tunePanel.append(tuneHead,tuneHelp,tuneList,tuneFoot,tuneStatus,tuneExport);
+  var tuneReset=element("button","zviz-tune-reset","RÉINITIALISER");
+  tuneReset.type="button";tuneReset.title="Restaurer les valeurs du visualiseur actuel";
+  tuneFoot.appendChild(tuneReset);
+  tunePanel.append(tuneHead,tuneList,tuneFoot);
   shell.appendChild(tunePanel);
   function setTunePanelOpen(open){
     tunePanel.hidden=!open;
@@ -548,34 +528,22 @@ function mount(host,media,options){
     if(mode<2)return;
     tuneHeading.textContent=presets[mode][0]+" / RÉGLAGES";
     tuneList.textContent="";
-    VIZ_TUNE_SPECS[mode].forEach(function(spec,index){
+    VIZ_TUNE_SPECS[mode].forEach(function(spec){
       var name=spec[0],row=element("label","zviz-tune-row");
-      var header=element("span","zviz-tune-row-head");
-      var nameBox=element("span","zviz-tune-row-title");
-      var number=element("span","zviz-tune-row-number",String(index+1).padStart(2,"0"));
       var labelText=element("span","zviz-tune-row-label",spec[1].toUpperCase());
-      nameBox.append(number,labelText);
-      var output=element("output","zviz-tune-value",tuneValues[mode][name]+" %");
-      header.append(nameBox,output);
       var input=element("input","zviz-tune-slider");
       input.type="range";input.min=String(spec[2]);input.max=String(spec[3]);
       input.step=String(spec[4]);input.value=String(tuneValues[mode][name]);
       input.setAttribute("aria-label",spec[1]);
       input.setAttribute("data-viz-control",name);
+      input.title=spec[1]+" : "+input.value+" %";
       input.addEventListener("input",function(){
         tuneValues[mode][name]=Number(input.value);
-        output.textContent=input.value+" %";
+        input.title=spec[1]+" : "+input.value+" %";
         saveVizTuning(tuneValues);
         if(name==="crt")applyTuneCRT();
-        if(!tuneExport.hidden)tuneExport.value=shareVizTuning(tuneValues);
-        tuneStatus.textContent="Sauvegardé automatiquement sur cet appareil";
       });
-      var endMarks=element("span","zviz-tune-limits");
-      endMarks.append(
-        element("span","","MIN  "+spec[2]+" %"),
-        element("span","","MAX  "+spec[3]+" %")
-      );
-      row.append(header,input,endMarks);
+      row.append(labelText,input);
       tuneList.appendChild(row);
     });
   }
@@ -595,27 +563,6 @@ function mount(host,media,options){
     saveVizTuning(tuneValues);
     applyTuneCRT();
     renderTunePanel();
-    if(!tuneExport.hidden)tuneExport.value=shareVizTuning(tuneValues);
-    tuneStatus.textContent="Valeurs d'origine restaurées pour ce mode";
-  };
-  tuneCopy.onclick=function(){
-    tuneExport.value=shareVizTuning(tuneValues);
-    tuneExport.hidden=false;
-    tuneExport.focus();tuneExport.select();
-    var msg=tuneExport.value;
-    if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(msg).then(function(){
-        tuneStatus.textContent="Copié ! Colle ces valeurs dans notre conversation.";
-      }).catch(function(){
-        tuneStatus.textContent="Sélectionne le texte ci-dessous et copie-le.";
-        tuneExport.focus();tuneExport.select();
-      });
-    }else{
-      var success=false;
-      try{success=document.execCommand("copy");}catch(e){}
-      tuneStatus.textContent=success?"Copié ! Colle ces valeurs dans notre conversation.":
-        "Sélectionne le texte ci-dessous et copie-le.";
-    }
   };
   function updatePreset(){
     modeText.textContent=(mode+1)+"/"+presets.length+"  "+presets[mode][0];
