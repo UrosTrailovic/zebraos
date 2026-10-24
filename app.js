@@ -183,33 +183,12 @@ function decorateSystemMenus(){
   if(tray){tray.textContent="";tray.appendChild(osIcon("network",16));}
 }
 function el(tag,cls,txt){var n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;}
-/* Keep the film reliably playing on phones. Browsers generally block
-   autoplay WITH sound, so start muted until there has been a user gesture.
-   After a user gesture (e.g. powering off and back on), try sound naturally. */
-function startAmbientBootVideo(){
- var video=$("zboot-backdrop-video");
- if(!video)return;
- video.volume=.35;
- video.muted=!(navigator.userActivation&&navigator.userActivation.hasBeenActive);
- function mutedFallback(){
-  if(!$("power-screen").classList.contains("active"))return;
-  video.muted=true;
-  try{var retry=video.play();if(retry&&retry.catch)retry.catch(function(){});}catch(ignored){}
- }
- try{
-  var attempt=video.play();
-  if(attempt&&attempt.catch)attempt.catch(mutedFallback);
- }catch(err){mutedFallback()}
-}
+/* Only the OS logo boot is shown on arrival. A minimal dark off-screen
+ * remains available for the user-initiated "Éteindre" command. */
 function show(id){
- ["power-screen","boot-screen","login-screen","session-boot-screen","desktop-screen"].forEach(function(s){$(s).classList.toggle("active",s===id)});
- var video=$("zboot-backdrop-video");
- if(video){
-  if(id==="power-screen")startAmbientBootVideo();
-  else video.pause();
- }
+ ["power-screen","boot-screen","login-screen","session-boot-screen","desktop-screen"]
+ .forEach(function(s){$(s).classList.toggle("active",s===id);});
 }
-startAmbientBootVideo();
 /* Power / studio startup audio. The user clicks POWER so playback is permitted on phones. */
 var studioBootAssets=window.ZebraBootAssets||{};
 var bootAudio=new Audio(studioBootAssets.startup||"");
@@ -227,19 +206,20 @@ function finishBoot(){
   booting=false;clearTimeout(bootTimer);
   bootAudio.pause();login();
 }
-function powerOn(){
-  if(booting)return;
-  booting=true;
-  $("power-screen").classList.add("powering-on");
-  clearTimeout(powerTimer);
-  powerTimer=setTimeout(function(){
-    if(!booting)return;
-    $("power-screen").classList.remove("powering-on");
-    show("boot-screen");
-    playBootTrack(bootAudio);
-    bootTimer=setTimeout(finishBoot,5200);
-  },230);
+function startLogoBoot(){
+ stopBootSequences();
+ booting=true;
+ var logoFrame=document.querySelector("#boot-screen .zboot-logo-frame");
+ if(logoFrame){
+  logoFrame.style.animation="none";
+  void logoFrame.offsetWidth;
+  logoFrame.style.removeProperty("animation");
+ }
+ show("boot-screen");
+ playBootTrack(bootAudio);
+ bootTimer=setTimeout(finishBoot,5200);
 }
+function powerOn(){startLogoBoot();}
 function finishSessionBoot(){
   if(!sessionBooting)return;
   sessionBooting=false;clearTimeout(sessionTimer);sessionAudio.pause();
@@ -363,22 +343,10 @@ function start(id){
 function end(){sfx("switch");stopBootSequences();if(window.ZebraAMP)window.ZebraAMP.stop();adminApproved=false;adminLoginUnlocked=false;closeAll();session=null;show("power-screen")}
 function restartLogin(){
  sfx("switch");
- stopBootSequences();
  if(window.ZebraAMP)window.ZebraAMP.stop();
  adminApproved=false;adminLoginUnlocked=false;
  closeAll();session=null;
- // Restart directly into the boot logo; the physical POWER facade belongs
- // only to the initial power-on or an explicit shutdown.
- booting=true;
- var logoFrame=document.querySelector("#boot-screen .zboot-logo-frame");
- if(logoFrame){
-  logoFrame.style.animation="none";
-  void logoFrame.offsetWidth; // Re-arm the same logo animation for each restart.
-  logoFrame.style.removeProperty("animation");
- }
- show("boot-screen");
- playBootTrack(bootAudio);
- bootTimer=setTimeout(finishBoot,5200);
+ startLogoBoot();
 }
 function signout(){sfx("switch");stopBootSequences();if(window.ZebraAMP)window.ZebraAMP.stop();adminLoginUnlocked=false;closeAll();session=null;login()}
 function getStore(k){try{return localStorage.getItem(k)}catch(e){return null}}
@@ -844,4 +812,6 @@ clock();
 setInterval(clock,10000);
 $("clock").ondblclick=function(){if(session)dateTime();};
 $("clock").onclick=function(){if(session&&(window.matchMedia("(pointer:coarse)").matches||window.innerWidth<701))dateTime();};
+/* Start the logo immediately; the physical boot panel no longer exists. */
+startLogoBoot();
 }());
