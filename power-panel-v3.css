@@ -1,4 +1,10 @@
 /* ZebraOS — façade physique du démarrage (textures du studio). */
+/* Important: inactive screens must not be rendered. The old display:flex
+   overrode .screen{display:none}, exposing the metal panel through the
+   boot-logo fade-out before the session selector appeared. */
+#power-screen.zp3-ready:not(.active) {
+  display:none;
+}
 #power-screen.zp3-ready {
   display:flex;align-items:center;justify-content:center;
   background-color:#151515;
