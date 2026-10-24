@@ -94,16 +94,51 @@ function tunnelRand(fx){
  fx.seed=(Math.imul(1664525,fx.seed)+1013904223)>>>0;
  return fx.seed/4294967296;
 }
+/* Real optical bloom: the glowing geometry is copied to a tiny, translucent
+ * buffer, enlarged through two filtered additive passes, then the full-
+ * resolution white-hot lines remain in front. The fallback is the four-layer
+ * native Canvas phosphor rendering when filter is unsupported. */
+function phosphorBloom(ctx,w,h,fx,r){
+ if(!r.playing||!ctx.canvas||typeof document==="undefined"||!("filter" in ctx))return;
+ try{
+  if(!fx.glowCanvas){
+   fx.glowCanvas=document.createElement("canvas");
+   fx.glowCtx=fx.glowCanvas.getContext("2d",{alpha:true});
+  }
+  var ghost=fx.glowCanvas,light=fx.glowCtx;
+  if(!light)return;
+  var gw=Math.max(64,Math.round(w*(mobile?.30:.38)));
+  var gh=Math.max(48,Math.round(h*(mobile?.30:.38)));
+  if(ghost.width!==gw||ghost.height!==gh){ghost.width=gw;ghost.height=gh;}
+  light.clearRect(0,0,gw,gh);
+  light.drawImage(ctx.canvas,0,0,ctx.canvas.width,ctx.canvas.height,0,0,gw,gh);
+  ctx.save();
+  ctx.globalCompositeOperation="lighter";
+  ctx.globalAlpha=clamp(.85+r.level*.12+r.flash*.12,.85,1);
+  ctx.filter="blur("+(mobile?13:24)+"px) brightness("+(2.0+r.bass*.8+r.flash*1.1)+") saturate(175%)";
+  ctx.drawImage(ghost,-8,-8,w+16,h+16);
+  ctx.globalAlpha=.72;
+  ctx.filter="blur("+(mobile?5:8)+"px) brightness(1.65) saturate(145%)";
+  ctx.drawImage(ghost,0,0,w,h);
+  ctx.restore();
+ }catch(error){
+  // A browser that cannot filter Canvas must never interrupt audio visuals.
+  try{ctx.filter="none";}catch(e){}
+ }
+}
 function tunnel(ctx,w,h,m,r,dt){
  dt=clamp(Number(dt)||.016,.001,.06);
  if(!r.tunnelFx)r.tunnelFx={seed:0x4A13B63,sparks:[],credit:0};
  var fx=r.tunnelFx,active=!!r.playing;
- var extent=Math.hypot(w,h)*.79;
+ var extent=Math.hypot(w,h)*.82;
  var burst=clamp(r.flash*.68+r.hit*.41,0,1);
- var exposure=clamp(.07+Math.pow(r.level,1.15)*.76+r.bass*.47+
-                   burst*.63+r.high*.15,0,1.7);
+ // Exposure no longer collapses to dark blue when a song's dynamics dip.
+ // With actual audio playing, even quiet rings have a visible hot white core;
+ // the loud transients then open a much larger phosphor bloom.
+ var exposure=active?clamp(.82+Math.pow(r.level,1.12)*.72+
+                         r.bass*.48+burst*.76+r.high*.22,.82,2.6):.065;
  var impact=clamp(r.bass*.65+r.hit*.72+r.flash*.60,0,1.55);
- var depth=r.depth*.33; // Large travel differential between quiet and loud sections.
+ var depth=r.depth*.39; // Still audio-driven; greater acceleration on heavy sections.
  var twist=r.phase*.31+r.mid*.3,tilt=(.05+r.mid*.07)*Math.sin(r.phase*.45);
  var cx=w/2,cy=h/2;
  ctx.save();
@@ -119,15 +154,18 @@ function tunnel(ctx,w,h,m,r,dt){
  for(var g=0;g<rails;g++){
   var ang=g/rails*TAU+twist*.25;
   var band=m.levels[(g*3)%48]||0;
-  var rayPower=clamp(exposure*.10+r.high*.18+band*.5+burst*.27,0,.85);
+  var rayPower=active?clamp(.48+r.high*.25+band*.48+burst*.40,.48,1):.035;
   ctx.beginPath();
   ctx.moveTo(Math.cos(ang)*6,Math.sin(ang)*5);
   ctx.lineTo(Math.cos(ang)*extent*1.02,Math.sin(ang)*extent*.82);
-  ctx.shadowColor=g%4===0?"#c579ff":"#29ffe5";
-  ctx.shadowBlur=mobile?11:21;
-  ctx.strokeStyle=g%4===0?"rgba(176,94,255,"+(rayPower*.55)+")":
-                        "rgba(23,255,221,"+(rayPower*.65)+")";
-  ctx.lineWidth=1.2+band*1.8+burst*.9;ctx.stroke();
+  ctx.shadowColor=g%4===0?"#ae5aff":"#3affdd";
+  ctx.shadowBlur=mobile?17:32;
+  ctx.strokeStyle=g%4===0?"rgba(186,83,255,"+(rayPower*.68)+")":
+                        "rgba(25,255,227,"+(rayPower*.76)+")";
+  ctx.lineWidth=3+band*2.3+burst*2;ctx.stroke();
+  ctx.shadowBlur=mobile?7:14;
+  ctx.lineWidth=1.1+band+burst*.6;
+  ctx.strokeStyle="rgba(211,255,249,"+(rayPower*.86)+")";ctx.stroke();
  }
 
  // Longitudinal speed is entirely driven by the integrated analyser energy.
@@ -149,31 +187,44 @@ function tunnel(ctx,w,h,m,r,dt){
    if(j===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
   }
   // Cyan / radioactive mint / violet: near-white cores at hard hits.
-  var hue=(i%6===0?278:i%5===0?197:162+z*59+r.high*18);
-  var lit=clamp((.14+exposure*.93+r.hit*.23)*(.24+z*.76),.02,1.6);
-  ctx.shadowColor="hsla("+hue+",100%,64%,1)";
-  ctx.shadowBlur=(mobile?19:38)+burst*22;
-  ctx.lineWidth=6+z*5+impact*3.4;
-  ctx.strokeStyle="hsla("+hue+",100%,51%,"+clamp(lit*.37,0,.82)+")";
+  var hue=(i%6===0?275:i%5===0?185:159+z*54+r.high*25);
+  var base=clamp(exposure*(.48+z*.52)+r.hit*.16,.03,2.4);
+  var on=active?1:.075;
+  // 1: wide genuinely colored aureole (not a transparent dark-blue outline).
+  ctx.shadowColor="hsla("+hue+",100%,66%,1)";
+  ctx.shadowBlur=(mobile?24:56)+burst*22;
+  ctx.lineWidth=17+z*11+impact*7;
+  ctx.strokeStyle="hsla("+hue+",100%,53%,"+
+    clamp(on*(.52+base*.12),0,.95)+")";
   ctx.stroke();
-  ctx.shadowBlur=(mobile?9:21)+burst*11;
-  ctx.lineWidth=2.5+z*2.1+impact*1.6;
-  ctx.strokeStyle="hsla("+hue+",100%,72%,"+clamp(lit*.78,0,.99)+")";
+  // 2: saturated tube, visibly blooming even between beats.
+  ctx.shadowBlur=(mobile?12:31)+burst*17;
+  ctx.lineWidth=7+z*5+impact*3.6;
+  ctx.strokeStyle="hsla("+hue+",100%,61%,"+
+    clamp(on*(.74+base*.16),0,1)+")";
   ctx.stroke();
-  ctx.shadowBlur=mobile?4:9;
-  ctx.lineWidth=1.15+z*.88+impact*.55;
-  ctx.strokeStyle="hsla("+hue+",100%,"+(87+burst*9)+"%,"+
-    clamp(lit*(.7+burst*.38),0,1)+")";
+  // 3: hot pale-green / cyan plasma sheath.
+  ctx.shadowColor="#a8fff0";ctx.shadowBlur=mobile?7:17;
+  ctx.lineWidth=3.1+z*2.5+burst*1.6;
+  ctx.strokeStyle="rgba(119,255,236,"+
+    clamp(on*(.85+base*.08),0,1)+")";
   ctx.stroke();
+  // 4: almost pure white core. The user should see a LIGHT, not a blue line.
+  ctx.shadowColor="#efffff";ctx.shadowBlur=mobile?3:9;
+  ctx.lineWidth=1.35+z*.9+impact*.6;
+  ctx.strokeStyle="rgba(242,255,252,"+
+    clamp(on*(.91+base*.08),0,1)+")";
+  ctx.stroke();
+  ctx.shadowBlur=0;
 
   // Little white electric glints on ring edges, modulated by high bins.
   var glitterBand=m.levels[(i*7+29)%48]||0;
   if(glitterBand+r.high+burst>.28){
    var angle=i*2.399963+twist*.25;
    var xx=Math.cos(angle)*radius,yy=Math.sin(angle)*radius*.8;
-   var sparkLight=clamp((glitterBand*.55+r.high*.4+burst*.35)*lit,0,.95);
-   var dot=1.2+glitterBand*2.6+burst*2.6;
-   ctx.shadowColor="#bffff4";ctx.shadowBlur=mobile?8:16;
+   var sparkLight=active?clamp(.65+glitterBand*.3+r.high*.2+burst*.3,.65,1):.04;
+   var dot=2.2+glitterBand*3.8+burst*4.2;
+   ctx.shadowColor="#d7fff9";ctx.shadowBlur=mobile?16:30;
    ctx.fillStyle="rgba(242,255,252,"+sparkLight+")";
    ctx.fillRect(xx-dot*.5,yy-dot*.5,dot,dot);
   }
@@ -181,10 +232,10 @@ function tunnel(ctx,w,h,m,r,dt){
 
  // A strong kick creates a short-lived expanding phosphor pressure wave.
  shock(ctx,r,extent*.96,166);
- var coreRadius=18+r.bass*107+r.hit*145+r.flash*90;
+ var coreRadius=26+r.bass*124+r.hit*162+r.flash*114;
  var core=ctx.createRadialGradient(0,0,0,0,0,coreRadius);
  core.addColorStop(0,"rgba(244,255,251,"+
-   clamp(.07+r.bass*.46+r.hit*.34+burst*.33,0,.97)+")");
+   clamp((active?.28:.02)+r.bass*.45+r.hit*.37+burst*.38,0,1)+")");
  core.addColorStop(.22,"rgba(85,255,223,"+
    clamp(.05+r.bass*.28+r.flash*.21,0,.68)+")");
  core.addColorStop(.65,"rgba(73,105,255,"+clamp(burst*.12+r.bass*.035,0,.22)+")");
@@ -194,7 +245,7 @@ function tunnel(ctx,w,h,m,r,dt){
 
  // Energy-dependent exposure blooms over the geometry; never white-screen strobe.
  lightWash(ctx,w,h,{
-  level:clamp(r.level*1.3,0,1),bass:r.bass,flash:clamp(r.flash*1.16,0,1)
+  level:clamp(r.level*1.5,0,1),bass:r.bass,flash:clamp(r.flash*1.4,0,1)
  });
 
  // Flying phosphor dust: high frequencies sparkle, kicks throw larger sparks.
@@ -232,24 +283,26 @@ function tunnel(ctx,w,h,m,r,dt){
   s.age+=dt;
   if(s.age>=s.life||!active){sparks.splice(k,1);continue;}
   var fade=1-s.age/s.life;
-  var power=fade*fade*clamp(.38+exposure*.48+burst*.4,0,1.4);
+  var power=fade*fade*clamp(.7+exposure*.36+burst*.48,0,1.8);
   s.x+=s.vx*dt;s.y+=s.vy*dt;
   var trail=.08+burst*.055;
   ctx.beginPath();
   ctx.moveTo(s.x-s.vx*trail,s.y-s.vy*trail);
   ctx.lineTo(s.x,s.y);
   ctx.shadowColor="hsla("+s.hue+",100%,65%,1)";
-  ctx.shadowBlur=mobile?11:23;
+  ctx.shadowBlur=mobile?16:34;
   ctx.strokeStyle="hsla("+s.hue+",100%,60%,"+
      clamp(power*.62,0,.85)+")";
-  ctx.lineWidth=2.7+s.size*.75;ctx.stroke();
-  ctx.shadowBlur=mobile?5:11;ctx.lineWidth=.7+s.size*.35;
+  ctx.lineWidth=4.8+s.size*1.3;ctx.stroke();
+  ctx.shadowBlur=mobile?8:17;ctx.lineWidth=1.4+s.size*.48;
   ctx.strokeStyle="rgba(240,255,252,"+clamp(power,0,.98)+")";ctx.stroke();
   ctx.shadowBlur=0;
   ctx.fillStyle="rgba(250,255,255,"+clamp(power*.85,0,1)+")";
   ctx.fillRect(s.x-s.size*.5,s.y-s.size*.5,s.size,s.size);
  }
  ctx.restore();
+ // Very low-resolution optical bloom is additive, keeping the geometry crisp.
+ phosphorBloom(ctx,w,h,fx,r);
 }
 function hyper(ctx,w,h,m,r,dt){
  var scale=Math.max(w,h)*.47,cx=w/2,cy=h/2;
