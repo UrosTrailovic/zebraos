@@ -935,16 +935,24 @@ function visualize(){
 function loadVisualizer(){
  if(window.ZebraVisualizer)return Promise.resolve(window.ZebraVisualizer);
  if(visualizerPromise)return visualizerPromise;
- visualizerPromise=new Promise(function(resolve,reject){
-  var script=document.createElement("script");
-  script.src="/visualizer.js?v=4.4";script.async=true;
-  script.onload=function(){
-   if(window.ZebraVisualizer)resolve(window.ZebraVisualizer);
-   else reject(Error("Module ZebraVIS introuvable."));
-  };
-  script.onerror=function(){reject(Error("Impossible de charger ZebraVIS."));};
-  document.head.appendChild(script);
- }).catch(function(err){visualizerPromise=null;throw err;});
+ function inject(url){
+  return new Promise(function(resolve,reject){
+   var script=document.createElement("script");
+   script.src=url;script.async=true;
+   script.onload=resolve;
+   script.onerror=function(){reject(Error("Impossible de charger "+url));};
+   document.head.appendChild(script);
+  });
+ }
+ // Keep the approved spectrum and scope available even if the optional
+ // reactive graphics module cannot be downloaded.
+ visualizerPromise=inject("/visualizer-reactive.js?v=1.0").catch(function(){return null;})
+  .then(function(){return inject("/visualizer.js?v=4.5");})
+  .then(function(){
+   if(!window.ZebraVisualizer)throw Error("Module ZebraVIS introuvable.");
+   return window.ZebraVisualizer;
+  })
+  .catch(function(err){visualizerPromise=null;throw err;});
  return visualizerPromise;
 }
 function openVisualizer(){
@@ -954,7 +962,7 @@ function openVisualizer(){
   var config=window.ZebraAMPConfig;
   if(!config||typeof config.windowBox!=="function")return;
   var box=config.windowBox("visualizer","ZebraVIS.exe — Visualiseur",650,500);
-  module.mount(box,audio,{analyser:analyser,previous:prev,next:function(){next(true);},toggle:togglePlayback});
+  module.mount(box,audio,{analyser:analyser,getAnalyser:function(){return analyser;},previous:prev,next:function(){next(true);},toggle:togglePlayback});
  }).catch(function(err){status(err.message||"Visualiseur indisponible.");});
 }
 function startAmpBootGreeting(node){
