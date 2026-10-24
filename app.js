@@ -239,7 +239,7 @@ function beginSessionBoot(id){
 function skipStartupKey(event){
   if(event.isComposing||!(event.key==="Escape"||event.key===" "||event.code==="Space"))return;
   var finish=null;
-  if($("power-screen").classList.contains("active")&&(event.key===" "||event.code==="Space"))finish=powerOn;
+  if($("power-screen").classList.contains("active")&&(event.key===" "||event.code==="Space"))finish=function(){var btn=$("power-btn");if(btn&&!btn.disabled)btn.click();};
   else if(booting&&$("boot-screen").classList.contains("active"))finish=finishBoot;
   else if(sessionBooting&&$("session-boot-screen").classList.contains("active"))finish=finishSessionBoot;
   if(!finish)return;
@@ -812,6 +812,6 @@ clock();
 setInterval(clock,10000);
 $("clock").ondblclick=function(){if(session)dateTime();};
 $("clock").onclick=function(){if(session&&(window.matchMedia("(pointer:coarse)").matches||window.innerWidth<701))dateTime();};
-/* Start the logo immediately; the physical boot panel no longer exists. */
-startLogoBoot();
+/* The textured ZebraOS machine is the initial screen.
+ * Logo boot starts only when its physical POWER button is pressed. */
 }());

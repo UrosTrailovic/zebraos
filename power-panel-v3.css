@@ -17,10 +17,10 @@
   position:relative;isolation:isolate;
   width:77vw;max-width:940px;width:min(77vw,940px,186dvh);
   aspect-ratio:991 / 393;flex:none;
-  opacity:0;
+  opacity:0;pointer-events:none;
   filter:drop-shadow(0 23px 30px rgba(0,0,0,.57));
 }
-#power-screen .zp3-machine.zp3-revealed {opacity:1}
+#power-screen .zp3-machine.zp3-revealed {opacity:1;pointer-events:auto}
 /* Épaisseur du boîtier, sous la véritable texture du panneau. */
 #power-screen .zp3-machine::before {
   content:"";position:absolute;z-index:-1;pointer-events:none;

@@ -95,7 +95,7 @@
  });
 })();
 </script>
-<link rel="stylesheet" href="style.css?v=10.6">
+<link rel="stylesheet" href="style.css?v=10.7">
 <link rel="stylesheet" href="zebra-hardware.css?v=1.0">
 <link rel="stylesheet" href="zebra-notes.css?v=1.0">
 <link rel="stylesheet" href="zebra-tools.css?v=1.0">
@@ -110,18 +110,24 @@
 <link rel="stylesheet" href="zebraamp-faders.css?v=1.3">
 <link rel="stylesheet" href="zebraamp-skin.css?v=1.1">
 
-<link rel="stylesheet" href="zebra-startup-clean.css?v=1.0">
+<link rel="stylesheet" href="power-panel-v3.css?v=2.0">
 <link rel="stylesheet" href="login-actions-fix.css?v=1.0">
 <link rel="stylesheet" href="wallpaper-customization.css?v=1.0">
 </head>
 <body>
-<div id="power-screen" class="screen" aria-label="Ordinateur éteint">
-  <button id="power-btn" type="button" class="zebra-restart-off" aria-label="Rallumer ZebraOS">
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2.5v9.5M6.2 5.8a9 9 0 1 0 11.6 0"/></svg>
-    <span>ALLUMER ZEBRAOS</span>
-  </button>
+<div id="power-screen" class="screen active zp3-ready" aria-label="Machine ZebraOS — allumage">
+  <div class="zp3-machine" role="group" aria-label="Façade métallique de ZebraOS">
+    <img class="zp3-face" src="assets/powerv3/pcinterface.webp" alt="" aria-hidden="true" fetchpriority="high" decoding="async">
+    <img class="zp3-led zp3-led-power" src="assets/powerv3/pcoff.webp" alt="" aria-hidden="true">
+    <img class="zp3-led zp3-led-net" src="assets/powerv3/pcoff.webp" alt="" aria-hidden="true">
+    <img class="zp3-sticker-z" src="assets/powerv3/zebraossticker.webp" alt="" aria-hidden="true">
+    <img class="zp3-sticker-i" src="assets/powerv3/intel%20sticker.webp" alt="" aria-hidden="true">
+    <button id="power-btn" class="zp3-btn" type="button" aria-label="Allumer ZebraOS">
+      <img src="assets/powerv3/btnpcoff.webp" alt="" aria-hidden="true">
+    </button>
+  </div>
 </div>
-<div id="boot-screen" class="screen active" aria-label="Démarrage de ZebraOS">
+<div id="boot-screen" class="screen" aria-label="Démarrage de ZebraOS">
   <div class="zboot-logo-frame"><img class="zboot-logo"  alt="ZebraOS" /></div>
   <button id="skip-boot" class="zboot-skip" aria-label="Passer l'animation de démarrage">PASSER L’INTRO &gt;</button>
 </div>
@@ -172,7 +178,8 @@
 <script src="control-panel.js?v=1.2"></script>
 <script src="zebra-tools.js?v=1.1"></script>
 <script src="desktop-layout.js?v=1.0"></script>
-<script src="app.js?v=10.8"></script>
+<script src="app.js?v=10.9"></script>
+<script src="power-panel-v3.js?v=2.0"></script>
 
 </body>
 </html>
