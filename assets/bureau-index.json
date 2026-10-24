@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-24T08:04:57.575891+00:00",
+  "generatedAt": "2026-10-24T08:14:05.802556+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -418,6 +418,25 @@
       "name": "Réglage de l’ordinateur",
       "app": "settings",
       "icon": "control-panel"
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn",
+      "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Jony-au-MAD-v2-2emeMASTER-test-_jony-la-bibi_ (1).mp3",
+      "type": "file",
+      "size": 6637065
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Jony-au-MAD-v2-2emeMASTER-test-_jony-la-bibi_.mp3",
+      "type": "file",
+      "size": 6637065
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/ZEPRA-KISAM-V6.mp3",
+      "type": "file",
+      "size": 7420500
     },
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
