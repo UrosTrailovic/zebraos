@@ -1,0 +1,14 @@
+/* ZebraOS startup without the old physical-metal computer screen. */
+#power-screen{background:#050505!important;color:#dedede;}
+#power-screen.active{display:grid;place-items:center;padding:20px;}
+#power-screen .zebra-restart-off{
+ display:flex;align-items:center;justify-content:center;gap:13px;
+ min-width:230px;min-height:56px;max-width:90vw;padding:13px 20px;
+ background:linear-gradient(180deg,#34393a,#171a1b);color:#e3e8e5;
+ border:2px outset #5b6260;border-radius:2px;
+ box-shadow:0 12px 40px #0008,inset 0 1px 0 #a4aca933;
+ font:13px/1.3 Tahoma,Arial,sans-serif;letter-spacing:1.2px;
+}
+#power-screen .zebra-restart-off svg{flex:none;}
+#power-screen .zebra-restart-off:active{border-style:inset;transform:translateY(1px);}
+#power-screen .zebra-restart-off:focus-visible{outline:2px solid #b3dfc8;outline-offset:4px;}
