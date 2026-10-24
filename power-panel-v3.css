@@ -8,9 +8,9 @@
 #power-screen.zp3-ready {
   display:flex;align-items:center;justify-content:center;
   background-color:#151515;
-  background-image:radial-gradient(ellipse at 50% 40%,rgba(34,34,34,.12),rgba(0,0,0,.30) 85%),url("assets/powerv3/matte-black-plastic.webp");
-  background-size:100% 100%,112px 112px;
-  background-repeat:no-repeat,repeat;
+  background-image:url("assets/powerv3/matte-black-plastic.webp");
+  background-size:112px 112px;
+  background-repeat:repeat;
   padding:clamp(14px,3vw,40px);overflow:hidden;
 }
 #power-screen .zp3-machine {
@@ -20,6 +20,7 @@
   opacity:0;pointer-events:none;
   filter:drop-shadow(0 23px 30px rgba(0,0,0,.57));
 }
+#power-screen.zp3-ready.zp3-awaiting{cursor:pointer}
 #power-screen .zp3-machine.zp3-revealed {opacity:1;pointer-events:auto}
 /* Épaisseur du boîtier, sous la véritable texture du panneau. */
 #power-screen .zp3-machine::before {

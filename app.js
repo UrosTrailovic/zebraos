@@ -239,7 +239,11 @@ function beginSessionBoot(id){
 function skipStartupKey(event){
   if(event.isComposing||!(event.key==="Escape"||event.key===" "||event.code==="Space"))return;
   var finish=null;
-  if($("power-screen").classList.contains("active")&&(event.key===" "||event.code==="Space"))finish=function(){var btn=$("power-btn");if(btn&&!btn.disabled)btn.click();};
+  if($("power-screen").classList.contains("active")&&(event.key===" "||event.code==="Space"))finish=function(){
+    var shell=$("power-screen"),facade=shell.querySelector(".zp3-machine");
+    if(facade&&!facade.classList.contains("zp3-revealed"))shell.click();
+    else{var btn=$("power-btn");if(btn&&!btn.disabled)btn.click();}
+  };
   else if(booting&&$("boot-screen").classList.contains("active"))finish=finishBoot;
   else if(sessionBooting&&$("session-boot-screen").classList.contains("active"))finish=finishSessionBoot;
   if(!finish)return;
@@ -362,7 +366,7 @@ function end(){
  shutdownTimer=setTimeout(function(){
   adminApproved=false;adminLoginUnlocked=false;
   closeAll();session=null;
-  // Reveal only the approved textured physical machine once the CRT goes dark.
+  // Return to the empty textured plastic cover. Clicking it reveals the machine.
   show("power-screen");
   if(screen)screen.classList.remove("zshutdown-collapse");
   document.body.classList.remove("zshutdown-running");
@@ -841,6 +845,6 @@ clock();
 setInterval(clock,10000);
 $("clock").ondblclick=function(){if(session)dateTime();};
 $("clock").onclick=function(){if(session&&(window.matchMedia("(pointer:coarse)").matches||window.innerWidth<701))dateTime();};
-/* The textured ZebraOS machine is the initial screen.
- * Logo boot starts only when its physical POWER button is pressed. */
+/* Initial screen = black plastic only; first click reveals the machine.
+ * A second, deliberate click on its POWER control starts ZebraOS. */
 }());

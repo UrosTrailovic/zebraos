@@ -13,7 +13,10 @@
  var base="assets/powerv3/";
  function url(name){return base+encodeURIComponent(name);}
  var originalPower=button.onclick;
- var blinking=false,timer=0,bootTimer=0,opening=false;
+ var blinking=false,timer=0,bootTimer=0,openTimer=0,ghost=null,opening=false;
+ // The plastic shell is the entire first screen; reveal the physical
+ // machine only after a real click/tap anywhere on it.
+ root.classList.add("zp3-awaiting");
  // Preload lit states to avoid an image swap flicker on first click.
  ["pcon.webp","btnpcon.webp"].forEach(function(name){var image=new Image();image.src=url(name);});
  function tick(){
@@ -26,7 +29,12 @@
  }
  function startBlink(){if(blinking)return;blinking=true;tick();}
  function reset(){
-  blinking=false;clearTimeout(timer);clearTimeout(bootTimer);
+  blinking=false;
+  clearTimeout(timer);clearTimeout(bootTimer);clearTimeout(openTimer);
+  if(ghost){ghost.remove();ghost=null;}
+  opening=false;
+  host.classList.remove("zp3-revealed");
+  root.classList.add("zp3-awaiting");
   powerLed.src=url("pcoff.webp");netLed.src=url("pcoff.webp");
   powerImage.src=url("btnpcoff.webp");
   button.disabled=false;
@@ -41,11 +49,11 @@
   },1050);
  };
  new MutationObserver(function(){
-  if(root.classList.contains("active"))startBlink();
-  else reset();
+  if(!root.classList.contains("active")){
+   if(!root.classList.contains("zp3-awaiting"))reset();
+  }else if(host.classList.contains("zp3-revealed"))startBlink();
  }).observe(root,{attributes:true,attributeFilter:["class"]});
- // Internet indicator stays active even before the visitor powers on.
- if(root.classList.contains("active"))startBlink();
+ // The network indicator begins only once the physical facade is visible.
  function playOpenSound(){
   try{
    if(localStorage.getItem("zebra.sfx.muted")==="1")return;
@@ -56,27 +64,54 @@
   }catch(e){}
  }
  function reveal(){
-  if(opening)return;opening=true;
+  if(opening||host.classList.contains("zp3-revealed")||
+     !root.classList.contains("active"))return;
+  opening=true;
+  root.classList.remove("zp3-awaiting");
+  // First gesture unlocks sound on Android/iOS; do not autoplay on load.
+  playOpenSound();
   if(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches){
-   host.classList.add("zp3-revealed");return;
+   host.classList.add("zp3-revealed");
+   startBlink();
+   return;
   }
   var rect=host.getBoundingClientRect();
-  var ghost=document.createElement("div");ghost.className="zp3-ghost";ghost.setAttribute("aria-hidden","true");
+  ghost=document.createElement("div");ghost.className="zp3-ghost";
+  ghost.setAttribute("aria-hidden","true");
   ghost.style.left=(rect.left+rect.width/2-22)+"px";
   ghost.style.top=(rect.top+rect.height/2-16)+"px";
   ghost.style.width="44px";ghost.style.height="32px";
-  root.appendChild(ghost);ghost.getBoundingClientRect();
+  root.appendChild(ghost);
+  // Layout read makes the next frame's transition consistently start from
+  // the centered outline even on mobile hardware.
+  ghost.getBoundingClientRect();
+  var outline=ghost;
   requestAnimationFrame(function(){
-   ghost.style.left=rect.left+"px";ghost.style.top=rect.top+"px";
-   ghost.style.width=rect.width+"px";ghost.style.height=rect.height+"px";
+   if(outline!==ghost||!root.classList.contains("active"))return;
+   outline.style.left=rect.left+"px";
+   outline.style.top=rect.top+"px";
+   outline.style.width=rect.width+"px";
+   outline.style.height=rect.height+"px";
   });
-  setTimeout(playOpenSound,125);
   var done=false;
   function finish(){
-   if(done)return;done=true;ghost.remove();host.classList.add("zp3-revealed");
+   if(done||outline!==ghost||!root.classList.contains("active"))return;
+   done=true;outline.remove();ghost=null;
+   host.classList.add("zp3-revealed");
+   startBlink();
   }
-  ghost.addEventListener("transitionend",function(event){if(event.propertyName==="width")finish();});
-  setTimeout(finish,700);
+  outline.addEventListener("transitionend",function(event){
+   if(event.propertyName==="width")finish();
+  });
+  openTimer=setTimeout(finish,700);
  }
- reveal();
+ root.addEventListener("click",function(){
+  // One tap reveals the machine; only its actual POWER button boots it.
+  reveal();
+ });
+ root.addEventListener("keydown",function(event){
+  if(event.key!=="Enter"||host.classList.contains("zp3-revealed"))return;
+  event.preventDefault();
+  reveal();
+ });
 })();
