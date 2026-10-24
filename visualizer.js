@@ -361,6 +361,7 @@ function mount(host,media,options){
   var modeText=element("div","zviz-mode-name");
   var fullButton=element("button","zviz-fullscreen","⛶");
   var mode=readMode(),lastFrame=0,stars=makeStars(),motion=makeMotion();
+  var reactiveEngine=window.ZebraVISReactive||null,reactor=reactiveEngine&&reactiveEngine.create();
   var ctx=canvas.getContext("2d",{alpha:false});
   if(!ctx){host.appendChild(element("p","github-drive-error","Canvas 2D non disponible sur ce navigateur."));return;}
   function updatePreset(){
@@ -408,13 +409,17 @@ function mount(host,media,options){
   ["play","pause","ended","emptied"].forEach(function(event){media.addEventListener(event,syncTransport);});
   syncTransport();transport.append(previousTrack,playTrack,nextTrack);shell.appendChild(transport);
   host.appendChild(shell);
+  // ZebraAMP owns the MediaElementSource. Do not create a competing node.
   function connectNow(){
-    var ok=connect(media,options&&options.analyser);
+    var managed=options&&typeof options.getAnalyser==="function";
+    var external=managed?options.getAnalyser():options&&options.analyser;
+    if(managed&&!external){analyser=null;led.classList.remove("on");return false;}
+    var ok=connect(media,external);
     led.classList.toggle("on",ok);
     if(ok&&audioContext)requestAnimationFrame(function(){if(audioContext&&audioContext.state==="suspended")audioContext.resume().catch(function(){});});
     return ok;
   }
-  var linked=connectNow();
+  var linked=connectNow(),lastLinkCheck=0;
   updatePreset();
   var startX=0;
   canvas.addEventListener("touchstart",function(e){if(e.touches.length)startX=e.touches[0].clientX;},{passive:true});
@@ -436,6 +441,11 @@ function mount(host,media,options){
       canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
       ctx.setTransform(dpr,0,0,dpr,0,0);
     }
+    if(options&&typeof options.getAnalyser==="function"&&t-lastLinkCheck>450){
+      lastLinkCheck=t;
+      var newest=options.getAnalyser();
+      if(newest!==analyser||(!linked&&newest))linked=connectNow();
+    }
     ctx.clearRect(0,0,w,h);
     backdrop(ctx,w,h);
     if(linked&&analyser){
@@ -449,13 +459,21 @@ function mount(host,media,options){
     var mids=linked?energy(spectrum,20,170):0;
     var treble=linked?energy(spectrum,170,500):0;
     var sounding=playing&&hasSignal;
+    if(mode>=2&&reactiveEngine&&reactor)reactiveEngine.update(reactor,motion,sounding,dt/1000);
     overlay.style.opacity=sounding?"0":"1";
     led.classList.toggle("pulsing",sounding);
     if(mode===0)drawSpectrum(ctx,w,h,motion);
     else if(mode===1)drawScope(ctx,w,h,bass,mids,t,scopeZoom);
-    else if(mode===2)drawTunnel(ctx,w,h,motion);
-    else if(mode===3)drawKaleido(ctx,w,h,motion);
-    else drawHyperdrive(ctx,w,h,motion,dt/1000,stars);
+    else if(mode===2){
+      if(reactiveEngine&&reactor)reactiveEngine.tunnel(ctx,w,h,motion,reactor);
+      else drawTunnel(ctx,w,h,motion);
+    }else if(mode===3){
+      if(reactiveEngine&&reactor)reactiveEngine.kaleido(ctx,w,h,motion,reactor);
+      else drawKaleido(ctx,w,h,motion);
+    }else{
+      if(reactiveEngine&&reactor)reactiveEngine.hyper(ctx,w,h,motion,reactor,dt/1000);
+      else drawHyperdrive(ctx,w,h,motion,dt/1000,stars);
+    }
   }
   state.stop=function(){
     if(state.stopped)return;
