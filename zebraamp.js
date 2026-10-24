@@ -933,7 +933,9 @@ function visualize(){
  animation=requestAnimationFrame(frame);
 }
 function loadVisualizer(){
- if(window.ZebraVisualizer)return Promise.resolve(window.ZebraVisualizer);
+ // Visualizer is often preloaded by index.html. In that case verify that
+ // the reactive engine is already present before reusing it.
+ if(window.ZebraVisualizer&&window.ZebraVISReactive)return Promise.resolve(window.ZebraVisualizer);
  if(visualizerPromise)return visualizerPromise;
  function inject(url){
   return new Promise(function(resolve,reject){
