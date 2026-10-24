@@ -110,49 +110,18 @@
 <link rel="stylesheet" href="zebraamp-faders.css?v=1.3">
 <link rel="stylesheet" href="zebraamp-skin.css?v=1.1">
 
-<link rel="stylesheet" href="power-panel-v3.css?v=1.8">
+<link rel="stylesheet" href="zebra-startup-clean.css?v=1.0">
 <link rel="stylesheet" href="login-actions-fix.css?v=1.0">
 <link rel="stylesheet" href="wallpaper-customization.css?v=1.0">
 </head>
 <body>
-<div id="power-screen" class="screen active">
-  <div class="zpower-tower" aria-label="Façade de l’ordinateur ZebraOS">
-    <i class="zpower-screw zpower-screw-a" aria-hidden="true"></i>
-    <i class="zpower-screw zpower-screw-b" aria-hidden="true"></i>
-    <i class="zpower-screw zpower-screw-c" aria-hidden="true"></i>
-    <i class="zpower-screw zpower-screw-d" aria-hidden="true"></i>
-    <div class="zpower-nameplate" aria-hidden="true">
-      <strong>ZEBRA</strong><span>PERSONAL COMPUTER</span><small>MODEL ZOS-2004</small>
-    </div>
-    <div class="zpower-drive" aria-hidden="true">
-      <span class="zpower-drive-door"></span><span class="zpower-drive-mark">COMPACT DISC</span>
-      <span class="zpower-drive-led"></span><span class="zpower-eject"></span>
-    </div>
-    <div class="zpower-bay" aria-hidden="true"></div>
-    <div class="zpower-console">
-      <div class="zpower-status" aria-hidden="true">
-        <span><i class="zpower-led zpower-led-main"></i>POWER</span>
-        <span><i class="zpower-led"></i>H.D.D.</span>
-      </div>
-      <button id="power-btn" class="zboot-power" type="button" aria-label="Allumer ZebraOS">
-        <span class="zboot-power-symbol" aria-hidden="true">
-          <svg class="zboot-power-svg" viewBox="0 0 64 64" width="64" height="64" xmlns="http://www.w3.org/2000/svg" fill="none">
-            <path d="M20 14 A23 23 0 1 0 44 14" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
-            <path d="M32 5 V30" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
-          </svg>
-        </span>
-      </button>
-      <span class="zpower-reset" aria-hidden="true"></span>
-    </div>
-    <div class="zpower-vents" aria-hidden="true">
-      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-    </div>
-    <p class="zpower-hint">APPUYEZ SUR POWER</p>
-  </div>
+<div id="power-screen" class="screen" aria-label="Ordinateur éteint">
+  <button id="power-btn" type="button" class="zebra-restart-off" aria-label="Rallumer ZebraOS">
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2.5v9.5M6.2 5.8a9 9 0 1 0 11.6 0"/></svg>
+    <span>ALLUMER ZEBRAOS</span>
+  </button>
 </div>
-<div id="boot-screen" class="screen" aria-label="Démarrage de ZebraOS">
+<div id="boot-screen" class="screen active" aria-label="Démarrage de ZebraOS">
   <div class="zboot-logo-frame"><img class="zboot-logo"  alt="ZebraOS" /></div>
   <button id="skip-boot" class="zboot-skip" aria-label="Passer l'animation de démarrage">PASSER L’INTRO &gt;</button>
 </div>
@@ -180,7 +149,7 @@
   </div>
 </div>
 <div id="desktop-screen" class="screen">
-  <div id="wallpaper" class="wallpaper wallpaper-visitor"><div class="wallpaper-grain"></div><div class="wallpaper-label">ZEBRA TAPE 2 <span>STUDIO // 2026</span></div></div>
+  <div id="wallpaper" class="wallpaper wallpaper-visitor"><div class="wallpaper-grain"></div><div class="wallpaper-label" hidden><span></span></div></div>
   <div id="desktop-icons" class="desktop-icons"></div>
   <div id="windows-area"></div>
   <div id="start-menu" class="start-menu hidden"><div class="start-side">ZebraOS <b>2.0</b></div><div class="start-options"><button data-start="amp">▣ <span>ZebraAMP</span></button><button data-start="explorer">▤ <span>Poste de travail</span></button><hr><button data-start="folder:games">▦ <span>Jeux</span></button><button data-start="folder:tools">▤ <span>Outils</span></button><hr><button data-start="settings">⚙ <span>Réglage de l’ordinateur</span></button><button data-start="about">ⓘ <span>Propriétés du système</span></button><hr><button id="logout">⇥ <span>Fermer la session</span></button><button id="shutdown-desktop">⏻ <span>Éteindre</span></button></div></div>
@@ -191,7 +160,7 @@
 <script src="sfx.js?v=0.4"></script>
 <script src="assets/icons-pack.js?v=0.6"></script>
 <script src="assets/boot-assets-v07.js?v=0.7"></script>
-<script src="wallpaper.js?v=1.4"></script>
+<script src="wallpaper.js?v=1.5"></script>
 <script src="zebra-video.js?v=1.2"></script>
 <script src="zebra-photos.js?v=1.3"></script>
 <script src="zebra-notes.js?v=1.0"></script>
@@ -199,12 +168,11 @@
 <script src="filesystem.js?v=3.1"></script>
 <script src="visualizer.js?v=4.6"></script>
 <script src="assets/zebraamp/zebra-tape-2-cover.js?v=1.0"></script>
-<script src="zebraamp.js?v=5.12"></script>
+<script src="zebraamp.js?v=5.13"></script>
 <script src="control-panel.js?v=1.2"></script>
 <script src="zebra-tools.js?v=1.1"></script>
 <script src="desktop-layout.js?v=1.0"></script>
-<script src="app.js?v=10.7"></script>
-<script src="power-panel-v3.js?v=1.5"></script>
+<script src="app.js?v=10.8"></script>
 
 </body>
 </html>
