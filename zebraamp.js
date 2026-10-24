@@ -248,6 +248,8 @@ function ensureReverb(){
   var convolver=ctx.createConvolver();
   convolver.normalize=true;convolver.buffer=impulse;
   var preDelay=ctx.createDelay(.15);preDelay.delayTime.value=.052;
+  // Filtrage réservé à la réverbération, jamais à la musique sèche.
+  // La fréquence de coupure évolue avec le dosage via applyReverb().
   var highpass=ctx.createBiquadFilter();highpass.type="highpass";highpass.frequency.value=165;
   var tone=ctx.createBiquadFilter();tone.type="lowpass";tone.frequency.value=5200;
   var dry=ctx.createGain(),wet=ctx.createGain();
@@ -261,7 +263,8 @@ function ensureReverb(){
   // Brancher les deux chemins en une fois. Les gains sont nuls au départ.
   analyser.disconnect();
   analyser.connect(dry);analyser.connect(preDelay);
-  reverbGraph={dry:dry,wet:wet,preDelay:preDelay,convolver:convolver,limiter:limiter,connected:true,seconds:seconds};
+  reverbGraph={dry:dry,wet:wet,preDelay:preDelay,convolver:convolver,
+               highpass:highpass,tone:tone,limiter:limiter,connected:true,seconds:seconds};
   return true;
  }catch(err){
   status("Réverbération indisponible sur ce navigateur.");
@@ -275,8 +278,15 @@ function applyReverb(){
  var state=reverbGraph,t=reverb/100;
  if(t>0&&!state.connected){analyser.connect(state.preDelay);state.connected=true;}
  var now=ctx.currentTime||0;
- // L'effet augmente vraiment : moins de son sec, davantage de résonance
- // spatiale. Le compresseur adoucit les crêtes lorsque les deux s'additionnent.
+ // Plus l'effet est fort, plus le bas du retour de réverbération est nettoyé.
+ // 0%: 165 Hz | 50%: ~480 Hz | 100%: ~1000 Hz (courbe progressive).
+ // Les aigus sont aussi ouverts progressivement, sans égaliser la piste sèche.
+ // Transition douce pour éviter les clics pendant le déplacement du curseur.
+ var wetHighpass=165+835*Math.pow(t,1.45);
+ var wetLowpass=5200+2500*Math.pow(t,.85);
+ state.highpass.frequency.setTargetAtTime(wetHighpass,now,.055);
+ state.tone.frequency.setTargetAtTime(wetLowpass,now,.055);
+ // Le dosage et les gains sec/réverb restent identiques à la version approuvée.
  state.dry.gain.setTargetAtTime(1-.40*t,now,.035);
  state.wet.gain.setTargetAtTime(1.30*Math.pow(t,.82),now,.035);
  if(t===0&&state.connected){
