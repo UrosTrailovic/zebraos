@@ -65,6 +65,71 @@ function readMode(){
 function saveMode(mode){
   try{localStorage.setItem("zebra.viz.preset.v2",String(mode));}catch(e){}
 }
+/* Temporary tuning desk for the two experimental visualizers.
+ * Defaults are the approved current look (100%). Persistence is per browser,
+ * independent of ZebraOS user sessions. No audio graph is modified. */
+var VIZ_TUNE_KEY="zebra.viz.tuning.v1";
+var VIZ_TUNE_SPECS={
+  2:[
+    ["speed","Vitesse du tunnel",0,230,5],
+    ["kick","Punch des kicks",0,250,5],
+    ["snare","Réaction aux snares",0,250,5],
+    ["high","Réaction aux aigus",0,250,5],
+    ["warp","Déformation des anneaux",0,220,5],
+    ["idle","Lumière en passage calme",0,200,5],
+    ["flash","Éclaircissement sur les kicks",0,240,5],
+    ["glow","Intensité du phosphore",0,180,5],
+    ["line","Épaisseur des lignes",30,200,5],
+    ["crt","Effet CRT",0,100,5]
+  ],
+  3:[
+    ["speed","Vitesse des étoiles",0,240,5],
+    ["kick","Accélération sur les kicks",0,240,5],
+    ["high","Réaction aux aigus",0,250,5],
+    ["trails","Longueur des traînées",0,220,5],
+    ["density","Densité des étoiles",20,100,5],
+    ["idle","Lumière en passage calme",0,200,5],
+    ["glow","Intensité du phosphore",0,180,5],
+    ["line","Épaisseur des traînées",30,180,5],
+    ["crt","Effet CRT",0,100,5]
+  ]
+};
+function defaultVizTuning(){
+  var saved={2:{},3:{}};
+  [2,3].forEach(function(mode){
+    VIZ_TUNE_SPECS[mode].forEach(function(spec){saved[mode][spec[0]]=100;});
+  });
+  return saved;
+}
+function loadVizTuning(){
+  var values=defaultVizTuning(),saved=null;
+  try{saved=JSON.parse(localStorage.getItem(VIZ_TUNE_KEY)||"null");}catch(e){}
+  if(!saved||typeof saved!=="object")return values;
+  [2,3].forEach(function(mode){
+    VIZ_TUNE_SPECS[mode].forEach(function(spec){
+      var val=Number(saved[mode]&&saved[mode][spec[0]]);
+      if(Number.isFinite(val))values[mode][spec[0]]=rounded(val,spec[2],spec[3]);
+    });
+  });
+  return values;
+}
+function saveVizTuning(values){
+  try{localStorage.setItem(VIZ_TUNE_KEY,JSON.stringify(values));}catch(e){}
+}
+function vizGain(tune,key){
+  return tune&&typeof tune[key]==="number"?rounded(tune[key],0,300)/100:1;
+}
+function shareVizTuning(values){
+  var lines=["ZebraVIS — ma configuration de test",""];
+  [2,3].forEach(function(mode){
+    lines.push(presets[mode][0]);
+    VIZ_TUNE_SPECS[mode].forEach(function(spec){
+      lines.push(spec[1]+" : "+values[mode][spec[0]]+" %");
+    });
+    lines.push("");
+  });
+  return lines.join("\n").trim();
+}
 function energy(arr,from,to){
   if(!arr)return 0;
   var sum=0,count=0;
@@ -164,7 +229,7 @@ function averageVizBand(a,first,last){
   var sum=0;for(var n=first;n<last;n++)sum+=a[n];
   return sum/(last-first);
 }
-function updateTunnelDynamics(m,playing,dt){
+function updateTunnelDynamics(m,playing,dt,tune){
   var f=m.fx,gate=playing?1:0;
   var kick=averageVizBand(m.bands,0,12)*gate;
   var snare=averageVizBand(m.bands,14,33)*gate;
@@ -186,8 +251,12 @@ function updateTunnelDynamics(m,playing,dt){
   f.snare=Math.max(snareHit,f.snare*Math.exp(-dt/.15));
   f.rise=Math.max(melodyHit,f.rise*Math.exp(-dt/.23));
   f.air=follow(f.air,playing?rounded(high*1.45,0,1):0,dt,.055,.20);
-  var target=playing?.14+m.level*.44+m.bass*.75+f.kick*2.25+
-                     f.snare*.95+f.rise*.85+f.air*.45:0;
+  var kickGain=vizGain(tune,"kick"),snareGain=vizGain(tune,"snare");
+  var highGain=vizGain(tune,"high");
+  var speedGain=vizGain(tune,"speed");
+  var target=playing?(.14+m.level*.44+m.bass*.75+
+                     f.kick*2.25*kickGain+f.snare*.95*snareGain+
+                     f.rise*.85*highGain+f.air*.45*highGain)*speedGain:0;
   f.velocity=follow(f.velocity,target,dt,.032,.20);
   if(playing)m.tunnelClock+=dt*f.velocity;
 }
@@ -270,68 +339,78 @@ function glowStroke(ctx,color,width,blur){
  * and the oscilloscope. The wide colored aura and the thin saturated center
  * share ONE untouched tunnel path; no screen-size filter, no global wash.
  * Caps keep multiple crossing rings from overexposing the frame. */
-function phosphorLine(ctx,hue,width,alpha,pulse){
+function phosphorLine(ctx,hue,width,alpha,pulse,tune){
   var a=rounded(alpha,0,1),hit=rounded(pulse,0,1);
+  var light=vizGain(tune,"glow");
   ctx.save();ctx.globalCompositeOperation="lighter";
   ctx.shadowColor="hsla("+hue+",100%,62%,1)";
   ctx.shadowBlur=(lowPower?12:19)+hit*(lowPower?2:4);
   ctx.lineWidth=width*2.75;
-  ctx.strokeStyle="hsla("+hue+",100%,54%,"+rounded(.15+a*.17,0,.36)+")";ctx.stroke();
+  ctx.strokeStyle="hsla("+hue+",100%,54%,"+rounded((.15+a*.17)*light,0,Math.min(.7,.36*light))+")";ctx.stroke();
   ctx.shadowColor="hsla("+hue+",100%,70%,1)";
   ctx.shadowBlur=(lowPower?6:11)+hit*2;
   ctx.lineWidth=width*1.65;
-  ctx.strokeStyle="hsla("+hue+",100%,73%,"+rounded(.38+a*.25,0,.7)+")";ctx.stroke();
+  ctx.strokeStyle="hsla("+hue+",100%,73%,"+rounded((.38+a*.25)*light,0,Math.min(.94,.7*light))+")";ctx.stroke();
   ctx.shadowColor="hsla("+hue+",100%,86%,1)";
   ctx.shadowBlur=lowPower?2:4;
   ctx.lineWidth=Math.max(.7,width*.78);
-  ctx.strokeStyle="hsla("+hue+",96%,87%,"+rounded(.59+a*.27+hit*.08,0,.9)+")";ctx.stroke();
+  ctx.strokeStyle="hsla("+hue+",96%,87%,"+rounded((.59+a*.27+hit*.08)*light,0,Math.min(.98,.9*light))+")";ctx.stroke();
   ctx.restore();
 }
-function drawTunnel(ctx,w,h,m){
+function drawTunnel(ctx,w,h,m,tune){
   var clock=m.tunnelClock,cx=w/2,cy=h/2,extent=Math.hypot(w,h)*.65,f=m.fx;
+  var kickGain=vizGain(tune,'kick'),snareGain=vizGain(tune,'snare');
+  var highGain=vizGain(tune,'high'),warpGain=vizGain(tune,'warp');
   ctx.save();
-  ctx.translate(cx+Math.sin(clock*12)*f.kick*2.1,
-                cy+Math.cos(clock*15)*f.kick*1.4);
+  ctx.translate(cx+Math.sin(clock*12)*f.kick*kickGain*2.1,
+                cy+Math.cos(clock*15)*f.kick*kickGain*1.4);
   var rings=lowPower?18:26,points=64;
   for(var n=rings-1;n>=0;n--){
     var z=(n/rings+clock*.26)%1;
     // Kick: physical tunnel pressure. Snare: very brief geometric twitch.
-    var radius=(9+z*z*extent)*(1+f.kick*.18);
-    var twist=clock*.48+z*.65+f.snare*.18*Math.sin(n*.7+clock*4);
+    var radius=(9+z*z*extent)*(1+f.kick*.18*kickGain);
+    var twist=clock*.48+z*.65+f.snare*.18*snareGain*Math.sin(n*.7+clock*4);
     ctx.beginPath();
-    for(var j=0;j<=points;j++){
+    for(var j=0;j<points;j++){
       var angle=j/points*TAU;
-      var band=m.levels[Math.floor(j/points*47)];
-      var snareRipple=f.snare*.035*Math.sin(angle*9+clock*5+n*.42);
-      var airRipple=f.rise*.025*Math.cos(angle*12+clock*3+n*.2);
-      var shape=1+.08*Math.cos(angle*6+twist)+band*.13+
-                m.hit*.035+snareRipple+airRipple;
+      // Wrap/interpolate last FFT band to first: no seam on a closed ring.
+      var bpos=j/points*48,bi=Math.floor(bpos)%48,bmix=bpos-Math.floor(bpos);
+      var band=m.levels[bi]*(1-bmix)+m.levels[(bi+1)%48]*bmix;
+      var snareRipple=f.snare*.035*snareGain*Math.sin(angle*9+clock*5+n*.42);
+      var airRipple=f.rise*.025*highGain*Math.cos(angle*12+clock*3+n*.2);
+      var shape=1+(.08*Math.cos(angle*6+twist)+band*.13+
+                m.hit*.035+snareRipple+airRipple)*warpGain;
       var x=Math.cos(angle+twist)*radius*shape,y=Math.sin(angle+twist)*radius*shape;
       if(j===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
     }
+    ctx.closePath();
     var hue=178+z*100+Math.sin(clock*.3)*22;
-    var alpha=(.19+.73*z)*(.62+m.level*.47+f.air*.19+f.snare*.14+f.rise*.22);
-    // A thinner tube with a bright colored phosphor core.
-    var thin=.55+z*.77+f.kick*.11;
-    phosphorLine(ctx,hue,thin,alpha,rounded(f.kick*.65+f.snare*.45+f.rise*.34,0,1));
+    var base=vizGain(tune,"idle"),flash=vizGain(tune,"flash");
+    var alpha=(.19+.73*z)*(.62*base+m.level*.47+
+                    f.air*.19*highGain+f.snare*.14*snareGain+
+                    f.rise*.22*highGain+f.kick*.28*kickGain*(flash-1));
+    var thin=(.55+z*.77+f.kick*.11*kickGain)*vizGain(tune,"line");
+    phosphorLine(ctx,hue,thin,alpha,rounded(
+                 (f.kick*.65*kickGain*flash+f.snare*.45*snareGain+
+                  f.rise*.34*highGain),0,1),tune);
     // High notes and snares briefly excite pixels ON the existing rings.
-    if(n%4===0&&(f.snare+f.rise)>.13){
+    if(n%4===0&&(f.snare*snareGain+f.rise*highGain)>.13){
       var ang=clock*1.4+n*2.399963;
       var px=Math.cos(ang+twist)*radius;
       var py=Math.sin(ang+twist)*radius;
-      var size=1.2+f.snare*1.5+f.rise*.9;
+      var size=1.2+f.snare*1.5*snareGain+f.rise*.9*highGain;
       ctx.shadowColor="#b1ffe1";ctx.shadowBlur=lowPower?2:6;
       ctx.fillStyle="rgba(181,255,229,"+
-        rounded((f.snare+f.rise)*.44,0,.72)+")";
+        rounded((f.snare*snareGain+f.rise*highGain)*.44*vizGain(tune,"glow"),0,.72)+")";
       ctx.fillRect(px-size*.5,py-size*.5,size,size);
       ctx.shadowBlur=0;
     }
   }
   ctx.shadowBlur=0;
-  var coreRadius=32+m.bass*45+m.hit*28+f.kick*46;
+  var coreRadius=32+m.bass*45+m.hit*28+f.kick*46*kickGain;
   var core=ctx.createRadialGradient(0,0,0,0,0,coreRadius);
   core.addColorStop(0,"rgba(177,255,238,"+
-    rounded(.08+m.hit*.35+f.kick*.25+f.snare*.10,0,.7)+")");
+    rounded((.08*vizGain(tune,"idle")+m.hit*.35+f.kick*.25*kickGain*vizGain(tune,"flash")+f.snare*.10*snareGain)*vizGain(tune,"glow"),0,.7)+")");
   core.addColorStop(1,"rgba(45,101,255,0)");
   ctx.fillStyle=core;circle(ctx,0,0,coreRadius);ctx.fill();
   ctx.restore();
@@ -342,34 +421,39 @@ function makeStars(){
   for(var i=0;i<(lowPower?140:320);i++)particles.push({x:random()*2-1,y:random()*2-1,z:.04+random()*.96,hue:180+random()*90});
   return particles;
 }
-function drawHyperdrive(ctx,w,h,m,dt,stars){
+function drawHyperdrive(ctx,w,h,m,dt,stars,tune){
   var cx=w/2,cy=h/2,scale=Math.min(w,h)*.38;
   // Visible acceleration on transients, with quiet sections slowing down.
-  var velocity=(m.level*.17+m.bass*.39+m.hit*1.38)*dt;
+  var velocity=(m.level*.17+m.bass*.39+m.hit*1.38*vizGain(tune,"kick"))*dt*vizGain(tune,"speed");
+  var highGain=vizGain(tune,"high"),glowGain=vizGain(tune,"glow");
+  var idleGain=vizGain(tune,"idle"),lineGain=vizGain(tune,"line");
+  var density=vizGain(tune,"density"),trails=vizGain(tune,"trails");
+  var densityThreshold=rounded(density*100,0,100);
   ctx.save();ctx.translate(cx,cy);ctx.rotate(Math.sin(m.clock*.25)*.09);
   ctx.globalCompositeOperation="lighter";
   for(var i=0;i<stars.length;i++){
     var s=stars[i],old=s.z;s.z-=velocity;
+    if((i*37)%100>=densityThreshold)continue;
     if(s.z<.04){s.z=1+(s.z%1);old=s.z;}
     var x=s.x*scale/s.z,y=s.y*scale/s.z;
-    var trail=Math.min(.22,velocity*(2+m.hit*5));
+    var trail=Math.min(.22*trails,velocity*(2+m.hit*5)*trails);
     var back=Math.min(1.2,Math.max(s.z,old)+trail);
     ctx.beginPath();ctx.moveTo(s.x*scale/back,s.y*scale/back);ctx.lineTo(x,y);
-    var alpha=rounded((1-s.z)*(.3+m.level*.6)+m.treble*.22,.02,.95);
+    var alpha=rounded(((1-s.z)*(.3*idleGain+m.level*.6)+m.treble*.22*highGain)*glowGain,.0,.95);
     // Same original trails, with a little green/blue/violet CRT fringe.
     // Only one in four gets an extra pass to remain fast on mobile.
     if(i%4===0){
       ctx.shadowColor="hsla("+s.hue+",100%,64%,1)";
       ctx.shadowBlur=lowPower?6:13;
-      ctx.lineWidth=2.5+(1-s.z)*2;
+      ctx.lineWidth=(2.5+(1-s.z)*2)*lineGain;
       ctx.strokeStyle="hsla("+s.hue+",98%,56%,"+rounded(alpha*.40,0,.36)+")";
       ctx.stroke();
     }
     ctx.shadowColor="hsla("+s.hue+",100%,72%,1)";
     ctx.shadowBlur=lowPower?2:(i%4===0?7:3);
-    ctx.lineWidth=.55+(1-s.z)*1.6;
-    ctx.strokeStyle="hsla("+s.hue+",94%,"+(70+m.treble*12)+"%,"+
-      rounded(alpha*(1.08+m.hit*.14),.12,.86)+")";
+    ctx.lineWidth=(.55+(1-s.z)*1.6)*lineGain;
+    ctx.strokeStyle="hsla("+s.hue+",94%,"+(70+m.treble*12*highGain)+"%,"+
+      rounded(alpha*(1.08+m.hit*.14),0,.86)+")";
     ctx.stroke();
     if(velocity<.0001){ctx.fillStyle="rgba(140,210,230,.12)";ctx.fillRect(x,y,1,1);}
   }
@@ -420,14 +504,116 @@ function mount(host,media,options){
   var modeText=element("div","zviz-mode-name");
   var fullButton=element("button","zviz-fullscreen","⛶");
   var mode=readMode(),lastFrame=0,stars=makeStars(),motion=makeMotion();
+  var tuneValues=loadVizTuning();
   var reactiveEngine=window.ZebraVISReactive||null,reactor=reactiveEngine&&reactiveEngine.create();
   var ctx=canvas.getContext("2d",{alpha:false});
   if(!ctx){host.appendChild(element("p","github-drive-error","Canvas 2D non disponible sur ce navigateur."));return;}
+  var tuneButton=element("button","zviz-settings-toggle","⚙");
+  tuneButton.type="button";tuneButton.title="Réglages du visualiseur";
+  tuneButton.setAttribute("aria-label","Ouvrir les réglages ZebraVIS");
+  tuneButton.setAttribute("aria-expanded","false");
+  var tunePanel=element("section","zviz-tune-panel");
+  tunePanel.hidden=true;
+  tunePanel.setAttribute("role","region");
+  tunePanel.setAttribute("aria-label","Réglages interactifs du visualiseur");
+  var tuneHead=element("div","zviz-tune-head");
+  var tuneHeading=element("div","zviz-tune-heading","RÉGLAGES");
+  var tuneClose=element("button","zviz-tune-close","×");
+  tuneClose.type="button";tuneClose.title="Fermer les réglages";
+  tuneHead.append(tuneHeading,tuneClose);
+  var tuneHelp=element("p","zviz-tune-help",
+    "Bouge les curseurs pendant la lecture. Les changements sont immédiats.");
+  var tuneList=element("div","zviz-tune-list");
+  var tuneFoot=element("div","zviz-tune-foot");
+  var tuneReset=element("button","zviz-tune-action","RÉINITIALISER");
+  tuneReset.type="button";tuneReset.title="Restaurer les valeurs de ce visualiseur";
+  var tuneCopy=element("button","zviz-tune-action zviz-tune-copy","COPIER MES RÉGLAGES");
+  tuneCopy.type="button";tuneCopy.title="Partager les réglages des deux modes";
+  tuneFoot.append(tuneReset,tuneCopy);
+  var tuneStatus=element("div","zviz-tune-status","Sauvegardé automatiquement sur cet appareil");
+  var tuneExport=element("textarea","zviz-tune-export");
+  tuneExport.readOnly=true;tuneExport.hidden=true;
+  tuneExport.setAttribute("aria-label","Mes valeurs ZebraVIS à copier");
+  tunePanel.append(tuneHead,tuneHelp,tuneList,tuneFoot,tuneStatus,tuneExport);
+  shell.appendChild(tunePanel);
+  function setTunePanelOpen(open){
+    tunePanel.hidden=!open;
+    tuneButton.setAttribute("aria-expanded",String(!!open));
+    if(open)renderTunePanel();
+  }
+  function renderTunePanel(){
+    if(mode<2)return;
+    tuneHeading.textContent="RÉGLAGES / "+presets[mode][0];
+    tuneList.textContent="";
+    VIZ_TUNE_SPECS[mode].forEach(function(spec){
+      var name=spec[0],row=element("label","zviz-tune-row");
+      var header=element("span","zviz-tune-row-head");
+      var labelText=element("span","zviz-tune-row-label",spec[1]);
+      var output=element("output","zviz-tune-value",tuneValues[mode][name]+" %");
+      header.append(labelText,output);
+      var input=element("input","zviz-tune-slider");
+      input.type="range";input.min=String(spec[2]);input.max=String(spec[3]);
+      input.step=String(spec[4]);input.value=String(tuneValues[mode][name]);
+      input.setAttribute("aria-label",spec[1]);
+      input.addEventListener("input",function(){
+        tuneValues[mode][name]=Number(input.value);
+        output.textContent=input.value+" %";
+        saveVizTuning(tuneValues);
+        if(name==="crt")applyTuneCRT();
+        if(!tuneExport.hidden)tuneExport.value=shareVizTuning(tuneValues);
+        tuneStatus.textContent="Sauvegardé automatiquement sur cet appareil";
+      });
+      row.append(header,input);
+      tuneList.appendChild(row);
+    });
+  }
+  function applyTuneCRT(){
+    crt.style.opacity=String(rounded(vizGain(tuneValues[mode],"crt"),0,1));
+  }
+  tuneButton.onclick=function(){
+    if(mode<2)return;
+    setTunePanelOpen(tunePanel.hidden);
+  };
+  tuneClose.onclick=function(){setTunePanelOpen(false);};
+  tuneReset.onclick=function(){
+    if(mode<2)return;
+    VIZ_TUNE_SPECS[mode].forEach(function(spec){
+      tuneValues[mode][spec[0]]=100;
+    });
+    saveVizTuning(tuneValues);
+    applyTuneCRT();
+    renderTunePanel();
+    if(!tuneExport.hidden)tuneExport.value=shareVizTuning(tuneValues);
+    tuneStatus.textContent="Valeurs d'origine restaurées pour ce mode";
+  };
+  tuneCopy.onclick=function(){
+    tuneExport.value=shareVizTuning(tuneValues);
+    tuneExport.hidden=false;
+    tuneExport.focus();tuneExport.select();
+    var msg=tuneExport.value;
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(msg).then(function(){
+        tuneStatus.textContent="Copié ! Colle ces valeurs dans notre conversation.";
+      }).catch(function(){
+        tuneStatus.textContent="Sélectionne le texte ci-dessous et copie-le.";
+        tuneExport.focus();tuneExport.select();
+      });
+    }else{
+      var success=false;
+      try{success=document.execCommand("copy");}catch(e){}
+      tuneStatus.textContent=success?"Copié ! Colle ces valeurs dans notre conversation.":
+        "Sélectionne le texte ci-dessous et copie-le.";
+    }
+  };
   function updatePreset(){
     modeText.textContent=(mode+1)+"/"+presets.length+"  "+presets[mode][0];
     back.title="Mode précédent";next.title="Mode suivant";
     zoomPanel.hidden=mode!==1;
     crt.hidden=mode<2;
+    applyTuneCRT();
+    tuneButton.disabled=mode<2;
+    if(mode<2)setTunePanelOpen(false);
+    else if(!tunePanel.hidden)renderTunePanel();
     saveMode(mode);
   }
   back.onclick=function(){mode=(mode+presets.length-1)%presets.length;updatePreset();};
@@ -437,7 +623,7 @@ function mount(host,media,options){
     if(document.fullscreenElement===shell&&document.exitFullscreen){document.exitFullscreen().catch(function(){});}
     else if(shell.requestFullscreen){var p=shell.requestFullscreen();if(p&&p.catch)p.catch(function(){});}
   };
-  bar.appendChild(back);bar.appendChild(modeText);bar.appendChild(next);bar.appendChild(fullButton);
+  bar.appendChild(back);bar.appendChild(modeText);bar.appendChild(next);bar.appendChild(tuneButton);bar.appendChild(fullButton);
   shell.appendChild(bar);
   var footer=element("div","zviz-footer");
   var hint=element("span","","EFFETS RÉACTIFS AU SON / CANVAS 2D");
@@ -519,7 +705,7 @@ function mount(host,media,options){
     var mids=linked?energy(spectrum,20,170):0;
     var treble=linked?energy(spectrum,170,500):0;
     var sounding=playing&&hasSignal;
-    if(mode===2)updateTunnelDynamics(motion,sounding,dt/1000);
+    if(mode===2)updateTunnelDynamics(motion,sounding,dt/1000,tuneValues[2]);
     if(mode>=2&&reactiveEngine&&reactor)reactiveEngine.update(reactor,motion,sounding,dt/1000);
     overlay.style.opacity=sounding?"0":"1";
     led.classList.toggle("pulsing",sounding);
@@ -527,10 +713,10 @@ function mount(host,media,options){
     else if(mode===1)drawScope(ctx,w,h,bass,mids,t,scopeZoom);
     else if(mode===2){
       if(reactiveEngine&&reactor)reactiveEngine.tunnel(ctx,w,h,motion,reactor);
-      else drawTunnel(ctx,w,h,motion);
+      else drawTunnel(ctx,w,h,motion,tuneValues[2]);
     }else{
       if(reactiveEngine&&reactor)reactiveEngine.hyper(ctx,w,h,motion,reactor,dt/1000);
-      else drawHyperdrive(ctx,w,h,motion,dt/1000,stars);
+      else drawHyperdrive(ctx,w,h,motion,dt/1000,stars,tuneValues[3]);
     }
   }
   state.stop=function(){

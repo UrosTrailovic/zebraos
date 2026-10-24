@@ -74,3 +74,65 @@
  .zviz-crt{box-shadow:inset 0 0 16px 3px rgba(0,1,6,.17),
                        inset 0 0 45px 9px rgba(0,1,7,.12)}
 }
+
+
+/* ZebraVIS Tuning Desk (temporary): recessed green/grey CRT-era controls.
+   Float beside the picture so sliders can be adjusted while music plays.
+   All controls and their values are live DOM inputs, no display filters. */
+.zviz-controls{grid-template-columns:38px minmax(0,1fr) 38px 38px 38px}
+.zviz-settings-toggle{font-size:19px;line-height:1;min-height:38px;padding:2px 0}
+.zviz-settings-toggle[aria-expanded="true"]{
+ border-style:inset;background:linear-gradient(#829e88,#abc4ae);
+ color:#092515;box-shadow:inset 1px 2px 5px #071b14b0;
+}
+.zviz-tune-panel{
+ position:absolute;top:54px;right:10px;z-index:30;
+ width:min(332px,calc(100% - 20px));max-height:calc(100% - 68px);
+ overflow-y:auto;overscroll-behavior:contain;
+ padding:9px;border:3px ridge #9db8a6;border-radius:0;
+ background:linear-gradient(125deg,#24372f,#10231c 78%);
+ box-shadow:3px 5px 15px #000c,inset 0 1px #8cb29b38;
+ color:#c1efd1;font:11px "Courier New",monospace;
+ scrollbar-color:#83ad94 #132920;
+}
+.zviz-tune-panel[hidden],.zviz-tune-export[hidden]{display:none!important}
+.zviz-tune-head{display:flex;align-items:center;gap:9px;justify-content:space-between;
+ border-bottom:1px solid #71997d82;padding:2px 0 8px}
+.zviz-tune-heading{font-weight:bold;letter-spacing:1px;font-size:12px;color:#d9f9df}
+.zviz .zviz-tune-close{width:29px;height:27px;flex:none;min-height:0;
+ background:linear-gradient(#dce3dc,#91a798);font:bold 20px Arial,sans-serif}
+.zviz-tune-help{font-size:10px;line-height:1.35;color:#9fcaaf;
+ margin:8px 0 10px}
+.zviz-tune-list{display:flex;flex-direction:column;gap:7px}
+.zviz-tune-row{display:block;padding:7px 8px 6px;border:1px solid #3e6550;
+ background:linear-gradient(#092017,#0a1c15);box-shadow:inset 0 1px 3px #000b;
+ cursor:default}
+.zviz-tune-row-head{display:flex;align-items:baseline;justify-content:space-between;
+ gap:10px;margin-bottom:2px}
+.zviz-tune-row-label{font-size:11px;line-height:1.2;color:#c5eccd;min-width:0}
+.zviz-tune-value{font:11px "Courier New",monospace;color:#8cffaf;
+ white-space:nowrap;font-variant-numeric:tabular-nums}
+.zviz-tune-slider{width:100%;height:29px;margin:2px 0 0;
+ display:block;cursor:ew-resize;accent-color:#91e7ad;touch-action:pan-y}
+.zviz-tune-foot{display:flex;gap:6px;flex-wrap:wrap;
+ border-top:1px solid #65917580;margin-top:11px;padding-top:10px}
+.zviz .zviz-tune-action{min-height:35px;flex:1 1 110px;
+ font:bold 9px "Courier New",monospace;padding:4px 6px}
+.zviz .zviz-tune-copy{background:linear-gradient(#bfeace,#74b98e)}
+.zviz-tune-status{font-size:9px;line-height:1.4;color:#83bfa1;
+ margin-top:9px;text-align:left}
+.zviz-tune-export{width:100%;height:80px;resize:vertical;margin-top:7px;
+ background:#03160d;color:#acffc8;border:1px inset #5c8870;
+ font:10px/1.4 "Courier New",monospace;padding:7px}
+@media(max-width:700px){
+ .zviz-controls{grid-template-columns:34px minmax(0,1fr) 34px 34px 34px;gap:4px}
+ .zviz-settings-toggle{font-size:17px;min-height:34px}
+ .zviz-tune-panel{top:52px;right:6px;width:calc(100% - 12px);
+   max-height:55%;padding:7px}
+ .zviz-tune-row{padding:5px 7px 4px}
+ .zviz-tune-list{gap:5px}
+ .zviz-tune-slider{height:33px}
+}
+@media(max-height:480px){
+ .zviz-tune-panel{top:37px;max-height:calc(100% - 43px)}
+}
