@@ -397,12 +397,12 @@ function mount(host,media,options){
     if(state.stopped||!shell.isConnected){state.stop();return;}
     state.request=requestAnimationFrame(frame);
     if(document.hidden||shell.closest(".window")?.classList.contains("minimized"))return;
-    var step=lowPower?36:18;
+    var step=mode>=2?(lowPower?42:32):(lowPower?36:18);
     if(t-lastFrame<step)return;
     var dt=rounded(t-lastFrame,1,50);lastFrame=t;
     var box=stage.getBoundingClientRect();
     var cw=Math.max(160,Math.round(box.width)),ch=Math.max(80,Math.round(box.height));
-    var pix=Math.min(window.devicePixelRatio||1,lowPower?1.25:1.6);
+    var pix=Math.min(window.devicePixelRatio||1,mode>=2?(lowPower?1:1.2):(lowPower?1.25:1.6));
     if(w!==cw||h!==ch||dpr!==pix){
       w=cw;h=ch;dpr=pix;
       canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
