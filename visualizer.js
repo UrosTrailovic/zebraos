@@ -65,7 +65,7 @@ function readMode(){
 function saveMode(mode){
   try{localStorage.setItem("zebra.viz.preset.v2",String(mode));}catch(e){}
 }
-/* Temporary tuning desk for the two experimental visualizers.
+/* ZebraVIS LAB — persistent experimental controls for audio visuals.
  * Defaults are the approved current look (100%). Persistence is per browser,
  * independent of ZebraOS user sessions. No audio graph is modified. */
 var VIZ_TUNE_KEY="zebra.viz.tuning.v1";
@@ -517,12 +517,15 @@ function mount(host,media,options){
   tunePanel.setAttribute("role","region");
   tunePanel.setAttribute("aria-label","Réglages interactifs du visualiseur");
   var tuneHead=element("div","zviz-tune-head");
+  var tuneTitleBox=element("div","zviz-tune-titlebox");
+  var tuneKicker=element("div","zviz-tune-kicker","ZEBRAVIS / TEST LAB");
   var tuneHeading=element("div","zviz-tune-heading","RÉGLAGES");
+  tuneTitleBox.append(tuneKicker,tuneHeading);
   var tuneClose=element("button","zviz-tune-close","×");
   tuneClose.type="button";tuneClose.title="Fermer les réglages";
-  tuneHead.append(tuneHeading,tuneClose);
+  tuneHead.append(tuneTitleBox,tuneClose);
   var tuneHelp=element("p","zviz-tune-help",
-    "Bouge les curseurs pendant la lecture. Les changements sont immédiats.");
+    "RÉGLAGES EN DIRECT  •  ESSAYE, ÉCOUTE ET AFFINE.");
   var tuneList=element("div","zviz-tune-list");
   var tuneFoot=element("div","zviz-tune-foot");
   var tuneReset=element("button","zviz-tune-action","RÉINITIALISER");
@@ -543,18 +546,22 @@ function mount(host,media,options){
   }
   function renderTunePanel(){
     if(mode<2)return;
-    tuneHeading.textContent="RÉGLAGES / "+presets[mode][0];
+    tuneHeading.textContent=presets[mode][0]+" / RÉGLAGES";
     tuneList.textContent="";
-    VIZ_TUNE_SPECS[mode].forEach(function(spec){
+    VIZ_TUNE_SPECS[mode].forEach(function(spec,index){
       var name=spec[0],row=element("label","zviz-tune-row");
       var header=element("span","zviz-tune-row-head");
-      var labelText=element("span","zviz-tune-row-label",spec[1]);
+      var nameBox=element("span","zviz-tune-row-title");
+      var number=element("span","zviz-tune-row-number",String(index+1).padStart(2,"0"));
+      var labelText=element("span","zviz-tune-row-label",spec[1].toUpperCase());
+      nameBox.append(number,labelText);
       var output=element("output","zviz-tune-value",tuneValues[mode][name]+" %");
-      header.append(labelText,output);
+      header.append(nameBox,output);
       var input=element("input","zviz-tune-slider");
       input.type="range";input.min=String(spec[2]);input.max=String(spec[3]);
       input.step=String(spec[4]);input.value=String(tuneValues[mode][name]);
       input.setAttribute("aria-label",spec[1]);
+      input.setAttribute("data-viz-control",name);
       input.addEventListener("input",function(){
         tuneValues[mode][name]=Number(input.value);
         output.textContent=input.value+" %";
@@ -563,7 +570,12 @@ function mount(host,media,options){
         if(!tuneExport.hidden)tuneExport.value=shareVizTuning(tuneValues);
         tuneStatus.textContent="Sauvegardé automatiquement sur cet appareil";
       });
-      row.append(header,input);
+      var endMarks=element("span","zviz-tune-limits");
+      endMarks.append(
+        element("span","","MIN  "+spec[2]+" %"),
+        element("span","","MAX  "+spec[3]+" %")
+      );
+      row.append(header,input,endMarks);
       tuneList.appendChild(row);
     });
   }

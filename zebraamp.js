@@ -947,7 +947,7 @@ function loadVisualizer(){
  // Keep the approved spectrum and scope available even if the optional
  // reactive graphics module cannot be downloaded.
  visualizerPromise=inject("/visualizer-reactive.js?v=1.1").catch(function(){return null;})
-  .then(function(){return inject("/visualizer.js?v=4.12");})
+  .then(function(){return inject("/visualizer.js?v=4.13");})
   .then(function(){
    if(!window.ZebraVisualizer)throw Error("Module ZebraVIS introuvable.");
    return window.ZebraVisualizer;
