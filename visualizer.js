@@ -230,21 +230,31 @@ function glowStroke(ctx,color,width,blur){
   ctx.strokeStyle=color;ctx.lineWidth=width;
   ctx.shadowColor=color;ctx.shadowBlur=lowPower?blur*.45:blur;ctx.stroke();
 }
-/* Small phosphor fringe ON the original paths (no full-canvas bloom).
- * Two strokes only: colored light spill + thin bright colored center.
- * Keeps the same geometry and hue as the restored ZebraVIS renderer. */
+/* Actual CRT phosphor: the same triple-pass emission used in Spectre 2000
+ * and the oscilloscope. The wide colored aura and the thin saturated center
+ * share ONE untouched tunnel path; no screen-size filter, no global wash.
+ * Caps keep multiple crossing rings from overexposing the frame. */
 function phosphorLine(ctx,hue,width,alpha,pulse){
-  var a=rounded(alpha,0,.9),hit=rounded(pulse,0,1);
+  var a=rounded(alpha,0,1),hit=rounded(pulse,0,1);
   ctx.save();
-  ctx.globalCompositeOperation="screen";
-  ctx.shadowColor="hsla("+hue+",100%,66%,.9)";
-  ctx.shadowBlur=(lowPower?3:8)+hit*(lowPower?2:3);
-  ctx.lineWidth=width*2.15;
-  ctx.strokeStyle="hsla("+hue+",98%,57%,"+(a*.23)+")";
+  ctx.globalCompositeOperation="lighter";
+  // 1. Wide colored light spill — the part missing from the old vector lines.
+  ctx.shadowColor="hsla("+hue+",100%,62%,1)";
+  ctx.shadowBlur=(lowPower?13:23)+hit*(lowPower?2:5);
+  ctx.lineWidth=width*4.2;
+  ctx.strokeStyle="hsla("+hue+",100%,53%,"+rounded(.12+a*.16,0,.31)+")";
   ctx.stroke();
-  ctx.shadowBlur=lowPower?1:3;
-  ctx.lineWidth=width;
-  ctx.strokeStyle="hsla("+hue+",94%,"+(68+hit*8)+"%,"+Math.min(.81,a*.88)+")";
+  // 2. Brighter green/cyan/violet tube, with compact bloom.
+  ctx.shadowColor="hsla("+hue+",100%,68%,1)";
+  ctx.shadowBlur=(lowPower?6:12)+hit*(lowPower?1:3);
+  ctx.lineWidth=width*2.1;
+  ctx.strokeStyle="hsla("+hue+",100%,70%,"+rounded(.31+a*.28,0,.64)+")";
+  ctx.stroke();
+  // 3. A razor-thin pale phosphor core (colored, not pure white).
+  ctx.shadowColor="hsla("+hue+",100%,84%,1)";
+  ctx.shadowBlur=lowPower?3:5;
+  ctx.lineWidth=Math.max(.8,width*.8);
+  ctx.strokeStyle="hsla("+hue+",96%,84%,"+rounded(.49+a*.29+hit*.07,0,.82)+")";
   ctx.stroke();
   ctx.restore();
 }
@@ -266,8 +276,8 @@ function drawTunnel(ctx,w,h,m){
       if(j===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
     }
     var hue=178+z*100+Math.sin(clock*.3)*22;
-    var alpha=(.15+.7*z)*(.28+m.level*.7);
-    phosphorLine(ctx,hue,.7+z*1.2+m.hit*.4,alpha*(1+m.hit*.25),m.hit*.75+m.bass*.4);
+    var alpha=(.19+.73*z)*(.60+m.level*.50);
+    phosphorLine(ctx,hue,.7+z*1.2+m.hit*.4,alpha*(1+m.hit*.12),m.hit*.75+m.bass*.4);
   }
   ctx.shadowBlur=0;
   var core=ctx.createRadialGradient(0,0,0,0,0,32+m.bass*45+m.hit*28);
@@ -298,17 +308,17 @@ function drawHyperdrive(ctx,w,h,m,dt,stars){
     // Same original trails, with a little green/blue/violet CRT fringe.
     // Only one in four gets an extra pass to remain fast on mobile.
     if(i%4===0){
-      ctx.shadowColor="hsla("+s.hue+",100%,64%,.8)";
-      ctx.shadowBlur=lowPower?2:8;
-      ctx.lineWidth=2.2+(1-s.z)*1.8;
-      ctx.strokeStyle="hsla("+s.hue+",95%,57%,"+(alpha*.21)+")";
+      ctx.shadowColor="hsla("+s.hue+",100%,64%,1)";
+      ctx.shadowBlur=lowPower?6:13;
+      ctx.lineWidth=2.5+(1-s.z)*2;
+      ctx.strokeStyle="hsla("+s.hue+",98%,56%,"+rounded(alpha*.40,0,.36)+")";
       ctx.stroke();
     }
-    ctx.shadowColor="hsla("+s.hue+",100%,69%,.85)";
-    ctx.shadowBlur=lowPower?0:(i%4===0?4:0);
-    ctx.lineWidth=.5+(1-s.z)*1.6;
-    ctx.strokeStyle="hsla("+s.hue+",86%,"+(65+m.treble*19)+"%,"+
-      rounded(alpha*(1+m.hit*.14),.02,.88)+")";
+    ctx.shadowColor="hsla("+s.hue+",100%,72%,1)";
+    ctx.shadowBlur=lowPower?2:(i%4===0?7:3);
+    ctx.lineWidth=.55+(1-s.z)*1.6;
+    ctx.strokeStyle="hsla("+s.hue+",94%,"+(70+m.treble*12)+"%,"+
+      rounded(alpha*(1.08+m.hit*.14),.12,.86)+")";
     ctx.stroke();
     if(velocity<.0001){ctx.fillStyle="rgba(140,210,230,.12)";ctx.fillRect(x,y,1,1);}
   }
