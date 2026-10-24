@@ -1,7 +1,7 @@
 /* ZebraOS — façade physique du démarrage (textures du studio). */
 #power-screen.zp3-ready {
   display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(ellipse 64% 45% at 50% 50%,#111213 0%,#080909 51%,#020202 100%);
+  background-color:#151515;background-image:url("assets/powerv3/background-black-matte.png");background-size:420px 420px;background-repeat:repeat;
   padding:clamp(14px,3vw,40px);overflow:hidden;
 }
 #power-screen .zp3-machine {
