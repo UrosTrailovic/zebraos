@@ -125,7 +125,7 @@ function follow(value,target,dt,attack,release){
 }
 function makeMotion(){
   return {bands:new Float32Array(48),levels:new Float32Array(48),
-    peaks:new Float32Array(48),holds:new Float32Array(48),clock:0,
+    peaks:new Float32Array(48),holds:new Float32Array(48),clock:0,tunnelClock:0,
     bass:0,mids:0,treble:0,level:0,hit:0,previousBass:0,bed:0};
 }
 function readMotion(m,node,playing,dt){
@@ -230,8 +230,26 @@ function glowStroke(ctx,color,width,blur){
   ctx.strokeStyle=color;ctx.lineWidth=width;
   ctx.shadowColor=color;ctx.shadowBlur=lowPower?blur*.45:blur;ctx.stroke();
 }
+/* Small phosphor fringe ON the original paths (no full-canvas bloom).
+ * Two strokes only: colored light spill + thin bright colored center.
+ * Keeps the same geometry and hue as the restored ZebraVIS renderer. */
+function phosphorLine(ctx,hue,width,alpha,pulse){
+  var a=rounded(alpha,0,.9),hit=rounded(pulse,0,1);
+  ctx.save();
+  ctx.globalCompositeOperation="screen";
+  ctx.shadowColor="hsla("+hue+",100%,66%,.9)";
+  ctx.shadowBlur=(lowPower?3:8)+hit*(lowPower?2:3);
+  ctx.lineWidth=width*2.15;
+  ctx.strokeStyle="hsla("+hue+",98%,57%,"+(a*.23)+")";
+  ctx.stroke();
+  ctx.shadowBlur=lowPower?1:3;
+  ctx.lineWidth=width;
+  ctx.strokeStyle="hsla("+hue+",94%,"+(68+hit*8)+"%,"+Math.min(.81,a*.88)+")";
+  ctx.stroke();
+  ctx.restore();
+}
 function drawTunnel(ctx,w,h,m){
-  var clock=m.clock,cx=w/2,cy=h/2,extent=Math.hypot(w,h)*.65;
+  var clock=m.tunnelClock,cx=w/2,cy=h/2,extent=Math.hypot(w,h)*.65;
   ctx.save();ctx.translate(cx,cy);
   var rings=lowPower?18:26,points=64;
   // A continuous depth phase: no phase jumps when a kick hits.
@@ -248,7 +266,8 @@ function drawTunnel(ctx,w,h,m){
       if(j===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
     }
     var hue=178+z*100+Math.sin(clock*.3)*22;
-    glowStroke(ctx,"hsla("+hue+",92%,"+(45+m.mids*22+m.hit*12)+"%,"+((.15+.7*z)*(.28+m.level*.7))+ ")",.7+z*1.2+m.hit*1.4,6+m.hit*10);
+    var alpha=(.15+.7*z)*(.28+m.level*.7);
+    phosphorLine(ctx,hue,.7+z*1.2+m.hit*.4,alpha*(1+m.hit*.25),m.hit*.75+m.bass*.4);
   }
   ctx.shadowBlur=0;
   var core=ctx.createRadialGradient(0,0,0,0,0,32+m.bass*45+m.hit*28);
@@ -265,7 +284,7 @@ function makeStars(){
 function drawHyperdrive(ctx,w,h,m,dt,stars){
   var cx=w/2,cy=h/2,scale=Math.min(w,h)*.38;
   // Visible acceleration on transients, with quiet sections slowing down.
-  var velocity=(m.level*.12+m.bass*.24+m.hit*.95)*dt;
+  var velocity=(m.level*.17+m.bass*.39+m.hit*1.38)*dt;
   ctx.save();ctx.translate(cx,cy);ctx.rotate(Math.sin(m.clock*.25)*.09);
   ctx.globalCompositeOperation="lighter";
   for(var i=0;i<stars.length;i++){
@@ -276,7 +295,21 @@ function drawHyperdrive(ctx,w,h,m,dt,stars){
     var back=Math.min(1.2,Math.max(s.z,old)+trail);
     ctx.beginPath();ctx.moveTo(s.x*scale/back,s.y*scale/back);ctx.lineTo(x,y);
     var alpha=rounded((1-s.z)*(.3+m.level*.6)+m.treble*.22,.02,.95);
-    glowStroke(ctx,"hsla("+s.hue+",80%,"+(65+m.treble*23)+"%,"+alpha+")",.5+(1-s.z)*1.6,(lowPower||i%5)?0:5);
+    // Same original trails, with a little green/blue/violet CRT fringe.
+    // Only one in four gets an extra pass to remain fast on mobile.
+    if(i%4===0){
+      ctx.shadowColor="hsla("+s.hue+",100%,64%,.8)";
+      ctx.shadowBlur=lowPower?2:8;
+      ctx.lineWidth=2.2+(1-s.z)*1.8;
+      ctx.strokeStyle="hsla("+s.hue+",95%,57%,"+(alpha*.21)+")";
+      ctx.stroke();
+    }
+    ctx.shadowColor="hsla("+s.hue+",100%,69%,.85)";
+    ctx.shadowBlur=lowPower?0:(i%4===0?4:0);
+    ctx.lineWidth=.5+(1-s.z)*1.6;
+    ctx.strokeStyle="hsla("+s.hue+",86%,"+(65+m.treble*19)+"%,"+
+      rounded(alpha*(1+m.hit*.14),.02,.88)+")";
+    ctx.stroke();
     if(velocity<.0001){ctx.fillStyle="rgba(140,210,230,.12)";ctx.fillRect(x,y,1,1);}
   }
   ctx.restore();
@@ -422,6 +455,11 @@ function mount(host,media,options){
     var mids=linked?energy(spectrum,20,170):0;
     var treble=linked?energy(spectrum,170,500):0;
     var sounding=playing&&hasSignal;
+    if(mode===2&&sounding){
+      // Audio-integrated travel only for Tunnel; Scope/Spectrum untouched.
+      motion.tunnelClock+=dt/1000*(.20*motion.level+.55*motion.mids+
+                                   .58*motion.bass+1.25*motion.hit);
+    }
     if(mode>=2&&reactiveEngine&&reactor)reactiveEngine.update(reactor,motion,sounding,dt/1000);
     overlay.style.opacity=sounding?"0":"1";
     led.classList.toggle("pulsing",sounding);
