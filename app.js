@@ -367,8 +367,18 @@ function restartLogin(){
  if(window.ZebraAMP)window.ZebraAMP.stop();
  adminApproved=false;adminLoginUnlocked=false;
  closeAll();session=null;
- show("power-screen");
- powerOn();
+ // Restart directly into the boot logo; the physical POWER facade belongs
+ // only to the initial power-on or an explicit shutdown.
+ booting=true;
+ var logoFrame=document.querySelector("#boot-screen .zboot-logo-frame");
+ if(logoFrame){
+  logoFrame.style.animation="none";
+  void logoFrame.offsetWidth; // Re-arm the same logo animation for each restart.
+  logoFrame.style.removeProperty("animation");
+ }
+ show("boot-screen");
+ playBootTrack(bootAudio);
+ bootTimer=setTimeout(finishBoot,5200);
 }
 function signout(){sfx("switch");stopBootSequences();if(window.ZebraAMP)window.ZebraAMP.stop();adminLoginUnlocked=false;closeAll();session=null;login()}
 function getStore(k){try{return localStorage.getItem(k)}catch(e){return null}}
