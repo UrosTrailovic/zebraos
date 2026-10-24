@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-23T15:47:01.977604+00:00",
+  "generatedAt": "2026-10-24T08:04:57.575891+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -454,6 +454,10 @@
       "path": "STUDIO/BUREAU/Zebra Tape 2/Poster/Poster v1.webp",
       "type": "file",
       "size": 1666704
+    },
+    {
+      "path": "STUDIO/BUREAU/Zebra Tape 2/Screenshot",
+      "type": "dir"
     },
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2/Son",
