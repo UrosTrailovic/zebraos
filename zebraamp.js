@@ -49,7 +49,7 @@ function format(t){if(!Number.isFinite(t)||t<0)return "00:00";t=Math.floor(t);re
 function status(text){notifyText=text||"";renderStatus();}
 function store(){
  try{localStorage.setItem(KEY,JSON.stringify({
-   playlists:playlists,volume:volume,shuffle:shuffle,repeat:repeat,
+   playlists:playlists.filter(function(p){return p.id!==OPENED;}),volume:volume,shuffle:shuffle,repeat:repeat,
    speed:speed,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,eq:eq,preset:preset
  }));}catch(e){status("Stockage des préférences indisponible.");}
 }
@@ -59,7 +59,7 @@ function restore(){
   if(!d||typeof d!=="object")return;
   if(Array.isArray(d.playlists))playlists=d.playlists.slice(0,60).filter(function(p){
    return p&&typeof p.id==="string"&&typeof p.name==="string"&&
-    p.id!==ALBUM&&Array.isArray(p.tracks);
+    p.id!==ALBUM&&p.id!==OPENED&&Array.isArray(p.tracks);
   }).map(function(p){return{id:p.id,name:p.name.slice(0,90),readonly:false,
    coverKey:p.coverKey==="cover:"+p.id?p.coverKey:null,
    tracks:p.tracks.filter(function(t){return t&&typeof t.id==="string"&&
@@ -317,9 +317,25 @@ function setEq(values,name){
  filters.forEach(function(f,i){f.gain.value=eq[i];});
  store();renderEq();
 }
+/* "Fichiers ouverts" is only a temporary queue for files launched in Explorer.
+ * It is never saved, and switching away disposes it immediately. */
+function discardOpenedPlaylist(){
+ var opened=playlists.find(function(p){return p.id===OPENED;});
+ if(!opened)return;
+ playlists=playlists.filter(function(p){return p.id!==OPENED;});
+ opened.tracks.forEach(function(track){
+  if(track.kind==="blob"&&track.blobKey){
+   dbOp("delete",track.blobKey).catch(function(){});
+  }
+ });
+}
 function setPlaylist(id){
  if(id!==ALBUM&&!playlists.some(function(p){return p.id===id;}))return;
- if(current!==id){audio.pause();currentId=null;audio.removeAttribute("src");releaseUrl();}
+ if(current!==id){
+  ++loadingId; // Cancel any asynchronous track load from the old playlist.
+  audio.pause();currentId=null;audio.removeAttribute("src");releaseUrl();
+  if(current===OPENED)discardOpenedPlaylist();
+ }
  current=id;store();render();
 }
 function createPlaylist(name,shouldSwitch){
@@ -444,7 +460,7 @@ function openCoverViewer(){
  view.querySelector(".amp3").appendChild(overlay);closeBtn.focus();
 }
 function editPlaylist(){
- var p=getList();if(p.readonly||!view)return;
+ var p=getList();if(p.readonly||p.id===OPENED||!view)return;
  var root=view.querySelector(".amp3");
  if(!root)return;
  root.querySelector(".amp3-edit-overlay")?.remove();
@@ -540,7 +556,7 @@ function editPlaylist(){
  nameInput.focus();nameInput.select();
 }
 function deleteList(){
- var p=getList();if(p.readonly)return;
+ var p=getList();if(p.readonly||p.id===OPENED)return;
  if(!confirm("Supprimer cette playlist ? Les fichiers importés ne seront pas supprimés des autres playlists."))return;
  playlists=playlists.filter(function(q){return q.id!==p.id;});
  releaseCover(p.id);
@@ -786,8 +802,8 @@ function render(){
  var oldListScroll=rows.dataset.playlist===current?rows.scrollTop:0;
  rows.innerHTML="";rows.dataset.playlist=current;
  var editable=!list.readonly;
- view.querySelector("[data-amp-rename]").disabled=!editable;
- view.querySelector("[data-amp-delete-list]").disabled=!editable;
+ view.querySelector("[data-amp-rename]").disabled=!editable||list.id===OPENED;
+ view.querySelector("[data-amp-delete-list]").disabled=!editable||list.id===OPENED;
  view.querySelector("[data-amp-import]").textContent=editable?"＋ Importer des sons":"＋ Créer avec mes sons";
  if(!list.tracks.length){
   rows.appendChild(el("div","amp3-empty",list.readonly?
