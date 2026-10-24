@@ -47,7 +47,7 @@ function el(tag,cls,label){
 }
 function key(name){return "zebra.wallpaper.v2."+name;}
 function read(name){
-  var state={imageId:null,mode:"fill",posX:50,posY:50,bgColor:"#172029",labelTitle:"ZEBRA TAPE 2",labelSub:"STUDIO // 2026",labelFont:"tahoma"};
+  var state={imageId:null,mode:"fill",posX:50,posY:50,bgColor:"#172029",labelTitle:"",labelSub:"",labelFont:"tahoma"};
   try{
     var saved=JSON.parse(localStorage.getItem(key(name))||"null");
     if(saved&&typeof saved==="object"){
@@ -56,8 +56,8 @@ function read(name){
       if(Number.isFinite(saved.posX))state.posX=Math.max(0,Math.min(100,saved.posX));
       if(Number.isFinite(saved.posY))state.posY=Math.max(0,Math.min(100,saved.posY));
        if(typeof saved.bgColor==="string"&&/^#[0-9a-fA-F]{6}$/.test(saved.bgColor))state.bgColor=saved.bgColor.toLowerCase();
-       if(typeof saved.labelTitle==="string")state.labelTitle=saved.labelTitle.slice(0,90);
-       if(typeof saved.labelSub==="string")state.labelSub=saved.labelSub.slice(0,90);
+       if(typeof saved.labelTitle==="string")state.labelTitle=(saved.labelTitle==="ZEBRA TAPE 2"?"":saved.labelTitle).slice(0,25);
+       if(typeof saved.labelSub==="string")state.labelSub=(saved.labelSub==="STUDIO // 2026"?"":saved.labelSub).slice(0,90);
        if(typeof saved.labelFont==="string"&&Object.prototype.hasOwnProperty.call(labelFonts,saved.labelFont))state.labelFont=saved.labelFont;
     }
   }catch(e){}
@@ -391,7 +391,7 @@ function mount(parent){
     input.oninput=function(){var state=read(currentSession);state[key]=input.value;save(currentSession,state);updateLabel(state);};
     line.appendChild(input);signature.appendChild(line);
   }
-  signatureField("Texte principal","labelTitle",90);
+  signatureField("Texte principal (25 caractères max.)","labelTitle",25);
   signatureField("Sous-texte","labelSub",90);
   var fontLine=el("label","wallpaper-signature-field");
   fontLine.appendChild(el("span","wallpaper-label-setting","Police de caractères"));
@@ -402,9 +402,9 @@ function mount(parent){
   fontSelect.value=cfg.labelFont;
   fontSelect.onchange=function(){var state=read(currentSession);state.labelFont=fontSelect.value;save(currentSession,state);updateLabel(state);};
   fontLine.appendChild(fontSelect);signature.appendChild(fontLine);
-  var restore=el("button","classic-button","Rétablir le texte d’origine");
+  var restore=el("button","classic-button","Effacer les textes");
   restore.type="button";
-  restore.onclick=function(){var state=read(currentSession);state.labelTitle="ZEBRA TAPE 2";state.labelSub="STUDIO // 2026";state.labelFont="tahoma";save(currentSession,state);mount(parent);updateLabel(state);};
+  restore.onclick=function(){var state=read(currentSession);state.labelTitle="";state.labelSub="";state.labelFont="tahoma";save(currentSession,state);mount(parent);updateLabel(state);};
   signature.appendChild(restore);parent.appendChild(signature);
   updateLabel(cfg);
 
