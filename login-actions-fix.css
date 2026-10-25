@@ -1,9 +1,8 @@
-/* ZebraOS login — compact Windows XP-style shutdown/restart commands.
- * Transparent text actions with one small colored hardware-like icon tile.
- * Keep both existing button ids and their JavaScript handlers untouched. */
+/* ZebraOS login — compact Windows XP-style shutdown control.
+ * The physical shutdown icon and its action remain unchanged. */
 #login-screen .login-footer{
-  height:clamp(92px,12vh,112px);
-  min-height:92px;
+  height:clamp(74px,10vh,100px);
+  min-height:74px;
   padding:0 clamp(16px,4.3vw,62px);
   display:flex;
   align-items:center;
@@ -78,17 +77,10 @@
   fill:none;stroke:currentColor;stroke-width:2.25;
   stroke-linejoin:round;stroke-linecap:round;
 }
-/* Restart gets its own green XP tile; shutdown stays orange/red. */
-#login-screen #restart-login .login-action-icon{
-  border-color:#beefa9;
-  background:linear-gradient(135deg,#bded83 0%,#5cab32 53%,#267d18 100%);
-  box-shadow:inset 1px 1px #fff8,inset -1px -1px #235d1588,
-             0 1px 2px #111d57aa;
-}
 @media(max-width:700px){
   #login-screen .login-footer{
-    height:clamp(91px,12vh,110px);
-    min-height:91px;
+    height:clamp(76px,10.5vh,104px);
+    min-height:76px;
     padding:0 16px max(4px,env(safe-area-inset-bottom,0px));
     display:flex;
     justify-content:flex-start;
@@ -126,9 +118,9 @@
 }
 @media(max-width:700px) and (max-height:560px){
   #login-screen .login-footer{
-    height:83px;min-height:83px;
+    height:60px;min-height:60px;
     padding:0 12px;
   }
   #login-screen .login-power-button{min-height:37px}
-  #login-screen .login-content{max-height:calc(100% - 90px)}
+  #login-screen .login-content{max-height:calc(100% - 70px)}
 }
