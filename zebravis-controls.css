@@ -76,54 +76,70 @@
 }
 
 
-/* ZebraVIS experimental controls: same uninterrupted green metal face as
- * ZebraAMP. Absolutely no per-control cards or digital LCD readouts.
- * Track and cap are provided by the shared ZebraAMP VOL. fader rules. */
+/* ZebraVIS LAB — one physical Windows-era window; existing ZebraAMP
+ * faders and green metal surface remain intact. The silver scrollbar stays
+ * visible on Android, where native scrollbars frequently auto-hide. */
 .zviz-controls{grid-template-columns:38px minmax(0,1fr) 38px 38px 38px}
 .zviz-settings-toggle{font-size:19px;line-height:1;min-height:38px;padding:2px 0}
 .zviz-settings-toggle[aria-expanded="true"]{
  border-style:inset;background:linear-gradient(#829e88,#abc4ae);
  color:#092515;box-shadow:inset 1px 2px 5px #071b14b0;
 }
-.zviz-tune-panel{
+.zviz-tune-frame{
  position:absolute;top:54px;right:10px;z-index:30;
- width:min(360px,calc(100% - 20px));max-height:calc(100% - 67px);
- overflow-y:auto;overscroll-behavior:contain;
- padding:24px 18px 22px;
- border:0;border-radius:2px;
- background:#26372e url('/assets/zebraamp/ampbg.png') 0 0 / 256px 256px repeat;
- box-shadow:0 6px 18px #000a,inset 0 1px 0 #ffffff22,inset 0 -1px 0 #0a170e;
- color:#a9dbb7;font:10px "Courier New",monospace;
- scrollbar-color:#809d87 #26372e;
+ width:min(360px,calc(100% - 20px));
+ height:70%;max-height:calc(100% - 67px);
+ display:flex;align-items:stretch;min-height:0;
+ padding:2px;
+ overflow:hidden;box-sizing:border-box;
+ border:3px solid;
+ border-color:#f4f4f4 #535353 #4e4e4e #eeeeee;
+ border-radius:1px;
+ background:#26372e url('/assets/zebraamp/ampbg.png') repeat 0 0 / 256px 256px;
+ box-shadow:inset 1px 1px 0 #fff9,
+            inset -1px -1px 0 #0008,
+            2px 5px 13px #000a;
 }
-.zviz-tune-panel[hidden]{display:none!important}
-/* Same four real asset screws as the machine body; no thick frame. */
-.zviz-tune-panel::before,.zviz-tune-panel::after{
- content:"";position:absolute;left:4px;right:4px;height:14px;
+.zviz-tune-frame[hidden]{display:none!important}
+/* Exactly the same hardware screw sprites as the existing machine. */
+.zviz-tune-frame::before,.zviz-tune-frame::after{
+ content:"";position:absolute;left:3px;right:24px;height:14px;
  background-image:url('/assets/zebraamp/vis.png'),url('/assets/zebraamp/vis.png');
  background-repeat:no-repeat;
  background-position:left center,right center;
  background-size:14px 14px;
- pointer-events:none;z-index:2;
+ z-index:2;pointer-events:none;
 }
-.zviz-tune-panel::before{top:3px}
-.zviz-tune-panel::after{bottom:3px}
+.zviz-tune-frame::before{top:2px}
+.zviz-tune-frame::after{bottom:2px}
+.zviz-tune-panel{
+ position:relative;top:auto;right:auto;z-index:auto;
+ min-width:0;min-height:0;max-height:none;
+ width:auto;height:100%;flex:1 1 auto;
+ overflow-y:auto;overflow-x:hidden;
+ overscroll-behavior:contain;
+ padding:23px 12px 23px;
+ border:0;border-radius:0;background:transparent;
+ box-shadow:none;
+ color:#a9dbb7;font:10px "Courier New",monospace;
+ scrollbar-width:none;-ms-overflow-style:none;
+ touch-action:pan-y;
+}
+.zviz-tune-panel::-webkit-scrollbar{display:none;width:0}
 .zviz-tune-head{
  display:flex;align-items:center;justify-content:space-between;gap:10px;
- min-height:27px;padding:0 9px;margin:0 0 18px;
+ min-height:27px;padding:0 10px;margin:0 0 18px;
  border:0;background:transparent;box-shadow:none;
 }
 .zviz-tune-heading{
  font:bold 10px/1.4 "Courier New",monospace;
- letter-spacing:.6px;color:#a9dbb7;
- overflow-wrap:anywhere;
+ letter-spacing:.6px;color:#a9dbb7;overflow-wrap:anywhere;
 }
 .zviz .zviz-tune-close{
  flex:none;min-height:25px;width:26px;height:25px;
  padding:0;font:bold 17px/1 Arial,sans-serif;
  background:linear-gradient(#dce3dc,#98aa9c);
 }
-/* Repeat precisely the VOL. label + horizontal fader, with breathing room. */
 .zviz-tune-list{display:flex;flex-direction:column;gap:24px;padding:0 10px}
 .zviz-tune-row{
  display:flex;flex-direction:column;gap:6px;
@@ -138,7 +154,6 @@
  width:100%;height:26px;min-height:24px;
  display:block;margin:0;padding:0;cursor:ew-resize;touch-action:pan-y;
 }
-/* Only a single, modest physical reset button after the last fader. */
 .zviz-tune-foot{
  display:flex;justify-content:center;align-items:center;
  margin:27px 0 1px;padding:0;border:0;background:none;
@@ -155,18 +170,56 @@
 .zviz .zviz-tune-reset:active{
  border-style:inset;transform:translateY(1px);box-shadow:inset 1px 1px 3px #0006;
 }
+/* Real raised gray XP scrollbar, with inset black groove, beveled movable
+ * thumb and two classic arrow buttons. No browser-overlay dependence. */
+.zviz-tune-scrollrail{
+ flex:0 0 19px;width:19px;min-width:19px;min-height:0;
+ display:flex;flex-direction:column;align-items:stretch;
+ border-left:1px solid #555;
+ background:#bcbcbc;box-shadow:inset 1px 0 #f9f9f9;
+ user-select:none;-webkit-user-select:none;
+}
+.zviz .zviz-tune-scroll-arrow{
+ flex:0 0 19px;display:flex;align-items:center;justify-content:center;
+ width:18px;height:19px;min-height:19px;
+ padding:0;margin:0;border:2px outset #fff;
+ border-radius:0;background:linear-gradient(#dedede,#aaa);
+ color:#343434;font:bold 9px/1 Arial,sans-serif;
+ box-shadow:none;touch-action:manipulation;
+}
+.zviz .zviz-tune-scroll-arrow:disabled{opacity:.55}
+.zviz-tune-scroll-track{
+ position:relative;min-height:0;flex:1 1 auto;
+ border:1px inset #ddd;
+ background:repeating-linear-gradient(45deg,#c8c8c8 0px,#c8c8c8 2px,#bdbdbd 2px,#bdbdbd 4px);
+}
+.zviz .zviz-tune-scroll-thumb{
+ position:absolute;left:0;right:0;top:0;
+ width:100%;height:48px;min-height:0;display:block;
+ margin:0;padding:0;
+ border:2px outset #f2f2f2;border-radius:0;
+ background:linear-gradient(90deg,#ddd 0%,#bebebe 50%,#a4a4a4 100%);
+ box-shadow:inset 1px 1px #fff9,inset -1px -1px #6668;
+ cursor:grab;touch-action:none;
+}
+.zviz .zviz-tune-scroll-thumb:active{cursor:grabbing;transform:none}
+.zviz .zviz-tune-scroll-thumb:disabled{opacity:.85;cursor:default}
 @media(max-width:700px){
  .zviz-controls{grid-template-columns:34px minmax(0,1fr) 34px 34px 34px;gap:4px}
  .zviz-settings-toggle{font-size:17px;min-height:34px}
- .zviz-tune-panel{
+ .zviz-tune-frame{
   top:49px;right:6px;width:calc(100% - 12px);
-  max-height:67%;padding:22px 12px 20px;
+  height:69%;max-height:calc(100% - 61px);
  }
+ .zviz-tune-panel{padding:21px 9px 20px}
  .zviz-tune-head{padding:0 9px;margin-bottom:17px}
- .zviz-tune-list{gap:23px;padding:0 13px}
+ .zviz-tune-list{gap:23px;padding:0 11px}
  .zviz .zviz-tune-slider{height:31px;min-height:31px}
- .zviz-tune-panel::before,.zviz-tune-panel::after{background-size:11px 11px;height:11px}
+ .zviz-tune-frame::before,.zviz-tune-frame::after{
+  right:24px;background-size:11px 11px;height:11px;
+ }
+ .zviz-tune-scrollrail{flex-basis:19px;width:19px}
 }
 @media(max-height:480px){
- .zviz-tune-panel{top:37px;max-height:calc(100% - 43px)}
+ .zviz-tune-frame{top:37px;max-height:calc(100% - 43px)}
 }

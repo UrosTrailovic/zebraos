@@ -503,8 +503,9 @@ function mount(host,media,options){
   tuneButton.type="button";tuneButton.title="Réglages du visualiseur";
   tuneButton.setAttribute("aria-label","Ouvrir les réglages ZebraVIS");
   tuneButton.setAttribute("aria-expanded","false");
+  var tuneFrame=element("div","zviz-tune-frame");
+  tuneFrame.hidden=true;
   var tunePanel=element("section","zviz-tune-panel");
-  tunePanel.hidden=true;
   tunePanel.setAttribute("role","region");
   tunePanel.setAttribute("aria-label","Réglages interactifs du visualiseur");
   var tuneHead=element("div","zviz-tune-head");
@@ -518,16 +519,89 @@ function mount(host,media,options){
   tuneReset.type="button";tuneReset.title="Restaurer les valeurs du visualiseur actuel";
   tuneFoot.appendChild(tuneReset);
   tunePanel.append(tuneHead,tuneList,tuneFoot);
-  shell.appendChild(tunePanel);
+  // Persistent mechanical XP scrollbar. Chromium on Android often hides
+  // the native scrollbar, so use a proper track/thumb tied to scrollTop.
+  var tuneRail=element("div","zviz-tune-scrollrail");
+  var tuneScrollUp=element("button","zviz-tune-scroll-arrow","▲");
+  var tuneScrollDown=element("button","zviz-tune-scroll-arrow","▼");
+  tuneScrollUp.type="button";tuneScrollDown.type="button";
+  tuneScrollUp.setAttribute("aria-label","Défiler vers le haut");
+  tuneScrollDown.setAttribute("aria-label","Défiler vers le bas");
+  var tuneTrack=element("div","zviz-tune-scroll-track");
+  var tuneThumb=element("button","zviz-tune-scroll-thumb");
+  tuneThumb.type="button";
+  tuneThumb.setAttribute("aria-label","Faire défiler les réglages");
+  tuneTrack.appendChild(tuneThumb);
+  tuneRail.append(tuneScrollUp,tuneTrack,tuneScrollDown);
+  tuneFrame.append(tunePanel,tuneRail);
+  shell.appendChild(tuneFrame);
+  var tuneScrollMax=0,tuneThumbTravel=0,tuneDragStartY=0,tuneDragStartTop=0;
+  function syncTuneScrollbar(){
+    if(tuneFrame.hidden)return;
+    var trackHeight=tuneTrack.clientHeight;
+    var viewHeight=tunePanel.clientHeight;
+    var contentHeight=tunePanel.scrollHeight;
+    tuneScrollMax=Math.max(0,contentHeight-viewHeight);
+    if(!trackHeight||!viewHeight)return;
+    var thumbHeight=tuneScrollMax>0?
+      Math.min(trackHeight,Math.max(32,trackHeight*viewHeight/Math.max(1,contentHeight))):
+      trackHeight;
+    tuneThumbTravel=Math.max(0,trackHeight-thumbHeight);
+    tuneThumb.style.height=thumbHeight+"px";
+    tuneThumb.style.top=(tuneScrollMax>0?
+      tuneThumbTravel*tunePanel.scrollTop/tuneScrollMax:0)+"px";
+    tuneScrollUp.disabled=tuneScrollMax<=0;
+    tuneScrollDown.disabled=tuneScrollMax<=0;
+    tuneThumb.disabled=tuneScrollMax<=0;
+  }
+  function scrollTuneBy(delta){
+    tunePanel.scrollTop=Math.max(0,Math.min(
+      Math.max(0,tunePanel.scrollHeight-tunePanel.clientHeight),
+      tunePanel.scrollTop+delta
+    ));
+    syncTuneScrollbar();
+  }
+  tuneScrollUp.onclick=function(){scrollTuneBy(-72);};
+  tuneScrollDown.onclick=function(){scrollTuneBy(72);};
+  tuneTrack.addEventListener("pointerdown",function(e){
+    if(e.target===tuneThumb||tuneScrollMax<=0)return;
+    var rect=tuneTrack.getBoundingClientRect();
+    scrollTuneBy((e.clientY-rect.top<tuneThumb.offsetTop)?
+      -tunePanel.clientHeight*.8:tunePanel.clientHeight*.8);
+  });
+  tuneThumb.addEventListener("pointerdown",function(e){
+    if(tuneScrollMax<=0)return;
+    e.preventDefault();e.stopPropagation();
+    tuneDragStartY=e.clientY;
+    tuneDragStartTop=tunePanel.scrollTop;
+    if(tuneThumb.setPointerCapture)tuneThumb.setPointerCapture(e.pointerId);
+  });
+  tuneThumb.addEventListener("pointermove",function(e){
+    if(!tuneThumb.hasPointerCapture||!tuneThumb.hasPointerCapture(e.pointerId)||
+       !tuneThumbTravel)return;
+    tunePanel.scrollTop=Math.max(0,Math.min(tuneScrollMax,
+      tuneDragStartTop+(e.clientY-tuneDragStartY)*tuneScrollMax/tuneThumbTravel));
+    syncTuneScrollbar();
+  });
+  tunePanel.addEventListener("scroll",syncTuneScrollbar,{passive:true});
+  if(window.ResizeObserver){
+    var tuneResizeObserver=new window.ResizeObserver(syncTuneScrollbar);
+    tuneResizeObserver.observe(tunePanel);
+    tuneResizeObserver.observe(tuneTrack);
+  }
   function setTunePanelOpen(open){
-    tunePanel.hidden=!open;
+    tuneFrame.hidden=!open;
     tuneButton.setAttribute("aria-expanded",String(!!open));
-    if(open)renderTunePanel();
+    if(open){
+      renderTunePanel();
+      requestAnimationFrame(syncTuneScrollbar);
+    }
   }
   function renderTunePanel(){
     if(mode<2)return;
     tuneHeading.textContent=presets[mode][0]+" / RÉGLAGES";
     tuneList.textContent="";
+    tunePanel.scrollTop=0;
     VIZ_TUNE_SPECS[mode].forEach(function(spec){
       var name=spec[0],row=element("label","zviz-tune-row");
       var labelText=element("span","zviz-tune-row-label",spec[1].toUpperCase());
@@ -546,13 +620,14 @@ function mount(host,media,options){
       row.append(labelText,input);
       tuneList.appendChild(row);
     });
+    if(!tuneFrame.hidden)requestAnimationFrame(syncTuneScrollbar);
   }
   function applyTuneCRT(){
     crt.style.opacity=String(rounded(vizGain(tuneValues[mode],"crt"),0,1));
   }
   tuneButton.onclick=function(){
     if(mode<2)return;
-    setTunePanelOpen(tunePanel.hidden);
+    setTunePanelOpen(tuneFrame.hidden);
   };
   tuneClose.onclick=function(){setTunePanelOpen(false);};
   tuneReset.onclick=function(){
@@ -572,7 +647,7 @@ function mount(host,media,options){
     applyTuneCRT();
     tuneButton.disabled=mode<2;
     if(mode<2)setTunePanelOpen(false);
-    else if(!tunePanel.hidden)renderTunePanel();
+    else if(!tuneFrame.hidden)renderTunePanel();
     saveMode(mode);
   }
   back.onclick=function(){mode=(mode+presets.length-1)%presets.length;updatePreset();};
