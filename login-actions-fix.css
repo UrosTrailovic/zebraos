@@ -1,50 +1,132 @@
-/* Retro, touch-friendly power controls on the ZebraOS session selection screen.
-   SVG icons avoid missing glyphs on Android and other fonts. */
-#login-screen .login-power-actions {display:flex;align-items:center;gap:12px;flex-wrap:nowrap;}
+/* ZebraOS login — compact Windows XP-style shutdown/restart commands.
+ * Transparent text actions with one small colored hardware-like icon tile.
+ * Keep both existing button ids and their JavaScript handlers untouched. */
+#login-screen .login-footer{
+  height:clamp(74px,10vh,100px);
+  min-height:74px;
+  padding:0 clamp(16px,4.3vw,62px);
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  box-sizing:border-box;
+}
+#login-screen .login-power-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  flex-wrap:nowrap;
+  gap:clamp(10px,2.3vw,25px);
+  width:auto;max-width:100%;
+}
 #login-screen .login-power-button{
-  display:inline-flex;align-items:center;justify-content:center;gap:9px;
-  min-height:42px;padding:8px 14px;box-sizing:border-box;
-  font:13px/1.2 Tahoma,Arial,sans-serif;white-space:nowrap;
-  border:1px solid #91aaf0;border-radius:2px;color:#f4f7ff;
-  background:linear-gradient(to bottom,#3d58aa,#253b8a);
-  box-shadow:inset 1px 1px 0 #a8bdf366,inset -1px -1px 0 #102563aa,0 2px 3px #0e206055;
-  text-shadow:0 1px 1px #172c71;
+  display:inline-flex;
+  flex:0 0 auto;
+  align-items:center;
+  justify-content:flex-start;
+  gap:7px;
+  min-height:40px;
+  min-width:0;
+  padding:4px 6px;
+  border:1px solid transparent;
+  border-radius:3px;
+  background:transparent;
+  box-shadow:none;
+  color:#f5f6ff;
+  font:13px/1.2 Tahoma,Arial,sans-serif;
+  text-shadow:0 1px 1px #101d61;
+  white-space:nowrap;
+  text-align:left;
   -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+#login-screen .login-power-button:hover{
+  background:rgba(155,182,255,.15);
+  border-color:rgba(209,225,255,.24);
+  box-shadow:none;
+}
+#login-screen .login-power-button:focus-visible{
+  outline:1px solid #d4e6ff;
+  outline-offset:1px;
+  background:rgba(155,182,255,.17);
 }
 #login-screen .login-power-button:active{
-  background:linear-gradient(to bottom,#22367b,#344f9d);
-  box-shadow:inset 2px 2px 3px #0c2158aa;
-  transform:translateY(1px);
+  background:rgba(2,16,75,.28);
+  border-color:rgba(180,203,255,.22);
+  box-shadow:inset 0 1px 2px #09165177;
+  transform:none;
+}
+#login-screen .login-power-button span{
+  display:block;
+  flex:0 1 auto;
 }
 #login-screen .login-action-icon{
-  display:block;position:static;flex:none;
-  width:19px;height:19px;overflow:visible;
-  fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;
+  position:static;
+  display:block;
+  flex:0 0 25px;
+  width:25px;
+  height:25px;
+  overflow:visible;
+  padding:4px;
+  box-sizing:border-box;
+  border:1px solid #ffd1a9;
+  border-radius:4px;
+  color:white;
+  background:linear-gradient(135deg,#ffac4e 0%,#e86c19 52%,#be3514 100%);
+  box-shadow:inset 1px 1px #fff8, inset -1px -1px #7d200b88,
+             0 1px 2px #111d57aa;
+  fill:none;stroke:currentColor;stroke-width:2.25;
+  stroke-linejoin:round;stroke-linecap:round;
+}
+/* Restart gets its own green XP tile; shutdown stays orange/red. */
+#login-screen #restart-login .login-action-icon{
+  border-color:#beefa9;
+  background:linear-gradient(135deg,#bded83 0%,#5cab32 53%,#267d18 100%);
+  box-shadow:inset 1px 1px #fff8,inset -1px -1px #235d1588,
+             0 1px 2px #111d57aa;
 }
 @media(max-width:700px){
   #login-screen .login-footer{
-    height:auto;min-height:112px;
-    padding:10px 16px calc(11px + env(safe-area-inset-bottom,0px));
-    display:flex;align-items:center;justify-content:center;
+    height:clamp(76px,10.5vh,104px);
+    min-height:76px;
+    padding:0 16px max(4px,env(safe-area-inset-bottom,0px));
+    display:flex;
+    justify-content:flex-start;
+    align-items:center;
   }
   #login-screen .login-power-actions{
-    width:min(100%,430px);
-    display:grid;grid-template-columns:1fr 1fr;gap:9px;
+    display:flex;
+    grid-template-columns:none;
+    width:auto;
+    gap:clamp(8px,2vw,17px);
+    flex-wrap:nowrap;
   }
   #login-screen .login-power-button{
-    min-height:50px;padding:8px 8px;gap:7px;
-    font-size:12px;white-space:normal;line-height:1.25;text-align:center;
+    flex:0 0 auto;
+    min-height:40px;
+    gap:6px;
+    padding:5px 4px;
+    font-size:clamp(11px,2.2vw,13px);
+    white-space:nowrap;
+    text-align:left;
   }
-  #login-screen .login-power-button span{display:block}
-  #login-screen .login-action-icon{width:21px;height:21px}
-  #login-screen .login-content{max-height:calc(100% - 127px)}
+  #login-screen .login-action-icon{
+    flex-basis:24px;width:24px;height:24px;
+  }
+  #login-screen .login-content{
+    max-height:calc(100% - 110px);
+  }
 }
 @media(max-width:375px){
-  #login-screen .login-power-button{font-size:11px;gap:5px}
-  #login-screen .login-action-icon{width:19px;height:19px}
+  #login-screen .login-footer{padding-left:10px;padding-right:10px}
+  #login-screen .login-power-actions{gap:4px}
+  #login-screen .login-power-button{gap:4px;font-size:10px;padding:5px 2px}
+  #login-screen .login-action-icon{flex-basis:22px;width:22px;height:22px}
 }
 @media(max-width:700px) and (max-height:560px){
-  #login-screen .login-footer{min-height:64px;padding:6px 12px calc(6px + env(safe-area-inset-bottom,0px))}
-  #login-screen .login-power-button{min-height:42px}
-  #login-screen .login-content{max-height:calc(100% - 80px)}
+  #login-screen .login-footer{
+    height:60px;min-height:60px;
+    padding:0 12px;
+  }
+  #login-screen .login-power-button{min-height:38px}
+  #login-screen .login-content{max-height:calc(100% - 70px)}
 }
