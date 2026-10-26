@@ -662,7 +662,9 @@ function mount(root){
     current.mat.forEach((row,y)=>row.forEach((v,x)=>{if(v&&current.y+y>=0)rect(ctx,(current.x+x)*BLOCK,(current.y+y)*BLOCK,BLOCK,v);}));
   }
   if(!started&&!over)drawIntroGame(now||performance.now());
-  preview(nextCtx,upcoming[0]);preview(holdCtx,held);
+  // L'accueil garde SUIVANT vide ; les vraies prochaines pièces
+  // apparaissent dès qu'une partie est lancée.
+  preview(nextCtx,started?upcoming[0]:null);preview(holdCtx,held);
   scoreEl.textContent=score;levelEl.textContent=level;linesEl.textContent=lines;bestEl.textContent=records;
  }
  function key(e){
