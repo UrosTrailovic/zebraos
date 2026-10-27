@@ -741,7 +741,7 @@ var gameModules={
  tetris:{name:"Tetris.exe",width:735,height:770,global:"ZebraTetris",
   files:["tetris-artwork.js?v=1.8","tetris.js?v=3.1"]},
  snake:{name:"Znake.exe",width:650,height:700,global:"ZebraSnake",
-  files:["snake.js?v=8.6"],css:"snake.css?v=8.9"},
+  files:["snake.js?v=8.7"],css:"snake.css?v=8.9"},
  paint:{name:"ZebraPaint.exe",width:850,height:640,global:"ZebraPaint",
   files:["paint.js?v=1.4"],css:"paint-responsive.css?v=1.4"}
 };
@@ -777,6 +777,35 @@ function loadGameModule(name){
   }).finally(function(){module.pending=null;});
  return module.pending;
 }
+/* Chrome Android forbids audio first started after lazy-loading promises.
+ * Prime Znake's menu theme while the desktop-click is still a user gesture,
+ * then hand this exact Audio instance to snake.js after its window mounts. */
+function stopZnakeMenuPrimer(root){
+ var primer=window.ZnakeMenuPrimer;
+ if(!primer||primer.root!==root)return;
+ window.ZnakeMenuPrimer=null;
+ if(primer.audio){
+  try{primer.audio.pause();primer.audio.removeAttribute("src");primer.audio.load();}catch(_){}
+ }
+}
+function primeZnakeMenu(root){
+ if(window.ZnakeMenuPrimer)stopZnakeMenuPrimer(window.ZnakeMenuPrimer.root);
+ try{
+  if(localStorage.getItem("zebra.snake.music")==="off"||
+     localStorage.getItem("zebra.sfx.muted")==="1"||
+     document.hidden)return;
+  var audio=new Audio("/assets/games/snake/Znake-menu-theme.mp3?v=1");
+  audio.loop=true;
+  audio.volume=.26;
+  audio.preload="auto";
+  window.ZnakeMenuPrimer={root:root,audio:audio};
+  // Execute play() *synchronously* before the click callback returns.
+  var started=audio.play();
+  if(started&&started.catch)started.catch(function(){
+   // A tap inside the menu can retry without allocating a second player.
+  });
+ }catch(_){stopZnakeMenuPrimer(root);}
+}
 function openGame(name){
  var entry=gameModules[name];if(!entry)return;
  var root=windowBox(name,entry.name,
@@ -784,20 +813,26 @@ function openGame(name){
  if(name==="tetris"||name==="snake")root.classList.add("zebra-game-body");
  // Pas de reset d'une application déjà ouverte ou en cours de chargement.
  if(root._zebraApp===name||root._zebraLoading===name)return;
+ if(name==="snake")primeZnakeMenu(root);
  root._zebraLoading=name;
  root.innerHTML="";
  var info=el("div","zebra-lazy-loading","Chargement de "+entry.name+"…");
  info.setAttribute("role","status");info.setAttribute("aria-live","polite");
  root.appendChild(info);
  loadGameModule(name).then(function(module){
-  if(!root.isConnected||root._zebraLoading!==name)return;
+  if(!root.isConnected||root._zebraLoading!==name){
+   if(name==="snake")stopZnakeMenuPrimer(root);
+   return;
+  }
   root._zebraLoading=null;root.innerHTML="";
   root._zebraApp=name;
   try{module.mount(root);}catch(err){
+   if(name==="snake")stopZnakeMenuPrimer(root);
    root._zebraApp=null;
    root.textContent="Impossible de démarrer "+entry.name+" : "+err.message;
   }
  }).catch(function(err){
+  if(name==="snake")stopZnakeMenuPrimer(root);
   if(!root.isConnected||root._zebraLoading!==name)return;
   root._zebraLoading=null;root.replaceChildren();
   var warning=el("p","app-message","Le chargement a échoué. Vérifie ta connexion et réessaie.");

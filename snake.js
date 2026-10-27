@@ -209,7 +209,7 @@ function draw(ctx,g,background){
  for(const s of [-1,1]){const x=head.x+d[0]*3+side[0]*s*3,y=head.y+d[1]*3+side[1]*s*3;ctx.fillStyle='#fff6b0';ctx.fillRect(x-1,y-1,3,3);ctx.fillStyle='#112b27';ctx.fillRect(x+d[0],y+d[1],2,2);}
 }
 /* Small chip sounds, unlocked by an input gesture and disposed with the window. */
-function createSounds(){
+function createSounds(mountRoot){
  let context=null,unlocked=false,disposed=false,mode='silent',ambienceTimer=null,beat=0,track=null,assets={},musicEnabled=true;
  const voices=new Set();
  const notes={
@@ -292,6 +292,21 @@ function createSounds(){
   pulse();ambienceTimer=setInterval(pulse,560);
  }
  function setMode(next){
+  // Adopt the audio started by the original desktop click while the browser
+  // still allowed playback. Never create two menu music players.
+  const primer=next==='menu'&&window.ZnakeMenuPrimer;
+  if(primer&&primer.root===mountRoot&&primer.audio){
+   window.ZnakeMenuPrimer=null;
+   stop();
+   mode='menu';
+   track=primer.audio;
+   unlocked=true;
+   if(!musicEnabled||muted()||document.hidden){clearTrack();return;}
+   if(track.paused){
+    try{const p=track.play();if(p&&p.catch)p.catch(()=>{});}catch(_){}
+   }
+   return;
+  }
   stop();mode=next;
   if(!unlocked||muted()||document.hidden)return;
   if(next==='menu'){if(musicEnabled)file('menu',true);}
@@ -326,7 +341,7 @@ function createSounds(){
 }
 function mount(root){
  if(root._zebraDispose)root._zebraDispose();root.innerHTML='';
- const sounds=createSounds(),settings={mode:'solo',players:1,level:1};let g=createGame(),menuPage='mode',menuIndex=0,elapsed=0;let alive=true,records={},observer,lastState=g.state,lastScore=0,crashTimer=null;
+ const sounds=createSounds(root),settings={mode:'solo',players:1,level:1};let g=createGame(),menuPage='mode',menuIndex=0,elapsed=0;let alive=true,records={},observer,lastState=g.state,lastScore=0,crashTimer=null;
  let musicEnabled=true,settingsOpen=false,settingsIndex=0;
  const settingsItems=['play','restart','music','menu'];
  fetch('/assets/games/snake/audio.json?v=3',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(a=>{if(alive)sounds.configure(a);}).catch(()=>{});
