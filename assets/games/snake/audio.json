@@ -1,4 +1,5 @@
 {
   "music": "/assets/games/snake/Znakev1Gamesong.mp3?v=1",
-  "lose": null
+  "lose": null,
+  "menu": "/assets/games/snake/Znake-menu-theme.mp3?v=1"
 }

@@ -233,6 +233,12 @@ function createSounds(){
    if(!context&&Audio)context=new Audio();
    if(context&&context.state==='suspended'){const pending=context.resume();if(pending&&pending.catch)pending.catch(()=>{});}
   }catch(_){}
+  // Android/Chrome : la première interaction dans le menu autorise sa musique.
+  if(mode==='menu'&&musicEnabled&&!document.hidden){
+   if(track&&track.paused){
+    try{const p=track.play();if(p&&p.catch)p.catch(()=>{});}catch(_){}
+   }else if(!track)file('menu',true);
+  }
  }
  function play(type){
   if(disposed||!unlocked||!context||document.hidden||!notes[type])return;
@@ -272,10 +278,10 @@ function createSounds(){
   }
  }
  function file(name,loop){
-  if(name==='music'&&!musicEnabled)return false;
+  if((name==='music'||name==='menu')&&!musicEnabled)return false;
   if(!assets[name]||!window.Audio||!unlocked||muted()||document.hidden)return false;
   try{
-   const audio=new window.Audio(assets[name]);track=audio;audio.loop=loop;audio.volume=loop?.23:.65;
+   const audio=new window.Audio(assets[name]);track=audio;audio.loop=loop;audio.volume=name==='menu'?.26:loop?.23:.65;
    const fallback=()=>{if(track!==audio||disposed)return;clearTrack();if(name==='lose')play('lose');else if(mode==='running')startAmbience();};
    audio.onerror=fallback;const pending=audio.play();if(pending&&pending.catch)pending.catch(fallback);return true;
   }catch(_){return false;}
@@ -288,21 +294,34 @@ function createSounds(){
  function setMode(next){
   stop();mode=next;
   if(!unlocked||muted()||document.hidden)return;
-  if(next==='running'){if(musicEnabled){if(!file('music',true))startAmbience();}}
+  if(next==='menu'){if(musicEnabled)file('menu',true);}
+  else if(next==='running'){if(musicEnabled){if(!file('music',true))startAmbience();}}
   else if(next==='hurt'){play('impact');if(!file('lose',false))play('lose');}
  }
- function configure(value){assets=value&&typeof value==='object'?value:{};}
+ function configure(value){
+  assets=value&&typeof value==='object'?value:{};
+  // Config can arrive after the first tap or the game window has mounted.
+  if(mode==='menu'&&unlocked&&musicEnabled&&!track)file('menu',true);
+ }
  function setMusicEnabled(value){
   musicEnabled=!!value;
   if(!musicEnabled){
    if(ambienceTimer!==null){clearInterval(ambienceTimer);ambienceTimer=null;}
-   if(track&&(mode==='running'||mode==='paused'))clearTrack();
+   if(track&&(mode==='running'||mode==='paused'||mode==='menu'))clearTrack();
+  }else if(mode==='menu'&&unlocked&&!muted()&&!document.hidden&&!track){
+   file('menu',true);
   }else if(mode==='running'&&unlocked&&!muted()&&!document.hidden&&!track){
    if(!file('music',true))startAmbience();
   }
  }
  function dispose(){disposed=true;stop();if(context){try{const closed=context.close();if(closed&&closed.catch)closed.catch(()=>{});}catch(_){}context=null;}}
- function sync(){if(muted())stop();else if(document.hidden&&mode==='running')pauseMusic();}
+ function sync(){
+  if(muted())stop();
+  else if(document.hidden){
+   if(mode==='running')pauseMusic();
+   else if(mode==='menu'&&track&&!track.paused)track.pause();
+  }
+ }
  return {unlock,play,stop,pauseMusic,resumeMusic,dispose,setMode,configure,setMusicEnabled,sync};
 }
 function mount(root){
@@ -310,7 +329,7 @@ function mount(root){
  const sounds=createSounds(),settings={mode:'solo',players:1,level:1};let g=createGame(),menuPage='mode',menuIndex=0,elapsed=0;let alive=true,records={},observer,lastState=g.state,lastScore=0,crashTimer=null;
  let musicEnabled=true,settingsOpen=false,settingsIndex=0;
  const settingsItems=['play','restart','music','menu'];
- fetch('/assets/games/snake/audio.json?v=2',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(a=>{if(alive)sounds.configure(a);}).catch(()=>{});
+ fetch('/assets/games/snake/audio.json?v=3',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(a=>{if(alive)sounds.configure(a);}).catch(()=>{});
  try{
   const saved=JSON.parse(localStorage.getItem('zebra.snake.records')||'{}');
   if(saved&&typeof saved==='object')records=saved;
@@ -580,6 +599,7 @@ function mount(root){
     if(lastState==='paused'){sounds.resumeMusic();sounds.play('resume');}
     else{sounds.setMode('running');sounds.play('start');}
    }
+   else if(g.state==='ready')sounds.setMode('menu');
    lastState=g.state;
   }
   if(g.score>lastScore&&g.state==='running')sounds.play('eat');lastScore=g.score;
@@ -632,7 +652,7 @@ function mount(root){
  document.addEventListener('keydown',key);document.addEventListener('visibilitychange',hide);window.addEventListener('blur',blur);
  const clock=setInterval(()=>{sounds.sync();if(g.state==='running'){if(!focused()){blur();return;}elapsed+=20;if(elapsed>=LEVEL_MS[settings.level-1]){elapsed=0;g.tick();render();}}},20);
  if(typeof ResizeObserver!=='undefined'){observer=new ResizeObserver(fit);observer.observe(arena);}else window.addEventListener('resize',fit);
- fit();render();
+ fit();sounds.setMode('menu');render();
  root._zebraDispose=function(){alive=false;clearCrash();sounds.dispose();clearInterval(clock);if(observer)observer.disconnect();window.removeEventListener('resize',fit);window.removeEventListener('blur',blur);document.removeEventListener('keydown',key);document.removeEventListener('visibilitychange',hide);};
 }
 window.ZebraSnake={mount,createGame,createDuel,LEVEL_MS,createSounds,draw,drawBackground,drawLevel3Background,drawLevel4Background,width:CW,height:CH};
