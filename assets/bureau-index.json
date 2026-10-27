@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-24T08:14:05.802556+00:00",
+  "generatedAt": "2026-10-27T16:43:36.155437+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -437,6 +437,10 @@
       "path": "STUDIO/BUREAU/Sonnnn/ZEPRA-KISAM-V6.mp3",
       "type": "file",
       "size": 7420500
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Zebra Tape 1",
+      "type": "dir"
     },
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
