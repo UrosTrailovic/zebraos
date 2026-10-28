@@ -1000,19 +1000,58 @@ function mount(root){
  }
  function wallGeom(){return geometryCache;}
  const bendCache=new Map();
- // The center of each visible ring follows two gentle superposed S-curves.
- // Subtract the bend under the cockpit so local play stays predictable.
+ // Arcade track director: most of the route has a genuinely straight
+ // centerline. One smooth bend appears in each long stretch (155 units).
+ // Every event rises and returns with zero slope AND zero curvature at the
+ // joins, so there is no jolt as the camera crosses the entry/exit.
+ const TRACK_STRETCH=155;
+ const bendProfiles=new Map();
+ function trackProfile(cell){
+  if(bendProfiles.has(cell))return bendProfiles.get(cell);
+  // Deterministic per-stretch variation. No random changes during a frame.
+  const hash=n=>{
+   n=Math.imul(n^0x45d9f3b,0x45d9f3b);
+   n=Math.imul(n^(n>>>16),0x45d9f3b);
+   return ((n^(n>>>16))>>>0)/4294967296;
+  };
+  const mix=hash(cell*19+19),pace=hash(cell*37+93);
+  // Four distinct motifs: lateral bends, a pronounced climb, a pronounced
+  // dive, and occasionally a diagonal. Keep long flat roads in between.
+  const motif=((cell%6)+6)%6;
+  let ax=0,ay=0;
+  if(motif===0){ax=W*(.18+mix*.06);ay=H*(.025+pace*.025);}
+  else if(motif===1){ax=-W*(.035+pace*.055);ay=-H*(.265+mix*.07);}
+  else if(motif===2){ax=-W*(.18+mix*.065);ay=H*(pace-.5)*.1;}
+  else if(motif===3){ax=W*(pace-.5)*.15;ay=H*(.27+mix*.07);}
+  else if(motif===4){ax=W*(.12+mix*.04);ay=-H*(.11+pace*.09);}
+  else {ax=-W*(.11+pace*.06);ay=H*(.10+mix*.09);}
+  const profile={start:38+hash(cell*7+11)*12,
+   duration:39+hash(cell*11+29)*12,ax,ay,motif};
+  bendProfiles.set(cell,profile);
+  return profile;
+ }
+ function trackCenter(position){
+  const world=Math.max(0,position);
+  const cell=Math.floor(world/TRACK_STRETCH);
+  const local=world-cell*TRACK_STRETCH;
+  const profile=trackProfile(cell);
+  const t=(local-profile.start)/profile.duration;
+  if(t<=0||t>=1)return{x:0,y:0};
+  // Quintic ease both sides yields a natural approach, crest and exit.
+  const u=t<.5?t*2:(1-t)*2;
+  const smooth=u*u*u*(u*(u*6-15)+10);
+  return{x:profile.ax*smooth,y:profile.ay*smooth};
+ }
+ // Render relative to the player's position along the world-space track,
+ // not as independent per-frame sine waves. Both wall and hazards use it.
  function tunnelBend(z){
   z=Math.max(0,z);
   const cached=bendCache.get(z);if(cached)return cached;
-  const w=travel,amount=1-Math.exp(-z*.16);
-  const x=amount*(
-   W*.15*(Math.sin((w+z)*.118+.37)-Math.sin(w*.118+.37))+
-   W*.041*(Math.sin((w+z)*.044+1.8)-Math.sin(w*.044+1.8)));
-  const y=amount*(
-   H*.12*(Math.sin((w+z)*.092+1.14)-Math.sin(w*.092+1.14))+
-   H*.028*(Math.sin((w+z)*.039+.51)-Math.sin(w*.039+.51)));
-  const v={x,y};bendCache.set(z,v);return v;
+  const p=trackCenter(travel+z),origin=trackCenter(travel);
+  const amount=1-Math.exp(-z*.16);
+  const offset={x:(p.x-origin.x)*amount,y:(p.y-origin.y)*amount};
+  bendCache.set(z,offset);
+  return offset;
  }
  function wallPoint(theta,z,shift){
   const g=geometryCache,r=g.R/(1+Math.max(0,z)*.68);
@@ -1467,6 +1506,12 @@ function mount(root){
    fadeDistance:APPEAR_FADE_DEPTH,
    ringCount:Math.ceil(RENDER_FAR_Z/.48)+1,panelRows:Math.ceil(RENDER_FAR_Z/.81)+1}),
   bendAt:(z)=>({...tunnelBend(z)}),revealOpacity,
+  trackAt:(world)=>({...trackCenter(world)}),
+  trackInfo:(world)=>{
+   const cell=Math.floor(Math.max(0,world)/TRACK_STRETCH);
+   return{cell,stretch:TRACK_STRETCH,...trackProfile(cell)};
+  },
+  setTestTravel:(world)=>{travel=Math.max(0,world);bendCache.clear();},
   pickups:()=>shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),
   addTestShield:(z,sector=0)=>{
    if(mode!=="running")return false;
