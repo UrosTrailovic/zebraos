@@ -97,6 +97,7 @@ function mount(root){
  let invuln=0,pulseCharge=2,pulseGlow=0,padBoostTime=0;
  let nitroHeld=false,nitroActive=false,nitroFuel=1,nitroRegenWait=0;
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
+ let menuStage="home",warningLife=0,warningBeepDelay=0,warningChirp=0;
  let soundEnabled=load("sfx","on")!=="off",audioCtx=null;
  // Dedicated Echo Racer audio system: never touch ZebraAMP or other games.
  let music=null,musicSource=null,musicAnalyser=null,musicBins=null,musicError=false;
@@ -111,8 +112,11 @@ function mount(root){
  const wrap=node("section","er zg zg-retro");
  wrap.setAttribute("aria-label","Echo Racer — jeu du tunnel phosphore");
  const heading=node("div","er-heading");
- const wordmark=node("div","er-wordmark");wordmark.append(
-  node("span","er-echo","ECHO"),node("span","er-racer","RACER"));
+ const wordmark=node("div","er-wordmark");
+ const headerLogo=node("img","er-header-logo");
+ headerLogo.src="/assets/games/echo-raccer-logo.png";
+ headerLogo.alt="ECHO RACER";
+ wordmark.appendChild(headerLogo);
  heading.appendChild(wordmark);wrap.appendChild(heading);
  const hud=node("div","er-hud");
  let scoreLabel=null;
@@ -159,6 +163,9 @@ function mount(root){
  }
  const sheen=node("div","er-crt");sheen.setAttribute("aria-hidden","true");
  const overlay=node("div","er-overlay");
+ const brandLogo=node("img","er-brand-logo");
+ brandLogo.src="/assets/games/echo-raccer-logo.png";
+ brandLogo.alt="Echo Racer";
  const logo=node("h2","er-title","ECHO RACER");
  const status=node("div","er-title-sub","PHOSPHOR TUNNEL / SYSTEM 01");
  const prompt=node("div","er-start-call","PRESS BUTTON TO PLAY");
@@ -168,25 +175,45 @@ function mount(root){
  overlayButton.type="button";
  const levelPicker=node("div","er-level-picker");
  levelPicker.setAttribute("role","group");levelPicker.setAttribute("aria-label","Choisir un niveau");
- const levelButtons=LEVELS.map(level=>{
+ const levelButtons=LEVELS.map((level,index)=>{
   const btn=node("button","er-level-button");
   btn.type="button";btn.title=level.subtitle;
-  btn.append(node("span","er-level-num",level.id==="free"?"∞":"NIVEAU "+level.id),
-             node("small","er-level-name",level.name));
-  btn.onclick=()=>{if(mode!=="menu")return;
+  btn.setAttribute("aria-label",(level.id==="free"?"Free Roam":"Niveau "+level.id)+" — "+level.name);
+  btn.style.setProperty("--level-texture",'url("/assets/games/lvl'+(index+1)+'.png")');
+  // Entire native pixel-art image is the button; no CSS or text overlay.
+  btn.onclick=()=>{
+   if(mode!=="menu"||menuStage!=="levels")return;
    selectedLevel=level;save("level",level.id);
    best=Number(load("best."+level.id,level.id==="3"?load("best","0"):"0"))||0;
-   renderLevelPicker();renderHud();
+   start();
   };
   levelPicker.appendChild(btn);return btn;
  });
- function renderLevelPicker(){
-  levelButtons.forEach((btn,i)=>{const active=selectedLevel.id===LEVELS[i].id;
-   btn.classList.toggle("selected",active);btn.setAttribute("aria-pressed",String(active));
-  });
-  status.textContent=selectedLevel.subtitle;
+ const backButton=node("button","er-menu-back","MENU");
+ backButton.type="button";backButton.setAttribute("aria-label","Retour au menu principal");
+ backButton.onclick=()=>toMenu();
+ function renderMenuStage(stage){
+  menuStage=stage;
+  const choosing=stage==="levels";
+  overlay.classList.toggle("er-stage-levels",choosing);
+  overlay.classList.toggle("er-stage-home",!choosing);
+  brandLogo.hidden=false;logo.hidden=true;
+  levelPicker.hidden=!choosing;overlayButton.hidden=choosing;
+  backButton.hidden=!choosing;status.hidden=!choosing;
+  prompt.hidden=true;expl.hidden=true;hint.hidden=!choosing;
+  if(choosing){status.textContent="CHOISIS TON CIRCUIT";
+   hint.textContent="1–5 : CHOIX DU NIVEAU · ÉCHAP : RETOUR";
+  }
+  overlayButton.classList.remove("er-overlay-restart");
+  overlayButton.textContent="▶ JOUER";
+  overlayButton.setAttribute("aria-label","Jouer — sélectionner un niveau");
+  backButton.setAttribute("aria-label","Retour à l'accueil Echo Racer");
  }
- overlay.append(logo,status,prompt,levelPicker,expl,hint,overlayButton);
+ function showLevelSelect(){
+  if(mode!=="menu"||menuStage==="levels")return;
+  renderMenuStage("levels");
+ }
+ overlay.append(brandLogo,logo,status,prompt,levelPicker,expl,hint,overlayButton,backButton);
  const dashboard=node("div","er-dashboard");
  dashboard.setAttribute("role","group");dashboard.setAttribute("aria-label","Vitesse et recharge du boost");
  function instrument(label,cls,unit){
@@ -203,11 +230,22 @@ function mount(root){
  const speedGauge=instrument("VITESSE","er-dashboard-speed","KM/H");
  const boostGauge=instrument("BOOST","er-dashboard-boost","%");
  const eventText=node("div","er-race-event","");
- screen.append(canvas,sheen,dashboard,eventText,overlay);frame.appendChild(screen);
+ const warningLayer=node("div","er-shield-warning");
+ const warningIcon=node("img","er-shield-warning-icon");
+ warningIcon.src="/assets/games/warning.png";warningIcon.alt="";
+ warningLayer.setAttribute("role","status");
+ warningLayer.setAttribute("aria-label","Attention : dernier bouclier");
+ warningLayer.append(warningIcon,node("span","er-shield-warning-label","DERNIER BOUCLIER"));
+ warningLayer.hidden=true;
+ screen.append(canvas,sheen,dashboard,eventText,warningLayer,overlay);frame.appendChild(screen);
  wrap.append(hud,frame);
  const footer=node("div","er-footer zg-buttons zt-buttons");
  function button(label,cls,callback){const b=node("button","er-hardware "+cls,label);b.type="button";b.onclick=()=>{beep("switch");callback();};return b;}
- const startButton=button("▶ JOUER","er-play",()=>{if(mode==="menu"||mode==="over")start();else togglePause();});
+ const startButton=button("▶ JOUER","er-play",()=>{
+  if(mode==="menu")showLevelSelect();
+  else if(mode==="over")start();
+  else togglePause();
+ });
  const restartButton=button("↻ RESTART","",start);
  const soundButton=button("♫ SON ON","",()=>{
   soundEnabled=!soundEnabled;save("sfx",soundEnabled?"on":"off");
@@ -463,10 +501,13 @@ function mount(root){
    if(!context)return;
    if(audioCtx.state==="suspended")audioCtx.resume().catch(()=>{});
    const o=audioCtx.createOscillator(),g=audioCtx.createGain(),t=audioCtx.currentTime;
-   const freq=kind==="hit"?104:kind==="pulse"?720:kind==="pass"?445:kind==="collect"?880:260;
-   o.type=kind==="hit"?"sawtooth":"triangle";o.frequency.setValueAtTime(freq,t);
-   o.frequency.exponentialRampToValueAtTime(Math.max(60,freq*(kind==="hit"?.38:1.32)),t+.14);
-   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(kind==="hit"?.06:.028,t+.008);
+   const freq=kind==="hit"?104:kind==="pulse"?720:kind==="pass"?445:kind==="collect"?880:
+    kind==="warning"?(++warningChirp%2?980:760):260;
+   o.type=kind==="hit"?"sawtooth":kind==="warning"?"square":"triangle";
+   o.frequency.setValueAtTime(freq,t);
+   if(kind!=="warning")o.frequency.exponentialRampToValueAtTime(Math.max(60,freq*(kind==="hit"?.38:1.32)),t+.14);
+   g.gain.setValueAtTime(.0001,t);
+   g.gain.exponentialRampToValueAtTime(kind==="hit"?.06:kind==="warning"?.022:.028,t+.008);
    g.gain.exponentialRampToValueAtTime(.0001,t+.19);
    o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+.20);
   }catch(_){}
@@ -494,7 +535,10 @@ function mount(root){
   lightSegments(boostGauge.segments,charge);
   eventText.textContent=mode==="running"&&messageLife>0?message:"";
   eventText.classList.toggle("visible",mode==="running"&&messageLife>0);
+  warningLayer.hidden=!(mode==="running"&&warningLife>0);
   startButton.textContent=mode==="running"?"Ⅱ PAUSE":mode==="paused"?"▶ REPRENDRE":"▶ JOUER";
+  startButton.setAttribute("aria-label",startButton.textContent);
+  startButton.classList.toggle("er-footer-playing",mode==="running");
  }
  function start(){
   mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
@@ -502,30 +546,40 @@ function mount(root){
   waves=[];pads=[];nextGateAt=selectedLevel.id==="free"?Infinity:START_GATE_AT;nextPadAt=selectedLevel.id==="free"?Infinity:PAD_START;lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
   invuln=0;pulseCharge=2;pulseGlow=padBoostTime=flash=shake=0;
   nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;
-  shipBoostFade=0;turboLight=0;
-  message=selectedLevel.id==="free"?"FREE ROAM · BOOST ILLIMITÉ":"TROUVE LE PASSAGE";messageLife=2;keys.clear();levelPicker.hidden=true;overlay.hidden=true;
+  shipBoostFade=0;turboLight=0;warningLife=0;warningBeepDelay=0;warningChirp=0;
+  message=selectedLevel.id==="free"?"FREE ROAM · BOOST ILLIMITÉ":"TROUVE LE PASSAGE";messageLife=2;keys.clear();levelPicker.hidden=true;backButton.hidden=true;overlay.hidden=true;
   beep("collect");startMusic(true);renderHud();
  }
  function toMenu(){
   if(mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
   stopMusic();mode="menu";keys.clear();waves=[];pads=[];trail=[];turnVelocity=0;
   elapsed=0;padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;
-  currentSpeed=0;score=0;scoreMultiplier=1;
-  overlay.hidden=false;levelPicker.hidden=false;
-  logo.textContent="ECHO RACER";prompt.textContent="CHOISIS TON CIRCUIT";
-  renderLevelPicker();overlayButton.textContent="▶ DÉMARRER";renderHud();
+  currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
+  overlay.hidden=false;renderMenuStage("home");
+  renderHud();
  }
  function gameOver(){
   stopMusic();nitroHeld=false;nitroActive=false;mode="over";keys.clear();flash=.5;shake=6;beep("hit");
+  warningLife=0;warningBeepDelay=0;
   if(score>best){best=Math.floor(score);save("best."+selectedLevel.id,best);}
-  levelPicker.hidden=true;overlay.hidden=false;logo.textContent="GAME OVER";prompt.textContent="RUN TERMINÉ";
-  status.textContent="SCORE "+Math.floor(score)+"  ·  RECORD "+best;
-  overlayButton.textContent="↻ REJOUER";renderHud();
+  overlay.hidden=false;brandLogo.hidden=true;logo.hidden=false;logo.textContent="GAME OVER";
+  levelPicker.hidden=true;backButton.hidden=false;
+  status.hidden=false;status.textContent="SCORE "+Math.floor(score)+"  ·  RECORD "+best;
+  prompt.hidden=true;expl.hidden=true;hint.hidden=true;
+  overlay.classList.remove("er-stage-home","er-stage-levels");
+  overlayButton.hidden=false;overlayButton.classList.add("er-overlay-restart");
+  overlayButton.textContent="↻ REJOUER";overlayButton.setAttribute("aria-label","Rejouer le niveau");
+  renderHud();
  }
  function togglePause(){
-  if(mode==="running"){endNitro();mode="paused";pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;overlay.hidden=false;
-   logo.textContent="PAUSE";prompt.textContent="SIGNAL SUSPENDU";status.textContent="LE TUNNEL T'ATTEND";
-   overlayButton.textContent="▶ REPRENDRE";
+  if(mode==="running"){endNitro();mode="paused";pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;backButton.hidden=false;overlay.hidden=false;
+   brandLogo.hidden=true;logo.hidden=false;logo.textContent="PAUSE";
+   prompt.hidden=false;prompt.textContent="SIGNAL SUSPENDU";
+   status.hidden=false;status.textContent="LE TUNNEL T'ATTEND";
+   expl.hidden=true;hint.hidden=true;
+   overlay.classList.remove("er-stage-home","er-stage-levels");
+   overlayButton.hidden=false;overlayButton.classList.remove("er-overlay-restart");
+   overlayButton.textContent="▶ REPRENDRE";overlayButton.setAttribute("aria-label","Reprendre la course");
   }else if(mode==="paused"){mode="running";overlay.hidden=true;startMusic(false);}
   else start();renderHud();
  }
@@ -648,6 +702,13 @@ function mount(root){
   padBoostTime=Math.max(0,padBoostTime-dt);
   pulseGlow=Math.max(0,pulseGlow-dt);messageLife=Math.max(0,messageLife-dt);
   flash=Math.max(0,flash-dt*1.8);shake=Math.max(0,shake-dt*16);
+  if(warningLife>0){
+   warningLife=Math.max(0,warningLife-dt);
+   warningBeepDelay-=dt;
+   if(warningLife>0&&warningBeepDelay<=0){
+    beep("warning");warningBeepDelay+=.47;
+   }
+  }
   // Separate obstacles by WORLD distance, not seconds. At faster speeds,
   // each gate still has a long, empty tunnel leading to the next one.
   while(travel>=nextGateAt){
@@ -695,6 +756,9 @@ function mount(root){
     w.credited=true;passed++;
     if(!w.cleared&&collisionAt(angle,w)&&invuln<=0){
      lives--;combo=0;invuln=1.35;flash=.47;shake=3;beep("hit");
+     if(lives===1){
+      warningLife=2.25;warningBeepDelay=.15;warningChirp=0;
+     }
      message="IMPACT !";messageLife=1.05;burst(angle,"#ff5caa",23);
      if(lives<=0){gameOver();break;}
     }else{
@@ -976,7 +1040,7 @@ function mount(root){
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable)return;
   // Enter/Space on level buttons must select, not immediately start.
   if(mode==="menu"&&e.target.closest&&e.target.closest(".er-level-picker"))return;
-  if(mode==="menu"&&/^[1-5]$/.test(e.key)){
+  if(mode==="menu"&&menuStage==="levels"&&/^[1-5]$/.test(e.key)){
    e.preventDefault();
    const id=e.key==="5"?"free":e.key;
    const btn=levelButtons[LEVELS.findIndex(x=>x.id===id)];
@@ -988,10 +1052,19 @@ function mount(root){
    arrowup:"up",w:"up",arrowdown:"down",s:"down"
   };
   const dir=control[k];
-  if(dir){e.preventDefault();if(mode!=="running"){if(!e.repeat)start();return;}keys.add(dir);return;}
+  if(dir){
+   e.preventDefault();
+   if(mode==="menu"){showLevelSelect();return;}
+   if(mode!=="running"){if(mode==="over"&&!e.repeat)start();return;}
+   keys.add(dir);return;
+  }
   if(k==="enter"||k===" "||k==="q"||k==="p"||k==="escape"){
    e.preventDefault();if(e.repeat)return;
-   if(mode==="menu"||mode==="over"){start();return;}
+   if(mode==="menu"){
+     if(k==="escape"){toMenu();return;}
+     showLevelSelect();return;
+    }
+    if(mode==="over"){start();return;}
    if(k==="p"||k==="escape"){togglePause();return;}
    if(mode==="paused"){togglePause();return;}
    if(k===" "){pulse();return;}
@@ -1007,7 +1080,11 @@ function mount(root){
  function boardDown(e){
   if(e.button!==undefined&&e.button!==0)return;
   if(e.target.closest&&e.target.closest("button"))return;
-  if(mode!=="running"){start();return;}
+  if(mode!=="running"){
+   if(mode==="menu")showLevelSelect();
+   else if(mode==="over")start();
+   return;
+  }
   if(e.pointerType!=="touch"&&e.pointerType!=="pen")return;
   dragPointer=e.pointerId;dragX=e.clientX;
   dragLastTs=Number(e.timeStamp)||Date.now();dragVelocity=0;
@@ -1040,7 +1117,11 @@ function mount(root){
  function onBlur(){endNitro();keys.clear();}
  document.addEventListener("visibilitychange",onVisibility);
  window.addEventListener("blur",onBlur);
- overlayButton.onclick=function(){if(mode==="paused")togglePause();else start();};
+ overlayButton.onclick=function(){
+  if(mode==="paused")togglePause();
+  else if(mode==="menu")showLevelSelect();
+  else start();
+ };
  document.addEventListener("keydown",keyDown);
  document.addEventListener("keyup",keyUp);
  function dispose(){
@@ -1082,7 +1163,16 @@ function mount(root){
    const level=LEVELS.find(x=>x.id===id);if(!level)return false;
    selectedLevel=level;save("level",id);
    best=Number(load("best."+id,id==="3"?load("best","0"):"0"))||0;
-   renderLevelPicker();renderHud();return true;
+   renderHud();return true;
+  },
+  stage:()=>menuStage,openLevels:showLevelSelect,
+  warning:()=>({life:warningLife,beepDelay:warningBeepDelay,visible:!warningLayer.hidden}),
+  simulateHit:()=>{
+   if(mode!=="running")return;
+   lives=Math.max(0,lives-1);invuln=1.35;flash=.47;shake=3;
+   if(lives===1){warningLife=2.25;warningBeepDelay=.15;warningChirp=0;}
+   if(lives===0)gameOver();
+   renderHud();
   },
   pattern:pattern,collisionAt:collisionAt,hitDepth:HIT_Z
  };
