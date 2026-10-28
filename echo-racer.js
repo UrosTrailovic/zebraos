@@ -108,6 +108,18 @@ function mount(root){
  const canvas=node("canvas","er-canvas");canvas.width=W;canvas.height=H;canvas.setAttribute("aria-label","Tunnel spatial violet et rose, rotation autour des barrières lumineuses");
  const c=canvas.getContext("2d",{alpha:false});
  if(!c)throw Error("Canvas 2D indisponible");
+ // Transparent pixel-art hood, loaded only when Echo Racer opens.
+ // The original PNGs are untouched; a failed download preserves gameplay.
+ const shipSprites={idle:new Image(),boost:new Image()};
+ const shipReady={idle:false,boost:false};
+ let shipBoostFade=0;
+ for(const state of ["idle","boost"]){
+  const sprite=shipSprites[state];
+  sprite.decoding="async";
+  sprite.onload=()=>{if(live)shipReady[state]=sprite.naturalWidth>0;};
+  sprite.onerror=()=>{if(live)shipReady[state]=false;};
+  sprite.src="/assets/games/echo-ship-"+state+".png";
+ }
  const sheen=node("div","er-crt");sheen.setAttribute("aria-hidden","true");
  const overlay=node("div","er-overlay");
  const logo=node("h2","er-title","ECHO RACER");
@@ -328,6 +340,7 @@ function mount(root){
   hudTimer=bestSaveTimer=audioSampleTimer=0;
   waves=[];pads=[];nextGateAt=START_GATE_AT;nextPadAt=PAD_START;lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
   invuln=0;pulseCharge=2;pulseGlow=boostTime=padBoostTime=boostCooldown=flash=shake=0;
+  shipBoostFade=0;
   message="TROUVE LE PASSAGE";messageLife=2;keys.clear();overlay.hidden=true;
   beep("collect");startMusic(true);renderHud();
  }
@@ -685,6 +698,29 @@ function mount(root){
   }
   c.restore();
  }
+ function drawShip(){
+  if(!shipReady.idle&&!shipReady.boost)return;
+  const sprite=shipReady.idle?shipSprites.idle:shipSprites.boost;
+  const iw=sprite.naturalWidth,ih=sprite.naturalHeight;
+  if(!iw||!ih)return;
+  // Fit the full silhouette, including thruster tips, inside the screen.
+  // Cap the height to preserve visibility of incoming hazards.
+  const scale=Math.min(W*.88/iw,H*.46/ih);
+  const dw=iw*scale,dh=ih*scale;
+  const steer=clamp(turnVelocity/3.85,-1,1);
+  const bob=mode==="running"?
+    Math.sin(elapsed*14)*Math.min(1.2,currentSpeed*.15)+audioFx.kick*1.2:0;
+  c.save();
+  c.translate(W*.5-steer*Math.min(W*.014,9),H+2+bob);
+  c.rotate(-steer*.023);
+  c.imageSmoothingEnabled=false; // Crisp retro pixels.
+  if(shipReady.idle)c.drawImage(shipSprites.idle,-dw*.5,-dh,dw,dh);
+  if(shipReady.boost){
+   c.globalAlpha=shipReady.idle?shipBoostFade:1;
+   if(c.globalAlpha>.005)c.drawImage(shipSprites.boost,-dw*.5,-dh,dw,dh);
+  }
+  c.restore();
+ }
  function drawFPV(){
   const g=wallGeom(),plane=HIT_Z,p=wallPoint(PI/2,plane);
   const nearest=waves.filter(w=>!w.cleared&&w.z>=HIT_Z&&w.z<HIT_Z+1.55).sort((a,b)=>a.z-b.z)[0];
@@ -722,7 +758,8 @@ function mount(root){
    c.fillStyle=p.color;c.fillRect(t.x-2,t.y-2,4,4);
   }
   c.globalAlpha=1;
-  drawFPV();
+  drawShip();
+  drawFPV(); // Keep collision/boost-pad cue visible above the hood.
   if(flash>0){
    c.fillStyle="rgba(255,70,143,"+(flash*.23)+")";c.fillRect(0,0,W,H);
   }
@@ -737,6 +774,9 @@ function mount(root){
    return;
   }
   if(mode==="running")advance(dt);
+  const turbo=mode==="running"&&(boostTime>0||padBoostTime>0)?1:0;
+  shipBoostFade+=(turbo-shipBoostFade)*(1-Math.exp(-dt*(turbo?15:10)));
+  if(Math.abs(shipBoostFade-turbo)<.002)shipBoostFade=turbo;
   sampleMusic(dt);paint(now);
  }
  function keyDown(e){
@@ -810,6 +850,11 @@ function mount(root){
   if(musicSource)try{musicSource.disconnect();}catch(_){}
   if(musicAnalyser)try{musicAnalyser.disconnect();}catch(_){}
   if(music){music.onerror=null;try{music.removeAttribute("src");music.load();}catch(_){}}
+  for(const state of ["idle","boost"]){
+   shipSprites[state].onload=shipSprites[state].onerror=null;
+   shipSprites[state].removeAttribute("src");
+   shipReady[state]=false;
+  }
   music=null;musicSource=null;musicAnalyser=null;musicBins=null;
   if(audioCtx)try{const p=audioCtx.close();if(p&&p.catch)p.catch(()=>{});}catch(_){}
   root._echoDebug=null;
@@ -818,6 +863,7 @@ function mount(root){
  root._echoDebug={
   snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,pulseCharge,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:boost,menu:toMenu,pause:togglePause,
+  ship:()=>({idleLoaded:shipReady.idle,boostLoaded:shipReady.boost,boostMix:shipBoostFade}),
   pattern:pattern,collisionAt:collisionAt,hitDepth:HIT_Z
  };
  renderSound();toMenu();renderHud();
