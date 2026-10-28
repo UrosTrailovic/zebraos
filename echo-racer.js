@@ -42,7 +42,9 @@ function collisionAt(ship,wave){
  // All tile and ship positions refer to the *same* foreground play plane.
  // This is an actual 2D collision test, not a projected pixel approximation.
  for(const t of wave.tiles){
-  if(Math.abs(t.x-ship.x)<.235&&Math.abs(t.y-ship.y)<.235)return true;
+  // A plate occupies .325 of the hoop radius. Include the ship's
+  // fuselage in the hitbox, so apparent overlaps match real impacts.
+  if(Math.abs(t.x-ship.x)<.30&&Math.abs(t.y-ship.y)<.30)return true;
  }
  return false;
 }
@@ -467,8 +469,14 @@ function mount(root){
   const rect=canvas.getBoundingClientRect();
   if(!rect.width||!rect.height)return;
   // A touchscreen drag may place the ship directly on the playing plane.
-  x=clamp(((e.clientX-rect.left)/rect.width-.5)*2.18,-.89,.89);
-  y=clamp(((e.clientY-rect.top)/rect.height-.49)*2.18,-.89,.89);
+  // Inverse of project(nx, ny, 0). The touch point and ship position
+  // must share the SAME vanishing-point geometry as every obstacle.
+  const px=(e.clientX-rect.left)/rect.width*W;
+  const py=(e.clientY-rect.top)/rect.height*H;
+  const center=project(0,0,0);
+  const radius=Math.min(W,H)*.72;
+  x=clamp((px-center.x)/radius,-.89,.89);
+  y=clamp((py-center.y)/(radius*.92),-.89,.89);
   constrain();
  }
  function boardUp(e){if(shipPointer===e.pointerId)shipPointer=null;}
