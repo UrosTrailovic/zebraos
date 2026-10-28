@@ -111,6 +111,7 @@ function mount(root){
  // The 0.967 s MP3 is already mastered to loop at its endpoints.
  const BOOST_FADE_IN_SECONDS=.11,BOOST_FADE_OUT_SECONDS=.23;
  let flySound=null,boostSound=null,flyFade=0,boostGain=0;
+ let boostBuffer=null,boostSource=null,boostOutput=null,boostLoad=null,boostAudioFailed=false;
  const audioFx={bass:0,mid:0,high:0,kick:0,previousBass:0,slowBass:0,beatCooldown:0,energy:0};
  let dragPointer=null,dragX=0,dragLastTs=0,dragVelocity=0;
  const wrap=node("section","er zg zg-retro");
@@ -358,7 +359,7 @@ function mount(root){
   if(!window.Audio)return null;
   try{
    music=new window.Audio(musicUrl);
-   music.loop=true;music.volume=.61;music.preload="none";
+   music.loop=true;music.volume=.82;music.preload="none";
    music.onerror=function(){musicError=true;};
    const context=ensureAudioContext();
    if(context&&context.createMediaElementSource&&context.createAnalyser){
@@ -397,6 +398,7 @@ function mount(root){
   if(!live||mode!=="running"||!soundEnabled||globalMuted()||document.hidden)return;
   if(!ensureEngineAudio())return;
   if(rewind){
+   stopBoostSource();primeBoostAudio();
    flyFade=0;
    try{flySound.pause();flySound.currentTime=0;flySound.volume=0;}catch(_){}
    if(boostSound)try{boostSound.pause();boostSound.currentTime=0;boostSound.volume=0;}catch(_){}
@@ -408,6 +410,7 @@ function mount(root){
   }catch(_){}
  }
  function pauseEngine(){
+  stopBoostSource();
   if(flySound)try{flySound.pause();}catch(_){}
   if(boostSound)try{boostSound.pause();boostSound.volume=0;}catch(_){}
   boostGain=0;
@@ -425,32 +428,103 @@ function mount(root){
   const t=flyFade;
   flySound.volume=FLY_VOLUME*t*t*(3-2*t);
  }
+ // MP3 element loops can pause at decoder frame boundaries. Decode once
+ // into an AudioBufferSourceNode with a trimmed, crossfaded seamless seam.
+ function primeBoostAudio(){
+  if(boostBuffer||boostLoad||boostAudioFailed||!live)return boostLoad;
+  const ctx=ensureAudioContext();
+  if(!ctx||typeof ctx.createBufferSource!=="function"||typeof ctx.createBuffer!=="function"||typeof fetch!=="function"){
+   boostAudioFailed=true;return null;
+  }
+  boostLoad=fetch(boostUrl).then(response=>{
+   if(!response.ok)throw Error("Boost asset unavailable");
+   return response.arrayBuffer();
+  }).then(bytes=>ctx.decodeAudioData(bytes)).then(raw=>{
+   if(!live)return null;
+   // Trim encoder silence at each end before stitching the seam.
+   let peak=0;
+   for(let ch=0;ch<raw.numberOfChannels;ch++){
+    const data=raw.getChannelData(ch);
+    for(let i=0;i<data.length;i++)peak=Math.max(peak,Math.abs(data[i]));
+   }
+   const threshold=Math.max(.0004,peak*.011);
+   let first=0,last=raw.length;
+   const loudAt=i=>{
+    for(let ch=0;ch<raw.numberOfChannels;ch++)
+     if(Math.abs(raw.getChannelData(ch)[i])>threshold)return true;
+    return false;
+   };
+   while(first<raw.length&& !loudAt(first))first++;
+   while(last>first&& !loudAt(last-1))last--;
+   const margin=Math.floor(raw.sampleRate*.004);
+   first=Math.max(0,first-margin);last=Math.min(raw.length,last+margin);
+   if(last-first<raw.sampleRate*.16){first=0;last=raw.length;}
+   const overlap=Math.min(Math.round(raw.sampleRate*.040),Math.floor((last-first)/6));
+   if(overlap<2){boostBuffer=raw;return raw;}
+   const len=last-first-overlap;
+   const buffer=ctx.createBuffer(raw.numberOfChannels,len,raw.sampleRate);
+   for(let ch=0;ch<raw.numberOfChannels;ch++){
+    const input=raw.getChannelData(ch),output=buffer.getChannelData(ch);
+    output.set(input.subarray(first,first+len));
+    // The final overlap is moved to the head: the loop ends where the
+    // blended tail begins, so there is no discontinuity or MP3 padding gap.
+    for(let i=0;i<overlap;i++){
+     const t=(i+1)/(overlap+1);
+     output[i]=input[last-overlap+i]*(1-t)+input[first+i]*t;
+    }
+   }
+   boostBuffer=buffer;
+   if(mode==="running"&&(nitroActive||padBoostTime>0))startBoostLoop();
+   return buffer;
+  }).catch(()=>{boostAudioFailed=true;return null;});
+  return boostLoad;
+ }
+ function stopBoostSource(){
+  if(boostSource){
+   try{boostSource.stop();boostSource.disconnect();}catch(_){}
+   boostSource=null;
+  }
+  if(boostOutput){try{boostOutput.disconnect();}catch(_){}boostOutput=null;}
+ }
  function startBoostLoop(){
   if(!live||mode!=="running"||!soundEnabled||globalMuted()||document.hidden)return;
-  if(!ensureEngineAudio()||!boostSound||!boostSound.paused)return;
-  try{
-   boostSound.loop=true;
-   boostSound.volume=BOOST_VOLUME*boostGain;
-   const started=boostSound.play();
-   if(started&&started.catch)started.catch(()=>{});
-  }catch(_){}
+  primeBoostAudio();
+  if(boostBuffer&&!boostSource&&audioCtx){
+   try{
+    const src=audioCtx.createBufferSource(),gain=audioCtx.createGain();
+    src.buffer=boostBuffer;src.loop=true;
+    gain.gain.value=BOOST_VOLUME*boostGain;
+    src.connect(gain);gain.connect(audioCtx.destination);src.start();
+    boostSource=src;boostOutput=gain;
+    if(boostSound&&!boostSound.paused)try{boostSound.pause();}catch(_){}
+   }catch(_){boostAudioFailed=true;boostSource=null;boostOutput=null;}
+  }
+  // Fallback only while decoding or if a browser lacks AudioBufferSourceNode.
+  if(!boostSource&&boostSound&&boostSound.paused){
+   try{
+    boostSound.loop=true;boostSound.volume=BOOST_VOLUME*boostGain;
+    const task=boostSound.play();if(task&&task.catch)task.catch(()=>{});
+   }catch(_){}
+  }
  }
  function tickBoostLoop(dt){
-  if(!boostSound)return;
+  if(!boostSound&&!boostSource)return;
   const enabled=live&&mode==="running"&&soundEnabled&&!globalMuted()&&!document.hidden;
   const wanted=enabled&&(nitroActive||padBoostTime>0);
   if(!enabled){
-   if(!boostSound.paused)try{boostSound.pause();}catch(_){}
-   boostSound.volume=0;boostGain=0;return;
+   stopBoostSource();
+   if(boostSound&&!boostSound.paused)try{boostSound.pause();}catch(_){}
+   if(boostSound)boostSound.volume=0;
+   boostGain=0;return;
   }
   if(wanted)startBoostLoop();
-  // Only the gain ramps; never rewind a running loop when boosting again.
   const fade=wanted?BOOST_FADE_IN_SECONDS:BOOST_FADE_OUT_SECONDS;
   boostGain=clamp(boostGain+(wanted?1:-1)*clamp(dt,0,.07)/fade,0,1);
-  boostSound.volume=BOOST_VOLUME*boostGain;
-  if(!wanted&&boostGain===0&&!boostSound.paused){
+  if(boostOutput)boostOutput.gain.value=BOOST_VOLUME*boostGain;
+  if(boostSound)boostSound.volume=boostSource?0:BOOST_VOLUME*boostGain;
+  // Maintain the decoded loop, silent, between rapid presses; no reset/click.
+  if(!wanted&&boostGain===0&&!boostSource&&boostSound&&!boostSound.paused)
    try{boostSound.pause();}catch(_){}
-  }
  }
  function startMusic(rewind){
   if(!live||!soundEnabled||globalMuted()||document.hidden)return;
@@ -1234,6 +1308,7 @@ function mount(root){
   if(musicSource)try{musicSource.disconnect();}catch(_){}
   if(musicAnalyser)try{musicAnalyser.disconnect();}catch(_){}
   if(music){music.onerror=null;try{music.removeAttribute("src");music.load();}catch(_){}}
+  stopBoostSource();boostBuffer=null;boostLoad=null;
   for(const sound of [flySound,boostSound]){
    if(sound)try{sound.pause();sound.removeAttribute("src");sound.load();}catch(_){}
   }
@@ -1258,8 +1333,9 @@ function mount(root){
    held:nitroHeld,manualBoost:nitroActive,burnTime:nitroBurnTime,regenWait:nitroRegenWait}),
   engineAudio:()=>({flyLoaded:!!flySound,boostLoaded:!!boostSound,
    flyPlaying:!!flySound&&!flySound.paused,boostPlaying:!!boostSound&&!boostSound.paused,
-   flyVolume:flySound?flySound.volume:0,boostVolume:boostSound?boostSound.volume:0,
-   boostGain,boostLoop:boostSound?boostSound.loop:false,flyFade}),
+   flyVolume:flySound?flySound.volume:0,boostVolume:boostOutput?boostOutput.gain.value:boostSound?boostSound.volume:0,
+   boostGain,boostLoop:!!boostSource||!!boostSound&&boostSound.loop,
+   sampleAccurate:!!boostSource,bufferLoaded:!!boostBuffer,flyFade}),
   tickAudio:tickBoostLoop,
   selectLevel:(id)=>{
    if(mode!=="menu")return false;
