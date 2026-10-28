@@ -417,9 +417,9 @@ function mount(root){
   beep("collect");startMusic(true);renderHud();
  }
  function toMenu(){
-  if(score>0)save("best."+selectedLevel.id,best);
+  if(mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
   stopMusic();mode="menu";keys.clear();waves=[];pads=[];trail=[];turnVelocity=0;
-  elapsed=0;padBoostTime=0;boostTime=0;boostCooldown=0;currentSpeed=0;scoreMultiplier=1;
+  elapsed=0;padBoostTime=0;boostTime=0;boostCooldown=0;currentSpeed=0;score=0;scoreMultiplier=1;
   overlay.hidden=false;levelPicker.hidden=false;
   logo.textContent="ECHO RACER";prompt.textContent="CHOISIS TON CIRCUIT";
   renderLevelPicker();overlayButton.textContent="▶ DÉMARRER";renderHud();
@@ -860,6 +860,15 @@ function mount(root){
   const parent=root.closest(".window");
   if(parent&&(!parent.classList.contains("focused")||parent.classList.contains("minimized")))return;
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable)return;
+  // Enter/Space on level buttons must select, not immediately start.
+  if(mode==="menu"&&e.target.closest&&e.target.closest(".er-level-picker"))return;
+  if(mode==="menu"&&/^[1-5]$/.test(e.key)){
+   e.preventDefault();
+   const id=e.key==="5"?"free":e.key;
+   const btn=levelButtons[LEVELS.findIndex(x=>x.id===id)];
+   if(btn)btn.click();
+   return;
+  }
   const k=e.key.toLowerCase(),control={
    arrowleft:"left",a:"left",arrowright:"right",d:"right",
    arrowup:"up",w:"up",arrowdown:"down",s:"down"
