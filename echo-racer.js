@@ -106,8 +106,7 @@ function mount(root){
  const heading=node("div","er-heading");
  const wordmark=node("div","er-wordmark");wordmark.append(
   node("span","er-echo","ECHO"),node("span","er-racer","RACER"));
- const headline=node("span","er-heading-sub","FPV / TUNNEL 360°");
- heading.append(wordmark,headline);wrap.appendChild(heading);
+ heading.appendChild(wordmark);wrap.appendChild(heading);
  const hud=node("div","er-hud");
  let scoreLabel=null;
  function metric(label){const box=node("div","er-meter"),title=node("span","",label);box.appendChild(title);if(label==="SCORE")scoreLabel=title;const value=node("strong","","0");box.appendChild(value);hud.appendChild(box);return value;}
@@ -160,13 +159,44 @@ function mount(root){
  const hint=node("p","er-hint","← → TOURNE · ↑ ↓ VITESSE · ESPACE PULSE · Q BOOST · P PAUSE");
  const overlayButton=node("button","er-overlay-button","▶ DÉMARRER");
  overlayButton.type="button";
- overlay.append(logo,status,prompt,expl,hint,overlayButton);
- const telemetry=node("div","er-telemetry");
- const signal=node("span","er-signal","● VEILLE");
- const speedEl=node("span","","VITESSE 01");
- const warning=node("span","","—");
- telemetry.append(signal,speedEl,warning);
- screen.append(canvas,sheen,overlay,telemetry);frame.appendChild(screen);
+ const levelPicker=node("div","er-level-picker");
+ levelPicker.setAttribute("role","group");levelPicker.setAttribute("aria-label","Choisir un niveau");
+ const levelButtons=LEVELS.map(level=>{
+  const btn=node("button","er-level-button");
+  btn.type="button";btn.title=level.subtitle;
+  btn.append(node("span","er-level-num",level.id==="free"?"∞":"NIVEAU "+level.id),
+             node("small","er-level-name",level.name));
+  btn.onclick=()=>{if(mode!=="menu")return;
+   selectedLevel=level;save("level",level.id);
+   best=Number(load("best."+level.id,level.id==="3"?load("best","0"):"0"))||0;
+   renderLevelPicker();renderHud();
+  };
+  levelPicker.appendChild(btn);return btn;
+ });
+ function renderLevelPicker(){
+  levelButtons.forEach((btn,i)=>{const active=selectedLevel.id===LEVELS[i].id;
+   btn.classList.toggle("selected",active);btn.setAttribute("aria-pressed",String(active));
+  });
+  status.textContent=selectedLevel.subtitle;
+ }
+ overlay.append(logo,status,prompt,levelPicker,expl,hint,overlayButton);
+ const dashboard=node("div","er-dashboard");
+ dashboard.setAttribute("role","group");dashboard.setAttribute("aria-label","Vitesse et recharge du boost");
+ function instrument(label,cls,unit){
+  const row=node("div","er-dashboard-row "+cls),readout=node("div","er-dashboard-readout");
+  const value=node("strong","er-dashboard-digits","000");
+  readout.append(node("span","er-dashboard-name",label),value,node("span","er-dashboard-unit",unit));
+  const bar=node("div","er-dashboard-bar");bar.setAttribute("aria-hidden","true");
+  const segments=[];
+  for(let i=0;i<15;i++){const led=node("span","er-dashboard-led");bar.appendChild(led);segments.push(led);}
+  const statusEl=node("span","er-dashboard-status","");
+  row.append(readout,bar,statusEl);dashboard.appendChild(row);
+  return{row,value,segments,statusEl};
+ }
+ const speedGauge=instrument("VITESSE","er-dashboard-speed","KM/H");
+ const boostGauge=instrument("BOOST","er-dashboard-boost","%");
+ const eventText=node("div","er-race-event","");
+ screen.append(canvas,sheen,dashboard,eventText,overlay);frame.appendChild(screen);
  wrap.append(hud,frame);
  const footer=node("div","er-footer zg-buttons zt-buttons");
  function button(label,cls,callback){const b=node("button","er-hardware "+cls,label);b.type="button";b.onclick=()=>{beep("switch");callback();};return b;}
@@ -229,7 +259,6 @@ function mount(root){
  }));
  Promise.all(spriteJobs).then(results=>{if(live&&pad.isConnected&&results.every(Boolean))pad.classList.add("zt-skin-ready");});
  wrap.append(pad);
- wrap.appendChild(node("div","er-key-guide","← / → TOURNER  ·  ↑ / ↓ VITESSE  ·  Q BOOST  ·  ESPACE PULSE  ·  P PAUSE"));
  root.appendChild(wrap);
  function fitCanvas(){
   if(!live)return;
@@ -354,16 +383,28 @@ function mount(root){
    o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+.20);
   }catch(_){}
  }
+ function lightSegments(segments,ratio){
+  const n=clamp(Math.round(ratio*segments.length),0,segments.length);
+  segments.forEach((led,i)=>led.classList.toggle("lit",i<n));
+ }
  function renderHud(){
-  scoreLabel.textContent="SCORE ×"+scoreMultiplier;
+  scoreLabel.textContent="SCORE";
   scoreEl.textContent=Math.floor(score).toLocaleString("fr");
   bestEl.textContent=Math.floor(best).toLocaleString("fr");
   shieldEl.textContent="◆".repeat(lives)+"◇".repeat(MAX_LIVES-lives);
   energyEl.textContent="✦".repeat(pulseCharge)+"·".repeat(3-pulseCharge);
-  speedEl.textContent="VITESSE "+String(clamp(Math.round((currentSpeed||3.25)*1.5),1,9)).padStart(2,"0");
-  signal.textContent=mode==="running"?"● SIGNAL":mode==="paused"?"● PAUSE":"● VEILLE";
-  signal.classList.toggle("on",mode==="running");
-  warning.textContent=padBoostTime>0?"PAD TURBO ×"+scoreMultiplier:boostTime>0?"BOOST ×"+scoreMultiplier:invuln>0?"BOUCLIER":messageLife>0?message:"—";
+  const speed=Math.round((mode==="menu"?0:currentSpeed)*25);
+  speedGauge.value.textContent=String(speed).padStart(3,"0");
+  lightSegments(speedGauge.segments,clamp(speed/310,0,1));
+  const free=selectedLevel.id==="free";
+  const active=mode==="running"&&(boostTime>0||padBoostTime>0);
+  const charge=free?1:clamp(1-boostCooldown/5,0,1);
+  boostGauge.value.textContent=free?"∞":String(active?100:Math.round(charge*100)).padStart(3,"0");
+  boostGauge.statusEl.textContent=free?"ILLIMITÉ":active?(padBoostTime>0?"TURBO":"NITRO"):charge>=.999?"PRÊT":"RECHARGE";
+  boostGauge.row.classList.toggle("er-dashboard-active",active);
+  lightSegments(boostGauge.segments,active?1:charge);
+  eventText.textContent=mode==="running"&&messageLife>0?message:"";
+  eventText.classList.toggle("visible",mode==="running"&&messageLife>0);
   startButton.textContent=mode==="running"?"Ⅱ PAUSE":mode==="paused"?"▶ REPRENDRE":"▶ JOUER";
  }
  function start(){
