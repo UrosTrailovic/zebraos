@@ -22,56 +22,54 @@ function rectRound(ctx,x,y,w,h,r){
  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
 }
-function pattern(n){
- // Five-by-five tiles; every pattern has several genuinely open escape routes.
- const cells=[],key=n%7;
- for(let j=-2;j<=2;j++)for(let i=-2;i<=2;i++){
+/* Player travels along the INNER CIRCUMFERENCE of a perfectly straight tube.
+ * The camera is the player: position is one world-space ANGLE, not an XY ship. */
+const SECTORS=16,STEP=TAU/SECTORS,HIT_Z=1.6,SPAWN_Z=6.3;
+function angularDelta(a,b){return ((a-b+PI)%TAU+TAU)%TAU-PI;}
+function pattern(kind){
+ const cells=[];
+ for(let i=0;i<SECTORS;i++){
   let block=false;
-  if(key===0)block=j===0;                           // horizontal shutter
-  if(key===1)block=i===0;                           // vertical shutter
-  if(key===2)block=(i===0||j===0)&&!(i===0&&j===0);// central escape window
-  if(key===3)block=(i<=-1&&j>=0)||(i>=1&&j<=0);    // opposing corners
-  if(key===4)block=Math.abs(i)===2&&Math.abs(j)<=1;// twin pillars
-  if(key===5)block=(i===j||i===-j)&&Math.abs(i)>0;  // diagonal X
-  if(key===6)block=(j===-1&&i<2)||(j===1&&i>-2);   // offset gates
-  if(block)cells.push({x:i*.35,y:j*.35});
+  if(kind===0)block=i<10;                               // wide single gap
+  if(kind===1)block=i<5||i>11;                            // clear seven-lane gate
+  if(kind===2)block=(i>=1&&i<=6)||(i>=10&&i<=13);        // split forks
+  if(kind===3)block=(i<=4)||(i>=8&&i<=11);               // offset passages
+  if(kind===4)block=i%4===0||i%4===1;                    // alternating bands
+  if(kind===5)block=i<12;                                // tighter single gap
+  if(kind===6)block=(i<=5)||(i>=9&&i<=13);              // two unequal exits
+  if(block)cells.push(i);
  }
  return cells;
 }
-function collisionAt(ship,wave){
- // All tile and ship positions refer to the *same* foreground play plane.
- // This is an actual 2D collision test, not a projected pixel approximation.
- for(const t of wave.tiles){
-  // A plate occupies .325 of the hoop radius. Include the ship's
-  // fuselage in the hitbox, so apparent overlaps match real impacts.
-  if(Math.abs(t.x-ship.x)<.30&&Math.abs(t.y-ship.y)<.30)return true;
- }
- return false;
+function collisionAt(player,wave){
+ if(!wave||wave.cleared)return false;
+ const angle=typeof player==="number"?player:player.angle||0;
+ return wave.sectors.some(id=>{
+  const center=(id+.5)*STEP;
+  return Math.abs(angularDelta(angle,center))<=STEP*.5;
+ });
 }
-function nearMiss(ship,wave){
- let closest=Infinity;
- for(const t of wave.tiles){
-  const d=Math.hypot(t.x-ship.x,t.y-ship.y);
-  if(d<closest)closest=d;
- }
- return closest<.44&&!collisionAt(ship,wave);
+function nearMiss(player,wave){
+ if(!wave||wave.cleared||collisionAt(player,wave))return false;
+ const angle=typeof player==="number"?player:player.angle||0;
+ return wave.sectors.some(id=>Math.abs(angularDelta(angle,(id+.5)*STEP))<STEP*.69);
 }
 function mount(root){
  if(root._zebraDispose)root._zebraDispose();
  root.innerHTML="";
  let live=true,raf=0,ro=null,last=0,mode="menu",keys=new Set();
- let x=0,y=.42,vx=0,vy=0,lives=MAX_LIVES,score=0,best=Number(load("best","0"))||0;
+ let angle=0,turnVelocity=0,lives=MAX_LIVES,score=0,best=Number(load("best","0"))||0;
  let distance=0,travel=0,passed=0,combo=0,waves=[],spawnDelay=1.1,trail=[],sparks=[];
  let invuln=0,pulseCharge=2,pulseGlow=0,boostTime=0,boostCooldown=0;
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
  let soundEnabled=load("sfx","on")!=="off",audioCtx=null;
- let shipPointer=null;
+ let dragPointer=null,dragX=0;
  const wrap=node("section","er zg zg-retro");
  wrap.setAttribute("aria-label","Echo Racer — jeu du tunnel phosphore");
  const heading=node("div","er-heading");
  const wordmark=node("div","er-wordmark");wordmark.append(
   node("span","er-echo","ECHO"),node("span","er-racer","RACER"));
- const headline=node("span","er-heading-sub","PHOSPHOR DRIVE · 2D");
+ const headline=node("span","er-heading-sub","FPV / TUNNEL 360°");
  heading.append(wordmark,headline);wrap.appendChild(heading);
  const hud=node("div","er-hud");
  function metric(label){const box=node("div","er-meter");box.appendChild(node("span","",label));const value=node("strong","","0");box.appendChild(value);hud.appendChild(box);return value;}
@@ -86,8 +84,8 @@ function mount(root){
  const logo=node("h2","er-title","ECHO RACER");
  const status=node("div","er-title-sub","PHOSPHOR TUNNEL / SYSTEM 01");
  const prompt=node("div","er-start-call","PRESS BUTTON TO PLAY");
- const expl=node("p","er-help","DÉPLACE LE VAISSEAU · ÉVITE LES BLOCS ROUGES");
- const hint=node("p","er-hint","WASD / FLÈCHES · ESPACE : PULSE · Q : BOOST · P : PAUSE");
+ const expl=node("p","er-help","VUE SUBJECTIVE · TOURNE AUTOUR DU TUNNEL POUR TROUVER LE PASSAGE");
+ const hint=node("p","er-hint","← → TOURNE · ↑ ↓ VITESSE · ESPACE PULSE · Q BOOST · P PAUSE");
  const overlayButton=node("button","er-overlay-button","▶ DÉMARRER");
  overlayButton.type="button";
  overlay.append(logo,status,prompt,expl,hint,overlayButton);
@@ -113,10 +111,10 @@ function mount(root){
  cross.appendChild(node("div","zt-cross-shape"));
  function holdButton(label,cls,which){
   const b=node("button","zt-control "+cls,label);b.type="button";b.setAttribute("aria-label",label);
-  b.onclick=function(e){if(e.detail===0){if(mode!=="running")start();else tap(which);}};
+  b.onclick=function(e){if(e.detail===0){if(mode==="menu"||mode==="over")start();else if(mode==="running")tap(which);}};
   b.addEventListener("pointerdown",function(e){
    if(e.button!==undefined&&e.button!==0)return;
-   e.preventDefault();if(mode!=="running"){start();return;}
+   e.preventDefault();if(mode!=="running"){if(mode==="menu"||mode==="over")start();return;}
    tap(which);if(["up","down","left","right"].includes(which))keys.add(which);
    try{b.setPointerCapture(e.pointerId);}catch(_){}
   });
@@ -133,10 +131,10 @@ function mount(root){
   return new Promise(resolve=>{img.onload=()=>resolve(true);img.onerror=()=>resolve(false);});
  }
  const buttons=[
-  [holdButton("Haut","zt-dir zt-dir-up","up"),"upTetris.png"],
-  [holdButton("Bas","zt-dir zt-dir-down","down"),"downTetris.png"],
-  [holdButton("Gauche","zt-dir zt-dir-left","left"),"leftTetris.png"],
-  [holdButton("Droite","zt-dir zt-dir-right","right"),"rightTetris.png"]
+  [holdButton("Accélérer","zt-dir zt-dir-up","up"),"upTetris.png"],
+  [holdButton("Ralentir","zt-dir zt-dir-down","down"),"downTetris.png"],
+  [holdButton("Tourner à gauche","zt-dir zt-dir-left","left"),"leftTetris.png"],
+  [holdButton("Tourner à droite","zt-dir zt-dir-right","right"),"rightTetris.png"]
  ];
  buttons.forEach(pair=>cross.appendChild(pair[0]));
  cross.appendChild(node("span","zt-cross-center"));dpad.appendChild(cross);
@@ -156,7 +154,7 @@ function mount(root){
  }));
  Promise.all(spriteJobs).then(results=>{if(live&&pad.isConnected&&results.every(Boolean))pad.classList.add("zt-skin-ready");});
  wrap.append(pad);
- wrap.appendChild(node("div","er-key-guide","WASD / FLÈCHES  ·  Q BOOST  ·  ESPACE PULSE  ·  P PAUSE"));
+ wrap.appendChild(node("div","er-key-guide","← / → TOURNER  ·  ↑ / ↓ VITESSE  ·  Q BOOST  ·  ESPACE PULSE  ·  P PAUSE"));
  root.appendChild(wrap);
  function fitCanvas(){
   if(!live)return;
@@ -197,16 +195,16 @@ function mount(root){
   startButton.textContent=mode==="running"?"Ⅱ PAUSE":mode==="paused"?"▶ REPRENDRE":"▶ JOUER";
  }
  function start(){
-  mode="running";x=0;y=.27;vx=vy=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
+  mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
   waves=[];spawnDelay=1.1;elapsed=0;nextWave=0;trail=[];sparks=[];
   invuln=0;pulseCharge=2;pulseGlow=boostTime=boostCooldown=flash=shake=0;
   message="ÉVITE LES OBSTACLES";messageLife=2;keys.clear();overlay.hidden=true;
   beep("collect");renderHud();
  }
  function toMenu(){
-  mode="menu";keys.clear();waves=[];trail=[];vx=vy=0;elapsed=0;
+  mode="menu";keys.clear();waves=[];trail=[];turnVelocity=0;elapsed=0;
   overlay.hidden=false;logo.textContent="ECHO RACER";prompt.textContent="PRESS BUTTON TO PLAY";
-  status.textContent="PHOSPHOR TUNNEL / SYSTEM 01";
+  status.textContent="FPV / TOUR DU TUNNEL 360°";
   overlayButton.textContent="▶ DÉMARRER";renderHud();
  }
  function gameOver(){
@@ -227,31 +225,27 @@ function mount(root){
   if(which==="pause"){togglePause();return;}
   if(which==="pulse"){pulse();return;}
   if(which==="boost"){boost();return;}
-  if(["up","down","left","right"].includes(which)&&mode==="running"){
-   const step=.07;
-   if(which==="left")x-=step;if(which==="right")x+=step;
-   if(which==="up")y-=step;if(which==="down")y+=step;
-   constrain();
-  }
+  if(mode!=="running")return;
+  // Single press = tiny rotation; holding the key rotates continuously.
+  if(which==="left")angle-=STEP*.38;
+  if(which==="right")angle+=STEP*.38;
+  // Up/down control forward speed only. There is no 2D ship translation.
  }
- function constrain(){
-  x=clamp(x,-.89,.89);y=clamp(y,-.89,.89);
-  const d=Math.hypot(x,y);
-  if(d>.94){x*=.94/d;y*=.94/d;}
- }
- function burst(px,py,color,count){
+ function burst(position,color,count){
+  const a=typeof position==="number"?position:angle;
   for(let i=0;i<count;i++)sparks.push({
-   x:px,y:py,vx:rand(-.9,.9),vy:rand(-.9,.9),life:rand(.18,.7),max:.7,color
+   a:a+rand(-.25,.25),z:rand(.9,2.0),va:rand(-1.2,1.2),vz:rand(-2.2,.7),
+   life:rand(.15,.55),max:.55,color
   });
-  if(sparks.length>140)sparks.splice(0,sparks.length-140);
+  if(sparks.length>90)sparks.splice(0,sparks.length-90);
  }
  function pulse(){
   if(mode!=="running"||pulseCharge<=0)return;
   pulseCharge--;pulseGlow=.5;beep("pulse");
-  const target=waves.filter(w=>!w.cleared&&w.z>.05&&w.z<.95).sort((a,b)=>a.z-b.z)[0];
+  const target=waves.filter(w=>!w.cleared&&w.z>HIT_Z-.1&&w.z<HIT_Z+2.6).sort((a,b)=>a.z-b.z)[0];
   if(target){
    target.cleared=true;score+=120;combo++;message="PULSE +120";messageLife=1;
-   burst(x,y,"#a6fff5",24);
+   burst(angle,"#a6fff5",24);
   }else{message="ONDE LIBÉRÉE";messageLife=.7;}
   renderHud();
  }
@@ -262,164 +256,171 @@ function mount(root){
  }
  function createWave(){
   let kind=Math.floor(rand(0,7));
-  if(nextWave===kind)kind=(kind+2)%7;
-  nextWave=kind;
-  const base=pattern(kind),rotation=(Math.floor(rand(0,4))*PI)/2;
-  const tiles=base.map(t=>({
-   x:Math.round((t.x*Math.cos(rotation)-t.y*Math.sin(rotation))*1000)/1000,
-   y:Math.round((t.x*Math.sin(rotation)+t.y*Math.cos(rotation))*1000)/1000
-  }));
-  return {tiles,kind,z:3.3,cleared:false,credited:false};
+  if(nextWave===kind)kind=(kind+2)%7;nextWave=kind;
+  const offset=Math.floor(rand(0,SECTORS));
+  const sectors=pattern(kind).map(id=>(id+offset)%SECTORS);
+  return {kind,sectors,z:SPAWN_Z,length:.7,cleared:false,credited:false};
  }
  function advance(dt){
   if(mode!=="running"||document.hidden)return;
   dt=clamp(dt,0,.05);elapsed+=dt;
-  const boostMultiplier=boostTime>0?1.42:1;
-  const speed=(.65+Math.min(.35,distance/3400*.35))*boostMultiplier;
-  // Tunnel and gates advance through the same depth coordinate every tick.
-  travel+=speed*dt;
-  const slide=1.38*dt;
-  let ax=0,ay=0;
-  if(keys.has("left"))ax-=1;if(keys.has("right"))ax+=1;
-  if(keys.has("up"))ay-=1;if(keys.has("down"))ay+=1;
-  const mag=Math.hypot(ax,ay)||1;
-  x+=ax/mag*slide;y+=ay/mag*slide;constrain();
-  vx=lerp(vx,ax*1.6,Math.min(1,dt*12));vy=lerp(vy,ay*1.6,Math.min(1,dt*12));
-  distance+=dt*110*boostMultiplier;
-  score+=dt*(12+Math.min(20,distance/300))*boostMultiplier;
-  spawnDelay-=dt;invuln=Math.max(0,invuln-dt);boostTime=Math.max(0,boostTime-dt);
+  const steer=(keys.has("right")?1:0)-(keys.has("left")?1:0);
+  const targetTurn=steer*2.85;
+  turnVelocity+=(targetTurn-turnVelocity)*Math.min(1,dt*11);
+  angle=(angle+turnVelocity*dt+TAU)%TAU;
+  const throttle=(keys.has("up")?.27:0)-(keys.has("down")?.23:0);
+  const boostMultiplier=boostTime>0?1.5:1;
+  const speed=clamp(.78+Math.min(.37,distance/1800*.4)+throttle,.47,1.65)*boostMultiplier;
+  // One physical depth displacement: both geometry (travel) and gates use it.
+  const dz=speed*dt;
+  travel+=dz;
+  distance+=dz*125;
+  score+=dt*(12+Math.min(28,distance/240))*boostMultiplier;
+  spawnDelay-=dt;
+  invuln=Math.max(0,invuln-dt);boostTime=Math.max(0,boostTime-dt);
   boostCooldown=Math.max(0,boostCooldown-dt);
   pulseGlow=Math.max(0,pulseGlow-dt);messageLife=Math.max(0,messageLife-dt);
   flash=Math.max(0,flash-dt*1.8);shake=Math.max(0,shake-dt*16);
   if(spawnDelay<=0){
    waves.push(createWave());
-   spawnDelay=Math.max(1.4,2.25-distance/8000)+rand(-.10,.10);
+   // A full revolution is possible between distant gates at normal speed.
+   spawnDelay=Math.max(1.8,2.7-distance/3000)+rand(-.10,.15);
   }
   for(const w of waves){
-   w.z-=speed*dt;
-   if(w.z<=0&&!w.credited){
+   const oldZ=w.z;
+   w.z-=dz;
+   // Swept collision at the exact same plane at which the obstacles pass
+   // the fixed cyan HUD arc. Frame rate cannot skip the detection.
+   if(oldZ>HIT_Z&&w.z<=HIT_Z&&!w.credited){
     w.credited=true;passed++;
-    if(!w.cleared&&collisionAt({x,y},w)&&invuln<=0){
-     lives--;combo=0;invuln=1.4;flash=.52;shake=7;beep("hit");
-     message="IMPACT !";messageLife=1.1;burst(x,y,"#ff464e",27);
+    if(!w.cleared&&collisionAt(angle,w)&&invuln<=0){
+     lives--;combo=0;invuln=1.35;flash=.47;shake=3;beep("hit");
+     message="IMPACT !";messageLife=1.05;burst(angle,"#ff4654",23);
      if(lives<=0){gameOver();break;}
     }else{
-     const near=!w.cleared&&nearMiss({x,y},w);
-     combo++;const bonus=(near?90:50)*Math.min(4,1+Math.floor(combo/5));
+     const near=!w.cleared&&nearMiss(angle,w);
+     combo++;const multiplier=Math.min(4,1+Math.floor(combo/5));
+     const bonus=(near?90:50)*multiplier;
      score+=bonus*(boostTime>0?2:1);
-     if(near){message="NEAR MISS +"+bonus;messageLife=.7;beep("pass");}
-     else if(combo%5===0){message="COMBO ×"+Math.min(4,1+Math.floor(combo/5));messageLife=.7;}
+     if(near){message="NEAR MISS +"+bonus;messageLife=.8;beep("pass");}
+     else if(combo%5===0){message="COMBO ×"+multiplier;messageLife=.75;}
      if(passed%4===0){pulseCharge=Math.min(3,pulseCharge+1);beep("collect");}
     }
    }
   }
-  waves=waves.filter(w=>w.z>-.18);
-  sparks.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;});
+  waves=waves.filter(w=>w.z>-.8);
+  sparks.forEach(p=>{p.a+=p.va*dt;p.z+=p.vz*dt;p.life-=dt;});
   sparks=sparks.filter(p=>p.life>0);
-  trail.push({x,y,life:.24});if(trail.length>20)trail.shift();
-  trail.forEach(p=>p.life-=dt);trail=trail.filter(p=>p.life>0);
   if(score>best){best=Math.floor(score);save("best",best);}
   renderHud();
  }
- function perspective(z){return 1/(1+Math.max(0,z)*1.8);}
- function project(nx,ny,z){const t=perspective(z),holeX=W*.295,holeY=H*.385,nearX=W*.525,nearY=H*.535,rad=Math.min(W,H)*.72;return{x:holeX+((nearX-holeX)+nx*rad)*t,y:holeY+((nearY-holeY)+ny*rad*.92)*t,k:t,r:rad*t};}
- function ring(z){const t=perspective(z),p=project(0,0,z);return {x:p.x,y:p.y,rx:p.r,ry:p.r*.92,k:t};}
+ function point(theta,z){
+  return wallPoint(theta,z);
+ }
+ function wallGeom(){return{cx:W*.5,cy:H*.5,R:Math.min(W,H)*.81};}
+ function wallPoint(theta,z){
+  const g=wallGeom(),r=g.R/(1+Math.max(0,z)*.68);
+  return{x:g.cx+Math.cos(theta)*r,y:g.cy+Math.sin(theta)*r,r};
+ }
+ function screenAngle(worldAngle){return worldAngle-angle+PI/2;}
+ function drawRing(z){
+  if(z<0)return;
+  const g=wallGeom(),r=wallPoint(0,z).r;
+  const alpha=clamp(1-z/13,0,1);
+  c.beginPath();c.arc(g.cx,g.cy,r,0,TAU);
+  c.strokeStyle="rgba(120,255,45,"+(.22+alpha*.75)+")";
+  c.lineWidth=1.15+alpha*2.1;c.shadowColor="#72ff28";c.shadowBlur=9;
+  c.stroke();
+ }
+ function drawPlate(a0,a1,z,length){
+  const near=Math.max(.05,z),far=near+length;
+  const front=[],back=[];
+  for(let i=0;i<=12;i++){
+   const a=a0+(a1-a0)*i/12;
+   front.push(wallPoint(a,near));back.push(wallPoint(a,far));
+  }
+  c.save();c.beginPath();
+  front.forEach((p,i)=>{if(!i)c.moveTo(p.x,p.y);else c.lineTo(p.x,p.y);});
+  for(let i=back.length-1;i>=0;i--)c.lineTo(back[i].x,back[i].y);
+  c.closePath();
+  c.fillStyle="#e8293d";c.strokeStyle="#ff7983";
+  c.lineWidth=1.3;c.shadowColor="#ff293a";c.shadowBlur=13;
+  c.fill();c.stroke();c.shadowBlur=0;
+  c.beginPath();
+  back.forEach((p,i)=>{if(!i)c.moveTo(p.x,p.y);else c.lineTo(p.x,p.y);});
+  c.strokeStyle="#7d1320";c.lineWidth=2;c.stroke();c.restore();
+ }
  function drawTunnel(now){
-  c.fillStyle='#000501';c.fillRect(0,0,W,H);
-  let hole=project(0,0,12),g=c.createRadialGradient(hole.x,hole.y,2,hole.x,hole.y,540);
-  g.addColorStop(0,'#040d05');g.addColorStop(.4,'#010a03');g.addColorStop(1,'#000201');c.fillStyle=g;c.fillRect(0,0,W,H);
-  const count=22,spacing=.3;const phase=mode==='menu'?(now*.00012)%spacing:travel%spacing;
-  c.save();c.lineCap='round';c.lineJoin='round';
-  // longitudinal rails plotted through same projection as red gates
+  const g=wallGeom();
+  c.fillStyle="#000502";c.fillRect(0,0,W,H);
+  const gradient=c.createRadialGradient(g.cx,g.cy,4,g.cx,g.cy,g.R*1.2);
+  gradient.addColorStop(0,"#001109");
+  gradient.addColorStop(.42,"#001008");
+  gradient.addColorStop(1,"#000100");
+  c.fillStyle=gradient;c.fillRect(0,0,W,H);
+  c.save();c.lineCap="round";
+  // The camera is straight down the axis at every angle; only tube ROLL
+  // changes. Vanishing point is always EXACTLY at canvas center.
   for(let i=0;i<24;i++){
-   const a=i/24*TAU,dirX=Math.cos(a),dirY=Math.sin(a);
-   let p0=project(dirX,dirY,8),p1=project(dirX,dirY,.001);
-   c.strokeStyle='rgba(82,255,23,.2)';c.lineWidth=8;c.shadowColor='#79ff20';c.shadowBlur=10;c.beginPath();c.moveTo(p0.x,p0.y);c.lineTo(p1.x,p1.y);c.stroke();
-   c.strokeStyle='rgba(120,255,41,.92)';c.lineWidth=1.8;c.shadowBlur=7;c.beginPath();c.moveTo(p0.x,p0.y);c.lineTo(p1.x,p1.y);c.stroke();
+   const theta=screenAngle(i*TAU/24);
+   const near=wallPoint(theta,.05),far=wallPoint(theta,13);
+   c.beginPath();c.moveTo(near.x,near.y);c.lineTo(far.x,far.y);
+   const accent=i%6===0;
+   c.strokeStyle=accent?"rgba(68,245,188,.73)":"rgba(108,255,44,.57)";
+   c.lineWidth=accent?2.6:1.55;
+   c.shadowColor=accent?"#31ffd5":"#73ff35";c.shadowBlur=8;
+   c.stroke();
   }
-  for(let i=count;i>=0;i--){
-   const z=i*spacing-phase;if(z<0)continue;const R=ring(z);
-   const alpha=clamp(.37+.62*R.k,.35,1);
-   c.strokeStyle=`rgba(92,255,21,${alpha*.23})`;c.lineWidth=7*R.k+2.4;c.shadowColor='#58ff19';c.shadowBlur=18;
-   c.beginPath();c.ellipse(R.x,R.y,R.rx,R.ry,0,0,TAU);c.stroke();
-   c.strokeStyle=`rgba(126,255,47,${alpha})`;c.lineWidth=1.2+3.5*R.k;c.shadowBlur=7;
-   c.beginPath();c.ellipse(R.x,R.y,R.rx,R.ry,0,0,TAU);c.stroke();
+  const spacing=.48,phase=mode==="menu"?(now*.00012)%spacing:travel%spacing;
+  for(let i=30;i>=0;i--)drawRing(i*spacing-phase);
+  c.restore();
+ }
+ function drawWave(w){
+  if(w.cleared||w.z>13||w.z<-.35)return;
+  // Plates sit on the INNER WALL. Same angular coordinate and depth as rings.
+  for(const id of w.sectors){
+   const a=screenAngle(id*STEP),b=screenAngle((id+1)*STEP);
+   drawPlate(a+.014,b-.014,w.z,w.length);
   }
-  c.restore();
-  const vanish=project(0,0,30),mouth=c.createRadialGradient(vanish.x,vanish.y,0,vanish.x,vanish.y,85);
-  mouth.addColorStop(0,'rgba(0,0,0,.92)');mouth.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=mouth;c.fillRect(vanish.x-100,vanish.y-100,200,200);
  }
- function drawBlock(nx,ny,z){
-  const p=project(nx,ny,z),r=p.r,sz=Math.max(2,r*.325),half=sz/2;
-  // Slight block extrusion points back along the tunnel axis, not screen-up
-  const back=project(nx,ny,z+.12),ex=back.x-p.x,ey=back.y-p.y;
-  c.save();c.shadowBlur=13*p.k+2;c.shadowColor='#ff1835';
-  c.fillStyle='#6e0d1a';c.beginPath();c.moveTo(p.x+half,p.y-half);c.lineTo(p.x+half+ex,p.y-half+ey);c.lineTo(p.x+half+ex,p.y+half+ey);c.lineTo(p.x+half,p.y+half);c.closePath();c.fill();
-  c.fillStyle='#aa1527';c.beginPath();c.moveTo(p.x-half,p.y-half);c.lineTo(p.x-half+ex,p.y-half+ey);c.lineTo(p.x+half+ex,p.y-half+ey);c.lineTo(p.x+half,p.y-half);c.closePath();c.fill();
-  c.fillStyle='#f52e39';c.fillRect(p.x-half,p.y-half,sz-1,sz-1);
-  c.shadowBlur=0;c.strokeStyle='#ff6f66';c.lineWidth=Math.max(.7,2*p.k);
-  c.strokeRect(p.x-half+.5,p.y-half+.5,sz-2,sz-2);
-  c.strokeStyle='rgba(67,0,12,.78)';c.lineWidth=Math.max(.8,p.k*2.2);
-  c.beginPath();c.moveTo(p.x,p.y-half);c.lineTo(p.x,p.y+half);c.moveTo(p.x-half,p.y);c.lineTo(p.x+half,p.y);c.stroke();c.restore();
- }
- function drawWave(w){if(w.cleared)return; c.save(); for(const t of w.tiles)drawBlock(t.x,t.y,w.z); c.restore();}
- function strokePoly(points,fill,stroke,lw=1){c.beginPath();points.forEach(([x,y],i)=>i===0?c.moveTo(x,y):c.lineTo(x,y));c.closePath();if(fill){c.fillStyle=fill;c.fill();}if(stroke){c.strokeStyle=stroke;c.lineWidth=lw;c.stroke();}}
- 
- function drawShip(){
-  const p=project(x,y,0),target=project(0,0,10);
-  const a=Math.atan2(target.y-p.y,target.x-p.x)+Math.PI/2;
-  const scale=clamp(Math.min(W,H)/300,1.15,1.75);
-  c.save();c.translate(p.x,p.y);c.rotate(a);c.scale(scale,scale);
-  if(invuln>0&&Math.floor(elapsed*12)%2===0)c.globalAlpha=.32;
-  c.shadowBlur=19;c.shadowColor='#43fadd';
-  strokePoly([[-25,-1],[-33,7],[-30,17],[-22,15],[-15,7]],'#244653','#8cf9e9',1.4);
-  strokePoly([[25,-1],[33,7],[30,17],[22,15],[15,7]],'#244653','#8cf9e9',1.4);
-  c.shadowBlur=0;
-  strokePoly([[-31,2],[-25,-1],[-21,17],[-30,17]],'#647e88','#d9fff9',.8);
-  strokePoly([[31,2],[25,-1],[21,17],[30,17]],'#647e88','#d9fff9',.8);
-  strokePoly([[-6,-9],[-33,10],[-31,18],[-11,11],[-7,21],[0,17],[7,21],[11,11],[31,18],[33,10],[6,-9]],'#1d5060','#a8ffff',1.6);
-  strokePoly([[-7,-4],[-30,14],[-10,7]],'#3d7984','#b1f4ef',1.2);
-  strokePoly([[7,-4],[30,14],[10,7]],'#3d7984','#b1f4ef',1.2);
-  c.shadowBlur=11;c.shadowColor='#7effef';
-  strokePoly([[0,-33],[8,-19],[9,6],[6,18],[0,14],[-6,18],[-9,6],[-8,-19]],'#9ac6c7','#efffff',1.5);
-  c.shadowBlur=0;
-  strokePoly([[-3,-21],[0,-31],[3,-21]],'#f0fffb','#eaffff',1);
-  strokePoly([[0,-20],[5,-11],[5,3],[0,8],[-5,3],[-5,-11]],'#0a3643','#45dfff',1.3);
-  c.fillStyle='#9de9f7';c.fillRect(-2,-12,4,5);
-  c.shadowBlur=17;c.shadowColor='#3effe2';
-  strokePoly([[-29,17],[-26,31],[-23,17]],'#71ffee',null);
-  strokePoly([[23,17],[26,31],[29,17]],'#71ffee',null);
-  c.shadowBlur=0;c.fillStyle='#faffff';c.fillRect(-27,17,2,4);c.fillRect(25,17,2,4);
-  c.restore();
+ function drawFPV(){
+  const g=wallGeom(),plane=HIT_Z,p=wallPoint(PI/2,plane);
+  const nearest=waves.filter(w=>!w.cleared&&w.z>=HIT_Z&&w.z<HIT_Z+1.55).sort((a,b)=>a.z-b.z)[0];
+  const blocked=nearest&&collisionAt(angle,nearest);
+  c.save();c.beginPath();
+  c.arc(g.cx,g.cy,p.r,PI/2-.19,PI/2+.19);
+  c.strokeStyle=blocked?"#ff5665":"#80fff0";
+  c.shadowColor=blocked?"#ff253b":"#32ffe1";
+  c.shadowBlur=15;c.lineWidth=4;c.stroke();
+  c.beginPath();c.moveTo(p.x,p.y+5);c.lineTo(p.x-6,p.y+16);
+  c.lineTo(p.x+6,p.y+16);c.closePath();
+  c.fillStyle=blocked?"#ffced2":"#d4fffa";c.fill();
   if(pulseGlow>0){
-   c.save();c.strokeStyle="rgba(140,255,238,"+(pulseGlow*1.3)+")";
-   c.lineWidth=3;c.shadowBlur=22;c.shadowColor="#6fffe1";
-   c.beginPath();c.arc(p.x,p.y,(.5-pulseGlow)*Math.min(W,H)*.85+24,0,TAU);c.stroke();c.restore();
+   c.beginPath();c.arc(g.cx,g.cy,p.r+(1-pulseGlow)*W*.3,0,TAU);
+   c.lineWidth=3;c.strokeStyle="rgba(126,255,236,"+(pulseGlow*1.6)+")";
+   c.stroke();
   }
+  c.restore();
  }
- function point(nx,ny,scale){return project(nx,ny,0);}
  function paint(now){
   if(!live||!root.isConnected)return;
-  c.setTransform(Math.min(2,window.devicePixelRatio||1),0,0,Math.min(2,window.devicePixelRatio||1),0,0);
-  c.clearRect(0,0,W,H);c.save();
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
+  c.save();
   if(shake>0)c.translate(rand(-shake,shake),rand(-shake,shake));
   drawTunnel(now);
-  // Far waves first, near waves above them, then the foreground ship.
-  for(const w of waves.slice().sort((a,b)=>b.z-a.z))drawWave(w);
-  for(const p of trail){
-   const t=point(p.x,p.y,1);
-   c.fillStyle="rgba(88,255,180,"+(Math.max(0,p.life)*.9)+")";
-   c.beginPath();c.arc(t.x,t.y,Math.max(1,p.life*18),0,TAU);c.fill();
-  }
-  for(const p of sparks){
-   const t=point(p.x,p.y,1);c.globalAlpha=clamp(p.life/.6,0,1);
-   c.fillStyle=p.color;c.fillRect(t.x-2,t.y-2,4,4);
-  }c.globalAlpha=1;
-  drawShip();
-  if(flash>0){
-   c.fillStyle="rgba(255,51,64,"+(flash*.30)+")";c.fillRect(0,0,W,H);
-  }
+  waves.slice().sort((a,b)=>b.z-a.z).forEach(drawWave);
   c.restore();
+  for(const p of sparks){
+   const t=wallPoint(screenAngle(p.a),p.z);
+   c.globalAlpha=clamp(p.life/p.max,0,1);
+   c.fillStyle=p.color;c.fillRect(t.x-2,t.y-2,4,4);
+  }
+  c.globalAlpha=1;
+  drawFPV();
+  if(flash>0){
+   c.fillStyle="rgba(255,42,56,"+(flash*.28)+")";c.fillRect(0,0,W,H);
+  }
  }
  function frameTick(now){
   if(!live)return;
@@ -456,30 +457,22 @@ function mount(root){
  }
  function boardDown(e){
   if(e.button!==undefined&&e.button!==0)return;
-  // Actual buttons start themselves; avoid a double reset on pointerdown.
   if(e.target.closest&&e.target.closest("button"))return;
   if(mode!=="running"){start();return;}
   if(e.pointerType!=="touch"&&e.pointerType!=="pen")return;
-  shipPointer=e.pointerId;
-  boardMove(e);
+  dragPointer=e.pointerId;dragX=e.clientX;
   try{screen.setPointerCapture(e.pointerId);}catch(_){}
  }
  function boardMove(e){
-  if(shipPointer!==e.pointerId||mode!=="running")return;
-  const rect=canvas.getBoundingClientRect();
-  if(!rect.width||!rect.height)return;
-  // A touchscreen drag may place the ship directly on the playing plane.
-  // Inverse of project(nx, ny, 0). The touch point and ship position
-  // must share the SAME vanishing-point geometry as every obstacle.
-  const px=(e.clientX-rect.left)/rect.width*W;
-  const py=(e.clientY-rect.top)/rect.height*H;
-  const center=project(0,0,0);
-  const radius=Math.min(W,H)*.72;
-  x=clamp((px-center.x)/radius,-.89,.89);
-  y=clamp((py-center.y)/(radius*.92),-.89,.89);
-  constrain();
+  if(dragPointer!==e.pointerId||mode!=="running")return;
+  const bounds=canvas.getBoundingClientRect();
+  if(!bounds.width)return;
+  // Horizontal swipe = orbital rotation, no teleporting inside the circle.
+  const dx=clamp(e.clientX-dragX,-bounds.width*.25,bounds.width*.25);
+  angle=(angle+dx/bounds.width*TAU*1.25+TAU)%TAU;
+  turnVelocity=0;dragX=e.clientX;
  }
- function boardUp(e){if(shipPointer===e.pointerId)shipPointer=null;}
+ function boardUp(e){if(dragPointer===e.pointerId)dragPointer=null;}
  screen.addEventListener("pointerdown",boardDown);
  screen.addEventListener("pointermove",boardMove);
  screen.addEventListener("pointerup",boardUp);
@@ -497,9 +490,9 @@ function mount(root){
  }
  root._zebraDispose=dispose;
  root._echoDebug={
-  snapshot:()=>({mode,x,y,lives,score,best,distance,travel,passed,combo,pulseCharge,canvas:{width:W,height:H},waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,tiles:w.tiles.map(t=>({x:t.x,y:t.y}))}))}),
+  snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,pulseCharge,canvas:{width:W,height:H},waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors]}))}),
   advance:advance,start:start,pulse:pulse,boost:boost,menu:toMenu,pause:togglePause,
-  pattern:pattern,collisionAt:collisionAt
+  pattern:pattern,collisionAt:collisionAt,hitDepth:HIT_Z
  };
  renderSound();toMenu();renderHud();
  if(typeof ResizeObserver!=="undefined"){ro=new ResizeObserver(fitCanvas);ro.observe(screen);}
