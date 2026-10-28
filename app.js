@@ -117,8 +117,8 @@ function osIcon(name,size){
     znak.style.width=size+"px";znak.style.height=size+"px";znak.style.objectFit="contain";
     znak.setAttribute("aria-hidden","true");return znak;
   }
-  if(name==="tetris"||name==="snake"||name==="paint"){
-    var retro=el("span","zapp-icon zapp-"+name,name==="tetris"?"▦":name==="snake"?"▥":"✎");
+  if(name==="tetris"||name==="snake"||name==="paint"||name==="racer"){
+    var retro=el("span","zapp-icon zapp-"+name,name==="tetris"?"▦":name==="snake"?"▥":name==="racer"?"◇":"✎");
     retro.style.width=size+"px";retro.style.height=size+"px";
     retro.style.fontSize=Math.round(size*.63)+"px";
     retro.setAttribute("aria-hidden","true");return retro;
@@ -157,7 +157,7 @@ function fileIcon(f){
 }
 function windowIcon(id){
   if(id==="amp")return "zebraamp";
-  if(id==="tetris"||id==="snake"||id==="paint"||id==="calc"||id==="sticky"||id==="planner")return id;
+  if(id==="tetris"||id==="snake"||id==="paint"||id==="racer"||id==="calc"||id==="sticky"||id==="planner")return id;
   if(id==="explorer")return "computer";
   if(id==="settings")return "control-panel";
   if(id==="manager")return "computer";
@@ -167,7 +167,7 @@ function windowIcon(id){
   return "txt";
 }
 function decorateSystemMenus(){
-  var mappings={amp:"zebraamp",explorer:"computer",notepad:"txt",viewer:"jpg",settings:"control-panel",about:"zebraos",tetris:"tetris",snake:"snake",paint:"paint","folder:games":"folder","folder:tools":"folder","folder:atelier":"folder",calc:"calc",sticky:"sticky",planner:"planner"};
+  var mappings={amp:"zebraamp",explorer:"computer",notepad:"txt",viewer:"jpg",settings:"control-panel",about:"zebraos",tetris:"tetris",snake:"snake",racer:"racer",paint:"paint","folder:games":"folder","folder:tools":"folder","folder:atelier":"folder",calc:"calc",sticky:"sticky",planner:"planner"};
   document.querySelectorAll("#start-menu [data-start]").forEach(function(b){
     Array.prototype.slice.call(b.childNodes).forEach(function(n){if(n.nodeType===3)n.remove()});
     b.insertBefore(osIcon(mappings[b.dataset.start]||"folder",20),b.firstChild);
@@ -742,6 +742,8 @@ var gameModules={
   files:["tetris-artwork.js?v=1.8","tetris.js?v=3.1"]},
  snake:{name:"Znake.exe",width:650,height:700,global:"ZebraSnake",
   files:["snake.js?v=8.7"],css:"snake.css?v=8.9"},
+ racer:{name:"Echo Racer.exe",width:750,height:790,global:"ZebraEchoRacer",
+  files:["echo-racer.js?v=1.0"],css:"echo-racer.css?v=1.0"},
  paint:{name:"ZebraPaint.exe",width:850,height:640,global:"ZebraPaint",
   files:["paint.js?v=1.4"],css:"paint-responsive.css?v=1.4"}
 };
@@ -810,7 +812,7 @@ function openGame(name){
  var entry=gameModules[name];if(!entry)return;
  var root=windowBox(name,entry.name,
    Math.min(entry.width,window.innerWidth-16),Math.min(entry.height,window.innerHeight-50));
- if(name==="tetris"||name==="snake")root.classList.add("zebra-game-body");
+ if(name==="tetris"||name==="snake"||name==="racer")root.classList.add("zebra-game-body");
  // Pas de reset d'une application déjà ouverte ou en cours de chargement.
  if(root._zebraApp===name||root._zebraLoading===name)return;
  if(name==="snake")primeZnakeMenu(root);
@@ -842,7 +844,7 @@ function openGame(name){
  });
 }
 window.ZebraLazyApps={load:loadGameModule};
-function open(code){$("start-menu").classList.add("hidden");if(code==="tetris"||code==="snake"||code==="paint")openGame(code);else if(code==="folder:games"||code==="folder:tools"||code==="folder:atelier")appFolder(code.split(":")[1]);else if(code==="calc"||code==="sticky"||code==="planner")openUtility(code);else if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="datetime")dateTime();else if(code==="welcome")welcome();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
+function open(code){$("start-menu").classList.add("hidden");if(code==="tetris"||code==="snake"||code==="racer"||code==="paint")openGame(code);else if(code==="folder:games"||code==="folder:tools"||code==="folder:atelier")appFolder(code.split(":")[1]);else if(code==="calc"||code==="sticky"||code==="planner")openUtility(code);else if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="datetime")dateTime();else if(code==="welcome")welcome();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
 decorateSystemMenus();
 $("power-btn").onclick=powerOn;$("skip-boot").onclick=finishBoot;$("skip-session-boot").onclick=finishSessionBoot;$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
 $("start-button").onclick=function(e){e.stopPropagation();$("start-menu").classList.toggle("hidden")};document.querySelectorAll("[data-start]").forEach(function(b){b.onclick=function(){open(b.dataset.start)}});document.addEventListener("pointerdown",function(e){if(!e.target.closest("#start-menu")&&!e.target.closest("#start-button"))$("start-menu").classList.add("hidden")});

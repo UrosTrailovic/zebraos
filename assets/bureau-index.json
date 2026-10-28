@@ -28,6 +28,13 @@
       "type": "dir"
     },
     {
+      "path": "STUDIO/BUREAU/Jeux/Echo Racer.exe.zebraos.json",
+      "type": "app",
+      "name": "Echo Racer.exe",
+      "app": "racer",
+      "icon": "racer"
+    },
+    {
       "path": "STUDIO/BUREAU/Jeux/Tetris.exe.zebraos.json",
       "type": "app",
       "name": "Tetris.exe",

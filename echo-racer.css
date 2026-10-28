@@ -1,0 +1,317 @@
+/* Echo Racer 1.0 — phosphor tunnel / solid desktop hardware.
+   Canvas is a straight 2D forward projection, not WebGL.
+   All selectors are scoped: Tetris / Znake / ZebraAMP remain unchanged. */
+.window-body.zebra-game-body:has(.er){padding:0!important;background:#0e1913;overflow:hidden}
+.zebra-game-body .zg.er{
+ --er-green:#8bff68;--er-mint:#a4ffd4;--er-dark:#02160d;
+ width:100%;height:100%;min-width:0;min-height:0;
+ margin:0;padding:8px;display:flex;flex-direction:column;gap:7px;
+ color:#b9ffcf;
+ background:#21372b url("/assets/zebraamp/ampbg.png") repeat 0 0 / 256px 256px;
+ font:12px/1.25 "Courier New",monospace;
+ overflow:hidden;box-sizing:border-box;
+ border:3px ridge #83988b;
+ box-shadow:inset 2px 2px 0 #c5d9c5,inset -2px -2px 0 #101c17;
+}
+.er *{box-sizing:border-box}
+.er [hidden]{display:none!important}
+.zebra-game-body .er .er-heading{
+ display:flex;flex:none;align-items:center;justify-content:space-between;gap:10px;
+ min-height:46px;margin:0;padding:5px 13px 6px;
+ border:3px ridge #b6d7b9;
+ background:linear-gradient(#00180f,#064127 48%,#00180d);
+ box-shadow:inset 1px 1px #d3ffe3,inset 0 0 20px #0b3e27,0 2px 0 #04170d;
+}
+.er-wordmark{
+ display:flex;align-items:baseline;gap:10px;white-space:nowrap;
+ font:bold clamp(20px,3vw,30px)/1 "Courier New",monospace;
+ letter-spacing:2.5px;
+}
+.er-echo{color:#d6ffd6;text-shadow:0 0 5px #91ff9c,0 0 16px #53ff84}
+.er-racer{color:#71ff3a;text-shadow:0 0 8px #71ff38,0 0 19px #28e728}
+.er-heading-sub{
+ color:#9ad0aa;font:10px/1.3 "Courier New",monospace;
+ letter-spacing:1px;white-space:nowrap;text-align:right;
+}
+.er-hud{
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+ flex:0 0 auto;gap:5px;margin:0;
+}
+.er-meter{
+ min-width:0;min-height:54px;padding:5px 6px;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+ background:linear-gradient(#061d12,#00160d);
+ border:3px ridge #9dc4a3;
+ box-shadow:inset 0 0 9px #1e664166,1px 2px #030d08b0;
+ text-align:center;
+}
+.er-meter span{display:block;color:#9ec3a7;letter-spacing:1px;font:9px "Courier New",monospace}
+.er-meter strong{
+ display:block;font:700 clamp(12px,1.8vw,20px)/1.2 "Courier New",monospace;
+ letter-spacing:.4px;white-space:nowrap;color:#adffae;
+ text-shadow:0 0 6px #33ff63,0 0 13px #0b6c31;
+}
+.er-meter:nth-child(3) strong{color:#cbff8a;font-size:17px;letter-spacing:2px}
+.er-meter:nth-child(4) strong{color:#86ffeb;font-size:19px;letter-spacing:3px}
+.er-frame{
+ flex:1 1 auto;min-height:100px;min-width:0;
+ display:flex;align-items:stretch;justify-content:center;
+ padding:7px;
+ border:4px ridge #c5d2c6;
+ background:#010704;
+ box-shadow:0 0 0 2px #112016,inset 0 0 22px #000,2px 3px 0 #08150a;
+}
+.er-screen{
+ width:100%;max-width:720px;height:100%;min-width:0;min-height:0;
+ position:relative;overflow:hidden;isolation:isolate;
+ background:#000806;touch-action:none;
+ border:2px solid #184f2d;
+ box-shadow:inset 0 0 28px #000,0 0 16px #113921;
+}
+.er-canvas{
+ display:block;width:100%;height:100%;object-fit:contain;
+ background:#010805;
+ image-rendering:auto;
+}
+.er-crt{
+ position:absolute;inset:0;z-index:3;pointer-events:none;
+ opacity:.75;
+ background:
+  repeating-linear-gradient(0deg,rgba(0,0,0,.19) 0px,rgba(0,0,0,.19) 1px,transparent 1px,transparent 4px),
+  radial-gradient(ellipse at 50% 50%,transparent 37%,rgba(0,0,0,.34) 91%,rgba(0,0,0,.72) 115%);
+ mix-blend-mode:multiply;
+}
+.er-crt::before{
+ content:"";position:absolute;inset:0;
+ background:linear-gradient(180deg,transparent 0%,rgba(131,255,155,.047) 48%,transparent 53%);
+ animation:er-scan 9s linear infinite;
+}
+@keyframes er-scan{from{transform:translateY(-100%)}to{transform:translateY(100%)}}
+.er-telemetry{
+ position:absolute;z-index:4;left:9px;right:9px;bottom:8px;
+ display:flex;align-items:center;justify-content:space-between;gap:5px;
+ min-height:22px;padding:3px 5px;
+ background:rgba(0,12,5,.69);
+ border-top:1px solid rgba(126,255,146,.35);
+ font:bold 10px "Courier New",monospace;color:#84d89c;
+ text-shadow:0 0 7px #2e9c4d;
+ pointer-events:none;
+}
+.er-signal.on{color:#86ff91;text-shadow:0 0 8px #59ff84}
+.er-overlay{
+ position:absolute;inset:0;z-index:5;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:12px;text-align:center;padding:22px;
+ background:radial-gradient(ellipse,rgba(0,31,16,.74),rgba(0,6,3,.82) 70%);
+ color:#b7ffbf;text-shadow:0 0 9px #35cb57;
+}
+.er-title{
+ margin:0;
+ font:900 clamp(28px,5vw,58px)/1.05 "Courier New",monospace;
+ letter-spacing:4px;color:#d8ffb5;
+ text-shadow:0 0 6px #9aff62,0 0 20px #36f356,3px 3px #061c0b;
+}
+.er-title-sub{font:12px "Courier New",monospace;color:#7bffc4;letter-spacing:1.2px}
+.er-start-call{
+ border:2px solid #69ff59;background:#06160c;
+ padding:10px 16px;
+ color:#deffb3;font:bold clamp(13px,2vw,21px) "Courier New",monospace;
+ letter-spacing:1.3px;text-shadow:0 0 8px #b6ff69;
+ box-shadow:0 0 16px #2be6347a,inset 0 0 13px #123d19;
+ animation:er-blink 1.9s steps(2,end) infinite;
+}
+@keyframes er-blink{50%{opacity:.65}}
+.er-help{font:bold 11px/1.5 "Courier New",monospace;margin:2px 0 0;color:#aafab5}
+.er-hint{font:10px/1.5 "Courier New",monospace;margin:0;color:#85b998}
+.zebra-game-body .er .er-overlay-button{
+ min-height:40px;padding:8px 22px;margin:2px 0 0;
+ border:3px outset #daeadc;border-radius:1px;
+ background:linear-gradient(#e2f1e6,#9eaeaa);
+ color:#143125;font:bold 14px "Courier New",monospace;
+ box-shadow:2px 3px 0 #142117;touch-action:manipulation;
+}
+.zebra-game-body .er .er-overlay-button:active{border-style:inset;transform:translateY(2px);box-shadow:inset 1px 1px 4px #25382a}
+.zebra-game-body .er .er-pad{
+ flex:0 0 auto;min-height:0;
+ display:contents;
+}
+.zebra-game-body .er .er-footer{
+ display:flex;align-items:stretch;justify-content:space-between;gap:6px;
+ flex:0 0 48px;min-height:0;margin:0;
+}
+.zebra-game-body .er .er-hardware{
+ flex:1 1 0;min-width:0;min-height:40px;
+ border:3px outset #d7dfd8;border-radius:2px;
+ background:linear-gradient(155deg,#e2e7df,#abbcb0 58%,#879d90);
+ box-shadow:inset 1px 1px #fff9,2px 3px #071d0d;
+ color:#0d291b;text-align:center;
+ font:bold 12px "Courier New",monospace;
+ letter-spacing:.1px;padding:6px 7px;
+ touch-action:manipulation;
+ text-shadow:0 1px #fff8;
+}
+.zebra-game-body .er .er-hardware:active{
+ border-style:inset;transform:translateY(2px);box-shadow:inset 1px 1px 4px #0007;
+}
+.zebra-game-body .er .er-play{
+ background:linear-gradient(#b8f9cc,#67bd86 55%,#388f56);
+ border-color:#e0ffe6 #2c5b3b #2a583b #e0ffe6;
+ color:#123521;
+}
+.er-key-guide{
+ flex:0 0 auto;margin:0;padding:4px 2px;
+ color:#acd0b2;text-align:center;white-space:normal;
+ font:9px/1.3 "Courier New",monospace;letter-spacing:.3px;
+}
+.zebra-game-body .er .zt-dpad,.zebra-game-body .er .zt-action-side{display:none}
+.zebra-game-body .er .zt-control-sprite{pointer-events:none}
+.zebra-game-body .er .zt-control{-webkit-tap-highlight-color:transparent;touch-action:none}
+.zebra-game-body .er .zt-control:focus-visible{outline:2px solid #a5ffd3;outline-offset:2px}
+@media(max-width:700px){
+ .zebra-game-body .zg.er{padding:5px;gap:5px}
+ .zebra-game-body .er .er-heading{min-height:37px;padding:4px 8px;gap:4px;border-width:2px}
+ .er-wordmark{font-size:clamp(17px,4.5vw,27px);gap:5px;letter-spacing:1px}
+ .er-heading-sub{font-size:8px;letter-spacing:0}
+ .er-hud{gap:3px}
+ .er-meter{min-height:42px;padding:3px 2px;border-width:2px;gap:1px}
+ .er-meter span{font-size:8px;letter-spacing:0}
+ .er-meter strong{font-size:clamp(11px,3vw,17px)}
+ .er-meter:nth-child(3) strong,.er-meter:nth-child(4) strong{font-size:13px;letter-spacing:0}
+ .er-frame{padding:4px;border-width:3px}
+ .er-telemetry{font-size:8px}
+ .er-overlay{padding:10px;gap:10px}
+ .er-title{font-size:clamp(22px,6vw,42px);letter-spacing:1px}
+ .er-title-sub{font-size:9px}
+ .er-help{font-size:9px}
+ .er-hint{font-size:8px}
+ .er-key-guide{display:none}
+ .zebra-game-body .er .er-pad{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  grid-template-rows:30px minmax(0,1fr);
+  width:100%;height:165px;flex:0 0 165px;
+  gap:4px 7px;
+  background:linear-gradient(145deg,#dedfda,#a1ada4 60%,#758779);
+  border:4px ridge #e1ebe3;border-radius:10px 10px 17px 9px;
+  box-shadow:inset 2px 2px #fff7,inset -2px -2px #3a4f3f,2px 3px #08170b;
+  overflow:hidden;position:relative;padding:5px 10px;
+  touch-action:manipulation;
+ }
+ .zebra-game-body .er .er-pad.zt-skin-ready{
+  background:#060564 url("/assets/games/tetris-controls/interfaceTetris.png") center/100% 100% no-repeat;
+  border:0;border-radius:0;box-shadow:none;
+ }
+ .zebra-game-body .er .er-footer{
+  grid-column:1/-1;grid-row:1;
+  width:100%;height:30px;min-height:30px;
+  display:flex;align-items:stretch;gap:4px;
+  margin:0;padding:0;
+ }
+ .zebra-game-body .er .er-hardware{
+  min-height:0;padding:3px;font-size:clamp(8px,2.2vw,12px);
+  border-width:2px;box-shadow:1px 2px #453e47;
+ }
+ .zebra-game-body .er .zt-dpad{
+  grid-row:2;grid-column:1;
+  display:flex;align-items:center;justify-content:center;
+  height:100%;min-height:0;width:100%;
+ }
+ .zebra-game-body .er .zt-cross{
+  width:min(100%,140px);height:113px;position:relative;touch-action:none;
+ }
+ .zebra-game-body .er .zt-control-sprite{display:none}
+ .zebra-game-body .er .zt-cross-shape{
+  position:absolute;inset:0;pointer-events:none;
+ }
+ .zebra-game-body .er .zt-cross-shape:before,
+ .zebra-game-body .er .zt-cross-shape:after{
+  content:"";position:absolute;background:linear-gradient(#888b84,#37403e);
+  border:2px outset #c4d1c6;box-shadow:1px 2px #121a17;border-radius:4px;
+ }
+ .zebra-game-body .er .zt-cross-shape:before{left:35%;width:30%;height:100%}
+ .zebra-game-body .er .zt-cross-shape:after{top:34%;height:33%;width:100%}
+ .zebra-game-body .er .zt-dir{
+  position:absolute;width:35%;height:33%;z-index:2;
+  padding:0;margin:0;border:0!important;background:transparent!important;
+  box-shadow:none!important;color:#e5ede3;font:900 16px "Courier New",monospace;
+ }
+ .zebra-game-body .er .zt-dir::before{color:#d6e2d7;font-size:16px}
+ .zebra-game-body .er .zt-dir-up{left:32.5%;top:0}
+ .zebra-game-body .er .zt-dir-down{left:32.5%;bottom:0}
+ .zebra-game-body .er .zt-dir-left{left:0;top:33%}
+ .zebra-game-body .er .zt-dir-right{right:0;top:33%}
+ .zebra-game-body .er .zt-cross-center{
+  position:absolute;z-index:3;pointer-events:none;left:50%;top:50%;
+  transform:translate(-50%,-50%);width:17px;height:17px;
+  border:2px solid #1c3023;background:#637b68;border-radius:3px;
+ }
+ .zebra-game-body .er .zt-action-side{
+  grid-row:2;grid-column:2;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;min-height:0;max-width:100%;width:100%;
+ }
+ .zebra-game-body .er .zt-ab{
+  width:100%;height:80px;max-width:140px;position:relative;
+ }
+ .zebra-game-body .er .zt-ab-button{
+  position:absolute;width:54px;height:54px;min-width:0;min-height:0;
+  border-radius:50%;border:3px outset #f3d9eb;
+  background:radial-gradient(circle at 25% 20%,#fff1fc,#d585b2 35%,#722b70 90%);
+  box-shadow:inset 1px 1px #fff9,2px 3px #1e121c;
+  color:#fff;font:bold 22px "Courier New",monospace;
+ }
+ .zebra-game-body .er .zt-b{left:0;bottom:0}
+ .zebra-game-body .er .zt-a{right:0;top:0}
+ .zebra-game-body .er .zt-select{
+  border:2px outset #dce3dc;border-radius:9px;
+  min-height:25px;padding:3px 16px;color:#101c14;
+  font:bold 10px "Courier New",monospace;
+  background:linear-gradient(#dee3db,#909b90);
+ }
+ .zebra-game-body .er .zt-control-caption{display:none}
+ /* Actual user-supplied Tetris controller PNGs override fallback drawings. */
+ .zebra-game-body .er .er-pad.zt-skin-ready .zt-control-sprite{
+  display:block;width:100%;height:100%;object-fit:contain;image-rendering:pixelated;
+ }
+ .zebra-game-body .er .er-pad.zt-skin-ready .zt-cross-shape,
+ .zebra-game-body .er .er-pad.zt-skin-ready .zt-cross-center{display:none}
+ .zebra-game-body .er .er-pad.zt-skin-ready .zt-dir{
+  padding:0!important;display:flex;align-items:center;justify-content:center;
+  background:transparent!important;border:0!important;box-shadow:none!important;
+ }
+ .zebra-game-body .er .er-pad.zt-skin-ready .zt-dir::before{display:none!important}
+ .zebra-game-body .er .er-pad.zt-skin-ready .zt-ab-button,
+ .zebra-game-body .er .er-pad.zt-skin-ready .zt-select{
+  padding:0;background:transparent;border:0;box-shadow:none;color:transparent;font-size:0;
+ }
+ .zebra-game-body .er .er-pad.zt-skin-ready .zt-ab-button:active,
+ .zebra-game-body .er .er-pad.zt-skin-ready .zt-select:active{filter:brightness(.85)}
+}
+@media(max-width:370px){
+ .zebra-game-body .er .er-pad{height:148px;flex-basis:148px;padding:3px 5px;gap:2px}
+ .zebra-game-body .er .zt-cross{height:101px}
+ .zebra-game-body .er .zt-ab{height:75px}
+ .zebra-game-body .er .zt-ab-button{width:48px;height:48px}
+ .er-hint{display:none}
+}
+@media(max-height:640px) and (pointer:coarse){
+ .zebra-game-body .er .er-pad{height:115px;flex-basis:115px;grid-template-rows:23px minmax(0,1fr)}
+ .zebra-game-body .er .er-footer{height:23px;min-height:23px}
+ .zebra-game-body .er .zt-cross{height:72px}
+ .zebra-game-body .er .zt-ab{height:65px}
+ .zebra-game-body .er .zt-ab-button{width:43px;height:43px}
+ .er-meter{min-height:30px!important}
+ .er-title{font-size:21px}
+ .er-help,.er-hint{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+ .er-crt::before{animation:none}
+ .er-start-call{animation:none}
+}
+.zapp-racer{
+ background:radial-gradient(circle at center,#06180c 20%,#23772d 55%,#07170a 100%);
+ color:#93ff61;text-shadow:0 0 9px #68ff4c;
+ border:1px solid #5dde4c;
+ font-family:monospace;
+ font-weight:bold;
+}
