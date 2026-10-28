@@ -22,11 +22,12 @@ function rectRound(ctx,x,y,w,h,r){
  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
 }
-/* Player travels along the INNER CIRCUMFERENCE of a perfectly straight tube.
- * The camera is the player: position is one world-space ANGLE, not an XY ship. */
-// One unified perspective for the tunnel skin, lighting and objects.
-// Longer draw distance does not change the player hit plane or collision math.
-const SECTORS=16,STEP=TAU/SECTORS,HIT_Z=1.6,SPAWN_Z=20.6,RENDER_FAR_Z=23.4;
+/* The player keeps an angular position on the tunnel wall, but the visual
+ * centerline now bends through space. Gates and collectibles share the same
+ * curved projection while the exact original angular collision rules stay.
+ * Experimental arcade curvature rather than full rigid-body 3D physics. */
+const SECTORS=16,STEP=TAU/SECTORS,HIT_Z=1.6,SPAWN_Z=29.4,RENDER_FAR_Z=32.6;
+const APPEAR_FADE_DEPTH=7.2;
 const PATTERN_COUNT=16;
 const LEVELS=[
  {id:"1",name:"INITIATION",subtitle:"PASSAGES LARGES",speed:.77,gap:1.55,spin:.04,patterns:[0,1,3,7,10,13]},
@@ -961,9 +962,30 @@ function mount(root){
   return wallPoint(theta,z);
  }
  function wallGeom(){return geometryCache;}
- function wallPoint(theta,z){
+ const bendCache=new Map();
+ // The center of each visible ring follows two gentle superposed S-curves.
+ // Subtract the bend under the cockpit so local play stays predictable.
+ function tunnelBend(z){
+  z=Math.max(0,z);
+  const cached=bendCache.get(z);if(cached)return cached;
+  const w=travel,amount=1-Math.exp(-z*.16);
+  const x=amount*(
+   W*.15*(Math.sin((w+z)*.118+.37)-Math.sin(w*.118+.37))+
+   W*.041*(Math.sin((w+z)*.044+1.8)-Math.sin(w*.044+1.8)));
+  const y=amount*(
+   H*.12*(Math.sin((w+z)*.092+1.14)-Math.sin(w*.092+1.14))+
+   H*.028*(Math.sin((w+z)*.039+.51)-Math.sin(w*.039+.51)));
+  const v={x,y};bendCache.set(z,v);return v;
+ }
+ function wallPoint(theta,z,shift){
   const g=geometryCache,r=g.R/(1+Math.max(0,z)*.68);
-  return{x:g.cx+Math.cos(theta)*r,y:g.cy+(Math.sin(theta)-g.offset)*r,r};
+  const bend=shift||tunnelBend(z);
+  return{x:g.cx+bend.x+Math.cos(theta)*r,
+    y:g.cy+bend.y+(Math.sin(theta)-g.offset)*r,r};
+ }
+ function revealOpacity(z){
+  const t=clamp((SPAWN_Z-z)/APPEAR_FADE_DEPTH,0,1);
+  return t*t*(3-2*t);
  }
  function screenAngle(worldAngle){return worldAngle-angle+PI/2;}
  // A lightweight PS2-era techno tunnel: dark segmented metal plates, glowing
@@ -972,25 +994,26 @@ function mount(root){
  function wallPatch(a0,a1,z0,z1,fill,stroke,steps){
   // Direct canvas path: no arrays (near/far) allocated for each tile.
   const n=steps||2,da=(a1-a0)/n;
+  const b0=tunnelBend(z0),b1=tunnelBend(z1);
   c.beginPath();
   for(let k=0;k<=n;k++){
-   const p=wallPoint(a0+da*k,z0);
+   const p=wallPoint(a0+da*k,z0,b0);
    if(k)c.lineTo(p.x,p.y);else c.moveTo(p.x,p.y);
   }
   for(let k=n;k>=0;k--){
-   const p=wallPoint(a0+da*k,z1);c.lineTo(p.x,p.y);
+   const p=wallPoint(a0+da*k,z1,b1);c.lineTo(p.x,p.y);
   }
   c.closePath();c.fillStyle=fill;c.fill();
   if(stroke){c.strokeStyle=stroke;c.lineWidth=.6;c.stroke();}
  }
  function drawRing(z,index){
   if(z<0||z>RENDER_FAR_Z)return;
-  const g=geometryCache,r=wallPoint(0,z).r;
+  const g=geometryCache,r=wallPoint(0,z).r,shift=tunnelBend(z);
   const near=clamp(1-z/RENDER_FAR_Z,0,1),cyan=index%5===0;
   // Controlled changes of the line itself, not a fat bloom filter.
   const beat=clamp(audioFx.kick*.65+audioFx.bass*.35,0,1);
   const high=clamp(audioFx.high,0,1);
-  c.beginPath();c.arc(g.cx,g.cy-g.offset*r,r,0,TAU);
+  c.beginPath();c.arc(g.cx+shift.x,g.cy+shift.y-g.offset*r,r,0,TAU);
   c.strokeStyle=cyan?
    "rgba(111,239,255,"+clamp(.32+.54*near+high*.12,0,.97)+")":
    "rgba(255,62,209,"+clamp(.25+.53*near+beat*.18,0,.97)+")";
@@ -1000,8 +1023,10 @@ function mount(root){
  }
  function drawTunnel(now){
   const g=wallGeom();
+  bendCache.clear();
   c.fillStyle="#05020a";c.fillRect(0,0,W,H);
-  const gradient=c.createRadialGradient(g.cx,g.cy,3,g.cx,g.cy,g.R*1.35);
+  const vanishing=tunnelBend(RENDER_FAR_Z);
+  const gradient=c.createRadialGradient(g.cx+vanishing.x,g.cy+vanishing.y,3,g.cx,g.cy,g.R*1.35);
   gradient.addColorStop(0,"#0b0619");
   gradient.addColorStop(.4,"#0e071b");
   gradient.addColorStop(.81,"#1b0a24");
@@ -1044,9 +1069,14 @@ function mount(root){
   // Industrial radial rails: structural shadow first, phosphor trace on top.
   for(let i=0;i<24;i++){
    const a=screenAngle(i*TAU/24);
-   const near=wallPoint(a,.04),far=wallPoint(a,RENDER_FAR_Z+.35);
+   const near=wallPoint(a,.04);
    const cyan=i%4===0;
-   c.beginPath();c.moveTo(near.x,near.y);c.lineTo(far.x,far.y);
+   c.beginPath();c.moveTo(near.x,near.y);
+   // Long rails curve through every bend, not straight to the old pupil.
+   for(let step=1;step<=24;step++){
+    const z=(RENDER_FAR_Z+.35)*step/24,pt=wallPoint(a,z);
+    c.lineTo(pt.x,pt.y);
+   }
    c.strokeStyle=cyan?"rgba(65,218,246,.13)":"rgba(253,75,210,.1)";
    c.lineWidth=cyan?9:5;c.shadowBlur=0;c.stroke();
    c.strokeStyle=cyan?"rgba(109,240,255,"+clamp(.72+audioFx.high*.28,0,1)+")":
@@ -1066,11 +1096,12 @@ function mount(root){
    c.fillRect(0,0,W,H);
   }
   // Deep indigo pupil, feathered rather than a flat black pasted circle.
-  const core=c.createRadialGradient(g.cx,g.cy,0,g.cx,g.cy,g.R*.17);
+  const core=c.createRadialGradient(g.cx+vanishing.x,g.cy+vanishing.y,0,
+   g.cx+vanishing.x,g.cy+vanishing.y,g.R*.17);
   core.addColorStop(0,"rgba(8,1,17,.9)");
   core.addColorStop(1,"rgba(8,1,17,0)");
   c.fillStyle=core;
-  c.fillRect(g.cx-g.R*.2,g.cy-g.R*.2,g.R*.4,g.R*.4);
+  c.fillRect(g.cx+vanishing.x-g.R*.2,g.cy+vanishing.y-g.R*.2,g.R*.4,g.R*.4);
   // Physically small, music-driven phosphor strips instead of a blurred
   // full-screen radial gradient. Kicks pulse pink, treble cyan.
   const kick=clamp(audioFx.kick*.65+audioFx.bass*.3,0,1);
@@ -1089,8 +1120,10 @@ function mount(root){
  }
  function drawWave(w){
   if(w.cleared||w.z>RENDER_FAR_Z||w.z<-.40)return;
-  // Same radius, angular sector and depth interpolation as drawTunnel().
-  c.save();c.lineJoin="round";
+  const reveal=revealOpacity(w.z);
+  if(reveal<.003)return;
+  // Fade in from the distance without popping at the creation position.
+  c.save();c.globalAlpha*=reveal;c.lineJoin="round";
   for(const id of w.sectors){
    // Draw EXACTLY the rotation used by collisionAt, including moving gates.
    const rot=w.rotation||0;
@@ -1115,7 +1148,9 @@ function mount(root){
  }
  function drawPad(pad){
   if(pad.z>RENDER_FAR_Z||pad.z<-.45||pad.credited)return;
-  c.save();c.lineJoin="round";c.lineCap="round";
+  const reveal=revealOpacity(pad.z);
+  if(reveal<.003)return;
+  c.save();c.globalAlpha*=reveal;c.lineJoin="round";c.lineCap="round";
   const near=Math.max(.04,pad.z),far=near+pad.length;
   const pulse=.74+.26*Math.sin(elapsed*13+near);
   for(const id of pad.sectors){
@@ -1369,7 +1404,9 @@ function mount(root){
   },
   death:()=>({active:screen.classList.contains("er-death"),overlay:overlay.classList.contains("er-stage-over"),icon:!crashIcon.hidden,title:logo.textContent}),
   viewDistance:()=>({far:RENDER_FAR_Z,spawn:SPAWN_Z,hit:HIT_Z,
+   fadeDistance:APPEAR_FADE_DEPTH,
    ringCount:Math.ceil(RENDER_FAR_Z/.48)+1,panelRows:Math.ceil(RENDER_FAR_Z/.81)+1}),
+  bendAt:(z)=>({...tunnelBend(z)}),revealOpacity,
   pattern:pattern,collisionAt:collisionAt,hitDepth:HIT_Z
  };
  renderSound();toMenu();renderHud();
