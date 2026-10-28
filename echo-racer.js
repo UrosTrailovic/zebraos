@@ -1000,47 +1000,63 @@ function mount(root){
  }
  function wallGeom(){return geometryCache;}
  const bendCache=new Map();
- // Arcade track director: most of the route has a genuinely straight
- // centerline. One smooth bend appears in each long stretch (155 units).
- // Every event rises and returns with zero slope AND zero curvature at the
- // joins, so there is no jolt as the camera crosses the entry/exit.
+ // Distance-driven course director: the opening is calm, then each stretch
+ // becomes less predictable with more bends and fewer straight sections.
+ // Events are deterministic, and all bends have zero slope at both ends.
  const TRACK_STRETCH=155;
  const bendProfiles=new Map();
+ function hashTrack(n){
+  n=Math.imul(n^0x45d9f3b,0x45d9f3b);
+  n=Math.imul(n^(n>>>16),0x45d9f3b);
+  return ((n^(n>>>16))>>>0)/4294967296;
+ }
+ function trackDifficulty(cell){
+  if(cell===0)return{stage:0,count:0,amplitude:0,label:"DÉPART"};
+  if(cell===1)return{stage:1,count:1,amplitude:.63,label:"ÉCHAUFFEMENT"};
+  if(cell<=3)return{stage:2,count:1,amplitude:.92,label:"COURBES"};
+  if(cell<=5)return{stage:3,count:2,amplitude:1.07,label:"ENCHAÎNEMENTS"};
+  if(cell<=8)return{stage:4,count:3,amplitude:1.20,label:"SÉRIEUX"};
+  return{stage:5,count:4,amplitude:1.33,label:"CHAOS"};
+ }
  function trackProfile(cell){
   if(bendProfiles.has(cell))return bendProfiles.get(cell);
-  // Deterministic per-stretch variation. No random changes during a frame.
-  const hash=n=>{
-   n=Math.imul(n^0x45d9f3b,0x45d9f3b);
-   n=Math.imul(n^(n>>>16),0x45d9f3b);
-   return ((n^(n>>>16))>>>0)/4294967296;
-  };
-  const mix=hash(cell*19+19),pace=hash(cell*37+93);
-  // Four distinct motifs: lateral bends, a pronounced climb, a pronounced
-  // dive, and occasionally a diagonal. Keep long flat roads in between.
-  const motif=((cell%6)+6)%6;
-  let ax=0,ay=0;
-  if(motif===0){ax=W*(.18+mix*.06);ay=H*(.025+pace*.025);}
-  else if(motif===1){ax=-W*(.035+pace*.055);ay=-H*(.265+mix*.07);}
-  else if(motif===2){ax=-W*(.18+mix*.065);ay=H*(pace-.5)*.1;}
-  else if(motif===3){ax=W*(pace-.5)*.15;ay=H*(.27+mix*.07);}
-  else if(motif===4){ax=W*(.12+mix*.04);ay=-H*(.11+pace*.09);}
-  else {ax=-W*(.11+pace*.06);ay=H*(.10+mix*.09);}
-  const profile={start:38+hash(cell*7+11)*12,
-   duration:39+hash(cell*11+29)*12,ax,ay,motif};
-  bendProfiles.set(cell,profile);
-  return profile;
+  const difficulty=trackDifficulty(cell),events=[];
+  const count=difficulty.count;
+  for(let i=0;i<count;i++){
+   // One smooth pulse per slot: wide gaps early, tightly packed curves late.
+   const slot=TRACK_STRETCH/count;
+   const duration=(count===1?43:count===2?31:count===3?28:25)+
+     hashTrack(cell*131+i*17+29)*(count===1?11:count===2?8:count===3?6:5);
+   const start=i*slot+(slot-duration)*(.42+hashTrack(cell*43+i*61+11)*.16);
+   const mix=hashTrack(cell*19+i*71+19),pace=hashTrack(cell*37+i*83+93);
+   const motif=((cell+i*3)%6+6)%6;
+   let ax=0,ay=0;
+   if(motif===0){ax=W*(.18+mix*.06);ay=H*(.025+pace*.025);}
+   else if(motif===1){ax=-W*(.035+pace*.055);ay=-H*(.265+mix*.07);}
+   else if(motif===2){ax=-W*(.18+mix*.065);ay=H*(pace-.5)*.1;}
+   else if(motif===3){ax=W*(pace-.5)*.15;ay=H*(.27+mix*.07);}
+   else if(motif===4){ax=W*(.12+mix*.04);ay=-H*(.11+pace*.09);}
+   else {ax=-W*(.11+pace*.06);ay=H*(.10+mix*.09);}
+   events.push({start,duration,ax:ax*difficulty.amplitude,
+    ay:ay*difficulty.amplitude,motif});
+  }
+  const profile={...difficulty,events,stretch:TRACK_STRETCH};
+  bendProfiles.set(cell,profile);return profile;
  }
  function trackCenter(position){
   const world=Math.max(0,position);
   const cell=Math.floor(world/TRACK_STRETCH);
-  const local=world-cell*TRACK_STRETCH;
-  const profile=trackProfile(cell);
-  const t=(local-profile.start)/profile.duration;
-  if(t<=0||t>=1)return{x:0,y:0};
-  // Quintic ease both sides yields a natural approach, crest and exit.
-  const u=t<.5?t*2:(1-t)*2;
-  const smooth=u*u*u*(u*(u*6-15)+10);
-  return{x:profile.ax*smooth,y:profile.ay*smooth};
+  const local=world-cell*TRACK_STRETCH,events=trackProfile(cell).events;
+  let x=0,y=0;
+  for(const e of events){
+   const t=(local-e.start)/e.duration;
+   if(t<=0||t>=1)continue;
+   // Quintic ease on both ends: camera has no kink entering or leaving.
+   const u=t<.5?t*2:(1-t)*2;
+   const smooth=u*u*u*(u*(u*6-15)+10);
+   x+=e.ax*smooth;y+=e.ay*smooth;
+  }
+  return{x,y};
  }
  // Render relative to the player's position along the world-space track,
  // not as independent per-frame sine waves. Both wall and hazards use it.
@@ -1509,7 +1525,7 @@ function mount(root){
   trackAt:(world)=>({...trackCenter(world)}),
   trackInfo:(world)=>{
    const cell=Math.floor(Math.max(0,world)/TRACK_STRETCH);
-   return{cell,stretch:TRACK_STRETCH,...trackProfile(cell)};
+   return{cell,...trackProfile(cell)};
   },
   setTestTravel:(world)=>{travel=Math.max(0,world);bendCache.clear();},
   pickups:()=>shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),
