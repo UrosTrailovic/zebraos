@@ -98,6 +98,8 @@ function mount(root){
  let nitroHeld=false,nitroActive=false,nitroFuel=1,nitroRegenWait=0;
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
  let menuStage="home",warningLife=0,warningBeepDelay=0,warningChirp=0;
+ const DEATH_FADE_SECONDS=1.15,DEATH_ANIMATION_SECONDS=1.15;
+ let deathFade=0,deathLock=0;
  let soundEnabled=load("sfx","on")!=="off",audioCtx=null;
  // Dedicated Echo Racer audio system: never touch ZebraAMP or other games.
  let music=null,musicSource=null,musicAnalyser=null,musicBins=null,musicError=false;
@@ -245,7 +247,9 @@ function mount(root){
  warningLayer.setAttribute("aria-label","Attention : dernier bouclier");
  warningLayer.append(warningIcon,node("span","er-shield-warning-label","DERNIER BOUCLIER"));
  warningLayer.hidden=true;
- screen.append(canvas,sheen,dashboard,eventText,warningLayer,overlay);frame.appendChild(screen);
+ const crashCurtain=node("div","er-crash-curtain");
+ crashCurtain.hidden=true;crashCurtain.setAttribute("aria-hidden","true");
+ screen.append(canvas,sheen,dashboard,eventText,warningLayer,overlay,crashCurtain);frame.appendChild(screen);
  wrap.append(hud,frame);
  const footer=node("div","er-footer zg-buttons zt-buttons");
  function button(label,cls,callback){const b=node("button","er-hardware "+cls,label);b.type="button";b.onclick=()=>{beep("switch");callback();};return b;}
@@ -582,19 +586,40 @@ function mount(root){
   startButton.setAttribute("aria-label",startButton.textContent);
   startButton.classList.toggle("er-footer-playing",mode==="running");
  }
+ function lockDeathControls(locked){
+  root.classList.toggle("er-death-locked",locked);
+  for(const btn of [startButton,restartButton,soundButton,menuButton,overlayButton,backButton])
+   btn.disabled=locked;
+ }
+ function advanceDeathSequence(dt){
+  if(mode==="crashing"){
+   deathFade=Math.min(DEATH_FADE_SECONDS,deathFade+Math.max(0,dt));
+   crashCurtain.style.opacity=String(deathFade/DEATH_FADE_SECONDS);
+   if(deathFade>=DEATH_FADE_SECONDS)revealGameOver();
+  }else if(mode==="over"&&deathLock>0){
+   deathLock=Math.max(0,deathLock-Math.max(0,dt));
+   if(deathLock===0)lockDeathControls(false);
+  }
+ }
  function start(){
+  if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
+  deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
+  lockDeathControls(false);
   mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
   hudTimer=bestSaveTimer=audioSampleTimer=0;
   waves=[];pads=[];nextGateAt=selectedLevel.id==="free"?Infinity:START_GATE_AT;nextPadAt=selectedLevel.id==="free"?Infinity:PAD_START;lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
   invuln=0;pulseCharge=2;pulseGlow=padBoostTime=flash=shake=0;
   nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;
   shipBoostFade=0;turboLight=0;warningLife=0;warningBeepDelay=0;warningChirp=0;
-  screen.classList.remove("er-death");overlay.classList.remove("er-stage-over");
+  screen.classList.remove("er-death","er-crashing");overlay.classList.remove("er-stage-over");
   crashIcon.hidden=true;crashSub.hidden=true;
   message=selectedLevel.id==="free"?"FREE ROAM · BOOST ILLIMITÉ":"TROUVE LE PASSAGE";messageLife=2;keys.clear();levelPicker.hidden=true;backButton.hidden=true;overlay.hidden=true;
   beep("collect");startMusic(true);renderHud();
  }
  function toMenu(){
+  if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
+  deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
+  screen.classList.remove("er-crashing");lockDeathControls(false);
   if(mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
   stopMusic();mode="menu";keys.clear();waves=[];pads=[];trail=[];turnVelocity=0;
   elapsed=0;padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;
@@ -603,10 +628,24 @@ function mount(root){
   renderHud();
  }
  function gameOver(){
-  stopMusic();nitroHeld=false;nitroActive=false;mode="over";keys.clear();flash=1.8;shake=12;
-  playDeathSound();screen.classList.add("er-death");
+  if(mode!=="running")return;
+  stopMusic();nitroHeld=false;nitroActive=false;mode="crashing";
+  keys.clear();dragPointer=null;deathFade=0;deathLock=0;
   warningLife=0;warningBeepDelay=0;
+  flash=.55;shake=7;
   if(score>best){best=Math.floor(score);save("best."+selectedLevel.id,best);}
+  overlay.hidden=true;screen.classList.remove("er-death");
+  screen.classList.add("er-crashing");
+  crashCurtain.style.opacity="0";crashCurtain.hidden=false;
+  lockDeathControls(true);renderHud();
+ }
+ function revealGameOver(){
+  if(mode!=="crashing")return;
+  mode="over";deathFade=DEATH_FADE_SECONDS;deathLock=DEATH_ANIMATION_SECONDS;
+  screen.classList.remove("er-crashing");
+  // Existing red impact, glitch and death synth play AFTER blackout.
+  flash=1.8;shake=12;playDeathSound();
+  screen.classList.add("er-death");
   overlay.hidden=false;brandLogo.hidden=true;logo.hidden=false;logo.textContent="GAME OVER";
   crashIcon.hidden=false;crashSub.hidden=false;
   overlay.classList.remove("er-stage-home","er-stage-levels");
@@ -616,9 +655,10 @@ function mount(root){
   prompt.hidden=true;expl.hidden=true;hint.hidden=true;
   overlayButton.hidden=false;overlayButton.classList.add("er-overlay-restart");
   overlayButton.textContent="↻ REJOUER";overlayButton.setAttribute("aria-label","Rejouer le niveau");
-  renderHud();
+  crashCurtain.hidden=true;lockDeathControls(true);renderHud();
  }
  function togglePause(){
+  if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   if(mode==="running"){endNitro();mode="paused";pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;backButton.hidden=false;overlay.hidden=false;
    brandLogo.hidden=true;logo.hidden=false;logo.textContent="PAUSE";
    prompt.hidden=false;prompt.textContent="SIGNAL SUSPENDU";
@@ -1069,6 +1109,7 @@ function mount(root){
    return;
   }
   if(mode==="running")advance(dt);
+  advanceDeathSequence(dt);
   tickEngine(dt);
   tickBoostLoop(dt);
   const turbo=mode==="running"&&(nitroActive||padBoostTime>0)?1:0;
@@ -1086,6 +1127,7 @@ function mount(root){
   const parent=root.closest(".window");
   if(parent&&(!parent.classList.contains("focused")||parent.classList.contains("minimized")))return;
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable)return;
+  if(mode==="crashing"||(mode==="over"&&deathLock>0)){e.preventDefault();return;}
   // Enter/Space on level buttons must select, not immediately start.
   if(mode==="menu"&&e.target.closest&&e.target.closest(".er-level-picker"))return;
   if(mode==="menu"&&menuStage==="levels"&&/^[1-5]$/.test(e.key)){
@@ -1126,6 +1168,7 @@ function mount(root){
   if(map[k])keys.delete(map[k]);
  }
  function boardDown(e){
+  if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   if(e.button!==undefined&&e.button!==0)return;
   if(e.target.closest&&e.target.closest("button"))return;
   if(mode!=="running"){
@@ -1219,6 +1262,11 @@ function mount(root){
   },
   stage:()=>menuStage,openLevels:showLevelSelect,
   warning:()=>({life:warningLife,beepDelay:warningBeepDelay,visible:!warningLayer.hidden}),
+  deathSequence:()=>({phase:mode,blackoutTime:deathFade,lockTime:deathLock,
+   curtainVisible:!crashCurtain.hidden,curtainOpacity:crashCurtain.style.opacity,
+   locked:root.classList.contains("er-death-locked"),
+   restartDisabled:restartButton.disabled,menuDisabled:menuButton.disabled}),
+  tickDeath:advanceDeathSequence,
   simulateHit:()=>{
    if(mode!=="running")return;
    lives=Math.max(0,lives-1);invuln=1.35;flash=.47;shake=3;
