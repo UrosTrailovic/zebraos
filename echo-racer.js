@@ -104,9 +104,11 @@ function mount(root){
  const musicUrl="/assets/games/echoraccaersong.mp3?v=1";
  // Two lightweight players independent of the music analyser.
  const flyUrl="/assets/spaceship-fly-sfx.mp3";
- const boostUrl="/assets/boostsfx.mp3";
+ const boostUrl="/assets/boostsfx.mp3?v=2";
  const FLY_VOLUME=.13,BOOST_VOLUME=.43,FLY_FADE_SECONDS=1.5;
- let flySound=null,boostSound=null,flyFade=0,boostSoundMode="";
+ // The 0.967 s MP3 is already mastered to loop at its endpoints.
+ const BOOST_FADE_IN_SECONDS=.11,BOOST_FADE_OUT_SECONDS=.23;
+ let flySound=null,boostSound=null,flyFade=0,boostGain=0;
  const audioFx={bass:0,mid:0,high:0,kick:0,previousBass:0,slowBass:0,beatCooldown:0,energy:0};
  let dragPointer=null,dragX=0,dragLastTs=0,dragVelocity=0;
  const wrap=node("section","er zg zg-retro");
@@ -256,7 +258,7 @@ function mount(root){
  const soundButton=button("♫ SON ON","er-sound",()=>{
   soundEnabled=!soundEnabled;save("sfx",soundEnabled?"on":"off");
    if(!soundEnabled)pauseMusic();
-   else if(mode==="running"){startMusic(false);if(nitroActive)playBoostSfx(true);}
+   else if(mode==="running")startMusic(false);
    renderSound();
  });
  const menuButton=button("☷ MENU","er-menu",toMenu);
@@ -382,7 +384,7 @@ function mount(root){
    }
    if(!boostSound){
     boostSound=new window.Audio(boostUrl);
-    boostSound.loop=false;boostSound.preload="auto";boostSound.volume=BOOST_VOLUME;
+    boostSound.loop=true;boostSound.preload="auto";boostSound.volume=0;
    }
   }catch(_){return false;}
   return !!flySound;
@@ -393,7 +395,8 @@ function mount(root){
   if(rewind){
    flyFade=0;
    try{flySound.pause();flySound.currentTime=0;flySound.volume=0;}catch(_){}
-   if(boostSound)try{boostSound.pause();boostSound.currentTime=0;boostSound.loop=false;boostSoundMode="";}catch(_){}
+   if(boostSound)try{boostSound.pause();boostSound.currentTime=0;boostSound.volume=0;}catch(_){}
+   boostGain=0;
   }
   if(flySound.paused)try{
    const started=flySound.play();
@@ -402,8 +405,8 @@ function mount(root){
  }
  function pauseEngine(){
   if(flySound)try{flySound.pause();}catch(_){}
-  if(boostSound)try{boostSound.pause();}catch(_){}
-  boostSoundMode="";
+  if(boostSound)try{boostSound.pause();boostSound.volume=0;}catch(_){}
+  boostGain=0;
  }
  function stopEngine(){
   pauseEngine();flyFade=0;
@@ -418,24 +421,37 @@ function mount(root){
   const t=flyFade;
   flySound.volume=FLY_VOLUME*t*t*(3-2*t);
  }
- function playBoostSfx(loop){
+ function startBoostLoop(){
   if(!live||mode!=="running"||!soundEnabled||globalMuted()||document.hidden)return;
-  if(!ensureEngineAudio()||!boostSound)return;
+  if(!ensureEngineAudio()||!boostSound||!boostSound.paused)return;
   try{
-   boostSound.pause();boostSound.currentTime=0;boostSound.volume=BOOST_VOLUME;
-   boostSound.loop=!!loop;boostSoundMode=loop?"nitro":"pad";
+   boostSound.loop=true;
+   boostSound.volume=BOOST_VOLUME*boostGain;
    const started=boostSound.play();
    if(started&&started.catch)started.catch(()=>{});
   }catch(_){}
  }
- function stopNitroSfx(){
-  if(boostSoundMode!=="nitro"||!boostSound)return;
-  try{boostSound.pause();boostSound.currentTime=0;boostSound.loop=false;}catch(_){}
-  boostSoundMode="";
+ function tickBoostLoop(dt){
+  if(!boostSound)return;
+  const enabled=live&&mode==="running"&&soundEnabled&&!globalMuted()&&!document.hidden;
+  const wanted=enabled&&(nitroActive||padBoostTime>0);
+  if(!enabled){
+   if(!boostSound.paused)try{boostSound.pause();}catch(_){}
+   boostSound.volume=0;boostGain=0;return;
+  }
+  if(wanted)startBoostLoop();
+  // Only the gain ramps; never rewind a running loop when boosting again.
+  const fade=wanted?BOOST_FADE_IN_SECONDS:BOOST_FADE_OUT_SECONDS;
+  boostGain=clamp(boostGain+(wanted?1:-1)*clamp(dt,0,.07)/fade,0,1);
+  boostSound.volume=BOOST_VOLUME*boostGain;
+  if(!wanted&&boostGain===0&&!boostSound.paused){
+   try{boostSound.pause();}catch(_){}
+  }
  }
  function startMusic(rewind){
   if(!live||!soundEnabled||globalMuted()||document.hidden)return;
   startEngine(rewind);
+  if(nitroActive||padBoostTime>0)startBoostLoop();
   const track=ensureMusic();if(!track)return;
   const context=audioCtx;
   if(context&&context.state==="suspended")try{
@@ -652,14 +668,15 @@ function mount(root){
   nitroActive=true;nitroRegenWait=0;
   shipBoostFade=1;turboLight=1;
   message=selectedLevel.id==="free"?"NITRO ∞":"NITRO";messageLife=.7;
-  playBoostSfx(true);renderHud();
+  startBoostLoop();renderHud();
  }
  function endNitro(){
   nitroHeld=false;
   if(!nitroActive)return;
   nitroActive=false;
   if(selectedLevel.id!=="free"&&nitroFuel<1)nitroRegenWait=NITRO_REGEN_WAIT;
-  stopNitroSfx();renderHud();
+  // The fade-out is finished on animation frames, not at key release.
+  renderHud();
  }
  function updateNitro(dt){
   if(mode!=="running")return;
@@ -667,7 +684,6 @@ function mount(root){
    nitroFuel=clamp(nitroFuel-dt/NITRO_BURN_SECONDS,0,1);
    if(nitroFuel<=0){
     nitroActive=false;nitroRegenWait=NITRO_REGEN_WAIT;
-    stopNitroSfx();
    }
   }else if(!nitroHeld&&selectedLevel.id!=="free"&&nitroFuel<1){
    nitroRegenWait=Math.max(0,nitroRegenWait-dt);
@@ -772,7 +788,7 @@ function mount(root){
      shipBoostFade=1;turboLight=1;
      score+=275*scoreMultiplier;
      pulseGlow=.68;message="TURBO PAD +275";messageLife=1.2;
-     burst(angle,"#72f7ff",34);if(!nitroActive)playBoostSfx(false);beep("collect");
+     burst(angle,"#72f7ff",34);startBoostLoop();beep("collect");
     }
    }
   }
@@ -1054,6 +1070,7 @@ function mount(root){
   }
   if(mode==="running")advance(dt);
   tickEngine(dt);
+  tickBoostLoop(dt);
   const turbo=mode==="running"&&(nitroActive||padBoostTime>0)?1:0;
   if(turbo){shipBoostFade=1;turboLight=1;}
   else{
@@ -1188,7 +1205,11 @@ function mount(root){
   level:()=>({id:selectedLevel.id,free:selectedLevel.id==="free",gap:selectedLevel.gap}),
   gauges:()=>({speed:Math.round(currentSpeed*25),charge:selectedLevel.id==="free"?1:nitroFuel,boosting:nitroActive||padBoostTime>0,
    held:nitroHeld,manualBoost:nitroActive,regenWait:nitroRegenWait}),
-  engineAudio:()=>({flyLoaded:!!flySound,boostLoaded:!!boostSound,flyPlaying:!!flySound&&!flySound.paused,boostPlaying:!!boostSound&&!boostSound.paused,flyVolume:flySound?flySound.volume:0,flyFade}),
+  engineAudio:()=>({flyLoaded:!!flySound,boostLoaded:!!boostSound,
+   flyPlaying:!!flySound&&!flySound.paused,boostPlaying:!!boostSound&&!boostSound.paused,
+   flyVolume:flySound?flySound.volume:0,boostVolume:boostSound?boostSound.volume:0,
+   boostGain,boostLoop:boostSound?boostSound.loop:false,flyFade}),
+  tickAudio:tickBoostLoop,
   selectLevel:(id)=>{
    if(mode!=="menu")return false;
    const level=LEVELS.find(x=>x.id===id);if(!level)return false;
