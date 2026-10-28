@@ -26,6 +26,13 @@ function rectRound(ctx,x,y,w,h,r){
  * The camera is the player: position is one world-space ANGLE, not an XY ship. */
 const SECTORS=16,STEP=TAU/SECTORS,HIT_Z=1.6,SPAWN_Z=12.6;
 const PATTERN_COUNT=16;
+const LEVELS=[
+ {id:"1",name:"INITIATION",subtitle:"PASSAGES LARGES",speed:.77,gap:1.55,spin:.04,patterns:[0,1,3,7,10,13]},
+ {id:"2",name:"CIRCUIT",subtitle:"RYTHME CROISSANT",speed:.91,gap:1.2,spin:.14,patterns:[0,1,2,3,5,7,10,11,13,14]},
+ {id:"3",name:"RAPIDE",subtitle:"RÈGLES CLASSIQUES",speed:1,gap:1,spin:.28,patterns:null},
+ {id:"4",name:"EXTRÊME",subtitle:"VITESSE MAXIMALE",speed:1.16,gap:.84,spin:.44,patterns:null},
+ {id:"free",name:"FREE ROAM",subtitle:"SANS OBSTACLES · BOOST ∞",speed:1,gap:1,spin:0,patterns:[]}
+];
 // Distances are in world units. Short double-gates punctuate longer stretches.
 const GAP_MIN=15.2,GAP_MAX=21.4,START_GATE_AT=.48;
 // A separate rhythm of collectible wall pads between the hazard waves.
@@ -82,7 +89,9 @@ function mount(root){
  let live=true,raf=0,ro=null,last=0,mode="menu",keys=new Set();
  let renderDpr=1,hudTimer=0,bestSaveTimer=0,audioSampleTimer=0;
  let geometryCache={cx:W*.5,cy:H*.39,R:Math.max(W,H)*1.23,offset:5/9};
- let angle=0,turnVelocity=0,lives=MAX_LIVES,score=0,best=Number(load("best","0"))||0;
+ let selectedLevel=LEVELS.find(x=>x.id===load("level","3"))||LEVELS[2];
+ let angle=0,turnVelocity=0,lives=MAX_LIVES,score=0;
+ let best=Number(load("best."+selectedLevel.id,selectedLevel.id==="3"?load("best","0"):"0"))||0;
  let distance=0,travel=0,passed=0,combo=0,waves=[],pads=[],nextGateAt=START_GATE_AT,nextPadAt=PAD_START,lastGateAt=-100,trail=[],sparks=[],currentSpeed=0,gateCount=0,padCount=0,scoreMultiplier=1;
  let invuln=0,pulseCharge=2,pulseGlow=0,boostTime=0,padBoostTime=0,boostCooldown=0;
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
@@ -112,7 +121,7 @@ function mount(root){
  // The original PNGs are untouched; a failed download preserves gameplay.
  const shipSprites={idle:new Image(),boost:new Image()};
  const shipReady={idle:false,boost:false};
- let shipBoostFade=0,featheredBoost=null;
+ let shipBoostFade=0,turboLight=0,featheredBoost=null;
  // Uploaded boost artwork is cut at the extreme sides; softly blend them
  // into the complete idle hull to hide hard rectangular exhaust edges.
  function softenBoostEdges(sprite){
@@ -360,14 +369,14 @@ function mount(root){
  function start(){
   mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
   hudTimer=bestSaveTimer=audioSampleTimer=0;
-  waves=[];pads=[];nextGateAt=START_GATE_AT;nextPadAt=PAD_START;lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
+  waves=[];pads=[];nextGateAt=selectedLevel.id==="free"?Infinity:START_GATE_AT;nextPadAt=selectedLevel.id==="free"?Infinity:PAD_START;lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
   invuln=0;pulseCharge=2;pulseGlow=boostTime=padBoostTime=boostCooldown=flash=shake=0;
-  shipBoostFade=0;
-  message="TROUVE LE PASSAGE";messageLife=2;keys.clear();overlay.hidden=true;
+  shipBoostFade=0;turboLight=0;
+  message=selectedLevel.id==="free"?"FREE ROAM · BOOST ILLIMITÉ":"TROUVE LE PASSAGE";messageLife=2;keys.clear();overlay.hidden=true;
   beep("collect");startMusic(true);renderHud();
  }
  function toMenu(){
-  if(score>0)save("best",best);
+  if(score>0)save("best."+selectedLevel.id,best);
   stopMusic();mode="menu";keys.clear();waves=[];pads=[];trail=[];turnVelocity=0;elapsed=0;padBoostTime=0;scoreMultiplier=1;
   overlay.hidden=false;logo.textContent="ECHO RACER";prompt.textContent="PRESS BUTTON TO PLAY";
   status.textContent="FPV / TOUR DU TUNNEL 360°";
@@ -375,7 +384,7 @@ function mount(root){
  }
  function gameOver(){
   stopMusic();mode="over";keys.clear();flash=.5;shake=6;beep("hit");
-  if(score>best){best=Math.floor(score);save("best",best);}
+  if(score>best){best=Math.floor(score);save("best."+selectedLevel.id,best);}
   overlay.hidden=false;logo.textContent="GAME OVER";prompt.textContent="RUN TERMINÉ";
   status.textContent="SCORE "+Math.floor(score)+"  ·  RECORD "+best;
   overlayButton.textContent="↻ REJOUER";renderHud();
@@ -419,17 +428,21 @@ function mount(root){
   renderHud();
  }
  function boost(){
-  if(mode!=="running"||boostCooldown>0)return;
-  boostTime=1.7;boostCooldown=5;message="BOOST ×2";messageLife=.8;
+  if(mode!=="running"||(boostCooldown>0&&selectedLevel.id!=="free"))return;
+  boostTime=1.7;boostCooldown=selectedLevel.id==="free"?0:5;
+  shipBoostFade=1;turboLight=1;
+  message=selectedLevel.id==="free"?"BOOST ∞":"BOOST ×2";messageLife=.8;
   beep("collect");renderHud();
  }
  function createWave(){
-  let kind=Math.floor(rand(0,PATTERN_COUNT));
-  if(kind===nextWave)kind=(kind+1+Math.floor(rand(0,5)))%PATTERN_COUNT;
+  const choices=selectedLevel.patterns||Array.from({length:PATTERN_COUNT},(_,i)=>i);
+  let kind=choices[Math.floor(rand(0,choices.length))];
+  if(kind===nextWave&&choices.length>1)
+   kind=choices[(choices.indexOf(kind)+1+Math.floor(rand(0,choices.length-1)))%choices.length];
   nextWave=kind;
   const rotation=Math.floor(rand(0,SECTORS))*STEP;
   // 1 in 4 waves slowly spins; spin affects both drawing and hit detection.
-  const spins=(gateCount>2&&Math.random()<.28);
+  const spins=(gateCount>2&&Math.random()<selectedLevel.spin);
   const spin=spins?(Math.random()<.5?-1:1)*rand(.26,.55):0;
   const twist=rand(-.14,.14);
   const sectors=pattern(kind);
@@ -448,7 +461,7 @@ function mount(root){
   else if(gateCount%7===6)gap=rand(21.0,24.5);  // relief after the double gate
   else gap=rand(GAP_MIN,GAP_MAX);
   if(hard)gap+=2.4;
-  return gap;
+  return gap*selectedLevel.gap;
  }
  function advance(dt){
   if(mode!=="running"||document.hidden)return;
@@ -464,8 +477,10 @@ function mount(root){
   // A boost pad is stronger than manual boost, but they do not multiply
   // together into an uncontrollable/untestable collision speed.
   const boostMultiplier=padBoostTime>0?1.85:boostTime>0?1.55:1;
-  const speed=clamp(4.15+Math.min(1.55,distance/3000*.43)+throttle,3.5,5.7)*boostMultiplier;
-  currentSpeed=speed;
+  const targetSpeed=clamp(4.15+Math.min(1.55,distance/3000*.43)+throttle,3.5,5.7)*selectedLevel.speed*boostMultiplier;
+  currentSpeed=targetSpeed>=currentSpeed?targetSpeed:
+   targetSpeed+(currentSpeed-targetSpeed)*Math.exp(-dt*1.48);
+  const speed=currentSpeed;
   // Score multiplier follows ACTUAL travel speed (including pad/manual boost).
   scoreMultiplier= speed>=8.2?5:speed>=6.85?4:speed>=5.65?3:speed>=4.7?2:1;
   // One physical depth displacement: both geometry (travel) and gates use it.
@@ -545,7 +560,7 @@ function mount(root){
    best=Math.floor(score);
    bestSaveTimer+=dt;
    // Do not synchronously write localStorage on every animation frame.
-   if(bestSaveTimer>=1.5){save("best",best);bestSaveTimer=0;}
+   if(bestSaveTimer>=1.5){save("best."+selectedLevel.id,best);bestSaveTimer=0;}
   }
   hudTimer+=dt;
   if(hudTimer>=.09){hudTimer=0;renderHud();}
@@ -649,6 +664,10 @@ function mount(root){
   const phase=(mode==="menu"?(now*.0016):travel)%spacing;
   for(let i=29;i>=0;i--)drawRing(i*spacing-phase,i);
   c.restore();
+  if(turboLight>.005){
+   c.fillStyle="rgba(187,117,238,"+(turboLight*.092)+")";
+   c.fillRect(0,0,W,H);
+  }
   // Deep indigo pupil, feathered rather than a flat black pasted circle.
   const core=c.createRadialGradient(g.cx,g.cy,0,g.cx,g.cy,g.R*.17);
   core.addColorStop(0,"rgba(8,1,17,.9)");
@@ -785,8 +804,13 @@ function mount(root){
   }
   if(mode==="running")advance(dt);
   const turbo=mode==="running"&&(boostTime>0||padBoostTime>0)?1:0;
-  shipBoostFade+=(turbo-shipBoostFade)*(1-Math.exp(-dt*(turbo?15:10)));
-  if(Math.abs(shipBoostFade-turbo)<.002)shipBoostFade=turbo;
+  if(turbo){shipBoostFade=1;turboLight=1;}
+  else{
+   shipBoostFade*=Math.exp(-dt*10);
+   turboLight*=Math.exp(-dt*5.8);
+   if(shipBoostFade<.002)shipBoostFade=0;
+   if(turboLight<.002)turboLight=0;
+  }
   sampleMusic(dt);paint(now);
  }
  function keyDown(e){
@@ -874,7 +898,15 @@ function mount(root){
  root._echoDebug={
   snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,pulseCharge,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:boost,menu:toMenu,pause:togglePause,
-  ship:()=>({idleLoaded:shipReady.idle,boostLoaded:shipReady.boost,boostMix:shipBoostFade}),
+  ship:()=>({idleLoaded:shipReady.idle,boostLoaded:shipReady.boost,boostMix:shipBoostFade,tunnelLight:turboLight}),
+  level:()=>({id:selectedLevel.id,free:selectedLevel.id==="free",gap:selectedLevel.gap}),
+  selectLevel:(id)=>{
+   if(mode!=="menu")return false;
+   const level=LEVELS.find(x=>x.id===id);if(!level)return false;
+   selectedLevel=level;save("level",id);
+   best=Number(load("best."+id,id==="3"?load("best","0"):"0"))||0;
+   renderHud();return true;
+  },
   pattern:pattern,collisionAt:collisionAt,hitDepth:HIT_Z
  };
  renderSound();toMenu();renderHud();
