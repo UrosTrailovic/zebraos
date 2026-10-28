@@ -720,3 +720,204 @@
 .zebra-game-body .er.er-death-locked .er-stage-over .er-menu-back {
  filter:brightness(.7) grayscale(.3);
 }
+
+
+/* Echo Racer 7.8 — mobile cockpit
+   Separate driving image, gauges and controller. Desktop keeps original UI. */
+.zebra-game-body .er .er-frame{position:relative}
+.zebra-game-body .er .er-pause-actions{display:none}
+@media(max-width:700px){
+  /* Logo remains available on the home/levels overlay inside the screen. */
+  .zebra-game-body .er .er-heading{display:none!important}
+  .zebra-game-body .zg.er{padding:4px;gap:4px}
+  .zebra-game-body .er .er-hud{gap:3px;flex:0 0 auto}
+  .zebra-game-body .er .er-meter{
+    height:46px;min-height:46px;padding:5px 3px 4px;
+  }
+  .zebra-game-body .er .er-meter span{font-size:8px}
+  .zebra-game-body .er .er-meter strong{font-size:clamp(12px,3vw,17px)}
+  .zebra-game-body .er .er-frame{
+    flex:1 1 0;min-height:0;min-width:0;
+    flex-direction:column;align-items:stretch;
+    padding:4px;gap:4px;border-width:3px;
+  }
+  .zebra-game-body .er .er-screen{
+    width:100%;max-width:none;height:auto;
+    flex:1 1 0;min-height:0;min-width:0;
+  }
+  /* Two compact physical gauges directly below the image, side by side. */
+  .zebra-game-body .er .er-dashboard{
+    position:static;inset:auto;width:100%;max-width:none;
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    align-items:center;gap:7px;
+    flex:0 0 62px;height:62px;min-height:62px;
+    padding:5px 8px;border-radius:3px;border:2px ridge #b7a2c1;
+    background:linear-gradient(135deg,#211429,#100a20);
+    box-shadow:inset 1px 1px #f3d7f577,inset 0 0 12px #0a0415;
+    pointer-events:none;
+  }
+  .zebra-game-body .er .er-dashboard-row{
+    height:100%;min-width:0;padding:2px 1px;
+    display:flex;flex-direction:column;justify-content:center;
+  }
+  .zebra-game-body .er .er-dashboard-row + .er-dashboard-row{
+    border-top:0;border-left:1px solid #78517e99;
+    padding:2px 0 2px 8px;
+  }
+  .zebra-game-body .er .er-dashboard-readout{
+    display:flex;align-items:baseline;gap:3px;min-width:0;
+  }
+  .zebra-game-body .er .er-dashboard-name{
+    font-size:9px;min-width:0;letter-spacing:.3px;flex:0 0 auto;
+  }
+  .zebra-game-body .er .er-dashboard-digits{
+    margin-left:auto;min-width:0;font-size:clamp(17px,4vw,23px);
+    letter-spacing:0;
+  }
+  .zebra-game-body .er .er-dashboard-unit{
+    font-size:8px;min-width:0;flex:0 0 auto;
+  }
+  .zebra-game-body .er .er-dashboard-bar{
+    height:8px;gap:2px;margin-top:6px;padding-right:0;
+  }
+  .zebra-game-body .er .er-dashboard-status{display:none}
+  .zebra-game-body .er .er-race-event{
+    right:8px;bottom:10px;max-width:calc(100% - 16px);
+    text-align:center;font-size:10px;
+  }
+  /* Reclaim permanent control-row space for the tactile gamepad. */
+  .zebra-game-body .er .er-footer{display:none!important}
+  .zebra-game-body .er .er-pad{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr)!important;
+    height:158px;flex:0 0 158px;
+  }
+  .zebra-game-body .er .zt-dpad,
+  .zebra-game-body .er .zt-action-side{
+    grid-row:1!important;
+  }
+  .zebra-game-body .er .zt-cross{height:min(118px,100%)}
+  /* SELECT pauses; the rest of the controls appear in the pause overlay. */
+  .zebra-game-body .er .er-overlay.er-stage-pause{
+    gap:8px;padding:10px 12px;
+    background:radial-gradient(ellipse at 50% 46%,rgba(38,10,55,.9),rgba(6,2,13,.94));
+  }
+  .zebra-game-body .er .er-overlay.er-stage-pause .er-title{
+    font-size:clamp(28px,6vw,43px);letter-spacing:2px;
+  }
+  .zebra-game-body .er .er-overlay.er-stage-pause .er-start-call{
+    font-size:12px;padding:7px 10px;
+  }
+  .zebra-game-body .er .er-overlay.er-stage-pause .er-overlay-button{
+    height:50px;width:min(75%,210px);
+  }
+  .zebra-game-body .er .er-overlay.er-stage-pause .er-menu-back{display:none!important}
+  .zebra-game-body .er .er-overlay.er-stage-pause .er-pause-actions{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    width:100%;max-width:330px;gap:5px;margin-top:4px;
+  }
+  .zebra-game-body .er .er-pause-action{
+    min-width:0;min-height:45px;padding:6px 2px;
+    background:linear-gradient(155deg,#72557f,#33203d 65%,#21152b);
+    border:2px outset #c6aacd;border-radius:2px;
+    color:#f8dff5;text-shadow:0 0 6px #a841a6;
+    font:bold 10px "Courier New",monospace;
+    box-shadow:inset 1px 1px #f1d6ef55,1px 2px 0 #0a0510;
+    cursor:pointer;touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .zebra-game-body .er .er-pause-action:active{
+    border-style:inset;transform:translateY(1px);
+    box-shadow:inset 1px 1px 4px #120719;
+  }
+  .zebra-game-body .er .er-pause-action:focus-visible{
+    outline:2px solid #8ff5ff;outline-offset:2px;
+  }
+}
+@media(max-width:700px) and (max-height:620px){
+  .zebra-game-body .er .er-pad{height:112px;flex-basis:112px}
+  .zebra-game-body .er .er-dashboard{height:55px;min-height:55px;flex-basis:55px}
+  .zebra-game-body .er .er-meter{height:39px;min-height:39px}
+}
+@media(max-width:370px){
+  .zebra-game-body .er .er-dashboard{padding:4px 5px;gap:4px}
+  .zebra-game-body .er .er-dashboard-row + .er-dashboard-row{padding-left:5px}
+  .zebra-game-body .er .er-dashboard-name{font-size:8px}
+  .zebra-game-body .er .er-dashboard-digits{font-size:17px}
+  .zebra-game-body .er .er-dashboard-unit{font-size:7px}
+  .zebra-game-body .er .er-pad{height:148px;flex-basis:148px}
+}
+
+
+/* Compact mobile level selector. All five image-textured levels remain
+   fully clickable even when the screen is shortened by the detached gauges. */
+@media(max-width:700px){
+ .zebra-game-body .er .er-overlay.er-stage-levels{
+  padding:4px 8px;gap:4px;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-levels .er-brand-logo{display:none!important}
+ .zebra-game-body .er .er-overlay.er-stage-levels .er-level-picker{
+  gap:1px;margin:0 auto;max-width:330px;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-levels .er-level-button,
+ .zebra-game-body .er .er-overlay.er-stage-levels .er-level-button.selected{
+  height:37px;min-height:37px;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-levels .er-hint{display:none!important}
+ .zebra-game-body .er .er-overlay.er-stage-levels .er-menu-back{
+  height:37px;width:min(100%,170px);
+ }
+}
+@media(max-width:700px) and (max-height:620px){
+ .zebra-game-body .er .er-overlay.er-stage-levels .er-level-button,
+ .zebra-game-body .er .er-overlay.er-stage-levels .er-level-button.selected{
+  height:32px;min-height:32px;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-levels .er-menu-back{height:31px}
+ .zebra-game-body .er .er-overlay.er-stage-pause{gap:5px;padding:5px 8px}
+ .zebra-game-body .er .er-overlay.er-stage-pause .er-pause-action{min-height:36px}
+}
+
+
+/* Short landscape / compact browser viewports: never cut off a menu action. */
+@media(max-width:700px) and (max-height:700px){
+ .zebra-game-body .er .er-overlay.er-stage-home{
+  gap:6px;padding:7px;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-home .er-brand-logo{
+  max-height:67px;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-home .er-overlay-button{
+  height:41px;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-pause{
+  gap:5px;padding:5px 7px;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-pause .er-title{
+  font-size:24px;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-pause .er-start-call,
+ .zebra-game-body .er .er-overlay.er-stage-pause .er-title-sub{
+  display:none!important;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-pause .er-overlay-button{
+  height:39px;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-pause .er-pause-action{
+  min-height:35px;font-size:9px;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-levels{
+  justify-content:flex-start;overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior:contain;touch-action:pan-y;
+  scrollbar-color:#c799c9 #1c1025;scrollbar-width:thin;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-levels .er-menu-back{
+  flex-shrink:0;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-over{
+  overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior:contain;touch-action:pan-y;
+  scrollbar-width:thin;scrollbar-color:#c799c9 #1c1025;
+ }
+}

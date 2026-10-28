@@ -214,7 +214,8 @@ function mount(root){
   overlay.classList.toggle("er-stage-levels",choosing);
   overlay.classList.toggle("er-stage-home",!choosing);
   brandLogo.hidden=false;logo.hidden=true;crashIcon.hidden=true;crashSub.hidden=true;
-  overlay.classList.remove("er-stage-over");screen.classList.remove("er-death");
+  overlay.classList.remove("er-stage-over","er-stage-pause");screen.classList.remove("er-death");
+  pauseActions.hidden=true;
   levelPicker.hidden=!choosing;overlayButton.hidden=choosing;
   backButton.hidden=!choosing;status.hidden=!choosing;
   prompt.hidden=true;expl.hidden=true;hint.hidden=!choosing;
@@ -230,7 +231,19 @@ function mount(root){
   if(mode!=="menu"||menuStage==="levels")return;
   renderMenuStage("levels");
  }
- overlay.append(brandLogo,crashIcon,logo,crashSub,status,prompt,levelPicker,expl,hint,overlayButton,backButton);
+ // SELECT opens these controls via the pause overlay, not a permanent bar.
+ const pauseActions=node("div","er-pause-actions");
+ pauseActions.setAttribute("role","group");
+ pauseActions.setAttribute("aria-label","Commandes en pause");
+ function pauseAction(label,cls,fn){
+  const btn=node("button","er-pause-action "+cls,label);
+  btn.type="button";btn.onclick=fn;return btn;
+ }
+ const pauseRestart=pauseAction("↻ RESTART","er-pause-restart",()=>start());
+ const pauseSound=pauseAction("♫ SON ON","er-pause-sound",()=>soundButton.click());
+ const pauseMenu=pauseAction("☷ MENU","er-pause-menu",()=>toMenu());
+ pauseActions.append(pauseRestart,pauseSound,pauseMenu);pauseActions.hidden=true;
+ overlay.append(brandLogo,crashIcon,logo,crashSub,status,prompt,levelPicker,expl,hint,overlayButton,backButton,pauseActions);
  const dashboard=node("div","er-dashboard");
  dashboard.setAttribute("role","group");dashboard.setAttribute("aria-label","Vitesse et recharge du boost");
  function instrument(label,cls,unit){
@@ -256,7 +269,9 @@ function mount(root){
  warningLayer.hidden=true;
  const crashCurtain=node("div","er-crash-curtain");
  crashCurtain.hidden=true;crashCurtain.setAttribute("aria-hidden","true");
- screen.append(canvas,sheen,dashboard,eventText,warningLayer,overlay,crashCurtain);frame.appendChild(screen);
+ // Instruments are part of frame: overlay on desktop, physical strip on mobile.
+ screen.append(canvas,sheen,eventText,warningLayer,overlay,crashCurtain);
+ frame.append(screen,dashboard);
  wrap.append(hud,frame);
  const footer=node("div","er-footer zg-buttons zt-buttons");
  function button(label,cls,callback){const b=node("button","er-hardware "+cls,label);b.type="button";b.onclick=()=>{beep("switch");callback();};return b;}
@@ -282,7 +297,8 @@ function mount(root){
   const b=node("button","zt-control "+cls,label);b.type="button";b.setAttribute("aria-label",label);
   b.onclick=function(e){
    if(e.detail===0&&which!=="boost"){
-    if(mode==="menu"||mode==="over")start();
+    if(mode==="paused"){if(which==="pause")togglePause();}
+    else if(mode==="menu"||mode==="over")start();
     else if(mode==="running")tap(which);
    }
   };
@@ -299,7 +315,9 @@ function mount(root){
   }
   b.addEventListener("pointerdown",function(e){
    if(e.button!==undefined&&e.button!==0)return;
-   e.preventDefault();if(mode!=="running"){if(mode==="menu"||mode==="over")start();return;}
+   e.preventDefault();
+   if(mode==="paused"){if(which==="pause")togglePause();return;}
+   if(mode!=="running"){if(mode==="menu"||mode==="over")start();return;}
    tap(which);if(["up","down","left","right"].includes(which))keys.add(which);
    try{b.setPointerCapture(e.pointerId);}catch(_){}
   });
@@ -599,6 +617,8 @@ function mount(root){
  function renderSound(){
   soundButton.textContent="♫ SON "+(soundEnabled?"ON":"OFF");
   soundButton.setAttribute("aria-pressed",String(soundEnabled));
+  pauseSound.textContent=soundEnabled?"♫ SON ON":"♫ SON OFF";
+  pauseSound.setAttribute("aria-pressed",String(soundEnabled));
  }
  function beep(kind){
   if(!soundEnabled||!live||globalMuted())return;
@@ -668,7 +688,7 @@ function mount(root){
  }
  function lockDeathControls(locked){
   root.classList.toggle("er-death-locked",locked);
-  for(const btn of [startButton,restartButton,soundButton,menuButton,overlayButton,backButton])
+  for(const btn of [startButton,restartButton,soundButton,menuButton,overlayButton,backButton,pauseRestart,pauseSound,pauseMenu])
    btn.disabled=locked;
  }
  function advanceDeathSequence(dt){
@@ -696,7 +716,8 @@ function mount(root){
   invuln=0;pulseCharge=2;pulseGlow=padBoostTime=flash=shake=0;
   nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;nitroBurnTime=0;
   shipBoostFade=0;turboLight=0;warningLife=0;warningBeepDelay=0;warningChirp=0;
-  screen.classList.remove("er-death","er-crashing");overlay.classList.remove("er-stage-over");
+  screen.classList.remove("er-death","er-crashing");
+  overlay.classList.remove("er-stage-over","er-stage-pause");pauseActions.hidden=true;
   crashIcon.hidden=true;crashSub.hidden=true;
   message=selectedLevel.id==="free"?"FREE ROAM · BOOST ILLIMITÉ":"TROUVE LE PASSAGE";messageLife=2;keys.clear();levelPicker.hidden=true;backButton.hidden=true;overlay.hidden=true;
   beep("collect");startMusic(true);renderHud();
@@ -733,7 +754,8 @@ function mount(root){
   screen.classList.add("er-death");
   overlay.hidden=false;brandLogo.hidden=true;logo.hidden=false;logo.textContent="GAME OVER";
   crashIcon.hidden=false;crashSub.hidden=false;
-  overlay.classList.remove("er-stage-home","er-stage-levels");
+  overlay.classList.remove("er-stage-home","er-stage-levels","er-stage-pause");
+  pauseActions.hidden=true;
   overlay.classList.add("er-stage-over");
   levelPicker.hidden=true;backButton.hidden=false;
   status.hidden=false;status.textContent="SCORE "+Math.floor(score)+"  ·  RECORD "+best;
@@ -744,7 +766,8 @@ function mount(root){
  }
  function togglePause(){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
-  if(mode==="running"){endNitro();mode="paused";pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;backButton.hidden=false;overlay.hidden=false;
+  if(mode==="running"){endNitro();mode="paused";pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;backButton.hidden=true;overlay.hidden=false;
+   overlay.classList.add("er-stage-pause");pauseActions.hidden=false;
    brandLogo.hidden=true;logo.hidden=false;logo.textContent="PAUSE";
    prompt.hidden=false;prompt.textContent="SIGNAL SUSPENDU";
    status.hidden=false;status.textContent="LE TUNNEL T'ATTEND";
@@ -752,7 +775,7 @@ function mount(root){
    overlay.classList.remove("er-stage-home","er-stage-levels");
    overlayButton.hidden=false;overlayButton.classList.remove("er-overlay-restart");
    overlayButton.textContent="▶ REPRENDRE";overlayButton.setAttribute("aria-label","Reprendre la course");
-  }else if(mode==="paused"){mode="running";overlay.hidden=true;startMusic(false);}
+  }else if(mode==="paused"){mode="running";overlay.hidden=true;overlay.classList.remove("er-stage-pause");pauseActions.hidden=true;startMusic(false);}
   else start();renderHud();
  }
  function tap(which){
@@ -1507,6 +1530,7 @@ function mount(root){
    renderHud();return true;
   },
   stage:()=>menuStage,openLevels:showLevelSelect,
+  pauseMenu:()=>({visible:!pauseActions.hidden,mode,stage:overlay.classList.contains("er-stage-pause"),soundLabel:pauseSound.textContent}),
   warning:()=>({life:warningLife,beepDelay:warningBeepDelay,visible:!warningLayer.hidden}),
   deathSequence:()=>({phase:mode,blackoutTime:deathFade,lockTime:deathLock,
    curtainVisible:!crashCurtain.hidden,curtainOpacity:crashCurtain.style.opacity,
