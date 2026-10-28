@@ -629,3 +629,77 @@
  .zebra-game-body .er .er-level-button.selected{height:39px;min-height:39px}
  .zebra-game-body .er .er-menu-back{height:41px}
 }
+
+/* The death sequence reuses the in-game warning sprite and preserves the
+   readable native metal controls, with a brief CRT impact instead of a cut. */
+.zebra-game-body .er .er-screen.er-death::after{
+ content:"";position:absolute;inset:0;z-index:4;pointer-events:none;
+ background:radial-gradient(circle at 50% 45%,rgba(255,232,247,.88),rgba(249,30,97,.62) 32%,rgba(61,5,35,.62) 80%);
+ animation:er-death-flash 1s ease-out both;
+}
+.zebra-game-body .er .er-screen.er-death .er-canvas{
+ filter:grayscale(.34) brightness(.67) contrast(1.16);
+ transition:filter .85s ease-out;
+}
+.zebra-game-body .er .er-overlay.er-stage-over{
+ padding:16px 18px;gap:11px;
+ background:radial-gradient(ellipse at 50% 42%,rgba(76,8,39,.87),rgba(12,2,20,.91) 65%,rgba(4,1,9,.97));
+ animation:er-gameover-arrival .54s cubic-bezier(.12,.85,.24,1.0) both;
+}
+.zebra-game-body .er .er-stage-over .er-crash-icon{
+ display:block;width:70px;height:68px;object-fit:contain;
+ image-rendering:pixelated;
+ filter:drop-shadow(0 0 15px #ff285b);
+ animation:er-crash-alert .58s steps(2,end) 4;
+}
+.zebra-game-body .er .er-stage-over .er-title{
+ display:block;font-size:clamp(36px,7.2vw,79px);letter-spacing:4px;
+ color:#fff3f4;
+ text-shadow:4px 3px #ff174f,-3px -1px #54eafb,0 0 22px #fc256d,0 0 34px #c51e54;
+ animation:er-gameover-glitch .19s steps(2,end) 4;
+}
+.zebra-game-body .er .er-stage-over .er-crash-sub{
+ font:bold 11px/1.4 "Courier New",monospace;
+ color:#ff789e;letter-spacing:1.7px;text-shadow:0 0 8px #fe255e;
+}
+.zebra-game-body .er .er-stage-over .er-title-sub{
+ max-width:95%;font:bold 13px/1.5 "Courier New",monospace;
+ letter-spacing:.6px;color:#f5d5eb;
+ background:rgba(13,3,21,.76);border:1px solid #7c3268;
+ padding:6px 10px;text-shadow:0 0 7px #ad60c4;
+}
+.zebra-game-body .er .er-stage-over .er-overlay-button{
+ animation:er-death-controls-in .42s ease-out .42s backwards;
+}
+.zebra-game-body .er .er-stage-over .er-menu-back{
+ animation:er-death-controls-in .42s ease-out .57s backwards;
+}
+@keyframes er-death-flash{
+ 0%{opacity:1}15%{opacity:.84}32%{opacity:.12}48%{opacity:.58}100%{opacity:0}
+}
+@keyframes er-gameover-arrival{
+ 0%{opacity:0;transform:scale(1.13)}36%{opacity:.72}
+ 75%{transform:scale(.99)}100%{opacity:1;transform:scale(1)}
+}
+@keyframes er-crash-alert{0%,48%{opacity:1}49%,100%{opacity:.18}}
+@keyframes er-gameover-glitch{
+ 0%{transform:translate(4px,-2px);filter:hue-rotate(-16deg)}
+ 50%{transform:translate(-4px,2px);filter:hue-rotate(16deg)}
+ 100%{transform:translate(0,0);filter:none}
+}
+@keyframes er-death-controls-in{from{opacity:0;transform:translateY(11px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:700px){
+ .zebra-game-body .er .er-overlay.er-stage-over{padding:8px;gap:6px}
+ .zebra-game-body .er .er-stage-over .er-crash-icon{width:46px;height:44px}
+ .zebra-game-body .er .er-stage-over .er-title{font-size:clamp(27px,6vw,49px)}
+ .zebra-game-body .er .er-stage-over .er-crash-sub{font-size:9px;letter-spacing:.5px}
+ .zebra-game-body .er .er-stage-over .er-title-sub{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+ .zebra-game-body .er .er-screen.er-death::after,
+ .zebra-game-body .er .er-stage-over,
+ .zebra-game-body .er .er-stage-over .er-crash-icon,
+ .zebra-game-body .er .er-stage-over .er-title,
+ .zebra-game-body .er .er-stage-over .er-overlay-button,
+ .zebra-game-body .er .er-stage-over .er-menu-back{animation:none}
+}
