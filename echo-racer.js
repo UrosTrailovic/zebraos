@@ -163,7 +163,7 @@ function mount(root){
  const status=node("div","er-title-sub","PHOSPHOR TUNNEL / SYSTEM 01");
  const prompt=node("div","er-start-call","PRESS BUTTON TO PLAY");
  const expl=node("p","er-help","VUE SUBJECTIVE · TOURNE AUTOUR DU TUNNEL POUR TROUVER LE PASSAGE");
- const hint=node("p","er-hint","← → TOURNE · ↑ ↓ VITESSE · ESPACE PULSE · Q BOOST · P PAUSE");
+ const hint=node("p","er-hint","← → TOURNE · ↑ ↓ VITESSE · ESPACE PULSE · Q NITRO (MAINTENIR) · P PAUSE");
  const overlayButton=node("button","er-overlay-button","▶ DÉMARRER");
  overlayButton.type="button";
  const levelPicker=node("div","er-level-picker");
@@ -268,12 +268,12 @@ function mount(root){
  cross.appendChild(node("span","zt-cross-center"));dpad.appendChild(cross);
  dpad.appendChild(node("span","zt-control-caption","DIRECTION"));
  const actionSide=node("div","zt-action-side"),ab=node("div","zt-ab");
- const bAction=holdButton("B — Boost","zt-ab-button zt-b","boost");
+ const bAction=holdButton("B — Nitro (maintenir)","zt-ab-button zt-b","boost");
  const aAction=holdButton("A — Pulse","zt-ab-button zt-a","pulse");
  bAction.textContent="B";aAction.textContent="A";
  ab.append(bAction,aAction);actionSide.appendChild(ab);
  const select=holdButton("SELECT — Pause","zt-select","pause");select.textContent="SELECT";
- actionSide.append(select,node("span","zt-control-caption","B : BOOST · A : PULSE"));
+ actionSide.append(select,node("span","zt-control-caption","B : NITRO · A : PULSE"));
  pad.append(dpad,actionSide);
  const spriteJobs=buttons.map(pair=>attachSprite(pair[0],pair[1]));
  spriteJobs.push(attachSprite(aAction,"btnAtetris.png"),attachSprite(bAction,"btnBtetris.png"),attachSprite(select,"selectTetris.png"));
