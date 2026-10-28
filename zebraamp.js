@@ -900,7 +900,6 @@ function visualize(){
   c.stroke();
   var bars=32,gap=Math.max(1,width*.006),margin=width*.055;
   var bw=Math.max(1,(width-2*margin-gap*(bars-1))/bars),floor=height*.82;
-  var bassEnergy=0;
   if(analyser&&bins&&!audio.paused){
    try{analyser.getByteFrequencyData(bins);}catch(e){}
   }
@@ -911,7 +910,6 @@ function visualize(){
    var target=bins&&!audio.paused?miniBands[i]:0;
    miniLevels[i]=audio.paused?0:miniLevels[i]+(target-miniLevels[i])*(1-Math.exp(-elapsed/(target>miniLevels[i]?.025:.15)));
    var v=miniLevels[i];
-   bassEnergy+=v;
    var hh=Math.max(2,v*(height*.68));
    var x=margin+i*(bw+gap);
    // Match ZebraVIS phosphor: broad green emission and a hot fine core.
@@ -931,10 +929,14 @@ function visualize(){
   }
   c.shadowColor="#66ff9e";c.shadowBlur=5;
   c.fillStyle="#a4eec0";c.font="9px monospace";
-  c.fillText(!audio.paused?(analyser&&bassEnergy>.02?"CH 01 • AUDIO":analyser?"CH 01 • EN ATTENTE":"CH 01 • DIRECT"):"CH 01 • VEILLE",8,12);
+  // Pendant un silence musical, les barres descendent mais le morceau
+  // est toujours en lecture. L'état affiché dépend du lecteur, jamais
+  // de l'énergie mesurée par l'analyseur.
+  var playing=!audio.paused&&!audio.ended;
+  c.fillText(playing?"CH 01 • AUDIO":"CH 01 • VEILLE",8,12);
   c.shadowBlur=0;
   var signal=view&&view.querySelector("[data-amp-spectrum-status]");
-  if(signal)signal.textContent=audio.paused?"VEILLE":analyser&&bassEnergy>.02?"SIGNAL":analyser?"ANALYSE…":"LECTURE DIRECTE";
+  if(signal)signal.textContent=playing?"SIGNAL":"VEILLE";
  }
  spectrumRefresh=function(){
   pausedFramePainted=false;
