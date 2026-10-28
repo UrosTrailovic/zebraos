@@ -413,25 +413,26 @@ function mount(root){
   waves=[];pads=[];nextGateAt=selectedLevel.id==="free"?Infinity:START_GATE_AT;nextPadAt=selectedLevel.id==="free"?Infinity:PAD_START;lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
   invuln=0;pulseCharge=2;pulseGlow=boostTime=padBoostTime=boostCooldown=flash=shake=0;
   shipBoostFade=0;turboLight=0;
-  message=selectedLevel.id==="free"?"FREE ROAM · BOOST ILLIMITÉ":"TROUVE LE PASSAGE";messageLife=2;keys.clear();overlay.hidden=true;
+  message=selectedLevel.id==="free"?"FREE ROAM · BOOST ILLIMITÉ":"TROUVE LE PASSAGE";messageLife=2;keys.clear();levelPicker.hidden=true;overlay.hidden=true;
   beep("collect");startMusic(true);renderHud();
  }
  function toMenu(){
   if(score>0)save("best."+selectedLevel.id,best);
-  stopMusic();mode="menu";keys.clear();waves=[];pads=[];trail=[];turnVelocity=0;elapsed=0;padBoostTime=0;scoreMultiplier=1;
-  overlay.hidden=false;logo.textContent="ECHO RACER";prompt.textContent="PRESS BUTTON TO PLAY";
-  status.textContent="FPV / TOUR DU TUNNEL 360°";
-  overlayButton.textContent="▶ DÉMARRER";renderHud();
+  stopMusic();mode="menu";keys.clear();waves=[];pads=[];trail=[];turnVelocity=0;
+  elapsed=0;padBoostTime=0;boostTime=0;boostCooldown=0;currentSpeed=0;scoreMultiplier=1;
+  overlay.hidden=false;levelPicker.hidden=false;
+  logo.textContent="ECHO RACER";prompt.textContent="CHOISIS TON CIRCUIT";
+  renderLevelPicker();overlayButton.textContent="▶ DÉMARRER";renderHud();
  }
  function gameOver(){
   stopMusic();mode="over";keys.clear();flash=.5;shake=6;beep("hit");
   if(score>best){best=Math.floor(score);save("best."+selectedLevel.id,best);}
-  overlay.hidden=false;logo.textContent="GAME OVER";prompt.textContent="RUN TERMINÉ";
+  levelPicker.hidden=true;overlay.hidden=false;logo.textContent="GAME OVER";prompt.textContent="RUN TERMINÉ";
   status.textContent="SCORE "+Math.floor(score)+"  ·  RECORD "+best;
   overlayButton.textContent="↻ REJOUER";renderHud();
  }
  function togglePause(){
-  if(mode==="running"){mode="paused";pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();overlay.hidden=false;
+  if(mode==="running"){mode="paused";pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;overlay.hidden=false;
    logo.textContent="PAUSE";prompt.textContent="SIGNAL SUSPENDU";status.textContent="LE TUNNEL T'ATTEND";
    overlayButton.textContent="▶ REPRENDRE";
   }else if(mode==="paused"){mode="running";overlay.hidden=true;startMusic(false);}
@@ -941,12 +942,13 @@ function mount(root){
   advance:advance,start:start,pulse:pulse,boost:boost,menu:toMenu,pause:togglePause,
   ship:()=>({idleLoaded:shipReady.idle,boostLoaded:shipReady.boost,boostMix:shipBoostFade,tunnelLight:turboLight}),
   level:()=>({id:selectedLevel.id,free:selectedLevel.id==="free",gap:selectedLevel.gap}),
+  gauges:()=>({speed:Math.round(currentSpeed*25),charge:selectedLevel.id==="free"?1:clamp(1-boostCooldown/5,0,1),boosting:boostTime>0||padBoostTime>0}),
   selectLevel:(id)=>{
    if(mode!=="menu")return false;
    const level=LEVELS.find(x=>x.id===id);if(!level)return false;
    selectedLevel=level;save("level",id);
    best=Number(load("best."+id,id==="3"?load("best","0"):"0"))||0;
-   renderHud();return true;
+   renderLevelPicker();renderHud();return true;
   },
   pattern:pattern,collisionAt:collisionAt,hitDepth:HIT_Z
  };
