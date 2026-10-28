@@ -65,7 +65,11 @@ function mount(root){
  let invuln=0,pulseCharge=2,pulseGlow=0,boostTime=0,boostCooldown=0;
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
  let soundEnabled=load("sfx","on")!=="off",audioCtx=null;
- let dragPointer=null,dragX=0;
+ // Dedicated Echo Racer audio system: never touch ZebraAMP or other games.
+ let music=null,musicSource=null,musicAnalyser=null,musicBins=null,musicError=false;
+ const musicUrl="/assets/games/echoraccaersong.mp3?v=1";
+ const audioFx={bass:0,mid:0,high:0,kick:0,previousBass:0,beatCooldown:0};
+ let dragPointer=null,dragX=0,dragLastTs=0,dragVelocity=0;
  const wrap=node("section","er zg zg-retro");
  wrap.setAttribute("aria-label","Echo Racer — jeu du tunnel phosphore");
  const heading=node("div","er-heading");
@@ -103,7 +107,10 @@ function mount(root){
  const startButton=button("▶ JOUER","er-play",()=>{if(mode==="menu"||mode==="over")start();else togglePause();});
  const restartButton=button("↻ RESTART","",start);
  const soundButton=button("♫ SON ON","",()=>{
-  soundEnabled=!soundEnabled;save("sfx",soundEnabled?"on":"off");renderSound();
+  soundEnabled=!soundEnabled;save("sfx",soundEnabled?"on":"off");
+   if(!soundEnabled)pauseMusic();
+   else if(mode==="running")startMusic(false);
+   renderSound();
  });
  const menuButton=button("☷ MENU","",toMenu);
  footer.append(startButton,restartButton,soundButton,menuButton);
@@ -168,13 +175,100 @@ function mount(root){
   if(canvas.width!==bw||canvas.height!==bh){canvas.width=bw;canvas.height=bh;}
  }
  fitCanvas();
- function renderSound(){soundButton.textContent="♫ SON "+(soundEnabled?"ON":"OFF");soundButton.setAttribute("aria-pressed",String(soundEnabled));}
- function beep(kind){
-  if(!soundEnabled||!live||load("sfx","on")==="off")return;
+ function globalMuted(){
+  try{return localStorage.getItem("zebra.sfx.muted")==="1";}catch(_){return false;}
+ }
+ function ensureAudioContext(){
+  if(audioCtx)return audioCtx;
+  const Ctx=window.AudioContext||window.webkitAudioContext;
+  if(!Ctx)return null;
+  try{audioCtx=new Ctx();return audioCtx;}catch(_){return null;}
+ }
+ function ensureMusic(){
+  if(music)return music;
+  if(!window.Audio)return null;
   try{
-   const Ctx=window.AudioContext||window.webkitAudioContext;
-   if(!Ctx)return;
-   if(!audioCtx)audioCtx=new Ctx();
+   music=new window.Audio(musicUrl);
+   music.loop=true;music.volume=.61;music.preload="none";
+   music.onerror=function(){musicError=true;};
+   const context=ensureAudioContext();
+   if(context&&context.createMediaElementSource&&context.createAnalyser){
+    try{
+     const analyser=context.createAnalyser();
+     analyser.fftSize=1024;analyser.smoothingTimeConstant=.74;
+     const source=context.createMediaElementSource(music);
+     musicSource=source; // retained even if a later connection fails
+     source.connect(analyser);analyser.connect(context.destination);
+     musicAnalyser=analyser;
+     musicBins=new Uint8Array(analyser.frequencyBinCount);
+    }catch(_){
+     if(musicSource)try{musicSource.connect(context.destination);}catch(_){}
+     musicAnalyser=null;musicBins=null;
+    }
+   }
+  }catch(_){music=null;musicAnalyser=null;musicBins=null;}
+  return music;
+ }
+ function startMusic(rewind){
+  if(!live||!soundEnabled||globalMuted()||document.hidden)return;
+  const track=ensureMusic();if(!track)return;
+  const context=audioCtx;
+  if(context&&context.state==="suspended")try{
+   const p=context.resume();if(p&&p.catch)p.catch(()=>{});
+  }catch(_){}
+  if(rewind)try{track.currentTime=0;}catch(_){}
+  musicError=false;
+  try{
+   const started=track.play();
+   if(started&&started.catch)started.catch(()=>{musicError=true;});
+  }catch(_){musicError=true;}
+ }
+ function pauseMusic(){if(music)try{music.pause();}catch(_){}}
+ function stopMusic(){
+  pauseMusic();
+  if(music)try{music.currentTime=0;}catch(_){}
+  audioFx.bass=audioFx.mid=audioFx.high=audioFx.kick=audioFx.previousBass=0;
+  audioFx.beatCooldown=0;
+ }
+ function sampleMusic(dt){
+  dt=clamp(dt,0,.08);
+  const shouldRead=mode==="running"&&soundEnabled&&!globalMuted()&&
+    music&&!music.paused&&musicAnalyser&&musicBins;
+  if(!shouldRead){
+   const decay=Math.exp(-dt*7);
+   audioFx.bass*=decay;audioFx.mid*=decay;audioFx.high*=decay;
+   audioFx.kick=Math.max(0,audioFx.kick-dt*3.1);
+   audioFx.previousBass*=decay;
+   return;
+  }
+  try{musicAnalyser.getByteFrequencyData(musicBins);}catch(_){return;}
+  function avg(start,end){
+   let sum=0;const endBin=Math.min(end,musicBins.length);
+   for(let k=start;k<endBin;k++)sum+=musicBins[k];
+   return sum/Math.max(1,endBin-start);
+  }
+  const bass=clamp((avg(1,6)-8)/117,0,1),
+        mid=clamp((avg(7,32)-8)/112,0,1),
+        high=clamp((avg(35,115)-6)/88,0,1);
+  const attack=1-Math.exp(-dt*18),release=1-Math.exp(-dt*6.5);
+  audioFx.bass+=(bass-audioFx.bass)*(bass>audioFx.bass?attack:release);
+  audioFx.mid+=(mid-audioFx.mid)*(mid>audioFx.mid?attack:release);
+  audioFx.high+=(high-audioFx.high)*(high>audioFx.high?attack:release);
+  audioFx.beatCooldown=Math.max(0,audioFx.beatCooldown-dt);
+  if(bass>.35&&bass-audioFx.previousBass>.11&&audioFx.beatCooldown===0){
+   audioFx.kick=1;audioFx.beatCooldown=.16;
+  }else audioFx.kick=Math.max(0,audioFx.kick-dt*4.2);
+  audioFx.previousBass=bass;
+ }
+ function renderSound(){
+  soundButton.textContent="♫ SON "+(soundEnabled?"ON":"OFF");
+  soundButton.setAttribute("aria-pressed",String(soundEnabled));
+ }
+ function beep(kind){
+  if(!soundEnabled||!live||globalMuted())return;
+  try{
+   const context=ensureAudioContext();
+   if(!context)return;
    if(audioCtx.state==="suspended")audioCtx.resume().catch(()=>{});
    const o=audioCtx.createOscillator(),g=audioCtx.createGain(),t=audioCtx.currentTime;
    const freq=kind==="hit"?104:kind==="pulse"?720:kind==="pass"?445:kind==="collect"?880:260;
@@ -201,26 +295,26 @@ function mount(root){
   waves=[];nextGateAt=START_GATE_AT;elapsed=0;nextWave=0;trail=[];sparks=[];currentSpeed=0;
   invuln=0;pulseCharge=2;pulseGlow=boostTime=boostCooldown=flash=shake=0;
   message="TROUVE LE PASSAGE";messageLife=2;keys.clear();overlay.hidden=true;
-  beep("collect");renderHud();
+  beep("collect");startMusic(true);renderHud();
  }
  function toMenu(){
-  mode="menu";keys.clear();waves=[];trail=[];turnVelocity=0;elapsed=0;
+  stopMusic();mode="menu";keys.clear();waves=[];trail=[];turnVelocity=0;elapsed=0;
   overlay.hidden=false;logo.textContent="ECHO RACER";prompt.textContent="PRESS BUTTON TO PLAY";
   status.textContent="FPV / TOUR DU TUNNEL 360°";
   overlayButton.textContent="▶ DÉMARRER";renderHud();
  }
  function gameOver(){
-  mode="over";keys.clear();flash=.5;shake=6;beep("hit");
+  stopMusic();mode="over";keys.clear();flash=.5;shake=6;beep("hit");
   if(score>best){best=Math.floor(score);save("best",best);}
   overlay.hidden=false;logo.textContent="GAME OVER";prompt.textContent="RUN TERMINÉ";
   status.textContent="SCORE "+Math.floor(score)+"  ·  RECORD "+best;
   overlayButton.textContent="↻ REJOUER";renderHud();
  }
  function togglePause(){
-  if(mode==="running"){mode="paused";keys.clear();overlay.hidden=false;
+  if(mode==="running"){mode="paused";pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();overlay.hidden=false;
    logo.textContent="PAUSE";prompt.textContent="SIGNAL SUSPENDU";status.textContent="LE TUNNEL T'ATTEND";
    overlayButton.textContent="▶ REPRENDRE";
-  }else if(mode==="paused"){mode="running";overlay.hidden=true;}
+  }else if(mode==="paused"){mode="running";overlay.hidden=true;startMusic(false);}
   else start();renderHud();
  }
  function tap(which){
@@ -229,8 +323,11 @@ function mount(root){
   if(which==="boost"){boost();return;}
   if(mode!=="running")return;
   // Single press = tiny rotation; holding the key rotates continuously.
-  if(which==="left")angle-=STEP*.38;
-  if(which==="right")angle+=STEP*.38;
+  if(which==="left"||which==="right"){
+   const d=which==="right"?1:-1;
+   angle=(angle+d*STEP*.13+TAU)%TAU;
+   turnVelocity=clamp(turnVelocity+d*.9,-4.1,4.1);
+  }
   // Up/down control forward speed only. There is no 2D ship translation.
  }
  function burst(position,color,count){
@@ -247,7 +344,7 @@ function mount(root){
   const target=waves.filter(w=>!w.cleared&&w.z>HIT_Z-.1&&w.z<HIT_Z+2.6).sort((a,b)=>a.z-b.z)[0];
   if(target){
    target.cleared=true;score+=120;combo++;message="PULSE +120";messageLife=1;
-   burst(angle,"#a6fff5",24);
+   burst(angle,"#8defff",24);
   }else{message="ONDE LIBÉRÉE";messageLife=.7;}
   renderHud();
  }
@@ -267,9 +364,12 @@ function mount(root){
   if(mode!=="running"||document.hidden)return;
   dt=clamp(dt,0,.05);elapsed+=dt;
   const steer=(keys.has("right")?1:0)-(keys.has("left")?1:0);
-  const targetTurn=steer*3.45;
-  turnVelocity+=(targetTurn-turnVelocity)*Math.min(1,dt*11);
-  angle=(angle+turnVelocity*dt+TAU)%TAU;
+  const targetTurn=steer*3.65;
+  // Accelerate decisively, coast when released, brake quickly by counter-steer.
+  const turnRate=steer?(turnVelocity*steer<0?11:7.5):3.5;
+  turnVelocity+=(targetTurn-turnVelocity)*(1-Math.exp(-dt*turnRate));
+  if(!steer&&Math.abs(turnVelocity)<.01)turnVelocity=0;
+  if(dragPointer===null)angle=(angle+turnVelocity*dt+TAU)%TAU;
   const throttle=(keys.has("up")?.27:0)-(keys.has("down")?.23:0);
   const boostMultiplier=boostTime>0?1.5:1;
   const speed=clamp(2.35+Math.min(.90,distance/5000*.25)+throttle*1.2,1.65,3.45)*boostMultiplier;
@@ -298,7 +398,7 @@ function mount(root){
     w.credited=true;passed++;
     if(!w.cleared&&collisionAt(angle,w)&&invuln<=0){
      lives--;combo=0;invuln=1.35;flash=.47;shake=3;beep("hit");
-     message="IMPACT !";messageLife=1.05;burst(angle,"#ff4654",23);
+     message="IMPACT !";messageLife=1.05;burst(angle,"#ff5caa",23);
      if(lives<=0){gameOver();break;}
     }else{
      const near=!w.cleared&&nearMiss(angle,w);
@@ -320,10 +420,15 @@ function mount(root){
  function point(theta,z){
   return wallPoint(theta,z);
  }
- function wallGeom(){return{cx:W*.5,cy:H*.5,R:Math.min(W,H)*.81};}
+ function wallGeom(){
+  // Tunnel ~18 m in diameter: the FPV camera is five metres below its
+  // central axis, roughly four metres above the inner running surface.
+  // The vanishing point is HIGH in frame; the wall sweeps under the pilot.
+  return {cx:W*.5,cy:H*.39,R:Math.max(W,H)*1.23,offset:5/9};
+}
  function wallPoint(theta,z){
   const g=wallGeom(),r=g.R/(1+Math.max(0,z)*.68);
-  return{x:g.cx+Math.cos(theta)*r,y:g.cy+Math.sin(theta)*r,r};
+  return{x:g.cx+Math.cos(theta)*r,y:g.cy+(Math.sin(theta)-g.offset)*r,r};
  }
  function screenAngle(worldAngle){return worldAngle-angle+PI/2;}
  // A lightweight PS2-era techno tunnel: dark segmented metal plates, glowing
@@ -345,11 +450,13 @@ function mount(root){
   if(z<0||z>15)return;
   const g=wallGeom(),r=wallPoint(0,z).r;
   const near=clamp(1-z/15,0,1),cyan=index%5===0;
-  c.beginPath();c.arc(g.cx,g.cy,r,0,TAU);
-  c.strokeStyle=cyan?"rgba(114,243,255,"+(.24+.7*near)+")":
-                         "rgba(255,63,213,"+(.18+.7*near)+")";
-  c.lineWidth=(cyan?1.65:1.12)+near*(cyan?2.2:1.65);
-  c.shadowColor=cyan?"#50f6ff":"#ff35d5";c.shadowBlur=7+5*near;
+  const beat=audioFx.kick*.38+audioFx.bass*.22,high=audioFx.high*.20;
+  c.beginPath();c.arc(g.cx,g.cy-g.offset*r,r,0,TAU);
+  c.strokeStyle=cyan?"rgba(114,243,255,"+clamp(.24+.7*near+high,0,1)+")":
+                         "rgba(255,63,213,"+clamp(.18+.7*near+beat,0,1)+")";
+  c.lineWidth=(cyan?1.65:1.12)+near*(cyan?2.2:1.65)+beat*2.5;
+  c.shadowColor=cyan?"#50f6ff":"#ff35d5";
+  c.shadowBlur=7+5*near+audioFx.bass*8+audioFx.kick*9;
   c.stroke();c.shadowBlur=0;
  }
  function drawTunnel(now){
@@ -371,15 +478,17 @@ function mount(root){
    const fade=clamp(1-z/15,0,1);
    for(let sector=0;sector<SECTORS;sector++){
     const a=screenAngle(sector*STEP),b=a+STEP;
-    const fill=(sector+row)%4===0?"rgba(107,30,113,.42)":
-      (sector+row)%2?"rgba(44,16,62,.52)":"rgba(67,18,79,.47)";
+    const bassLight=audioFx.bass*.15+audioFx.kick*.11;
+    const fill=(sector+row)%4===0?"rgba(107,30,113,"+(.42+bassLight)+")":
+      (sector+row)%2?"rgba(44,16,62,"+(.52+bassLight*.55)+")":
+      "rgba(67,18,79,"+(.47+bassLight*.8)+")";
     wallPatch(a+.006,b-.006,z,z+panelLength,fill,
       "rgba(186,77,188,.13)",3);
     // Tiny luminous rivets flash toward the camera along with the wall.
     if(row%3===0&&sector%4===1){
      const p=wallPoint((a+b)*.5,z+.28);
-     c.fillStyle="rgba(248,73,226,"+(.24+.65*fade)+")";
-     c.shadowColor="#fa39d8";c.shadowBlur=5;
+     c.fillStyle="rgba(248,73,226,"+clamp(.24+.65*fade+audioFx.high*.32,0,1)+")";
+     c.shadowColor="#fa39d8";c.shadowBlur=5+audioFx.high*9;
      c.beginPath();c.arc(p.x,p.y,Math.max(.8,2.7*fade),0,TAU);c.fill();
      c.shadowBlur=0;
     }
@@ -393,9 +502,11 @@ function mount(root){
    c.beginPath();c.moveTo(near.x,near.y);c.lineTo(far.x,far.y);
    c.strokeStyle=cyan?"rgba(65,218,246,.13)":"rgba(253,75,210,.1)";
    c.lineWidth=cyan?9:5;c.shadowBlur=0;c.stroke();
-   c.strokeStyle=cyan?"rgba(109,240,255,.92)":"rgba(210,76,237,.52)";
-   c.lineWidth=cyan?2.5:1.4;
-   c.shadowColor=cyan?"#48eefe":"#ff48c6";c.shadowBlur=cyan?12:5;
+   c.strokeStyle=cyan?"rgba(109,240,255,"+clamp(.72+audioFx.high*.28,0,1)+")":
+                           "rgba(210,76,237,"+clamp(.43+audioFx.mid*.36,0,1)+")";
+   c.lineWidth=(cyan?2.5:1.4)+audioFx.high*(cyan?1.5:.55);
+   c.shadowColor=cyan?"#48eefe":"#ff48c6";
+   c.shadowBlur=(cyan?12:5)+audioFx.high*10+audioFx.kick*4;
    c.stroke();c.shadowBlur=0;
   }
   const spacing=.48;
@@ -408,6 +519,16 @@ function mount(root){
   core.addColorStop(1,"rgba(8,1,17,0)");
   c.fillStyle=core;
   c.fillRect(g.cx-g.R*.2,g.cy-g.R*.2,g.R*.4,g.R*.4);
+  // The music lights the vanishing point, but never shifts the actual
+  // projection or a collision surface.
+  const intensity=audioFx.bass*.16+audioFx.kick*.22;
+  if(intensity>.008){
+   const aura=c.createRadialGradient(g.cx,g.cy,3,g.cx,g.cy,g.R*.31);
+   aura.addColorStop(0,"rgba(255,80,212,"+clamp(intensity,0,.46)+")");
+   aura.addColorStop(1,"rgba(255,40,200,0)");
+   c.fillStyle=aura;
+   c.fillRect(g.cx-g.R*.35,g.cy-g.R*.35,g.R*.7,g.R*.7);
+  }
  }
  function drawWave(w){
   if(w.cleared||w.z>15||w.z<-.40)return;
@@ -432,7 +553,7 @@ function mount(root){
   const nearest=waves.filter(w=>!w.cleared&&w.z>=HIT_Z&&w.z<HIT_Z+1.55).sort((a,b)=>a.z-b.z)[0];
   const blocked=nearest&&collisionAt(angle,nearest);
   c.save();c.beginPath();
-  c.arc(g.cx,g.cy,p.r,PI/2-.19,PI/2+.19);
+  c.arc(g.cx,g.cy-g.offset*p.r,p.r,PI/2-.19,PI/2+.19);
   c.strokeStyle=blocked?"#ffab82":"#7ff3ff";
   c.shadowColor=blocked?"#ff4785":"#39eaff";
   c.shadowBlur=15;c.lineWidth=4;c.stroke();
@@ -471,9 +592,12 @@ function mount(root){
   raf=requestAnimationFrame(frameTick);
   const dt=last?clamp((now-last)/1000,0,.07):0;last=now;
   const parent=root.closest(".window");
-  if(document.hidden||parent&&parent.classList.contains("minimized"))return;
+  if(document.hidden||parent&&parent.classList.contains("minimized")){
+   if(mode==="running")togglePause();
+   return;
+  }
   if(mode==="running")advance(dt);
-  paint(now);
+  sampleMusic(dt);paint(now);
  }
  function keyDown(e){
   if(!live||document.hidden||e.altKey||e.ctrlKey||e.metaKey)return;
@@ -505,6 +629,7 @@ function mount(root){
   if(mode!=="running"){start();return;}
   if(e.pointerType!=="touch"&&e.pointerType!=="pen")return;
   dragPointer=e.pointerId;dragX=e.clientX;
+  dragLastTs=Number(e.timeStamp)||Date.now();dragVelocity=0;
   try{screen.setPointerCapture(e.pointerId);}catch(_){}
  }
  function boardMove(e){
@@ -513,28 +638,45 @@ function mount(root){
   if(!bounds.width)return;
   // Horizontal swipe = orbital rotation, no teleporting inside the circle.
   const dx=clamp(e.clientX-dragX,-bounds.width*.25,bounds.width*.25);
-  angle=(angle+dx/bounds.width*TAU*1.25+TAU)%TAU;
-  turnVelocity=0;dragX=e.clientX;
+  const delta=dx/bounds.width*TAU*1.25;
+  const stamp=Number(e.timeStamp)||Date.now();
+  const sec=clamp((stamp-dragLastTs)/1000,.016,.12);
+  dragVelocity=lerp(dragVelocity,clamp(delta/sec,-4.1,4.1),.48);
+  angle=(angle+delta+TAU)%TAU;
+  dragLastTs=stamp;dragX=e.clientX;
  }
- function boardUp(e){if(dragPointer===e.pointerId)dragPointer=null;}
+ function boardUp(e){
+  if(dragPointer!==e.pointerId)return;
+  const stamp=Number(e.timeStamp)||Date.now();
+  turnVelocity=clamp(dragVelocity*(stamp-dragLastTs>140?.28:.8),-3.9,3.9);
+  dragPointer=null;dragVelocity=0;
+}
  screen.addEventListener("pointerdown",boardDown);
  screen.addEventListener("pointermove",boardMove);
  screen.addEventListener("pointerup",boardUp);
  screen.addEventListener("pointercancel",boardUp);
+ function onVisibility(){if(document.hidden&&mode==="running")togglePause();}
+ document.addEventListener("visibilitychange",onVisibility);
  overlayButton.onclick=function(){if(mode==="paused")togglePause();else start();};
  document.addEventListener("keydown",keyDown);
  document.addEventListener("keyup",keyUp);
  function dispose(){
   live=false;cancelAnimationFrame(raf);keys.clear();
+  stopMusic();
+  document.removeEventListener("visibilitychange",onVisibility);
   document.removeEventListener("keydown",keyDown);
   document.removeEventListener("keyup",keyUp);
   if(ro){ro.disconnect();ro=null;}else window.removeEventListener("resize",fitCanvas);
+  if(musicSource)try{musicSource.disconnect();}catch(_){}
+  if(musicAnalyser)try{musicAnalyser.disconnect();}catch(_){}
+  if(music){music.onerror=null;try{music.removeAttribute("src");music.load();}catch(_){}}
+  music=null;musicSource=null;musicAnalyser=null;musicBins=null;
   if(audioCtx)try{const p=audioCtx.close();if(p&&p.catch)p.catch(()=>{});}catch(_){}
   root._echoDebug=null;
  }
  root._zebraDispose=dispose;
  root._echoDebug={
-  snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,pulseCharge,canvas:{width:W,height:H},waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors]}))}),
+  snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,pulseCharge,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick},error:musicError},canvas:{width:W,height:H},waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors]}))}),
   advance:advance,start:start,pulse:pulse,boost:boost,menu:toMenu,pause:togglePause,
   pattern:pattern,collisionAt:collisionAt,hitDepth:HIT_Z
  };
