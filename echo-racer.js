@@ -109,6 +109,9 @@ function mount(root){
  let soundEnabled=load("sfx","on")!=="off",audioCtx=null;
  // Dedicated Echo Racer audio system: never touch ZebraAMP or other games.
  let music=null,musicSource=null,musicAnalyser=null,musicBins=null,musicError=false;
+ // Dedicated song boost; do not alter engine SFX or ZebraAMP's audio graph.
+ let musicGain=null,musicLimiter=null;
+ const MUSIC_GAIN=1.9;
  const musicUrl="/assets/games/echoraccaersong.mp3?v=1";
  // Two lightweight players independent of the music analyser.
  const flyUrl="/assets/spaceship-fly-sfx.mp3";
@@ -391,11 +394,37 @@ function mount(root){
      const analyser=context.createAnalyser();
      analyser.fftSize=1024;analyser.smoothingTimeConstant=.74;
      const source=context.createMediaElementSource(music);
-     musicSource=source; // retained even if a later connection fails
-     source.connect(analyser);analyser.connect(context.destination);
+     musicSource=source;
+     // Keep the analyser upstream of the playback gain so the visual
+     // reactivity still tracks the unboosted song rather than a clipped feed.
+     source.connect(analyser);
+     let output=analyser;
+     if(context.createGain){
+      try{
+       musicGain=context.createGain();
+       musicGain.gain.value=MUSIC_GAIN;
+       output.connect(musicGain);
+       output=musicGain;
+      }catch(_){musicGain=null;}
+     }
+     // Peak protection for quieter MP3s that need more perceived loudness.
+     if(context.createDynamicsCompressor){
+      try{
+       musicLimiter=context.createDynamicsCompressor();
+       musicLimiter.threshold.value=-2.5;
+       musicLimiter.knee.value=2;
+       musicLimiter.ratio.value=12;
+       musicLimiter.attack.value=.003;
+       musicLimiter.release.value=.13;
+       output.connect(musicLimiter);
+       output=musicLimiter;
+      }catch(_){musicLimiter=null;}
+     }
+     output.connect(context.destination);
      musicAnalyser=analyser;
      musicBins=new Uint8Array(analyser.frequencyBinCount);
     }catch(_){
+     // One source node per music element; fall back to direct playback.
      if(musicSource)try{musicSource.connect(context.destination);}catch(_){}
      musicAnalyser=null;musicBins=null;
     }
@@ -1492,6 +1521,8 @@ function mount(root){
   if(ro){ro.disconnect();ro=null;}else window.removeEventListener("resize",fitCanvas);
   if(musicSource)try{musicSource.disconnect();}catch(_){}
   if(musicAnalyser)try{musicAnalyser.disconnect();}catch(_){}
+  if(musicGain)try{musicGain.disconnect();}catch(_){}
+  if(musicLimiter)try{musicLimiter.disconnect();}catch(_){}
   if(music){music.onerror=null;try{music.removeAttribute("src");music.load();}catch(_){}}
   stopBoostSource();boostBuffer=null;boostLoad=null;
   for(const sound of [flySound,boostSound]){
@@ -1504,7 +1535,7 @@ function mount(root){
    shipReady[state]=false;
   }
   featheredBoost=null;
-  music=null;musicSource=null;musicAnalyser=null;musicBins=null;
+  music=null;musicSource=null;musicAnalyser=null;musicBins=null;musicGain=null;musicLimiter=null;
   if(audioCtx)try{const p=audioCtx.close();if(p&&p.catch)p.catch(()=>{});}catch(_){}
   root._echoDebug=null;
  }
