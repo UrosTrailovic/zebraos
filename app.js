@@ -743,7 +743,7 @@ var gameModules={
  snake:{name:"Znake.exe",width:650,height:700,global:"ZebraSnake",
   files:["snake.js?v=8.7"],css:"snake.css?v=8.9"},
  racer:{name:"Echo Racer.exe",width:750,height:790,global:"ZebraEchoRacer",
-  files:["echo-racer.js?v=1.0"],css:"echo-racer.css?v=1.0"},
+  files:["echo-racer.js?v=2.0"],css:"echo-racer.css?v=1.0"},
  paint:{name:"ZebraPaint.exe",width:850,height:640,global:"ZebraPaint",
   files:["paint.js?v=1.4"],css:"paint-responsive.css?v=1.4"}
 };
