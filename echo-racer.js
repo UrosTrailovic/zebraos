@@ -1011,11 +1011,11 @@ function mount(root){
   return ((n^(n>>>16))>>>0)/4294967296;
  }
  function trackDifficulty(cell){
-  if(cell===0)return{stage:0,count:0,amplitude:0,label:"DÉPART"};
+  if(cell===0)return{stage:0,count:1,amplitude:.42,label:"DÉPART"};
   if(cell===1)return{stage:1,count:1,amplitude:.63,label:"ÉCHAUFFEMENT"};
-  if(cell<=3)return{stage:2,count:1,amplitude:.92,label:"COURBES"};
-  if(cell<=5)return{stage:3,count:2,amplitude:1.07,label:"ENCHAÎNEMENTS"};
-  if(cell<=8)return{stage:4,count:3,amplitude:1.20,label:"SÉRIEUX"};
+  if(cell===2)return{stage:2,count:1,amplitude:.92,label:"COURBES"};
+  if(cell<=4)return{stage:3,count:2,amplitude:1.07,label:"ENCHAÎNEMENTS"};
+  if(cell<=6)return{stage:4,count:3,amplitude:1.20,label:"SÉRIEUX"};
   return{stage:5,count:4,amplitude:1.33,label:"CHAOS"};
  }
  function trackProfile(cell){
@@ -1025,9 +1025,12 @@ function mount(root){
   for(let i=0;i<count;i++){
    // One smooth pulse per slot: wide gaps early, tightly packed curves late.
    const slot=TRACK_STRETCH/count;
-   const duration=(count===1?43:count===2?31:count===3?28:25)+
-     hashTrack(cell*131+i*17+29)*(count===1?11:count===2?8:count===3?6:5);
-   const start=i*slot+(slot-duration)*(.42+hashTrack(cell*43+i*61+11)*.16);
+   const duration=(cell===0?32:count===1?43:count===2?31:count===3?28:25)+
+     hashTrack(cell*131+i*17+29)*(cell===0?4:count===1?11:count===2?8:count===3?6:5);
+   // First 18 seconds or so are straight, then one mild introductory
+   // curve. Later bends progressively fill more of each segment.
+   const start=cell===0?77+hashTrack(11)*8:
+     i*slot+(slot-duration)*(.42+hashTrack(cell*43+i*61+11)*.16);
    const mix=hashTrack(cell*19+i*71+19),pace=hashTrack(cell*37+i*83+93);
    const motif=((cell+i*3)%6+6)%6;
    let ax=0,ay=0;
