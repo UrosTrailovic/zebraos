@@ -95,7 +95,7 @@ function mount(root){
  let best=Number(load("best."+selectedLevel.id,selectedLevel.id==="3"?load("best","0"):"0"))||0;
  let distance=0,travel=0,passed=0,combo=0,waves=[],pads=[],nextGateAt=START_GATE_AT,nextPadAt=PAD_START,lastGateAt=-100,trail=[],sparks=[],currentSpeed=0,gateCount=0,padCount=0,scoreMultiplier=1;
  let invuln=0,pulseCharge=2,pulseGlow=0,padBoostTime=0;
- let nitroHeld=false,nitroActive=false,nitroFuel=1,nitroRegenWait=0;
+ let nitroHeld=false,nitroActive=false,nitroFuel=1,nitroRegenWait=0,nitroBurnTime=0;
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
  let menuStage="home",warningLife=0,warningBeepDelay=0,warningChirp=0;
  const DEATH_FADE_SECONDS=1.15,DEATH_ANIMATION_SECONDS=1.15;
@@ -179,7 +179,7 @@ function mount(root){
  const status=node("div","er-title-sub","PHOSPHOR TUNNEL / SYSTEM 01");
  const prompt=node("div","er-start-call","PRESS BUTTON TO PLAY");
  const expl=node("p","er-help","VUE SUBJECTIVE · TOURNE AUTOUR DU TUNNEL POUR TROUVER LE PASSAGE");
- const hint=node("p","er-hint","← → TOURNE · ↑ ↓ VITESSE · ESPACE PULSE · Q NITRO (MAINTENIR) · P PAUSE");
+ const hint=node("p","er-hint","← → TOURNE · ↑ ↓ VITESSE · ESPACE NITRO (MAINTENIR) · Q PULSE · P PAUSE");
  const overlayButton=node("button","er-overlay-button","▶ DÉMARRER");
  overlayButton.type="button";
  const levelPicker=node("div","er-level-picker");
@@ -609,7 +609,7 @@ function mount(root){
   hudTimer=bestSaveTimer=audioSampleTimer=0;
   waves=[];pads=[];nextGateAt=selectedLevel.id==="free"?Infinity:START_GATE_AT;nextPadAt=selectedLevel.id==="free"?Infinity:PAD_START;lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
   invuln=0;pulseCharge=2;pulseGlow=padBoostTime=flash=shake=0;
-  nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;
+  nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;nitroBurnTime=0;
   shipBoostFade=0;turboLight=0;warningLife=0;warningBeepDelay=0;warningChirp=0;
   screen.classList.remove("er-death","er-crashing");overlay.classList.remove("er-stage-over");
   crashIcon.hidden=true;crashSub.hidden=true;
@@ -622,7 +622,7 @@ function mount(root){
   screen.classList.remove("er-crashing");lockDeathControls(false);
   if(mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
   stopMusic();mode="menu";keys.clear();waves=[];pads=[];trail=[];turnVelocity=0;
-  elapsed=0;padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;
+  elapsed=0;padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;nitroBurnTime=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
   overlay.hidden=false;renderMenuStage("home");
   renderHud();
@@ -678,8 +678,8 @@ function mount(root){
   // Single press = tiny rotation; holding the key rotates continuously.
   if(which==="left"||which==="right"){
    const d=which==="right"?1:-1;
-   angle=(angle+d*STEP*.10+TAU)%TAU;
-   turnVelocity=clamp(turnVelocity+d*.66,-3.45,3.45);
+   angle=(angle+d*STEP*.085+TAU)%TAU;
+   turnVelocity=clamp(turnVelocity+d*.56,-3.25,3.25);
   }
   // Up/down control forward speed only. There is no 2D ship translation.
  }
@@ -706,24 +706,25 @@ function mount(root){
   nitroHeld=true;
   if(selectedLevel.id!=="free"&&nitroFuel<=0)return;
   nitroActive=true;nitroRegenWait=0;
-  shipBoostFade=1;turboLight=1;
+  shipBoostFade=1;turboLight=1;nitroBurnTime=0;
   message=selectedLevel.id==="free"?"NITRO ∞":"NITRO";messageLife=.7;
   startBoostLoop();renderHud();
  }
  function endNitro(){
   nitroHeld=false;
   if(!nitroActive)return;
-  nitroActive=false;
+  nitroActive=false;nitroBurnTime=0;
   if(selectedLevel.id!=="free"&&nitroFuel<1)nitroRegenWait=NITRO_REGEN_WAIT;
   // The fade-out is finished on animation frames, not at key release.
   renderHud();
  }
  function updateNitro(dt){
   if(mode!=="running")return;
+  if(nitroActive)nitroBurnTime+=dt;
   if(nitroActive&&selectedLevel.id!=="free"){
    nitroFuel=clamp(nitroFuel-dt/NITRO_BURN_SECONDS,0,1);
    if(nitroFuel<=0){
-    nitroActive=false;nitroRegenWait=NITRO_REGEN_WAIT;
+    nitroActive=false;nitroBurnTime=0;nitroRegenWait=NITRO_REGEN_WAIT;
    }
   }else if(!nitroHeld&&selectedLevel.id!=="free"&&nitroFuel<1){
    nitroRegenWait=Math.max(0,nitroRegenWait-dt);
@@ -763,9 +764,9 @@ function mount(root){
   if(mode!=="running"||document.hidden)return;
   dt=clamp(dt,0,.05);elapsed+=dt;
   const steer=(keys.has("right")?1:0)-(keys.has("left")?1:0);
-  const targetTurn=steer*3.85;
+  const targetTurn=steer*3.50;
   // Accelerate decisively, coast when released, brake quickly by counter-steer.
-  const turnRate=steer?(turnVelocity*steer<0?11.5:8.5):3.5;
+  const turnRate=steer?(turnVelocity*steer<0?10.2:7.1):3.5;
   turnVelocity+=(targetTurn-turnVelocity)*(1-Math.exp(-dt*turnRate));
   if(!steer&&Math.abs(turnVelocity)<.01)turnVelocity=0;
   if(dragPointer===null)angle=(angle+turnVelocity*dt+TAU)%TAU;
@@ -773,10 +774,17 @@ function mount(root){
   // A boost pad is stronger than manual boost, but they do not multiply
   // together into an uncontrollable/untestable collision speed.
   updateNitro(dt);
-  const boostMultiplier=padBoostTime>0?1.85:nitroActive?1.55:1;
-  const targetSpeed=clamp(4.15+Math.min(1.55,distance/3000*.43)+throttle,3.5,5.7)*selectedLevel.speed*boostMultiplier;
-  currentSpeed=targetSpeed>=currentSpeed?targetSpeed:
-   targetSpeed+(currentSpeed-targetSpeed)*Math.exp(-dt*1.48);
+  // Score-driven cruise progression: uninterrupted growth in every mode.
+  const growthRate=selectedLevel.id==="1"?.50:selectedLevel.id==="2"?.61:
+   selectedLevel.id==="3"?.72:selectedLevel.id==="4"?.84:.58;
+  const growth=Math.min(2.25,Math.log1p(Math.max(0,score)/3500)*growthRate);
+  const base=(clamp(4.15+Math.min(1.55,distance/3000*.43)+throttle,3.5,5.7)+growth)*selectedLevel.speed;
+  // A held nitro continues to gain thrust, instead of jumping to a ceiling.
+  const nitroThrust=1.38+1.1*(1-Math.exp(-nitroBurnTime*.72));
+  const multiplier=padBoostTime>0?2.5:nitroActive?nitroThrust:1;
+  const targetSpeed=base*multiplier;
+  const response=targetSpeed>=currentSpeed?6.7:.62;
+  currentSpeed+=(targetSpeed-currentSpeed)*(1-Math.exp(-dt*response));
   const speed=currentSpeed;
   // Score multiplier follows ACTUAL travel speed (including pad/manual boost).
   scoreMultiplier= speed>=8.2?5:speed>=6.85?4:speed>=5.65?3:speed>=4.7?2:1;
@@ -1054,7 +1062,7 @@ function mount(root){
   // Cap the height to preserve visibility of incoming hazards.
   const scale=Math.min(W*.88/iw,H*.46/ih);
   const dw=iw*scale,dh=ih*scale;
-  const steer=clamp(turnVelocity/3.85,-1,1);
+  const steer=clamp(turnVelocity/3.50,-1,1);
   const bob=mode==="running"?
     Math.sin(elapsed*14)*Math.min(1.2,currentSpeed*.15)+audioFx.kick*1.2:0;
   c.save();
@@ -1157,14 +1165,14 @@ function mount(root){
     if(mode==="over"){start();return;}
    if(k==="p"||k==="escape"){togglePause();return;}
    if(mode==="paused"){togglePause();return;}
-   if(k===" "){pulse();return;}
-   if(k==="q"){beginNitro();return;}
+   if(k===" "){beginNitro();return;}
+   if(k==="q"){pulse();return;}
   }
  }
  function keyUp(e){
   const map={arrowleft:"left",a:"left",arrowright:"right",d:"right",arrowup:"up",w:"up",arrowdown:"down",s:"down"};
   const k=e.key.toLowerCase();
-  if(k==="q")endNitro();
+  if(k===" ")endNitro();
   if(map[k])keys.delete(map[k]);
  }
  function boardDown(e){
@@ -1247,7 +1255,7 @@ function mount(root){
   ship:()=>({idleLoaded:shipReady.idle,boostLoaded:shipReady.boost,boostMix:shipBoostFade,tunnelLight:turboLight}),
   level:()=>({id:selectedLevel.id,free:selectedLevel.id==="free",gap:selectedLevel.gap}),
   gauges:()=>({speed:Math.round(currentSpeed*25),charge:selectedLevel.id==="free"?1:nitroFuel,boosting:nitroActive||padBoostTime>0,
-   held:nitroHeld,manualBoost:nitroActive,regenWait:nitroRegenWait}),
+   held:nitroHeld,manualBoost:nitroActive,burnTime:nitroBurnTime,regenWait:nitroRegenWait}),
   engineAudio:()=>({flyLoaded:!!flySound,boostLoaded:!!boostSound,
    flyPlaying:!!flySound&&!flySound.paused,boostPlaying:!!boostSound&&!boostSound.paused,
    flyVolume:flySound?flySound.volume:0,boostVolume:boostSound?boostSound.volume:0,
