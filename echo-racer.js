@@ -24,51 +24,71 @@ function rectRound(ctx,x,y,w,h,r){
 }
 /* Player travels along the INNER CIRCUMFERENCE of a perfectly straight tube.
  * The camera is the player: position is one world-space ANGLE, not an XY ship. */
-const SECTORS=16,STEP=TAU/SECTORS,HIT_Z=1.6,SPAWN_Z=9.5;
-// Physical distance between gates, not a timer: speed and obstacle gaps stay independent.
-const GAP_MIN=9.2,GAP_MAX=11.0,START_GATE_AT=1.05;
+const SECTORS=16,STEP=TAU/SECTORS,HIT_Z=1.6,SPAWN_Z=12.6;
+const PATTERN_COUNT=16;
+// Distances are in world units. Short double-gates punctuate longer stretches.
+const GAP_MIN=15.2,GAP_MAX=21.4,START_GATE_AT=.48;
+// A separate rhythm of collectible wall pads between the hazard waves.
+const PAD_START=7.2,PAD_GAP_MIN=33,PAD_GAP_MAX=47;
 function angularDelta(a,b){return ((a-b+PI)%TAU+TAU)%TAU-PI;}
+function inGap(i,start,width){
+ return ((i-start+SECTORS)%SECTORS)<width;
+}
+// 16 distinct silhouettes: long slit, twin gates, zig-zag, teeth, broken
+// pillars, forked bridges, rotating shutters, etc. Every design has a
+// passage; the actual gate may rotate by sector offsets and animate.
 function pattern(kind){
- const cells=[];
+ const blocks=[];
  for(let i=0;i<SECTORS;i++){
-  let block=false;
-  if(kind===0)block=i<10;                               // wide single gap
-  if(kind===1)block=i<5||i>11;                            // clear seven-lane gate
-  if(kind===2)block=(i>=1&&i<=6)||(i>=10&&i<=13);        // split forks
-  if(kind===3)block=(i<=4)||(i>=8&&i<=11);               // offset passages
-  if(kind===4)block=i%4===0||i%4===1;                    // alternating bands
-  if(kind===5)block=i<12;                                // tighter single gap
-  if(kind===6)block=(i<=5)||(i>=9&&i<=13);              // two unequal exits
-  if(block)cells.push(i);
+  let wall=false;
+  switch(kind%PATTERN_COUNT){
+   case 0: wall=!inGap(i,0,6);break;                    // wide escape bay
+   case 1: wall=!inGap(i,0,4)&&!inGap(i,9,4);break;    // twin doors
+   case 2: wall=!inGap(i,0,3);break;                    // tight single slit
+   case 3: wall=(i%8)<5;break;                         // two fork gaps
+   case 4: wall=(i%4)<2;break;                         // alternating stripes
+   case 5: wall=inGap(i,0,8)||inGap(i,11,2);break;     // broad wall + island
+   case 6: wall=(i%5)<3;break;                         // staggered teeth
+   case 7: wall=!inGap(i,2,5)&&!inGap(i,11,3);break;   // asymmetric doors
+   case 8: wall=i%3!==0&&i!==9;break;                  // dotted grate
+   case 9: wall=inGap(i,0,7)||inGap(i,9,5);break;      // paired shutters
+   case 10:wall=(i%8)===0||(i%8)===1||(i%8)===2;break;// two broad ribs
+   case 11:wall=!inGap(i,0,5)&&!inGap(i,10,2);break;  // big/small split
+   case 12:wall=(i%6)<3;break;                         // triple stepped teeth
+   case 13:wall=inGap(i,0,6)||inGap(i,10,3);break;    // uneven opposing arches
+   case 14:wall=!inGap(i,0,4)&&!inGap(i,7,4);break;   // close double holes
+   default:wall=inGap(i,0,5)||inGap(i,8,4)||i===14;  // scattered blocks
+  }
+  if(wall)blocks.push(i);
  }
- return cells;
+ return blocks;
+}
+function obstacleAngle(wave,sector){
+ return (sector+.5)*STEP+(wave.rotation||0);
 }
 function collisionAt(player,wave){
  if(!wave||wave.cleared)return false;
  const angle=typeof player==="number"?player:player.angle||0;
- return wave.sectors.some(id=>{
-  const center=(id+.5)*STEP;
-  return Math.abs(angularDelta(angle,center))<=STEP*.5;
- });
+ return wave.sectors.some(id=>Math.abs(angularDelta(angle,obstacleAngle(wave,id)))<=STEP*.5);
 }
 function nearMiss(player,wave){
  if(!wave||wave.cleared||collisionAt(player,wave))return false;
  const angle=typeof player==="number"?player:player.angle||0;
- return wave.sectors.some(id=>Math.abs(angularDelta(angle,(id+.5)*STEP))<STEP*.69);
+ return wave.sectors.some(id=>Math.abs(angularDelta(angle,obstacleAngle(wave,id)))<STEP*.72);
 }
 function mount(root){
  if(root._zebraDispose)root._zebraDispose();
  root.innerHTML="";
  let live=true,raf=0,ro=null,last=0,mode="menu",keys=new Set();
  let angle=0,turnVelocity=0,lives=MAX_LIVES,score=0,best=Number(load("best","0"))||0;
- let distance=0,travel=0,passed=0,combo=0,waves=[],nextGateAt=START_GATE_AT,trail=[],sparks=[],currentSpeed=0;
- let invuln=0,pulseCharge=2,pulseGlow=0,boostTime=0,boostCooldown=0;
+ let distance=0,travel=0,passed=0,combo=0,waves=[],pads=[],nextGateAt=START_GATE_AT,nextPadAt=PAD_START,lastGateAt=-100,trail=[],sparks=[],currentSpeed=0,gateCount=0,padCount=0,scoreMultiplier=1;
+ let invuln=0,pulseCharge=2,pulseGlow=0,boostTime=0,padBoostTime=0,boostCooldown=0;
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
  let soundEnabled=load("sfx","on")!=="off",audioCtx=null;
  // Dedicated Echo Racer audio system: never touch ZebraAMP or other games.
  let music=null,musicSource=null,musicAnalyser=null,musicBins=null,musicError=false;
  const musicUrl="/assets/games/echoraccaersong.mp3?v=1";
- const audioFx={bass:0,mid:0,high:0,kick:0,previousBass:0,beatCooldown:0};
+ const audioFx={bass:0,mid:0,high:0,kick:0,previousBass:0,slowBass:0,beatCooldown:0,energy:0};
  let dragPointer=null,dragX=0,dragLastTs=0,dragVelocity=0;
  const wrap=node("section","er zg zg-retro");
  wrap.setAttribute("aria-label","Echo Racer — jeu du tunnel phosphore");
@@ -78,7 +98,8 @@ function mount(root){
  const headline=node("span","er-heading-sub","FPV / TUNNEL 360°");
  heading.append(wordmark,headline);wrap.appendChild(heading);
  const hud=node("div","er-hud");
- function metric(label){const box=node("div","er-meter");box.appendChild(node("span","",label));const value=node("strong","","0");box.appendChild(value);hud.appendChild(box);return value;}
+ let scoreLabel=null;
+ function metric(label){const box=node("div","er-meter"),title=node("span","",label);box.appendChild(title);if(label==="SCORE")scoreLabel=title;const value=node("strong","","0");box.appendChild(value);hud.appendChild(box);return value;}
  const scoreEl=metric("SCORE"),bestEl=metric("RECORD"),shieldEl=metric("BOUCLIERS"),energyEl=metric("PULSE");
  const frame=node("div","er-frame");
  const screen=node("div","er-screen");
@@ -227,7 +248,7 @@ function mount(root){
  function stopMusic(){
   pauseMusic();
   if(music)try{music.currentTime=0;}catch(_){}
-  audioFx.bass=audioFx.mid=audioFx.high=audioFx.kick=audioFx.previousBass=0;
+  audioFx.bass=audioFx.mid=audioFx.high=audioFx.kick=audioFx.previousBass=audioFx.slowBass=audioFx.energy=0;
   audioFx.beatCooldown=0;
  }
  function sampleMusic(dt){
@@ -237,8 +258,8 @@ function mount(root){
   if(!shouldRead){
    const decay=Math.exp(-dt*7);
    audioFx.bass*=decay;audioFx.mid*=decay;audioFx.high*=decay;
-   audioFx.kick=Math.max(0,audioFx.kick-dt*3.1);
-   audioFx.previousBass*=decay;
+   audioFx.kick=Math.max(0,audioFx.kick-dt*2.9);
+   audioFx.previousBass*=decay;audioFx.slowBass*=decay;audioFx.energy*=decay;
    return;
   }
   try{musicAnalyser.getByteFrequencyData(musicBins);}catch(_){return;}
@@ -247,17 +268,22 @@ function mount(root){
    for(let k=start;k<endBin;k++)sum+=musicBins[k];
    return sum/Math.max(1,endBin-start);
   }
-  const bass=clamp((avg(1,6)-8)/117,0,1),
-        mid=clamp((avg(7,32)-8)/112,0,1),
-        high=clamp((avg(35,115)-6)/88,0,1);
-  const attack=1-Math.exp(-dt*18),release=1-Math.exp(-dt*6.5);
+  // High-sensitivity normalization for mixed, mastered MP3 material.
+  const bass=clamp((avg(1,10)-5)/94,0,1),
+        mid=clamp((avg(11,50)-5)/93,0,1),
+        high=clamp((avg(51,180)-4)/78,0,1);
+  const attack=1-Math.exp(-dt*23),release=1-Math.exp(-dt*7);
   audioFx.bass+=(bass-audioFx.bass)*(bass>audioFx.bass?attack:release);
   audioFx.mid+=(mid-audioFx.mid)*(mid>audioFx.mid?attack:release);
   audioFx.high+=(high-audioFx.high)*(high>audioFx.high?attack:release);
+  const baseline=audioFx.slowBass;
+  audioFx.slowBass+=(bass-audioFx.slowBass)*(1-Math.exp(-dt*1.6));
   audioFx.beatCooldown=Math.max(0,audioFx.beatCooldown-dt);
-  if(bass>.35&&bass-audioFx.previousBass>.11&&audioFx.beatCooldown===0){
-   audioFx.kick=1;audioFx.beatCooldown=.16;
-  }else audioFx.kick=Math.max(0,audioFx.kick-dt*4.2);
+  if(bass>.25&&bass-baseline>.085&&audioFx.beatCooldown<=0){
+   audioFx.kick=1;audioFx.beatCooldown=.17;
+  }else audioFx.kick=Math.max(0,audioFx.kick-dt*3.2);
+  audioFx.energy=clamp(audioFx.bass*.55+audioFx.mid*.33+
+    audioFx.high*.22+audioFx.kick*.25,0,1);
   audioFx.previousBass=bass;
  }
  function renderSound(){
@@ -280,25 +306,26 @@ function mount(root){
   }catch(_){}
  }
  function renderHud(){
+  scoreLabel.textContent="SCORE ×"+scoreMultiplier;
   scoreEl.textContent=Math.floor(score).toLocaleString("fr");
   bestEl.textContent=Math.floor(best).toLocaleString("fr");
   shieldEl.textContent="◆".repeat(lives)+"◇".repeat(MAX_LIVES-lives);
   energyEl.textContent="✦".repeat(pulseCharge)+"·".repeat(3-pulseCharge);
-  speedEl.textContent="VITESSE "+String(clamp(Math.round((currentSpeed||2.35)*1.9),1,9)).padStart(2,"0");
+  speedEl.textContent="VITESSE "+String(clamp(Math.round((currentSpeed||3.25)*1.5),1,9)).padStart(2,"0");
   signal.textContent=mode==="running"?"● SIGNAL":mode==="paused"?"● PAUSE":"● VEILLE";
   signal.classList.toggle("on",mode==="running");
-  warning.textContent=boostTime>0?"BOOST ×2":invuln>0?"BOUCLIER":messageLife>0?message:"—";
+  warning.textContent=padBoostTime>0?"PAD TURBO ×"+scoreMultiplier:boostTime>0?"BOOST ×"+scoreMultiplier:invuln>0?"BOUCLIER":messageLife>0?message:"—";
   startButton.textContent=mode==="running"?"Ⅱ PAUSE":mode==="paused"?"▶ REPRENDRE":"▶ JOUER";
  }
  function start(){
   mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
-  waves=[];nextGateAt=START_GATE_AT;elapsed=0;nextWave=0;trail=[];sparks=[];currentSpeed=0;
-  invuln=0;pulseCharge=2;pulseGlow=boostTime=boostCooldown=flash=shake=0;
+  waves=[];pads=[];nextGateAt=START_GATE_AT;nextPadAt=PAD_START;lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
+  invuln=0;pulseCharge=2;pulseGlow=boostTime=padBoostTime=boostCooldown=flash=shake=0;
   message="TROUVE LE PASSAGE";messageLife=2;keys.clear();overlay.hidden=true;
   beep("collect");startMusic(true);renderHud();
  }
  function toMenu(){
-  stopMusic();mode="menu";keys.clear();waves=[];trail=[];turnVelocity=0;elapsed=0;
+  stopMusic();mode="menu";keys.clear();waves=[];pads=[];trail=[];turnVelocity=0;elapsed=0;padBoostTime=0;scoreMultiplier=1;
   overlay.hidden=false;logo.textContent="ECHO RACER";prompt.textContent="PRESS BUTTON TO PLAY";
   status.textContent="FPV / TOUR DU TUNNEL 360°";
   overlayButton.textContent="▶ DÉMARRER";renderHud();
@@ -354,44 +381,101 @@ function mount(root){
   beep("collect");renderHud();
  }
  function createWave(){
-  let kind=Math.floor(rand(0,7));
-  if(nextWave===kind)kind=(kind+2)%7;nextWave=kind;
-  const offset=Math.floor(rand(0,SECTORS));
-  const sectors=pattern(kind).map(id=>(id+offset)%SECTORS);
-  return {kind,sectors,z:SPAWN_Z,length:.86,cleared:false,credited:false};
+  let kind=Math.floor(rand(0,PATTERN_COUNT));
+  if(kind===nextWave)kind=(kind+1+Math.floor(rand(0,5)))%PATTERN_COUNT;
+  nextWave=kind;
+  const rotation=Math.floor(rand(0,SECTORS))*STEP;
+  // 1 in 4 waves slowly spins; spin affects both drawing and hit detection.
+  const spins=(gateCount>2&&Math.random()<.28);
+  const spin=spins?(Math.random()<.5?-1:1)*rand(.26,.55):0;
+  const twist=rand(-.14,.14);
+  const sectors=pattern(kind);
+  return {
+   kind,sectors,z:SPAWN_Z,
+   length:kind===2||kind===8?rand(.6,.9):rand(.85,1.5),
+   rotation,spin,twist,cleared:false,credited:false
+  };
+ }
+ function nextGateGap(){
+  const hard=nextWave===2||nextWave===8||nextWave===9;
+  // Variety of breathing room: double-gate sets, long open accelerations,
+  // normal gaps. The tightest shutters get EXTRA distance.
+  let gap;
+  if(gateCount%7===5)gap=rand(12.1,13.9);         // occasional fast double gate
+  else if(gateCount%7===6)gap=rand(21.0,24.5);  // relief after the double gate
+  else gap=rand(GAP_MIN,GAP_MAX);
+  if(hard)gap+=2.4;
+  return gap;
  }
  function advance(dt){
   if(mode!=="running"||document.hidden)return;
   dt=clamp(dt,0,.05);elapsed+=dt;
   const steer=(keys.has("right")?1:0)-(keys.has("left")?1:0);
-  const targetTurn=steer*3.65;
+  const targetTurn=steer*4.8;
   // Accelerate decisively, coast when released, brake quickly by counter-steer.
-  const turnRate=steer?(turnVelocity*steer<0?11:7.5):3.5;
+  const turnRate=steer?(turnVelocity*steer<0?14:10.8):3.8;
   turnVelocity+=(targetTurn-turnVelocity)*(1-Math.exp(-dt*turnRate));
   if(!steer&&Math.abs(turnVelocity)<.01)turnVelocity=0;
   if(dragPointer===null)angle=(angle+turnVelocity*dt+TAU)%TAU;
-  const throttle=(keys.has("up")?.27:0)-(keys.has("down")?.23:0);
-  const boostMultiplier=boostTime>0?1.5:1;
-  const speed=clamp(2.35+Math.min(.90,distance/5000*.25)+throttle*1.2,1.65,3.45)*boostMultiplier;
+  const throttle=(keys.has("up")?.52:0)-(keys.has("down")?.55:0);
+  // A boost pad is stronger than manual boost, but they do not multiply
+  // together into an uncontrollable/untestable collision speed.
+  const boostMultiplier=padBoostTime>0?1.85:boostTime>0?1.55:1;
+  const speed=clamp(4.15+Math.min(1.55,distance/3000*.43)+throttle,3.5,5.7)*boostMultiplier;
   currentSpeed=speed;
+  // Score multiplier follows ACTUAL travel speed (including pad/manual boost).
+  scoreMultiplier= speed>=8.2?5:speed>=6.85?4:speed>=5.65?3:speed>=4.7?2:1;
   // One physical depth displacement: both geometry (travel) and gates use it.
   const dz=speed*dt;
   travel+=dz;
   distance+=dz*125;
-  score+=dt*(12+Math.min(28,distance/240))*boostMultiplier;
+  score+=dt*(15+Math.min(35,distance/210))*scoreMultiplier;
   invuln=Math.max(0,invuln-dt);boostTime=Math.max(0,boostTime-dt);
+  padBoostTime=Math.max(0,padBoostTime-dt);
   boostCooldown=Math.max(0,boostCooldown-dt);
   pulseGlow=Math.max(0,pulseGlow-dt);messageLife=Math.max(0,messageLife-dt);
   flash=Math.max(0,flash-dt*1.8);shake=Math.max(0,shake-dt*16);
   // Separate obstacles by WORLD distance, not seconds. At faster speeds,
   // each gate still has a long, empty tunnel leading to the next one.
-  if(travel>=nextGateAt){
-   waves.push(createWave());
-   nextGateAt+=rand(GAP_MIN,GAP_MAX);
+  while(travel>=nextGateAt){
+   gateCount++;
+   const spawnAt=nextGateAt;
+   const wave=createWave();
+   wave.z=SPAWN_Z-(travel-spawnAt);
+   waves.push(wave);
+   lastGateAt=spawnAt;
+   nextGateAt+=nextGateGap();
   }
+  // Pads have their OWN calendar and cannot appear on top of a hazard.
+  while(travel>=nextPadAt){
+   const gapPrevious=nextPadAt-lastGateAt;
+   const gapNext=nextGateAt-nextPadAt;
+   if(gapPrevious<5.3||gapNext<5.3){nextPadAt+=5.4;continue;}
+   const targetSector=(Math.floor((angle/TAU)*SECTORS)-1+SECTORS)%SECTORS;
+   const center=padCount===0?targetSector:Math.floor(rand(0,SECTORS));
+   const pad={z:SPAWN_Z-(travel-nextPadAt),sectors:[center,(center+1)%SECTORS,(center+2)%SECTORS],
+     length:1.1,cleared:false,credited:false};
+   pads.push(pad);padCount++;
+   nextPadAt+=rand(PAD_GAP_MIN,PAD_GAP_MAX);
+  }
+  for(const pad of pads){
+   const oldZ=pad.z;pad.z-=dz;
+   if(oldZ>HIT_Z&&pad.z<=HIT_Z&&!pad.credited){
+    pad.credited=true;
+    if(collisionAt(angle,pad)){
+     padBoostTime=Math.max(padBoostTime,2.8);
+     boostTime=0;
+     score+=275*scoreMultiplier;
+     pulseGlow=.68;message="TURBO PAD +275";messageLife=1.2;
+     burst(angle,"#72f7ff",34);beep("collect");
+    }
+   }
+  }
+  pads=pads.filter(p=>p.z>-.8);
   for(const w of waves){
    const oldZ=w.z;
    w.z-=dz;
+   if(w.spin)w.rotation+=w.spin*dt;
    // Swept collision at the exact same plane at which the obstacles pass
    // the fixed cyan HUD arc. Frame rate cannot skip the detection.
    if(oldZ>HIT_Z&&w.z<=HIT_Z&&!w.credited){
@@ -404,7 +488,7 @@ function mount(root){
      const near=!w.cleared&&nearMiss(angle,w);
      combo++;const multiplier=Math.min(4,1+Math.floor(combo/5));
      const bonus=(near?90:50)*multiplier;
-     score+=bonus*(boostTime>0?2:1);
+     score+=bonus*scoreMultiplier;
      if(near){message="NEAR MISS +"+bonus;messageLife=.8;beep("pass");}
      else if(combo%5===0){message="COMBO ×"+multiplier;messageLife=.75;}
      if(passed%4===0){pulseCharge=Math.min(3,pulseCharge+1);beep("collect");}
@@ -450,13 +534,13 @@ function mount(root){
   if(z<0||z>15)return;
   const g=wallGeom(),r=wallPoint(0,z).r;
   const near=clamp(1-z/15,0,1),cyan=index%5===0;
-  const beat=audioFx.kick*.38+audioFx.bass*.22,high=audioFx.high*.20;
+  const beat=audioFx.kick*.9+audioFx.bass*.85+audioFx.mid*.3,high=audioFx.high*.55;
   c.beginPath();c.arc(g.cx,g.cy-g.offset*r,r,0,TAU);
   c.strokeStyle=cyan?"rgba(114,243,255,"+clamp(.24+.7*near+high,0,1)+")":
                          "rgba(255,63,213,"+clamp(.18+.7*near+beat,0,1)+")";
-  c.lineWidth=(cyan?1.65:1.12)+near*(cyan?2.2:1.65)+beat*2.5;
+  c.lineWidth=(cyan?1.65:1.12)+near*(cyan?2.2:1.65)+beat*5.6;
   c.shadowColor=cyan?"#50f6ff":"#ff35d5";
-  c.shadowBlur=7+5*near+audioFx.bass*8+audioFx.kick*9;
+  c.shadowBlur=7+5*near+audioFx.energy*27+audioFx.kick*24;
   c.stroke();c.shadowBlur=0;
  }
  function drawTunnel(now){
@@ -478,7 +562,7 @@ function mount(root){
    const fade=clamp(1-z/15,0,1);
    for(let sector=0;sector<SECTORS;sector++){
     const a=screenAngle(sector*STEP),b=a+STEP;
-    const bassLight=audioFx.bass*.15+audioFx.kick*.11;
+    const bassLight=audioFx.energy*.39+audioFx.kick*.23;
     const fill=(sector+row)%4===0?"rgba(107,30,113,"+(.42+bassLight)+")":
       (sector+row)%2?"rgba(44,16,62,"+(.52+bassLight*.55)+")":
       "rgba(67,18,79,"+(.47+bassLight*.8)+")";
@@ -487,8 +571,8 @@ function mount(root){
     // Tiny luminous rivets flash toward the camera along with the wall.
     if(row%3===0&&sector%4===1){
      const p=wallPoint((a+b)*.5,z+.28);
-     c.fillStyle="rgba(248,73,226,"+clamp(.24+.65*fade+audioFx.high*.32,0,1)+")";
-     c.shadowColor="#fa39d8";c.shadowBlur=5+audioFx.high*9;
+     c.fillStyle="rgba(248,73,226,"+clamp(.24+.65*fade+audioFx.high*.62,0,1)+")";
+     c.shadowColor="#fa39d8";c.shadowBlur=5+audioFx.high*25;
      c.beginPath();c.arc(p.x,p.y,Math.max(.8,2.7*fade),0,TAU);c.fill();
      c.shadowBlur=0;
     }
@@ -504,9 +588,9 @@ function mount(root){
    c.lineWidth=cyan?9:5;c.shadowBlur=0;c.stroke();
    c.strokeStyle=cyan?"rgba(109,240,255,"+clamp(.72+audioFx.high*.28,0,1)+")":
                            "rgba(210,76,237,"+clamp(.43+audioFx.mid*.36,0,1)+")";
-   c.lineWidth=(cyan?2.5:1.4)+audioFx.high*(cyan?1.5:.55);
+   c.lineWidth=(cyan?2.5:1.4)+audioFx.high*(cyan?5:2.7)+audioFx.kick*1.6;
    c.shadowColor=cyan?"#48eefe":"#ff48c6";
-   c.shadowBlur=(cyan?12:5)+audioFx.high*10+audioFx.kick*4;
+   c.shadowBlur=(cyan?12:5)+audioFx.high*28+audioFx.kick*17;
    c.stroke();c.shadowBlur=0;
   }
   const spacing=.48;
@@ -521,13 +605,35 @@ function mount(root){
   c.fillRect(g.cx-g.R*.2,g.cy-g.R*.2,g.R*.4,g.R*.4);
   // The music lights the vanishing point, but never shifts the actual
   // projection or a collision surface.
-  const intensity=audioFx.bass*.16+audioFx.kick*.22;
-  if(intensity>.008){
-   const aura=c.createRadialGradient(g.cx,g.cy,3,g.cx,g.cy,g.R*.31);
-   aura.addColorStop(0,"rgba(255,80,212,"+clamp(intensity,0,.46)+")");
-   aura.addColorStop(1,"rgba(255,40,200,0)");
+  // The whole tunnel flashes to the track, but no physics geometry moves.
+  const intensity=clamp(audioFx.energy*.62+audioFx.kick*.38,0,1);
+  if(intensity>.014){
+   c.save();
+   const aura=c.createRadialGradient(g.cx,g.cy,2,g.cx,g.cy,g.R*.65);
+   aura.addColorStop(0,"rgba(255,126,229,"+clamp(intensity*.85,0,.92)+")");
+   aura.addColorStop(.48,"rgba(231,59,211,"+clamp(intensity*.35,0,.43)+")");
+   aura.addColorStop(1,"rgba(80,16,130,0)");
    c.fillStyle=aura;
-   c.fillRect(g.cx-g.R*.35,g.cy-g.R*.35,g.R*.7,g.R*.7);
+   c.fillRect(g.cx-g.R*.75,g.cy-g.R*.75,g.R*1.5,g.R*1.5);
+   c.fillStyle="rgba(242,62,202,"+clamp(audioFx.kick*.20+audioFx.energy*.055,0,.25)+")";
+   c.fillRect(0,0,W,H);
+   c.restore();
+  }
+  // Amplified flashes on several wall rings; same world-position radius.
+  if(audioFx.kick>.06||audioFx.high>.18){
+   c.save();c.lineCap="round";
+   for(let i=0;i<3;i++){
+    const z=1.1+i*2.5,r=wallPoint(0,z).r;
+    c.beginPath();c.arc(g.cx,g.cy-g.offset*r,r,0,TAU);
+    c.strokeStyle=i%2===0?
+      "rgba(255,169,244,"+clamp(audioFx.kick*.8+audioFx.energy*.4,0,.96)+")":
+      "rgba(114,250,255,"+clamp(audioFx.high*.8+audioFx.kick*.35,0,.94)+")";
+    c.lineWidth=1.8+audioFx.kick*7+audioFx.high*3;
+    c.shadowColor=i%2===0?"#ff79df":"#5ff6ff";
+    c.shadowBlur=18+audioFx.kick*30+audioFx.high*14;
+    c.stroke();
+   }
+   c.restore();
   }
  }
  function drawWave(w){
@@ -535,31 +641,64 @@ function mount(root){
   // Same radius, angular sector and depth interpolation as drawTunnel().
   c.save();c.lineJoin="round";
   for(const id of w.sectors){
-   const a=screenAngle(id*STEP)+.013,b=screenAngle((id+1)*STEP)-.013;
+   // Draw EXACTLY the rotation used by collisionAt, including moving gates.
+   const rot=w.rotation||0;
+   const a=screenAngle(id*STEP+rot)+.013,b=screenAngle((id+1)*STEP+rot)-.013;
    const z=Math.max(.04,w.z),far=z+w.length;
-   c.shadowColor="#ff4e82";c.shadowBlur=10;
-   wallPatch(a,b,z,far,"#e62a61","#ffb19c",6);
+   // Distinct material families help players identify gate silhouettes.
+   const skin=w.kind%4;
+   const skinFill=skin===0?"#ef3a5c":skin===1?"#d9267b":
+     skin===2?"#eb493d":"#a52ed2";
+   const skinEdge=skin===0?"#ffb19c":skin===1?"#ffc1de":
+     skin===2?"#ffe4aa":"#eb96ff";
+   c.shadowColor=skin===3?"#db4aff":"#ff4e82";c.shadowBlur=10;
+   wallPatch(a,b,z,far,skinFill,skinEdge,6);
    c.shadowBlur=0;
    // Pale amber warning edge separates dangerous gates from pink wall trim.
    const q0=wallPoint(a+.025,z+.035),q1=wallPoint(b-.025,z+.035);
    c.beginPath();c.moveTo(q0.x,q0.y);c.lineTo(q1.x,q1.y);
-   c.strokeStyle="rgba(255,226,173,.88)";c.lineWidth=1.25;
+   c.strokeStyle="rgba(255,226,173,.88)";c.lineWidth=1.35;
    c.shadowColor="#ff8d92";c.shadowBlur=8;c.stroke();c.shadowBlur=0;
+  }
+  c.restore();
+ }
+ function drawPad(pad){
+  if(pad.z>15||pad.z<-.45||pad.credited)return;
+  c.save();c.lineJoin="round";c.lineCap="round";
+  const near=Math.max(.04,pad.z),far=near+pad.length;
+  const pulse=.74+.26*Math.sin(elapsed*13+near);
+  for(const id of pad.sectors){
+   const a=screenAngle(id*STEP)+.016,b=screenAngle((id+1)*STEP)-.016;
+   c.shadowColor="#3af6ff";c.shadowBlur=17+audioFx.high*17;
+   wallPatch(a,b,near,far,
+     "rgba(20,184,221,"+clamp(.66+pulse*.28,0,1)+")",
+     "#dbfcff",5);
+   const mid=(a+b)*.5,span=(b-a)*.25;
+   for(let k=0;k<2;k++){
+    const z=near+.18+k*.39;
+    const p0=wallPoint(mid-span,z+.19),pc=wallPoint(mid,z),
+          p1=wallPoint(mid+span,z+.19);
+    c.beginPath();c.moveTo(p0.x,p0.y);c.lineTo(pc.x,pc.y);c.lineTo(p1.x,p1.y);
+    c.lineWidth=2.8;c.strokeStyle="#fff9a9";
+    c.shadowColor="#fbff71";c.shadowBlur=11;c.stroke();
+   }
   }
   c.restore();
  }
  function drawFPV(){
   const g=wallGeom(),plane=HIT_Z,p=wallPoint(PI/2,plane);
   const nearest=waves.filter(w=>!w.cleared&&w.z>=HIT_Z&&w.z<HIT_Z+1.55).sort((a,b)=>a.z-b.z)[0];
+  const nearestPad=pads.filter(p=>!p.credited&&p.z>=HIT_Z&&p.z<HIT_Z+1.8).sort((a,b)=>a.z-b.z)[0];
   const blocked=nearest&&collisionAt(angle,nearest);
+  const onPad=!blocked&&nearestPad&&collisionAt(angle,nearestPad);
   c.save();c.beginPath();
   c.arc(g.cx,g.cy-g.offset*p.r,p.r,PI/2-.19,PI/2+.19);
-  c.strokeStyle=blocked?"#ffab82":"#7ff3ff";
-  c.shadowColor=blocked?"#ff4785":"#39eaff";
+  c.strokeStyle=blocked?"#ffab82":onPad?"#faff8e":"#7ff3ff";
+  c.shadowColor=blocked?"#ff4785":onPad?"#ffff55":"#39eaff";
   c.shadowBlur=15;c.lineWidth=4;c.stroke();
   c.beginPath();c.moveTo(p.x,p.y+5);c.lineTo(p.x-6,p.y+16);
   c.lineTo(p.x+6,p.y+16);c.closePath();
-  c.fillStyle=blocked?"#ffe4ac":"#dcfcff";c.fill();
+  c.fillStyle=blocked?"#ffe4ac":onPad?"#faffb9":"#dcfcff";c.fill();
   if(pulseGlow>0){
    c.beginPath();c.arc(g.cx,g.cy,p.r+(1-pulseGlow)*W*.3,0,TAU);
    c.lineWidth=3;c.strokeStyle="rgba(99,245,255,"+(pulseGlow*1.6)+")";
@@ -574,6 +713,7 @@ function mount(root){
   c.save();
   if(shake>0)c.translate(rand(-shake,shake),rand(-shake,shake));
   drawTunnel(now);
+  pads.slice().sort((a,b)=>b.z-a.z).forEach(drawPad);
   waves.slice().sort((a,b)=>b.z-a.z).forEach(drawWave);
   c.restore();
   for(const p of sparks){
@@ -676,7 +816,7 @@ function mount(root){
  }
  root._zebraDispose=dispose;
  root._echoDebug={
-  snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,pulseCharge,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick},error:musicError},canvas:{width:W,height:H},waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors]}))}),
+  snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,pulseCharge,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:boost,menu:toMenu,pause:togglePause,
   pattern:pattern,collisionAt:collisionAt,hitDepth:HIT_Z
  };
