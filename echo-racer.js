@@ -212,7 +212,7 @@ function mount(root){
  const soundButton=button("♫ SON ON","",()=>{
   soundEnabled=!soundEnabled;save("sfx",soundEnabled?"on":"off");
    if(!soundEnabled)pauseMusic();
-   else if(mode==="running")startMusic(false);
+   else if(mode==="running"){startMusic(false);if(nitroActive)playBoostSfx(true);}
    renderSound();
  });
  const menuButton=button("☷ MENU","",toMenu);
@@ -223,14 +223,30 @@ function mount(root){
  cross.appendChild(node("div","zt-cross-shape"));
  function holdButton(label,cls,which){
   const b=node("button","zt-control "+cls,label);b.type="button";b.setAttribute("aria-label",label);
-  b.onclick=function(e){if(e.detail===0){if(mode==="menu"||mode==="over")start();else if(mode==="running")tap(which);}};
+  b.onclick=function(e){
+   if(e.detail===0&&which!=="boost"){
+    if(mode==="menu"||mode==="over")start();
+    else if(mode==="running")tap(which);
+   }
+  };
+  if(which==="boost"){
+   b.addEventListener("keydown",e=>{
+    if(e.key!==" "&&e.key!=="Enter")return;
+    e.preventDefault();e.stopPropagation();
+    if(mode==="running")beginNitro();
+    else if(mode==="menu"||mode==="over")start();
+   });
+   b.addEventListener("keyup",e=>{
+    if(e.key===" "||e.key==="Enter"){e.preventDefault();e.stopPropagation();endNitro();}
+   });
+  }
   b.addEventListener("pointerdown",function(e){
    if(e.button!==undefined&&e.button!==0)return;
    e.preventDefault();if(mode!=="running"){if(mode==="menu"||mode==="over")start();return;}
    tap(which);if(["up","down","left","right"].includes(which))keys.add(which);
    try{b.setPointerCapture(e.pointerId);}catch(_){}
   });
-  const up=()=>keys.delete(which);
+  const up=()=>{keys.delete(which);if(which==="boost")endNitro();};
   b.addEventListener("pointerup",up);b.addEventListener("pointercancel",up);
   b.addEventListener("lostpointercapture",up);
   b.addEventListener("contextmenu",e=>e.preventDefault());
@@ -462,12 +478,13 @@ function mount(root){
   speedGauge.value.textContent=String(speed).padStart(3,"0");
   lightSegments(speedGauge.segments,clamp(speed/310,0,1));
   const free=selectedLevel.id==="free";
-  const active=mode==="running"&&(boostTime>0||padBoostTime>0);
-  const charge=free?1:clamp(1-boostCooldown/5,0,1);
-  boostGauge.value.textContent=free?"∞":String(active?100:Math.round(charge*100)).padStart(3,"0");
-  boostGauge.statusEl.textContent=free?"ILLIMITÉ":active?(padBoostTime>0?"TURBO":"NITRO"):charge>=.999?"PRÊT":"RECHARGE";
+  const active=mode==="running"&&(nitroActive||padBoostTime>0);
+  const charge=free?1:nitroFuel;
+  boostGauge.value.textContent=free?"∞":String(Math.round(charge*100)).padStart(3,"0");
+  boostGauge.statusEl.textContent=padBoostTime>0?"TURBO":nitroActive?"NITRO":free?"ILLIMITÉ":
+   charge>=.999?"PRÊT":nitroRegenWait>0?"PAUSE":"RECHARGE";
   boostGauge.row.classList.toggle("er-dashboard-active",active);
-  lightSegments(boostGauge.segments,active?1:charge);
+  lightSegments(boostGauge.segments,charge);
   eventText.textContent=mode==="running"&&messageLife>0?message:"";
   eventText.classList.toggle("visible",mode==="running"&&messageLife>0);
   startButton.textContent=mode==="running"?"Ⅱ PAUSE":mode==="paused"?"▶ REPRENDRE":"▶ JOUER";
@@ -976,7 +993,9 @@ function mount(root){
  }
  function keyUp(e){
   const map={arrowleft:"left",a:"left",arrowright:"right",d:"right",arrowup:"up",w:"up",arrowdown:"down",s:"down"};
-  if(map[e.key.toLowerCase()])keys.delete(map[e.key.toLowerCase()]);
+  const k=e.key.toLowerCase();
+  if(k==="q")endNitro();
+  if(map[k])keys.delete(map[k]);
  }
  function boardDown(e){
   if(e.button!==undefined&&e.button!==0)return;
@@ -1011,7 +1030,9 @@ function mount(root){
  screen.addEventListener("pointerup",boardUp);
  screen.addEventListener("pointercancel",boardUp);
  function onVisibility(){if(document.hidden&&mode==="running")togglePause();}
+ function onBlur(){endNitro();keys.clear();}
  document.addEventListener("visibilitychange",onVisibility);
+ window.addEventListener("blur",onBlur);
  overlayButton.onclick=function(){if(mode==="paused")togglePause();else start();};
  document.addEventListener("keydown",keyDown);
  document.addEventListener("keyup",keyUp);
@@ -1019,6 +1040,7 @@ function mount(root){
   live=false;cancelAnimationFrame(raf);keys.clear();
   stopMusic();
   document.removeEventListener("visibilitychange",onVisibility);
+  window.removeEventListener("blur",onBlur);
   document.removeEventListener("keydown",keyDown);
   document.removeEventListener("keyup",keyUp);
   if(ro){ro.disconnect();ro=null;}else window.removeEventListener("resize",fitCanvas);
