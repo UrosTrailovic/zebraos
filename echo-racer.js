@@ -753,7 +753,7 @@ function mount(root){
   if(mode!=="running")return;
   // Single press = tiny rotation; holding the key rotates continuously.
   if(which==="left"||which==="right"){
-   const d=which==="right"?1:-1;
+   const d=which==="right"?-1:1;
    angle=(angle+d*STEP*.085+TAU)%TAU;
    turnVelocity=clamp(turnVelocity+d*.56,-3.25,3.25);
   }
@@ -839,7 +839,9 @@ function mount(root){
  function advance(dt){
   if(mode!=="running"||document.hidden)return;
   dt=clamp(dt,0,.05);elapsed+=dt;
-  const steer=(keys.has("right")?1:0)-(keys.has("left")?1:0);
+  // Inverted orbital steering: pressing LEFT rotates the camera/ship toward
+  // the opposite tunnel angle. Keep keyboard and touch D-pad consistent.
+  const steer=(keys.has("left")?1:0)-(keys.has("right")?1:0);
   const targetTurn=steer*3.50;
   // Accelerate decisively, coast when released, brake quickly by counter-steer.
   const turnRate=steer?(turnVelocity*steer<0?10.2:7.1):3.5;
@@ -1276,7 +1278,7 @@ function mount(root){
   if(!bounds.width)return;
   // Horizontal swipe = orbital rotation, no teleporting inside the circle.
   const dx=clamp(e.clientX-dragX,-bounds.width*.25,bounds.width*.25);
-  const delta=dx/bounds.width*TAU*1.0;
+  const delta=-dx/bounds.width*TAU*1.0;
   const stamp=Number(e.timeStamp)||Date.now();
   const sec=clamp((stamp-dragLastTs)/1000,.016,.12);
   dragVelocity=lerp(dragVelocity,clamp(delta/sec,-3.35,3.35),.43);
