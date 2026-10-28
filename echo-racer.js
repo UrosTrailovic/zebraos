@@ -349,7 +349,7 @@ function mount(root){
   if(rewind){
    flyFade=0;
    try{flySound.pause();flySound.currentTime=0;flySound.volume=0;}catch(_){}
-   if(boostSound)try{boostSound.pause();boostSound.currentTime=0;}catch(_){}
+   if(boostSound)try{boostSound.pause();boostSound.currentTime=0;boostSound.loop=false;boostSoundMode="";}catch(_){}
   }
   if(flySound.paused)try{
    const started=flySound.play();
@@ -359,6 +359,7 @@ function mount(root){
  function pauseEngine(){
   if(flySound)try{flySound.pause();}catch(_){}
   if(boostSound)try{boostSound.pause();}catch(_){}
+  boostSoundMode="";
  }
  function stopEngine(){
   pauseEngine();flyFade=0;
@@ -373,14 +374,20 @@ function mount(root){
   const t=flyFade;
   flySound.volume=FLY_VOLUME*t*t*(3-2*t);
  }
- function playBoostSfx(){
+ function playBoostSfx(loop){
   if(!live||mode!=="running"||!soundEnabled||globalMuted()||document.hidden)return;
   if(!ensureEngineAudio()||!boostSound)return;
   try{
    boostSound.pause();boostSound.currentTime=0;boostSound.volume=BOOST_VOLUME;
+   boostSound.loop=!!loop;boostSoundMode=loop?"nitro":"pad";
    const started=boostSound.play();
    if(started&&started.catch)started.catch(()=>{});
   }catch(_){}
+ }
+ function stopNitroSfx(){
+  if(boostSoundMode!=="nitro"||!boostSound)return;
+  try{boostSound.pause();boostSound.currentTime=0;boostSound.loop=false;}catch(_){}
+  boostSoundMode="";
  }
  function startMusic(rewind){
   if(!live||!soundEnabled||globalMuted()||document.hidden)return;
