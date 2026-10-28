@@ -246,14 +246,14 @@ function mount(root){
   else if(mode==="over")start();
   else togglePause();
  });
- const restartButton=button("↻ RESTART","",start);
- const soundButton=button("♫ SON ON","",()=>{
+ const restartButton=button("↻ RESTART","er-restart",start);
+ const soundButton=button("♫ SON ON","er-sound",()=>{
   soundEnabled=!soundEnabled;save("sfx",soundEnabled?"on":"off");
    if(!soundEnabled)pauseMusic();
    else if(mode==="running"){startMusic(false);if(nitroActive)playBoostSfx(true);}
    renderSound();
  });
- const menuButton=button("☷ MENU","",toMenu);
+ const menuButton=button("☷ MENU","er-menu",toMenu);
  footer.append(startButton,restartButton,soundButton,menuButton);
  const pad=node("div","er-pad zt-handheld");pad.appendChild(footer);
  pad.setAttribute("aria-label","Manette tactile Echo Racer");
