@@ -99,6 +99,11 @@ function mount(root){
  // Dedicated Echo Racer audio system: never touch ZebraAMP or other games.
  let music=null,musicSource=null,musicAnalyser=null,musicBins=null,musicError=false;
  const musicUrl="/assets/games/echoraccaersong.mp3?v=1";
+ // Two lightweight players independent of the music analyser.
+ const flyUrl="/assets/spaceship-fly-sfx.mp3";
+ const boostUrl="/assets/boostsfx.mp3";
+ const FLY_VOLUME=.13,BOOST_VOLUME=.43,FLY_FADE_SECONDS=1.5;
+ let flySound=null,boostSound=null,flyFade=0;
  const audioFx={bass:0,mid:0,high:0,kick:0,previousBass:0,slowBass:0,beatCooldown:0,energy:0};
  let dragPointer=null,dragX=0,dragLastTs=0,dragVelocity=0;
  const wrap=node("section","er zg zg-retro");
@@ -305,8 +310,63 @@ function mount(root){
   }catch(_){music=null;musicAnalyser=null;musicBins=null;}
   return music;
  }
+ // Audio elements are created lazily inside the first game start gesture.
+ function ensureEngineAudio(){
+  if(!window.Audio)return false;
+  try{
+   if(!flySound){
+    flySound=new window.Audio(flyUrl);
+    flySound.loop=true;flySound.preload="auto";flySound.volume=0;
+   }
+   if(!boostSound){
+    boostSound=new window.Audio(boostUrl);
+    boostSound.loop=false;boostSound.preload="auto";boostSound.volume=BOOST_VOLUME;
+   }
+  }catch(_){return false;}
+  return !!flySound;
+ }
+ function startEngine(rewind){
+  if(!live||mode!=="running"||!soundEnabled||globalMuted()||document.hidden)return;
+  if(!ensureEngineAudio())return;
+  if(rewind){
+   flyFade=0;
+   try{flySound.pause();flySound.currentTime=0;flySound.volume=0;}catch(_){}
+   if(boostSound)try{boostSound.pause();boostSound.currentTime=0;}catch(_){}
+  }
+  if(flySound.paused)try{
+   const started=flySound.play();
+   if(started&&started.catch)started.catch(()=>{});
+  }catch(_){}
+ }
+ function pauseEngine(){
+  if(flySound)try{flySound.pause();}catch(_){}
+  if(boostSound)try{boostSound.pause();}catch(_){}
+ }
+ function stopEngine(){
+  pauseEngine();flyFade=0;
+  if(flySound)try{flySound.currentTime=0;flySound.volume=0;}catch(_){}
+  if(boostSound)try{boostSound.currentTime=0;}catch(_){}
+ }
+ function tickEngine(dt){
+  if(!flySound||mode!=="running")return;
+  if(!soundEnabled||globalMuted()||document.hidden){pauseEngine();return;}
+  if(flySound.paused)return;
+  flyFade=clamp(flyFade+clamp(dt,0,.07)/FLY_FADE_SECONDS,0,1);
+  const t=flyFade;
+  flySound.volume=FLY_VOLUME*t*t*(3-2*t);
+ }
+ function playBoostSfx(){
+  if(!live||mode!=="running"||!soundEnabled||globalMuted()||document.hidden)return;
+  if(!ensureEngineAudio()||!boostSound)return;
+  try{
+   boostSound.pause();boostSound.currentTime=0;boostSound.volume=BOOST_VOLUME;
+   const started=boostSound.play();
+   if(started&&started.catch)started.catch(()=>{});
+  }catch(_){}
+ }
  function startMusic(rewind){
   if(!live||!soundEnabled||globalMuted()||document.hidden)return;
+  startEngine(rewind);
   const track=ensureMusic();if(!track)return;
   const context=audioCtx;
   if(context&&context.state==="suspended")try{
@@ -319,9 +379,12 @@ function mount(root){
    if(started&&started.catch)started.catch(()=>{musicError=true;});
   }catch(_){musicError=true;}
  }
- function pauseMusic(){if(music)try{music.pause();}catch(_){}}
+ function pauseMusic(){
+  if(music)try{music.pause();}catch(_){}
+  pauseEngine();
+ }
  function stopMusic(){
-  pauseMusic();
+  pauseMusic();stopEngine();
   if(music)try{music.currentTime=0;}catch(_){}
   audioFx.bass=audioFx.mid=audioFx.high=audioFx.kick=audioFx.previousBass=audioFx.slowBass=audioFx.energy=0;
   audioFx.beatCooldown=0;
@@ -474,7 +537,7 @@ function mount(root){
   boostTime=1.7;boostCooldown=selectedLevel.id==="free"?0:5;
   shipBoostFade=1;turboLight=1;
   message=selectedLevel.id==="free"?"BOOST ∞":"BOOST ×2";messageLife=.8;
-  beep("collect");renderHud();
+  playBoostSfx();beep("collect");renderHud();
  }
  function createWave(){
   const choices=selectedLevel.patterns||Array.from({length:PATTERN_COUNT},(_,i)=>i);
@@ -567,7 +630,7 @@ function mount(root){
      boostTime=0;
      score+=275*scoreMultiplier;
      pulseGlow=.68;message="TURBO PAD +275";messageLife=1.2;
-     burst(angle,"#72f7ff",34);beep("collect");
+     burst(angle,"#72f7ff",34);playBoostSfx();beep("collect");
     }
    }
   }
@@ -845,6 +908,7 @@ function mount(root){
    return;
   }
   if(mode==="running")advance(dt);
+  tickEngine(dt);
   const turbo=mode==="running"&&(boostTime>0||padBoostTime>0)?1:0;
   if(turbo){shipBoostFade=1;turboLight=1;}
   else{
@@ -935,6 +999,10 @@ function mount(root){
   if(musicSource)try{musicSource.disconnect();}catch(_){}
   if(musicAnalyser)try{musicAnalyser.disconnect();}catch(_){}
   if(music){music.onerror=null;try{music.removeAttribute("src");music.load();}catch(_){}}
+  for(const sound of [flySound,boostSound]){
+   if(sound)try{sound.pause();sound.removeAttribute("src");sound.load();}catch(_){}
+  }
+  flySound=null;boostSound=null;
   for(const state of ["idle","boost"]){
    shipSprites[state].onload=shipSprites[state].onerror=null;
    shipSprites[state].removeAttribute("src");
@@ -952,6 +1020,7 @@ function mount(root){
   ship:()=>({idleLoaded:shipReady.idle,boostLoaded:shipReady.boost,boostMix:shipBoostFade,tunnelLight:turboLight}),
   level:()=>({id:selectedLevel.id,free:selectedLevel.id==="free",gap:selectedLevel.gap}),
   gauges:()=>({speed:Math.round(currentSpeed*25),charge:selectedLevel.id==="free"?1:clamp(1-boostCooldown/5,0,1),boosting:boostTime>0||padBoostTime>0}),
+  engineAudio:()=>({flyLoaded:!!flySound,boostLoaded:!!boostSound,flyPlaying:!!flySound&&!flySound.paused,boostPlaying:!!boostSound&&!boostSound.paused,flyVolume:flySound?flySound.volume:0,flyFade}),
   selectLevel:(id)=>{
    if(mode!=="menu")return false;
    const level=LEVELS.find(x=>x.id===id);if(!level)return false;
