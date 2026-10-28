@@ -1183,6 +1183,28 @@ function mount(root){
   }
   c.restore();
  }
+ // Shield collectible attached to the same bent tube as every obstacle.
+ function drawShieldPickup(pickup){
+  if(pickup.credited||pickup.z>RENDER_FAR_Z||pickup.z<-.45)return;
+  const alpha=revealOpacity(pickup.z);if(alpha<.003)return;
+  const a=screenAngle((pickup.sectors[0]+1)*STEP);
+  const pos=wallPoint(a,Math.max(0,pickup.z));
+  const size=clamp(pos.r*.22,3.6,47),glow=.78+.22*Math.sin(elapsed*7+pickup.shimmer);
+  c.save();c.globalAlpha*=alpha;c.translate(pos.x,pos.y);
+  c.shadowColor="#66ffe2";c.shadowBlur=9*glow;
+  c.fillStyle="rgba(6,51,58,.74)";c.strokeStyle="#9fffe4";
+  c.lineWidth=Math.max(.9,size*.095);
+  c.beginPath();c.moveTo(0,-size);
+  c.lineTo(size*.77,-size*.66);c.lineTo(size*.65,size*.34);
+  c.quadraticCurveTo(0,size*1.15,0,size*1.22);
+  c.quadraticCurveTo(-size*.65,size*.42,-size*.65,size*.34);
+  c.lineTo(-size*.77,-size*.66);c.closePath();c.fill();c.stroke();
+  c.shadowBlur=0;c.lineWidth=Math.max(.7,size*.085);
+  c.strokeStyle="#fff1ae";c.beginPath();
+  c.moveTo(-size*.38,-size*.04);c.lineTo(-size*.07,size*.32);
+  c.lineTo(size*.43,-size*.4);c.stroke();
+  c.restore();
+ }
  function drawPad(pad){
   if(pad.z>RENDER_FAR_Z||pad.z<-.45||pad.credited)return;
   const reveal=revealOpacity(pad.z);
@@ -1248,6 +1270,7 @@ function mount(root){
   drawTunnel(now);
   // Newest waves/pads are already the farthest; no per-frame copies or sort.
   for(let i=pads.length-1;i>=0;i--)drawPad(pads[i]);
+  for(let i=shields.length-1;i>=0;i--)drawShieldPickup(shields[i]);
   for(let i=waves.length-1;i>=0;i--)drawWave(waves[i]);
   c.restore();
   for(const p of sparks){
@@ -1444,6 +1467,13 @@ function mount(root){
    fadeDistance:APPEAR_FADE_DEPTH,
    ringCount:Math.ceil(RENDER_FAR_Z/.48)+1,panelRows:Math.ceil(RENDER_FAR_Z/.81)+1}),
   bendAt:(z)=>({...tunnelBend(z)}),revealOpacity,
+  pickups:()=>shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),
+  addTestShield:(z,sector=0)=>{
+   if(mode!=="running")return false;
+   const id=((sector%SECTORS)+SECTORS)%SECTORS;
+   shields.push({z,sectors:[id,(id+1)%SECTORS],credited:false,shimmer:0});
+   return true;
+  },
   pattern:pattern,collisionAt:collisionAt,hitDepth:HIT_Z
  };
  renderSound();toMenu();renderHud();
