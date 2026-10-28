@@ -315,3 +315,82 @@
  font-family:monospace;
  font-weight:bold;
 }
+
+
+/* Echo Racer 4.0 — Obani-style magenta/cyan arcade hardware.
+   Tactile ZebraOS controls remain unchanged; only this app is themed. */
+.window-body.zebra-game-body:has(.er){background:#11091b}
+.zebra-game-body .zg.er{
+ --er-green:#ff7bdf;--er-mint:#90f5ff;--er-dark:#100719;
+ color:#f3d0fb;
+ background-color:#19101f;
+ background-image:linear-gradient(120deg,rgba(37,9,51,.86),rgba(24,9,38,.78)),url("/assets/zebraamp/ampbg.png");
+ background-size:auto,256px 256px;
+ border-color:#827289;
+ box-shadow:inset 2px 2px 0 #e4c9e7,inset -2px -2px 0 #090510;
+}
+.zebra-game-body .er .er-heading{
+ border-color:#bd8bc4;
+ background:linear-gradient(#16091e,#48204e 48%,#130617);
+ box-shadow:inset 1px 1px #f9dbff,inset 0 0 20px #671b73,0 2px 0 #150916;
+}
+.er-echo{color:#ffd7f8;text-shadow:0 0 6px #ff8add,0 0 15px #e945ba}
+.er-racer{color:#81f7ff;text-shadow:0 0 8px #81faff,0 0 20px #3be0fa}
+.er-heading-sub{color:#db9fe2}
+.er-meter{
+ background:linear-gradient(#130920,#0b0619);
+ border-color:#846690;
+ box-shadow:inset 0 0 10px #602d745b,1px 2px #080510b0;
+}
+.er-meter span{color:#c2a0cf}
+.er-meter strong{color:#ffc3f3;text-shadow:0 0 7px #fc57db,0 0 14px #8b30a9}
+.er-meter:nth-child(3) strong{color:#ffb9f2}
+.er-meter:nth-child(4) strong{color:#81f6ff}
+.er-frame{
+ border-color:#c4a7ce;background:#090414;
+ box-shadow:0 0 0 2px #200e2b,inset 0 0 22px #000,2px 3px 0 #0b0710;
+}
+.er-screen{
+ background:#090414;border-color:#6d2b79;
+ box-shadow:inset 0 0 28px #05020a,0 0 15px #4b175f;
+}
+.er-canvas{background:#090414}
+.er-crt::before{background:linear-gradient(180deg,transparent 0%,rgba(255,107,235,.055) 48%,transparent 53%)}
+.er-telemetry{
+ background:rgba(17,5,27,.82);
+ border-top-color:rgba(251,100,220,.5);
+ color:#e8afea;text-shadow:0 0 7px #af3bce;
+}
+.er-signal.on{color:#90edff;text-shadow:0 0 8px #3de4ff}
+.er-overlay{
+ background:radial-gradient(ellipse,rgba(29,8,52,.80),rgba(6,2,15,.88) 72%);
+ color:#f4cafa;text-shadow:0 0 10px #e142d0;
+}
+.er-title{
+ color:#fff0ff;
+ text-shadow:0 0 7px #ff9ce9,0 0 23px #ff3ddd,3px 3px #210826;
+}
+.er-title-sub{color:#a6f0ff}
+.er-start-call{
+ border-color:#ee6ad5;background:#220d30;color:#ffeaff;
+ text-shadow:0 0 9px #ff8cf3;
+ box-shadow:0 0 17px #d523b87a,inset 0 0 14px #551c63;
+}
+.er-help{color:#ffd3f5}
+.er-hint{color:#bc9ece}
+.zebra-game-body .er .er-overlay-button{
+ border-color:#f1d9ef;
+ background:linear-gradient(#f5e5f5,#bba7c1);
+ color:#321339;box-shadow:2px 3px 0 #1a0a21;
+}
+.zebra-game-body .er .er-play{
+ background:linear-gradient(#ffcaf5,#e07dc8 54%,#a449a5);
+ border-color:#ffe0fb #74366e #75316d #ffe0fb;
+ color:#2d102d;
+}
+.er-key-guide{color:#d0a3d7}
+.zapp-racer{
+ background:radial-gradient(circle at center,#261139 10%,#ae389c 56%,#18091e 100%);
+ color:#95faff;text-shadow:0 0 9px #75f0ff;
+ border:1px solid #ff76d9;
+}

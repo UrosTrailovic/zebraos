@@ -24,7 +24,9 @@ function rectRound(ctx,x,y,w,h,r){
 }
 /* Player travels along the INNER CIRCUMFERENCE of a perfectly straight tube.
  * The camera is the player: position is one world-space ANGLE, not an XY ship. */
-const SECTORS=16,STEP=TAU/SECTORS,HIT_Z=1.6,SPAWN_Z=6.3;
+const SECTORS=16,STEP=TAU/SECTORS,HIT_Z=1.6,SPAWN_Z=9.5;
+// Physical distance between gates, not a timer: speed and obstacle gaps stay independent.
+const GAP_MIN=9.2,GAP_MAX=11.0,START_GATE_AT=1.05;
 function angularDelta(a,b){return ((a-b+PI)%TAU+TAU)%TAU-PI;}
 function pattern(kind){
  const cells=[];
@@ -59,7 +61,7 @@ function mount(root){
  root.innerHTML="";
  let live=true,raf=0,ro=null,last=0,mode="menu",keys=new Set();
  let angle=0,turnVelocity=0,lives=MAX_LIVES,score=0,best=Number(load("best","0"))||0;
- let distance=0,travel=0,passed=0,combo=0,waves=[],spawnDelay=1.1,trail=[],sparks=[];
+ let distance=0,travel=0,passed=0,combo=0,waves=[],nextGateAt=START_GATE_AT,trail=[],sparks=[],currentSpeed=0;
  let invuln=0,pulseCharge=2,pulseGlow=0,boostTime=0,boostCooldown=0;
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
  let soundEnabled=load("sfx","on")!=="off",audioCtx=null;
@@ -76,7 +78,7 @@ function mount(root){
  const scoreEl=metric("SCORE"),bestEl=metric("RECORD"),shieldEl=metric("BOUCLIERS"),energyEl=metric("PULSE");
  const frame=node("div","er-frame");
  const screen=node("div","er-screen");
- const canvas=node("canvas","er-canvas");canvas.width=W;canvas.height=H;canvas.setAttribute("aria-label","Tunnel vert phosphore, esquive les obstacles rouges");
+ const canvas=node("canvas","er-canvas");canvas.width=W;canvas.height=H;canvas.setAttribute("aria-label","Tunnel spatial violet et rose, rotation autour des barrières lumineuses");
  const c=canvas.getContext("2d",{alpha:false});
  if(!c)throw Error("Canvas 2D indisponible");
  const sheen=node("div","er-crt");sheen.setAttribute("aria-hidden","true");
@@ -188,7 +190,7 @@ function mount(root){
   bestEl.textContent=Math.floor(best).toLocaleString("fr");
   shieldEl.textContent="◆".repeat(lives)+"◇".repeat(MAX_LIVES-lives);
   energyEl.textContent="✦".repeat(pulseCharge)+"·".repeat(3-pulseCharge);
-  speedEl.textContent="VITESSE "+String(Math.min(9,1+Math.floor(distance/550))).padStart(2,"0");
+  speedEl.textContent="VITESSE "+String(clamp(Math.round((currentSpeed||2.35)*1.9),1,9)).padStart(2,"0");
   signal.textContent=mode==="running"?"● SIGNAL":mode==="paused"?"● PAUSE":"● VEILLE";
   signal.classList.toggle("on",mode==="running");
   warning.textContent=boostTime>0?"BOOST ×2":invuln>0?"BOUCLIER":messageLife>0?message:"—";
@@ -196,9 +198,9 @@ function mount(root){
  }
  function start(){
   mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
-  waves=[];spawnDelay=1.1;elapsed=0;nextWave=0;trail=[];sparks=[];
+  waves=[];nextGateAt=START_GATE_AT;elapsed=0;nextWave=0;trail=[];sparks=[];currentSpeed=0;
   invuln=0;pulseCharge=2;pulseGlow=boostTime=boostCooldown=flash=shake=0;
-  message="ÉVITE LES OBSTACLES";messageLife=2;keys.clear();overlay.hidden=true;
+  message="TROUVE LE PASSAGE";messageLife=2;keys.clear();overlay.hidden=true;
   beep("collect");renderHud();
  }
  function toMenu(){
@@ -259,32 +261,33 @@ function mount(root){
   if(nextWave===kind)kind=(kind+2)%7;nextWave=kind;
   const offset=Math.floor(rand(0,SECTORS));
   const sectors=pattern(kind).map(id=>(id+offset)%SECTORS);
-  return {kind,sectors,z:SPAWN_Z,length:.7,cleared:false,credited:false};
+  return {kind,sectors,z:SPAWN_Z,length:.86,cleared:false,credited:false};
  }
  function advance(dt){
   if(mode!=="running"||document.hidden)return;
   dt=clamp(dt,0,.05);elapsed+=dt;
   const steer=(keys.has("right")?1:0)-(keys.has("left")?1:0);
-  const targetTurn=steer*2.85;
+  const targetTurn=steer*3.45;
   turnVelocity+=(targetTurn-turnVelocity)*Math.min(1,dt*11);
   angle=(angle+turnVelocity*dt+TAU)%TAU;
   const throttle=(keys.has("up")?.27:0)-(keys.has("down")?.23:0);
   const boostMultiplier=boostTime>0?1.5:1;
-  const speed=clamp(.78+Math.min(.37,distance/1800*.4)+throttle,.47,1.65)*boostMultiplier;
+  const speed=clamp(2.35+Math.min(.90,distance/5000*.25)+throttle*1.2,1.65,3.45)*boostMultiplier;
+  currentSpeed=speed;
   // One physical depth displacement: both geometry (travel) and gates use it.
   const dz=speed*dt;
   travel+=dz;
   distance+=dz*125;
   score+=dt*(12+Math.min(28,distance/240))*boostMultiplier;
-  spawnDelay-=dt;
   invuln=Math.max(0,invuln-dt);boostTime=Math.max(0,boostTime-dt);
   boostCooldown=Math.max(0,boostCooldown-dt);
   pulseGlow=Math.max(0,pulseGlow-dt);messageLife=Math.max(0,messageLife-dt);
   flash=Math.max(0,flash-dt*1.8);shake=Math.max(0,shake-dt*16);
-  if(spawnDelay<=0){
+  // Separate obstacles by WORLD distance, not seconds. At faster speeds,
+  // each gate still has a long, empty tunnel leading to the next one.
+  if(travel>=nextGateAt){
    waves.push(createWave());
-   // A full revolution is possible between distant gates at normal speed.
-   spawnDelay=Math.max(1.8,2.7-distance/3000)+rand(-.10,.15);
+   nextGateAt+=rand(GAP_MIN,GAP_MAX);
   }
   for(const w of waves){
    const oldZ=w.z;
@@ -323,65 +326,106 @@ function mount(root){
   return{x:g.cx+Math.cos(theta)*r,y:g.cy+Math.sin(theta)*r,r};
  }
  function screenAngle(worldAngle){return worldAngle-angle+PI/2;}
- function drawRing(z){
-  if(z<0)return;
-  const g=wallGeom(),r=wallPoint(0,z).r;
-  const alpha=clamp(1-z/13,0,1);
-  c.beginPath();c.arc(g.cx,g.cy,r,0,TAU);
-  c.strokeStyle="rgba(120,255,45,"+(.22+alpha*.75)+")";
-  c.lineWidth=1.15+alpha*2.1;c.shadowColor="#72ff28";c.shadowBlur=9;
-  c.stroke();
- }
- function drawPlate(a0,a1,z,length){
-  const near=Math.max(.05,z),far=near+length;
-  const front=[],back=[];
-  for(let i=0;i<=12;i++){
-   const a=a0+(a1-a0)*i/12;
-   front.push(wallPoint(a,near));back.push(wallPoint(a,far));
+ // A lightweight PS2-era techno tunnel: dark segmented metal plates, glowing
+ // magenta hoops, cyan energy conduits and animated wall LEDs. Every surface
+ // uses wallPoint(z), the *same* cylinder as the actual obstacle geometry.
+ function wallPatch(a0,a1,z0,z1,fill,stroke,steps){
+  const n=steps||3,near=[],far=[];
+  for(let k=0;k<=n;k++){
+   const a=a0+(a1-a0)*k/n;
+   near.push(wallPoint(a,z0));far.push(wallPoint(a,z1));
   }
-  c.save();c.beginPath();
-  front.forEach((p,i)=>{if(!i)c.moveTo(p.x,p.y);else c.lineTo(p.x,p.y);});
-  for(let i=back.length-1;i>=0;i--)c.lineTo(back[i].x,back[i].y);
-  c.closePath();
-  c.fillStyle="#e8293d";c.strokeStyle="#ff7983";
-  c.lineWidth=1.3;c.shadowColor="#ff293a";c.shadowBlur=13;
-  c.fill();c.stroke();c.shadowBlur=0;
   c.beginPath();
-  back.forEach((p,i)=>{if(!i)c.moveTo(p.x,p.y);else c.lineTo(p.x,p.y);});
-  c.strokeStyle="#7d1320";c.lineWidth=2;c.stroke();c.restore();
+  near.forEach((p,k)=>{if(k)c.lineTo(p.x,p.y);else c.moveTo(p.x,p.y);});
+  for(let k=far.length-1;k>=0;k--)c.lineTo(far[k].x,far[k].y);
+  c.closePath();c.fillStyle=fill;c.fill();
+  if(stroke){c.strokeStyle=stroke;c.lineWidth=.65;c.stroke();}
+ }
+ function drawRing(z,index){
+  if(z<0||z>15)return;
+  const g=wallGeom(),r=wallPoint(0,z).r;
+  const near=clamp(1-z/15,0,1),cyan=index%5===0;
+  c.beginPath();c.arc(g.cx,g.cy,r,0,TAU);
+  c.strokeStyle=cyan?"rgba(114,243,255,"+(.24+.7*near)+")":
+                         "rgba(255,63,213,"+(.18+.7*near)+")";
+  c.lineWidth=(cyan?1.65:1.12)+near*(cyan?2.2:1.65);
+  c.shadowColor=cyan?"#50f6ff":"#ff35d5";c.shadowBlur=7+5*near;
+  c.stroke();c.shadowBlur=0;
  }
  function drawTunnel(now){
   const g=wallGeom();
-  c.fillStyle="#000502";c.fillRect(0,0,W,H);
-  const gradient=c.createRadialGradient(g.cx,g.cy,4,g.cx,g.cy,g.R*1.2);
-  gradient.addColorStop(0,"#001109");
-  gradient.addColorStop(.42,"#001008");
-  gradient.addColorStop(1,"#000100");
+  c.fillStyle="#05020a";c.fillRect(0,0,W,H);
+  const gradient=c.createRadialGradient(g.cx,g.cy,3,g.cx,g.cy,g.R*1.35);
+  gradient.addColorStop(0,"#0b0619");
+  gradient.addColorStop(.4,"#0e071b");
+  gradient.addColorStop(.81,"#1b0a24");
+  gradient.addColorStop(1,"#05020b");
   c.fillStyle=gradient;c.fillRect(0,0,W,H);
-  c.save();c.lineCap="round";
-  // The camera is straight down the axis at every angle; only tube ROLL
-  // changes. Vanishing point is always EXACTLY at canvas center.
-  for(let i=0;i<24;i++){
-   const theta=screenAngle(i*TAU/24);
-   const near=wallPoint(theta,.05),far=wallPoint(theta,13);
-   c.beginPath();c.moveTo(near.x,near.y);c.lineTo(far.x,far.y);
-   const accent=i%6===0;
-   c.strokeStyle=accent?"rgba(68,245,188,.73)":"rgba(108,255,44,.57)";
-   c.lineWidth=accent?2.6:1.55;
-   c.shadowColor=accent?"#31ffd5":"#73ff35";c.shadowBlur=8;
-   c.stroke();
+  c.save();c.lineCap="round";c.lineJoin="round";
+  // An indigo panel skin follows the camera's angular roll. The panels move
+  // at exactly the same world speed as the neon hoops and the obstacle walls.
+  const panelLength=.81,panelOffset=(mode==="menu"?(now*.0016):travel)%panelLength;
+  for(let row=19;row>=0;row--){
+   const z=row*panelLength-panelOffset;
+   if(z<0||z>14.6)continue;
+   const fade=clamp(1-z/15,0,1);
+   for(let sector=0;sector<SECTORS;sector++){
+    const a=screenAngle(sector*STEP),b=a+STEP;
+    const fill=(sector+row)%4===0?"rgba(107,30,113,.42)":
+      (sector+row)%2?"rgba(44,16,62,.52)":"rgba(67,18,79,.47)";
+    wallPatch(a+.006,b-.006,z,z+panelLength,fill,
+      "rgba(186,77,188,.13)",3);
+    // Tiny luminous rivets flash toward the camera along with the wall.
+    if(row%3===0&&sector%4===1){
+     const p=wallPoint((a+b)*.5,z+.28);
+     c.fillStyle="rgba(248,73,226,"+(.24+.65*fade)+")";
+     c.shadowColor="#fa39d8";c.shadowBlur=5;
+     c.beginPath();c.arc(p.x,p.y,Math.max(.8,2.7*fade),0,TAU);c.fill();
+     c.shadowBlur=0;
+    }
+   }
   }
-  const spacing=.48,phase=mode==="menu"?(now*.00012)%spacing:travel%spacing;
-  for(let i=30;i>=0;i--)drawRing(i*spacing-phase);
+  // Industrial radial rails: structural shadow first, phosphor trace on top.
+  for(let i=0;i<24;i++){
+   const a=screenAngle(i*TAU/24);
+   const near=wallPoint(a,.04),far=wallPoint(a,14.6);
+   const cyan=i%4===0;
+   c.beginPath();c.moveTo(near.x,near.y);c.lineTo(far.x,far.y);
+   c.strokeStyle=cyan?"rgba(65,218,246,.13)":"rgba(253,75,210,.1)";
+   c.lineWidth=cyan?9:5;c.shadowBlur=0;c.stroke();
+   c.strokeStyle=cyan?"rgba(109,240,255,.92)":"rgba(210,76,237,.52)";
+   c.lineWidth=cyan?2.5:1.4;
+   c.shadowColor=cyan?"#48eefe":"#ff48c6";c.shadowBlur=cyan?12:5;
+   c.stroke();c.shadowBlur=0;
+  }
+  const spacing=.48;
+  const phase=(mode==="menu"?(now*.0016):travel)%spacing;
+  for(let i=31;i>=0;i--)drawRing(i*spacing-phase,i);
   c.restore();
+  // Deep indigo pupil, feathered rather than a flat black pasted circle.
+  const core=c.createRadialGradient(g.cx,g.cy,0,g.cx,g.cy,g.R*.17);
+  core.addColorStop(0,"rgba(8,1,17,.9)");
+  core.addColorStop(1,"rgba(8,1,17,0)");
+  c.fillStyle=core;
+  c.fillRect(g.cx-g.R*.2,g.cy-g.R*.2,g.R*.4,g.R*.4);
  }
  function drawWave(w){
-  if(w.cleared||w.z>13||w.z<-.35)return;
-  // Plates sit on the INNER WALL. Same angular coordinate and depth as rings.
+  if(w.cleared||w.z>15||w.z<-.40)return;
+  // Same radius, angular sector and depth interpolation as drawTunnel().
+  c.save();c.lineJoin="round";
   for(const id of w.sectors){
-   const a=screenAngle(id*STEP),b=screenAngle((id+1)*STEP);
-   drawPlate(a+.014,b-.014,w.z,w.length);
+   const a=screenAngle(id*STEP)+.013,b=screenAngle((id+1)*STEP)-.013;
+   const z=Math.max(.04,w.z),far=z+w.length;
+   c.shadowColor="#ff4e82";c.shadowBlur=10;
+   wallPatch(a,b,z,far,"#e62a61","#ffb19c",6);
+   c.shadowBlur=0;
+   // Pale amber warning edge separates dangerous gates from pink wall trim.
+   const q0=wallPoint(a+.025,z+.035),q1=wallPoint(b-.025,z+.035);
+   c.beginPath();c.moveTo(q0.x,q0.y);c.lineTo(q1.x,q1.y);
+   c.strokeStyle="rgba(255,226,173,.88)";c.lineWidth=1.25;
+   c.shadowColor="#ff8d92";c.shadowBlur=8;c.stroke();c.shadowBlur=0;
   }
+  c.restore();
  }
  function drawFPV(){
   const g=wallGeom(),plane=HIT_Z,p=wallPoint(PI/2,plane);
@@ -389,15 +433,15 @@ function mount(root){
   const blocked=nearest&&collisionAt(angle,nearest);
   c.save();c.beginPath();
   c.arc(g.cx,g.cy,p.r,PI/2-.19,PI/2+.19);
-  c.strokeStyle=blocked?"#ff5665":"#80fff0";
-  c.shadowColor=blocked?"#ff253b":"#32ffe1";
+  c.strokeStyle=blocked?"#ffab82":"#7ff3ff";
+  c.shadowColor=blocked?"#ff4785":"#39eaff";
   c.shadowBlur=15;c.lineWidth=4;c.stroke();
   c.beginPath();c.moveTo(p.x,p.y+5);c.lineTo(p.x-6,p.y+16);
   c.lineTo(p.x+6,p.y+16);c.closePath();
-  c.fillStyle=blocked?"#ffced2":"#d4fffa";c.fill();
+  c.fillStyle=blocked?"#ffe4ac":"#dcfcff";c.fill();
   if(pulseGlow>0){
    c.beginPath();c.arc(g.cx,g.cy,p.r+(1-pulseGlow)*W*.3,0,TAU);
-   c.lineWidth=3;c.strokeStyle="rgba(126,255,236,"+(pulseGlow*1.6)+")";
+   c.lineWidth=3;c.strokeStyle="rgba(99,245,255,"+(pulseGlow*1.6)+")";
    c.stroke();
   }
   c.restore();
@@ -419,7 +463,7 @@ function mount(root){
   c.globalAlpha=1;
   drawFPV();
   if(flash>0){
-   c.fillStyle="rgba(255,42,56,"+(flash*.28)+")";c.fillRect(0,0,W,H);
+   c.fillStyle="rgba(255,70,143,"+(flash*.23)+")";c.fillRect(0,0,W,H);
   }
  }
  function frameTick(now){
