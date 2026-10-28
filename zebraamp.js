@@ -43,6 +43,19 @@ function prepareNativeAudio(media){
 }
 function stamp(){return "pl-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);}
 function label(name){return String(name||"Sans titre").replace(/\.[^.]+$/,"").slice(0,150);}
+/* Crédits musicaux distincts de ZebraOS, qui n'est que l'interface.
+ * Le nom du fichier fait foi : pas de changement des titres ni du son. */
+function trackArtist(track){
+ if(!track||track.kind!=="public")return "LOCAL";
+ var path=String(track.path||"");
+ if(path.indexOf("STUDIO/BUREAU/Zebra Tape 2/")===0){
+  var name=path.split("/").pop().replace(/\.[^.]+$/,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+  if(name==="6stouse")return "Jony";
+  if(name==="5iwannadance")return "Zebra & Ekko";
+  if(name==="1domaintro"||name==="9backhome")return "Zebra & Cubic";
+ }
+ return "Zebra";
+}
 function getList(){return current===ALBUM?album:playlists.find(function(p){return p.id===current;})||album;}
 function getTrack(){return getList().tracks.find(function(t){return t.id===currentId;})||null;}
 function format(t){if(!Number.isFinite(t)||t<0)return "00:00";t=Math.floor(t);return String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");}
@@ -833,7 +846,7 @@ function render(){
    row.appendChild(playBtn);
    var info=el("div","amp3-track-info");
    info.appendChild(el("span","amp3-track-title",(i+1)+". "+t.name));
-   info.appendChild(el("small","amp3-track-source",t.kind==="public"?"ZEBRAOS":"LOCAL"));
+   info.appendChild(el("small","amp3-track-source",trackArtist(t)));
    row.appendChild(info);
    if(editable){
     row.appendChild(b("↑",function(){moveTrack(t.id,-1);},"amp3-small"));
