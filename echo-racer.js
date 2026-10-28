@@ -112,11 +112,33 @@ function mount(root){
  // The original PNGs are untouched; a failed download preserves gameplay.
  const shipSprites={idle:new Image(),boost:new Image()};
  const shipReady={idle:false,boost:false};
- let shipBoostFade=0;
+ let shipBoostFade=0,featheredBoost=null;
+ // Uploaded boost artwork is cut at the extreme sides; softly blend them
+ // into the complete idle hull to hide hard rectangular exhaust edges.
+ function softenBoostEdges(sprite){
+  const offscreen=document.createElement("canvas");
+  offscreen.width=sprite.naturalWidth;offscreen.height=sprite.naturalHeight;
+  const pen=offscreen.getContext("2d");
+  if(!pen)return sprite;
+  pen.drawImage(sprite,0,0);
+  pen.globalCompositeOperation="destination-in";
+  const edge=pen.createLinearGradient(0,0,offscreen.width,0);
+  edge.addColorStop(0,"rgba(255,255,255,0)");
+  edge.addColorStop(.105,"rgba(255,255,255,1)");
+  edge.addColorStop(.895,"rgba(255,255,255,1)");
+  edge.addColorStop(1,"rgba(255,255,255,0)");
+  pen.fillStyle=edge;pen.fillRect(0,0,offscreen.width,offscreen.height);
+  return offscreen;
+ }
  for(const state of ["idle","boost"]){
   const sprite=shipSprites[state];
   sprite.decoding="async";
-  sprite.onload=()=>{if(live)shipReady[state]=sprite.naturalWidth>0;};
+  sprite.onload=()=>{
+   if(!live)return;
+   shipReady[state]=sprite.naturalWidth>0;
+   if(state==="boost"&&shipReady.boost)
+    featheredBoost=softenBoostEdges(sprite);
+  };
   sprite.onerror=()=>{if(live)shipReady[state]=false;};
   sprite.src="/assets/games/echo-ship-"+state+".png";
  }
@@ -717,30 +739,18 @@ function mount(root){
   if(shipReady.idle)c.drawImage(shipSprites.idle,-dw*.5,-dh,dw,dh);
   if(shipReady.boost){
    c.globalAlpha=shipReady.idle?shipBoostFade:1;
-   if(c.globalAlpha>.005)c.drawImage(shipSprites.boost,-dw*.5,-dh,dw,dh);
+   if(c.globalAlpha>.005)c.drawImage(featheredBoost||shipSprites.boost,-dw*.5,-dh,dw,dh);
   }
   c.restore();
  }
- function drawFPV(){
-  const g=wallGeom(),plane=HIT_Z,p=wallPoint(PI/2,plane);
-  const nearest=waves.filter(w=>!w.cleared&&w.z>=HIT_Z&&w.z<HIT_Z+1.55).sort((a,b)=>a.z-b.z)[0];
-  const nearestPad=pads.filter(p=>!p.credited&&p.z>=HIT_Z&&p.z<HIT_Z+1.8).sort((a,b)=>a.z-b.z)[0];
-  const blocked=nearest&&collisionAt(angle,nearest);
-  const onPad=!blocked&&nearestPad&&collisionAt(angle,nearestPad);
-  c.save();c.beginPath();
-  c.arc(g.cx,g.cy-g.offset*p.r,p.r,PI/2-.19,PI/2+.19);
-  c.strokeStyle=blocked?"#ffab82":onPad?"#faff8e":"#7ff3ff";
-  c.shadowColor=blocked?"#ff4785":onPad?"#ffff55":"#39eaff";
-  c.shadowBlur=4;c.lineWidth=3.5;c.stroke();
-  c.beginPath();c.moveTo(p.x,p.y+5);c.lineTo(p.x-6,p.y+16);
-  c.lineTo(p.x+6,p.y+16);c.closePath();
-  c.fillStyle=blocked?"#ffe4ac":onPad?"#faffb9":"#dcfcff";c.fill();
-  if(pulseGlow>0){
-   c.beginPath();c.arc(g.cx,g.cy,p.r+(1-pulseGlow)*W*.3,0,TAU);
-   c.lineWidth=3;c.strokeStyle="rgba(99,245,255,"+(pulseGlow*1.6)+")";
-   c.stroke();
-  }
-  c.restore();
+ function drawPulseWave(){
+  // Ship replaces the persistent curved aiming arc + cyan triangle.
+  // Only the temporary pulse shockwave remains.
+  if(pulseGlow<=0)return;
+  const g=wallGeom(),p=wallPoint(PI/2,HIT_Z);
+  c.save();c.beginPath();c.arc(g.cx,g.cy,p.r+(1-pulseGlow)*W*.3,0,TAU);
+  c.lineWidth=3;c.strokeStyle="rgba(99,245,255,"+(pulseGlow*1.6)+")";
+  c.stroke();c.restore();
  }
  function paint(now){
   if(!live||!root.isConnected)return;
@@ -758,8 +768,8 @@ function mount(root){
    c.fillStyle=p.color;c.fillRect(t.x-2,t.y-2,4,4);
   }
   c.globalAlpha=1;
-  drawShip();
-  drawFPV(); // Keep collision/boost-pad cue visible above the hood.
+  drawPulseWave();
+  drawShip(); // Ship is now the only permanent POV marker.
   if(flash>0){
    c.fillStyle="rgba(255,70,143,"+(flash*.23)+")";c.fillRect(0,0,W,H);
   }
@@ -855,6 +865,7 @@ function mount(root){
    shipSprites[state].removeAttribute("src");
    shipReady[state]=false;
   }
+  featheredBoost=null;
   music=null;musicSource=null;musicAnalyser=null;musicBins=null;
   if(audioCtx)try{const p=audioCtx.close();if(p&&p.catch)p.catch(()=>{});}catch(_){}
   root._echoDebug=null;
