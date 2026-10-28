@@ -1016,8 +1016,11 @@ function mount(root){
    const fade=clamp(1-z/RENDER_FAR_Z,0,1);
    const bassLight=clamp(audioFx.bass*.13+audioFx.kick*.1,0,.23);
    const highLight=clamp(audioFx.high*.48,0,.48);
-   for(let sector=0;sector<SECTORS;sector++){
-    const a=screenAngle(sector*STEP),b=a+STEP;
+   // LOD: distant plates span two sectors. Keep close-up seams at full
+   // resolution while cutting geometry cost in the extended distance.
+   const sectorStep=z>15?2:1;
+   for(let sector=0;sector<SECTORS;sector+=sectorStep){
+    const a=screenAngle(sector*STEP),b=a+sectorStep*STEP;
     const fill=(sector+row)%4===0?"rgba(107,30,113,"+(.37+bassLight)+")":
       (sector+row)%2?"rgba(44,16,62,"+(.48+bassLight*.55)+")":
       "rgba(67,18,79,"+(.43+bassLight*.8)+")";
