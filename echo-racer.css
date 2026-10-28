@@ -476,3 +476,156 @@
  .zebra-game-body .er .er-level-button{min-height:38px;padding:4px 2px;font-size:9px}
  .er-level-name{font-size:7px}
 }
+
+
+/* Echo Racer 7.3 — native pixel-art UI textures uploaded to assets/games.
+   Width/height and contain preserve the entire source artwork. */
+.zebra-game-body .er .er-header-logo{
+ display:block;width:min(226px,100%);height:38px;object-fit:contain;
+ image-rendering:pixelated;filter:drop-shadow(0 0 4px #d34fff55);
+}
+.zebra-game-body .er .er-wordmark{display:flex;align-items:center;min-width:0}
+.zebra-game-body .er .er-meter{
+ border:0;box-shadow:none;min-height:54px;
+ background:url("/assets/games/plate2.png") center/100% 100% no-repeat;
+ padding:7px 5px 6px;
+}
+.zebra-game-body .er .er-meter span{color:#e9c2ee;text-shadow:0 0 4px #321039}
+.zebra-game-body .er .er-meter strong{text-shadow:0 0 7px #fb76e7,0 0 14px #a936a9}
+.zebra-game-body .er .er-meter:nth-child(4) strong{
+ color:#81f6ff;text-shadow:0 0 8px #44eafa;
+}
+.zebra-game-body .er .er-brand-logo{
+ display:block;width:min(92%,440px);max-height:150px;object-fit:contain;
+ image-rendering:pixelated;filter:drop-shadow(0 0 14px #cb43d85b);
+ margin:0 auto 4px;
+}
+.zebra-game-body .er .er-overlay.er-stage-home{gap:14px}
+.zebra-game-body .er .er-overlay.er-stage-levels{
+ gap:6px;padding:10px 13px;justify-content:center;
+}
+.zebra-game-body .er .er-overlay.er-stage-levels .er-brand-logo{
+ width:min(70%,265px);max-height:76px;margin:0 auto 0;
+}
+.zebra-game-body .er .er-overlay.er-stage-levels .er-title-sub{
+ font-size:10px;color:#a5efff;letter-spacing:1.5px;
+}
+.zebra-game-body .er .er-level-picker{
+ display:flex;flex-direction:column;align-items:center;gap:3px;
+ width:min(100%,344px);max-width:344px;margin:3px auto;
+}
+.zebra-game-body .er .er-level-button,
+.zebra-game-body .er .er-level-button.selected{
+ display:block;width:100%;height:50px;min-height:50px;flex:none;
+ border:0;border-radius:0;padding:0;box-shadow:none;
+ background-image:var(--level-texture);
+ background-size:contain;background-repeat:no-repeat;background-position:center;
+ background-color:transparent;
+ font-size:0;color:transparent;text-shadow:none;
+ image-rendering:pixelated;
+ cursor:pointer;
+}
+.zebra-game-body .er .er-level-button.selected{
+ filter:drop-shadow(0 0 4px #ff91f955);
+}
+.zebra-game-body .er .er-level-button:hover,
+.zebra-game-body .er .er-level-button:focus-visible{
+ filter:brightness(1.19) drop-shadow(0 0 7px #a34ee677);
+ transform:translateX(2px);
+ outline:none;
+}
+.zebra-game-body .er .er-level-button:active{transform:translateY(1px);filter:brightness(.9)}
+.zebra-game-body .er .er-overlay-button,
+.zebra-game-body .er .er-menu-back{
+ display:block;width:min(100%,215px);height:57px;min-height:0;flex:none;
+ margin:0 auto;padding:0;border:0;border-radius:0;box-shadow:none;
+ background:url("/assets/games/playbtn.png") center/contain no-repeat;
+ color:transparent;font-size:0;line-height:0;text-shadow:none;
+ image-rendering:pixelated;cursor:pointer;touch-action:manipulation;
+}
+.zebra-game-body .er .er-overlay-button.er-overlay-restart{
+ background-image:url("/assets/games/restartbtn.png");
+}
+.zebra-game-body .er .er-menu-back{
+ background-image:url("/assets/games/menubtn.png");
+ width:min(100%,185px);height:51px;
+}
+.zebra-game-body .er .er-overlay-button:hover,
+.zebra-game-body .er .er-menu-back:hover{
+ filter:brightness(1.15) drop-shadow(0 0 7px #e881e34d);
+}
+.zebra-game-body .er .er-overlay-button:focus-visible,
+.zebra-game-body .er .er-menu-back:focus-visible{outline:2px solid #95f8ff;outline-offset:2px}
+.zebra-game-body .er .er-overlay-button:active,
+.zebra-game-body .er .er-menu-back:active{
+ transform:translateY(2px);box-shadow:none;border:0;filter:brightness(.84)
+}
+.zebra-game-body .er .er-hardware:not(.er-sound){
+ border:0;border-radius:0;box-shadow:none;padding:0;
+ background-color:transparent;background-repeat:no-repeat;
+ background-size:contain;background-position:center;
+ color:transparent;font-size:0;line-height:0;text-shadow:none;
+ image-rendering:pixelated;
+}
+.zebra-game-body .er .er-hardware.er-play{
+ background-image:url("/assets/games/playbtn.png");
+}
+.zebra-game-body .er .er-hardware.er-play.er-footer-playing{
+ background-image:url("/assets/games/pausebtn.png");
+}
+.zebra-game-body .er .er-hardware.er-restart{
+ background-image:url("/assets/games/restartbtn.png");
+}
+.zebra-game-body .er .er-hardware.er-menu{
+ background-image:url("/assets/games/menubtn.png");
+}
+.zebra-game-body .er .er-hardware.er-sound{
+ background:linear-gradient(#51435a,#23162f);
+ border:2px outset #b49ebc;color:#d1e9ef;
+ text-shadow:0 0 4px #56d2e4;font-size:11px;
+}
+.zebra-game-body .er .er-hardware:not(.er-sound):hover{filter:brightness(1.16)}
+.zebra-game-body .er .er-hardware:not(.er-sound):active{
+ transform:translateY(1px);border:0;box-shadow:none;filter:brightness(.86);
+}
+.zebra-game-body .er .er-shield-warning{
+ position:absolute;z-index:4;top:17%;left:50%;transform:translateX(-50%);
+ width:min(210px,64%);display:flex;flex-direction:column;
+ align-items:center;gap:5px;padding:8px;
+ pointer-events:none;
+ background:radial-gradient(ellipse,rgba(57,5,19,.86),rgba(7,0,11,.25) 72%,transparent);
+ animation:er-shield-flicker .47s steps(1,end) infinite;
+}
+.zebra-game-body .er .er-shield-warning-icon{
+ width:61px;height:57px;object-fit:contain;image-rendering:pixelated;
+ filter:drop-shadow(0 0 12px #ff3e7499);
+}
+.zebra-game-body .er .er-shield-warning-label{
+ color:#ffe3ec;font:bold 12px "Courier New",monospace;
+ letter-spacing:1px;text-shadow:0 0 9px #ff2b64;white-space:nowrap;
+}
+@keyframes er-shield-flicker{
+ 0%,48%{opacity:1}49%,100%{opacity:.16}
+}
+@media(max-width:700px){
+ .zebra-game-body .er .er-header-logo{height:30px;width:min(190px,100%)}
+ .zebra-game-body .er .er-meter{min-height:42px;padding:3px 2px}
+ .zebra-game-body .er .er-brand-logo{max-height:105px}
+ .zebra-game-body .er .er-overlay.er-stage-levels{padding:6px 9px;gap:4px}
+ .zebra-game-body .er .er-overlay.er-stage-levels .er-brand-logo{max-height:60px}
+ .zebra-game-body .er .er-level-picker{width:min(100%,308px);gap:1px}
+ .zebra-game-body .er .er-level-button,
+ .zebra-game-body .er .er-level-button.selected{height:44px;min-height:44px}
+ .zebra-game-body .er .er-menu-back{height:43px;width:min(100%,170px)}
+ .zebra-game-body .er .er-overlay-button{height:49px;width:min(100%,195px)}
+ .zebra-game-body .er .er-shield-warning{top:14%;width:min(174px,65%)}
+ .zebra-game-body .er .er-shield-warning-icon{width:48px;height:45px}
+ .zebra-game-body .er .er-shield-warning-label{font-size:10px}
+}
+@media(max-height:620px){
+ .zebra-game-body .er .er-overlay.er-stage-levels .er-brand-logo{max-height:52px}
+ .zebra-game-body .er .er-level-picker{gap:0}
+ .zebra-game-body .er .er-level-button,
+ .zebra-game-body .er .er-level-button.selected{height:39px;min-height:39px}
+ .zebra-game-body .er .er-menu-back{height:41px}
+}
