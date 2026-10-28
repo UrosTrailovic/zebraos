@@ -40,6 +40,7 @@ const LEVELS=[
 const GAP_MIN=15.2,GAP_MAX=21.4,START_GATE_AT=.48;
 // A separate rhythm of collectible wall pads between the hazard waves.
 const PAD_START=7.2,PAD_GAP_MIN=33,PAD_GAP_MAX=47;
+const SHIELD_START=34,SHIELD_GAP_MIN=51,SHIELD_GAP_MAX=77;
 const NITRO_BURN_SECONDS=3.2,NITRO_REFILL_SECONDS=5,NITRO_REGEN_WAIT=.45;
 function angularDelta(a,b){return ((a-b+PI)%TAU+TAU)%TAU-PI;}
 function inGap(i,start,width){
@@ -96,7 +97,9 @@ function mount(root){
  let selectedLevel=LEVELS.find(x=>x.id===load("level","3"))||LEVELS[2];
  let angle=0,turnVelocity=0,lives=MAX_LIVES,score=0;
  let best=Number(load("best."+selectedLevel.id,selectedLevel.id==="3"?load("best","0"):"0"))||0;
- let distance=0,travel=0,passed=0,combo=0,waves=[],pads=[],nextGateAt=START_GATE_AT,nextPadAt=PAD_START,lastGateAt=-100,trail=[],sparks=[],currentSpeed=0,gateCount=0,padCount=0,scoreMultiplier=1;
+ let distance=0,travel=0,passed=0,combo=0,waves=[],pads=[],shields=[],
+  nextGateAt=START_GATE_AT,nextPadAt=PAD_START,nextShieldAt=SHIELD_START,
+  lastGateAt=-100,trail=[],sparks=[],currentSpeed=0,gateCount=0,padCount=0,shieldCount=0,scoreMultiplier=1;
  let invuln=0,pulseCharge=2,pulseGlow=0,padBoostTime=0;
  let nitroHeld=false,nitroActive=false,nitroFuel=1,nitroRegenWait=0,nitroBurnTime=0;
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
@@ -684,7 +687,12 @@ function mount(root){
   lockDeathControls(false);
   mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
   hudTimer=bestSaveTimer=audioSampleTimer=0;
-  waves=[];pads=[];nextGateAt=selectedLevel.id==="free"?Infinity:START_GATE_AT;nextPadAt=selectedLevel.id==="free"?Infinity:PAD_START;lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
+  waves=[];pads=[];shields=[];
+  nextGateAt=selectedLevel.id==="free"?Infinity:START_GATE_AT;
+  nextPadAt=selectedLevel.id==="free"?Infinity:PAD_START;
+  nextShieldAt=selectedLevel.id==="free"?Infinity:SHIELD_START;
+  lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;shieldCount=0;
+  trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
   invuln=0;pulseCharge=2;pulseGlow=padBoostTime=flash=shake=0;
   nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;nitroBurnTime=0;
   shipBoostFade=0;turboLight=0;warningLife=0;warningBeepDelay=0;warningChirp=0;
@@ -698,7 +706,7 @@ function mount(root){
   deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
   screen.classList.remove("er-crashing");lockDeathControls(false);
   if(mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
-  stopMusic();mode="menu";keys.clear();waves=[];pads=[];trail=[];turnVelocity=0;
+  stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];trail=[];turnVelocity=0;
   elapsed=0;padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;nitroBurnTime=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
   overlay.hidden=false;renderMenuStage("home");
@@ -906,6 +914,35 @@ function mount(root){
    pads.push(pad);padCount++;
    nextPadAt+=rand(PAD_GAP_MIN,PAD_GAP_MAX);
   }
+  // Independent world-space shield calendar. Skip positions beside gates.
+  while(travel>=nextShieldAt){
+   if(nextShieldAt-lastGateAt<7||nextGateAt-nextShieldAt<7){
+    nextShieldAt+=7.5;continue;
+   }
+   const nearSector=Math.floor(angle/STEP);
+   const center=(shieldCount===0||Math.random()<.58)?
+    (nearSector+Math.floor(rand(-2,3))+SECTORS)%SECTORS:
+    Math.floor(rand(0,SECTORS));
+   shields.push({z:SPAWN_Z-(travel-nextShieldAt),
+     sectors:[center,(center+1)%SECTORS],credited:false,shimmer:rand(0,TAU)});
+   shieldCount++;
+   nextShieldAt+=rand(SHIELD_GAP_MIN,SHIELD_GAP_MAX);
+  }
+  for(const pickup of shields){
+   const oldZ=pickup.z;pickup.z-=dz;
+   if(oldZ>HIT_Z&&pickup.z<=HIT_Z&&!pickup.credited){
+    pickup.credited=true;
+    if(collisionAt(angle,pickup)){
+     const gained=lives<MAX_LIVES;
+     if(gained){lives++;warningLife=0;warningBeepDelay=0;}
+     else score+=100*scoreMultiplier;
+     message=gained?"BOUCLIER +1":"BOUCLIER MAX +100";
+     messageLife=1.4;
+     burst(angle,"#a1ffe0",26);beep("collect");renderHud();
+    }
+   }
+  }
+  shields=shields.filter(p=>p.z>-.8);
   for(const pad of pads){
    const oldZ=pad.z;pad.z-=dz;
    if(oldZ>HIT_Z&&pad.z<=HIT_Z&&!pad.credited){
