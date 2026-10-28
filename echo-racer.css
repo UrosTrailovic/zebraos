@@ -703,3 +703,20 @@
  .zebra-game-body .er .er-stage-over .er-overlay-button,
  .zebra-game-body .er .er-stage-over .er-menu-back{animation:none}
 }
+
+/* Echo Racer 7.4 — blackout on final impact, controls physically locked until
+   the existing Game Over choreography has finished. */
+.zebra-game-body .er .er-crash-curtain {
+ position:absolute;inset:0;z-index:9;background:#000;
+ pointer-events:none;opacity:0;will-change:opacity;
+}
+.zebra-game-body .er .er-crash-curtain[hidden] {display:none !important}
+.zebra-game-body .er.er-death-locked .er-hardware,
+.zebra-game-body .er.er-death-locked .er-overlay-button,
+.zebra-game-body .er.er-death-locked .er-menu-back {
+ cursor:wait;pointer-events:none;
+}
+.zebra-game-body .er.er-death-locked .er-stage-over .er-overlay-button,
+.zebra-game-body .er.er-death-locked .er-stage-over .er-menu-back {
+ filter:brightness(.7) grayscale(.3);
+}
