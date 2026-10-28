@@ -394,3 +394,7 @@
  color:#95faff;text-shadow:0 0 9px #75f0ff;
  border:1px solid #ff76d9;
 }
+
+/* Echo Racer 6.1: CRT preserved without heavy per-frame blend composition. */
+.zebra-game-body .er .er-crt{mix-blend-mode:normal;opacity:.43;}
+.zebra-game-body .er .er-crt::before{opacity:.45;}

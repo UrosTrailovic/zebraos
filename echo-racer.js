@@ -80,6 +80,8 @@ function mount(root){
  if(root._zebraDispose)root._zebraDispose();
  root.innerHTML="";
  let live=true,raf=0,ro=null,last=0,mode="menu",keys=new Set();
+ let renderDpr=1,hudTimer=0,bestSaveTimer=0,audioSampleTimer=0;
+ let geometryCache={cx:W*.5,cy:H*.39,R:Math.max(W,H)*1.23,offset:5/9};
  let angle=0,turnVelocity=0,lives=MAX_LIVES,score=0,best=Number(load("best","0"))||0;
  let distance=0,travel=0,passed=0,combo=0,waves=[],pads=[],nextGateAt=START_GATE_AT,nextPadAt=PAD_START,lastGateAt=-100,trail=[],sparks=[],currentSpeed=0,gateCount=0,padCount=0,scoreMultiplier=1;
  let invuln=0,pulseCharge=2,pulseGlow=0,boostTime=0,padBoostTime=0,boostCooldown=0;
@@ -191,8 +193,9 @@ function mount(root){
   const bounds=screen.getBoundingClientRect();
   if(!bounds.width||!bounds.height)return;
   W=Math.max(150,Math.round(bounds.width));H=Math.max(180,Math.round(bounds.height));
-  const dpr=Math.min(2,window.devicePixelRatio||1);
-  const bw=Math.round(W*dpr),bh=Math.round(H*dpr);
+  renderDpr=Math.min(W<520?1.25:1.5,window.devicePixelRatio||1);
+  geometryCache={cx:W*.5,cy:H*.39,R:Math.max(W,H)*1.23,offset:5/9};
+  const bw=Math.round(W*renderDpr),bh=Math.round(H*renderDpr);
   if(canvas.width!==bw||canvas.height!==bh){canvas.width=bw;canvas.height=bh;}
  }
  fitCanvas();
@@ -252,7 +255,9 @@ function mount(root){
   audioFx.beatCooldown=0;
  }
  function sampleMusic(dt){
-  dt=clamp(dt,0,.08);
+  audioSampleTimer+=clamp(dt,0,.08);
+  if(audioSampleTimer<.04)return;
+  dt=Math.min(.12,audioSampleTimer);audioSampleTimer=0;
   const shouldRead=mode==="running"&&soundEnabled&&!globalMuted()&&
     music&&!music.paused&&musicAnalyser&&musicBins;
   if(!shouldRead){
@@ -269,9 +274,10 @@ function mount(root){
    return sum/Math.max(1,endBin-start);
   }
   // High-sensitivity normalization for mixed, mastered MP3 material.
-  const bass=clamp((avg(1,10)-5)/94,0,1),
-        mid=clamp((avg(11,50)-5)/93,0,1),
-        high=clamp((avg(51,180)-4)/78,0,1);
+  // Leave headroom for loud mastered MP3s: avoid permanent saturation.
+  const bass=clamp((avg(1,10)-12)/175,0,1),
+        mid=clamp((avg(11,50)-10)/166,0,1),
+        high=clamp((avg(51,180)-8)/156,0,1);
   const attack=1-Math.exp(-dt*23),release=1-Math.exp(-dt*7);
   audioFx.bass+=(bass-audioFx.bass)*(bass>audioFx.bass?attack:release);
   audioFx.mid+=(mid-audioFx.mid)*(mid>audioFx.mid?attack:release);
@@ -319,12 +325,14 @@ function mount(root){
  }
  function start(){
   mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
+  hudTimer=bestSaveTimer=audioSampleTimer=0;
   waves=[];pads=[];nextGateAt=START_GATE_AT;nextPadAt=PAD_START;lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
   invuln=0;pulseCharge=2;pulseGlow=boostTime=padBoostTime=boostCooldown=flash=shake=0;
   message="TROUVE LE PASSAGE";messageLife=2;keys.clear();overlay.hidden=true;
   beep("collect");startMusic(true);renderHud();
  }
  function toMenu(){
+  if(score>0)save("best",best);
   stopMusic();mode="menu";keys.clear();waves=[];pads=[];trail=[];turnVelocity=0;elapsed=0;padBoostTime=0;scoreMultiplier=1;
   overlay.hidden=false;logo.textContent="ECHO RACER";prompt.textContent="PRESS BUTTON TO PLAY";
   status.textContent="FPV / TOUR DU TUNNEL 360°";
@@ -352,8 +360,8 @@ function mount(root){
   // Single press = tiny rotation; holding the key rotates continuously.
   if(which==="left"||which==="right"){
    const d=which==="right"?1:-1;
-   angle=(angle+d*STEP*.13+TAU)%TAU;
-   turnVelocity=clamp(turnVelocity+d*.9,-4.1,4.1);
+   angle=(angle+d*STEP*.10+TAU)%TAU;
+   turnVelocity=clamp(turnVelocity+d*.66,-3.45,3.45);
   }
   // Up/down control forward speed only. There is no 2D ship translation.
  }
@@ -411,9 +419,9 @@ function mount(root){
   if(mode!=="running"||document.hidden)return;
   dt=clamp(dt,0,.05);elapsed+=dt;
   const steer=(keys.has("right")?1:0)-(keys.has("left")?1:0);
-  const targetTurn=steer*4.8;
+  const targetTurn=steer*3.85;
   // Accelerate decisively, coast when released, brake quickly by counter-steer.
-  const turnRate=steer?(turnVelocity*steer<0?14:10.8):3.8;
+  const turnRate=steer?(turnVelocity*steer<0?11.5:8.5):3.5;
   turnVelocity+=(targetTurn-turnVelocity)*(1-Math.exp(-dt*turnRate));
   if(!steer&&Math.abs(turnVelocity)<.01)turnVelocity=0;
   if(dragPointer===null)angle=(angle+turnVelocity*dt+TAU)%TAU;
@@ -498,20 +506,21 @@ function mount(root){
   waves=waves.filter(w=>w.z>-.8);
   sparks.forEach(p=>{p.a+=p.va*dt;p.z+=p.vz*dt;p.life-=dt;});
   sparks=sparks.filter(p=>p.life>0);
-  if(score>best){best=Math.floor(score);save("best",best);}
-  renderHud();
+  if(score>best){
+   best=Math.floor(score);
+   bestSaveTimer+=dt;
+   // Do not synchronously write localStorage on every animation frame.
+   if(bestSaveTimer>=1.5){save("best",best);bestSaveTimer=0;}
+  }
+  hudTimer+=dt;
+  if(hudTimer>=.09){hudTimer=0;renderHud();}
  }
  function point(theta,z){
   return wallPoint(theta,z);
  }
- function wallGeom(){
-  // Tunnel ~18 m in diameter: the FPV camera is five metres below its
-  // central axis, roughly four metres above the inner running surface.
-  // The vanishing point is HIGH in frame; the wall sweeps under the pilot.
-  return {cx:W*.5,cy:H*.39,R:Math.max(W,H)*1.23,offset:5/9};
-}
+ function wallGeom(){return geometryCache;}
  function wallPoint(theta,z){
-  const g=wallGeom(),r=g.R/(1+Math.max(0,z)*.68);
+  const g=geometryCache,r=g.R/(1+Math.max(0,z)*.68);
   return{x:g.cx+Math.cos(theta)*r,y:g.cy+(Math.sin(theta)-g.offset)*r,r};
  }
  function screenAngle(worldAngle){return worldAngle-angle+PI/2;}
@@ -519,29 +528,33 @@ function mount(root){
  // magenta hoops, cyan energy conduits and animated wall LEDs. Every surface
  // uses wallPoint(z), the *same* cylinder as the actual obstacle geometry.
  function wallPatch(a0,a1,z0,z1,fill,stroke,steps){
-  const n=steps||3,near=[],far=[];
-  for(let k=0;k<=n;k++){
-   const a=a0+(a1-a0)*k/n;
-   near.push(wallPoint(a,z0));far.push(wallPoint(a,z1));
-  }
+  // Direct canvas path: no arrays (near/far) allocated for each tile.
+  const n=steps||2,da=(a1-a0)/n;
   c.beginPath();
-  near.forEach((p,k)=>{if(k)c.lineTo(p.x,p.y);else c.moveTo(p.x,p.y);});
-  for(let k=far.length-1;k>=0;k--)c.lineTo(far[k].x,far[k].y);
+  for(let k=0;k<=n;k++){
+   const p=wallPoint(a0+da*k,z0);
+   if(k)c.lineTo(p.x,p.y);else c.moveTo(p.x,p.y);
+  }
+  for(let k=n;k>=0;k--){
+   const p=wallPoint(a0+da*k,z1);c.lineTo(p.x,p.y);
+  }
   c.closePath();c.fillStyle=fill;c.fill();
-  if(stroke){c.strokeStyle=stroke;c.lineWidth=.65;c.stroke();}
+  if(stroke){c.strokeStyle=stroke;c.lineWidth=.6;c.stroke();}
  }
  function drawRing(z,index){
-  if(z<0||z>15)return;
-  const g=wallGeom(),r=wallPoint(0,z).r;
-  const near=clamp(1-z/15,0,1),cyan=index%5===0;
-  const beat=audioFx.kick*.9+audioFx.bass*.85+audioFx.mid*.3,high=audioFx.high*.55;
+  if(z<0||z>14.2)return;
+  const g=geometryCache,r=wallPoint(0,z).r;
+  const near=clamp(1-z/14.2,0,1),cyan=index%5===0;
+  // Controlled changes of the line itself, not a fat bloom filter.
+  const beat=clamp(audioFx.kick*.65+audioFx.bass*.35,0,1);
+  const high=clamp(audioFx.high,0,1);
   c.beginPath();c.arc(g.cx,g.cy-g.offset*r,r,0,TAU);
-  c.strokeStyle=cyan?"rgba(114,243,255,"+clamp(.24+.7*near+high,0,1)+")":
-                         "rgba(255,63,213,"+clamp(.18+.7*near+beat,0,1)+")";
-  c.lineWidth=(cyan?1.65:1.12)+near*(cyan?2.2:1.65)+beat*5.6;
+  c.strokeStyle=cyan?
+   "rgba(111,239,255,"+clamp(.32+.54*near+high*.12,0,.97)+")":
+   "rgba(255,62,209,"+clamp(.25+.53*near+beat*.18,0,.97)+")";
+  c.lineWidth=(cyan?1.7:1.2)+near*(cyan?1.6:1.1)+beat*1.1;
   c.shadowColor=cyan?"#50f6ff":"#ff35d5";
-  c.shadowBlur=7+5*near+audioFx.energy*27+audioFx.kick*24;
-  c.stroke();c.shadowBlur=0;
+  c.shadowBlur=cyan?2:0;c.stroke();c.shadowBlur=0;
  }
  function drawTunnel(now){
   const g=wallGeom();
@@ -556,25 +569,29 @@ function mount(root){
   // An indigo panel skin follows the camera's angular roll. The panels move
   // at exactly the same world speed as the neon hoops and the obstacle walls.
   const panelLength=.81,panelOffset=(mode==="menu"?(now*.0016):travel)%panelLength;
-  for(let row=19;row>=0;row--){
+  for(let row=16;row>=0;row--){
    const z=row*panelLength-panelOffset;
-   if(z<0||z>14.6)continue;
-   const fade=clamp(1-z/15,0,1);
+   if(z<0||z>12.9)continue;
+   const fade=clamp(1-z/13,0,1);
+   const bassLight=clamp(audioFx.bass*.13+audioFx.kick*.1,0,.23);
+   const highLight=clamp(audioFx.high*.48,0,.48);
    for(let sector=0;sector<SECTORS;sector++){
     const a=screenAngle(sector*STEP),b=a+STEP;
-    const bassLight=audioFx.energy*.39+audioFx.kick*.23;
-    const fill=(sector+row)%4===0?"rgba(107,30,113,"+(.42+bassLight)+")":
-      (sector+row)%2?"rgba(44,16,62,"+(.52+bassLight*.55)+")":
-      "rgba(67,18,79,"+(.47+bassLight*.8)+")";
+    const fill=(sector+row)%4===0?"rgba(107,30,113,"+(.37+bassLight)+")":
+      (sector+row)%2?"rgba(44,16,62,"+(.48+bassLight*.55)+")":
+      "rgba(67,18,79,"+(.43+bassLight*.8)+")";
     wallPatch(a+.006,b-.006,z,z+panelLength,fill,
-      "rgba(186,77,188,.13)",3);
+      row<5&&sector%4===0?"rgba(180,76,195,.12)":null,row<5?2:1);
+    // Treble-driven cyan bands are painted onto the tunnel itself.
+    if(row%3===1&&sector%4===2&&z<10.5){
+     wallPatch(a+.09,b-.09,z+.19,z+.25,
+      "rgba(107,241,255,"+(.12+highLight)+")",null,1);
+    }
     // Tiny luminous rivets flash toward the camera along with the wall.
-    if(row%3===0&&sector%4===1){
+    if(row%3===0&&sector%4===1&&z<10.5){
      const p=wallPoint((a+b)*.5,z+.28);
-     c.fillStyle="rgba(248,73,226,"+clamp(.24+.65*fade+audioFx.high*.62,0,1)+")";
-     c.shadowColor="#fa39d8";c.shadowBlur=5+audioFx.high*25;
-     c.beginPath();c.arc(p.x,p.y,Math.max(.8,2.7*fade),0,TAU);c.fill();
-     c.shadowBlur=0;
+     c.fillStyle="rgba(248,73,226,"+clamp(.24+.5*fade+highLight*.65,0,.9)+")";
+     c.beginPath();c.arc(p.x,p.y,Math.max(.8,2.5*fade),0,TAU);c.fill();
     }
    }
   }
@@ -588,14 +605,14 @@ function mount(root){
    c.lineWidth=cyan?9:5;c.shadowBlur=0;c.stroke();
    c.strokeStyle=cyan?"rgba(109,240,255,"+clamp(.72+audioFx.high*.28,0,1)+")":
                            "rgba(210,76,237,"+clamp(.43+audioFx.mid*.36,0,1)+")";
-   c.lineWidth=(cyan?2.5:1.4)+audioFx.high*(cyan?5:2.7)+audioFx.kick*1.6;
+   c.lineWidth=(cyan?2.4:1.4)+audioFx.high*(cyan?.8:.5)+audioFx.kick*.35;
    c.shadowColor=cyan?"#48eefe":"#ff48c6";
-   c.shadowBlur=(cyan?12:5)+audioFx.high*28+audioFx.kick*17;
+   c.shadowBlur=cyan?2:0;
    c.stroke();c.shadowBlur=0;
   }
   const spacing=.48;
   const phase=(mode==="menu"?(now*.0016):travel)%spacing;
-  for(let i=31;i>=0;i--)drawRing(i*spacing-phase,i);
+  for(let i=29;i>=0;i--)drawRing(i*spacing-phase,i);
   c.restore();
   // Deep indigo pupil, feathered rather than a flat black pasted circle.
   const core=c.createRadialGradient(g.cx,g.cy,0,g.cx,g.cy,g.R*.17);
@@ -603,37 +620,20 @@ function mount(root){
   core.addColorStop(1,"rgba(8,1,17,0)");
   c.fillStyle=core;
   c.fillRect(g.cx-g.R*.2,g.cy-g.R*.2,g.R*.4,g.R*.4);
-  // The music lights the vanishing point, but never shifts the actual
-  // projection or a collision surface.
-  // The whole tunnel flashes to the track, but no physics geometry moves.
-  const intensity=clamp(audioFx.energy*.62+audioFx.kick*.38,0,1);
-  if(intensity>.014){
-   c.save();
-   const aura=c.createRadialGradient(g.cx,g.cy,2,g.cx,g.cy,g.R*.65);
-   aura.addColorStop(0,"rgba(255,126,229,"+clamp(intensity*.85,0,.92)+")");
-   aura.addColorStop(.48,"rgba(231,59,211,"+clamp(intensity*.35,0,.43)+")");
-   aura.addColorStop(1,"rgba(80,16,130,0)");
-   c.fillStyle=aura;
-   c.fillRect(g.cx-g.R*.75,g.cy-g.R*.75,g.R*1.5,g.R*1.5);
-   c.fillStyle="rgba(242,62,202,"+clamp(audioFx.kick*.20+audioFx.energy*.055,0,.25)+")";
-   c.fillRect(0,0,W,H);
-   c.restore();
-  }
-  // Amplified flashes on several wall rings; same world-position radius.
-  if(audioFx.kick>.06||audioFx.high>.18){
-   c.save();c.lineCap="round";
-   for(let i=0;i<3;i++){
-    const z=1.1+i*2.5,r=wallPoint(0,z).r;
-    c.beginPath();c.arc(g.cx,g.cy-g.offset*r,r,0,TAU);
-    c.strokeStyle=i%2===0?
-      "rgba(255,169,244,"+clamp(audioFx.kick*.8+audioFx.energy*.4,0,.96)+")":
-      "rgba(114,250,255,"+clamp(audioFx.high*.8+audioFx.kick*.35,0,.94)+")";
-    c.lineWidth=1.8+audioFx.kick*7+audioFx.high*3;
-    c.shadowColor=i%2===0?"#ff79df":"#5ff6ff";
-    c.shadowBlur=18+audioFx.kick*30+audioFx.high*14;
-    c.stroke();
+  // Physically small, music-driven phosphor strips instead of a blurred
+  // full-screen radial gradient. Kicks pulse pink, treble cyan.
+  const kick=clamp(audioFx.kick*.65+audioFx.bass*.3,0,1);
+  const treble=clamp(audioFx.high*.8,0,.8);
+  if(kick>.12||treble>.12){
+   for(let i=0;i<8;i++){
+    const a=screenAngle(i*TAU/8+.11),z=1.7+(i%3)*1.12;
+    const amount=i%2===0?kick:treble;
+    if(amount<.13)continue;
+    wallPatch(a,a+STEP*.67,z,z+.10+amount*.30,
+     i%2===0?
+      "rgba(255,112,225,"+(.17+amount*.58)+")":
+      "rgba(110,246,255,"+(.17+amount*.55)+")",null,1);
    }
-   c.restore();
   }
  }
  function drawWave(w){
@@ -651,14 +651,14 @@ function mount(root){
      skin===2?"#eb493d":"#a52ed2";
    const skinEdge=skin===0?"#ffb19c":skin===1?"#ffc1de":
      skin===2?"#ffe4aa":"#eb96ff";
-   c.shadowColor=skin===3?"#db4aff":"#ff4e82";c.shadowBlur=10;
+   c.shadowColor=skin===3?"#db4aff":"#ff4e82";c.shadowBlur=2;
    wallPatch(a,b,z,far,skinFill,skinEdge,6);
    c.shadowBlur=0;
    // Pale amber warning edge separates dangerous gates from pink wall trim.
    const q0=wallPoint(a+.025,z+.035),q1=wallPoint(b-.025,z+.035);
    c.beginPath();c.moveTo(q0.x,q0.y);c.lineTo(q1.x,q1.y);
    c.strokeStyle="rgba(255,226,173,.88)";c.lineWidth=1.35;
-   c.shadowColor="#ff8d92";c.shadowBlur=8;c.stroke();c.shadowBlur=0;
+   c.shadowBlur=0;c.stroke();
   }
   c.restore();
  }
@@ -669,18 +669,18 @@ function mount(root){
   const pulse=.74+.26*Math.sin(elapsed*13+near);
   for(const id of pad.sectors){
    const a=screenAngle(id*STEP)+.016,b=screenAngle((id+1)*STEP)-.016;
-   c.shadowColor="#3af6ff";c.shadowBlur=17+audioFx.high*17;
+   c.shadowColor="#3af6ff";c.shadowBlur=3;
    wallPatch(a,b,near,far,
      "rgba(20,184,221,"+clamp(.66+pulse*.28,0,1)+")",
      "#dbfcff",5);
    const mid=(a+b)*.5,span=(b-a)*.25;
    for(let k=0;k<2;k++){
     const z=near+.18+k*.39;
-    const p0=wallPoint(mid-span,z+.19),pc=wallPoint(mid,z),
-          p1=wallPoint(mid+span,z+.19);
+    const p0=wallPoint(mid-span,z),pc=wallPoint(mid,z+.24),
+          p1=wallPoint(mid+span,z);
     c.beginPath();c.moveTo(p0.x,p0.y);c.lineTo(pc.x,pc.y);c.lineTo(p1.x,p1.y);
     c.lineWidth=2.8;c.strokeStyle="#fff9a9";
-    c.shadowColor="#fbff71";c.shadowBlur=11;c.stroke();
+    c.shadowBlur=0;c.stroke();
    }
   }
   c.restore();
@@ -695,7 +695,7 @@ function mount(root){
   c.arc(g.cx,g.cy-g.offset*p.r,p.r,PI/2-.19,PI/2+.19);
   c.strokeStyle=blocked?"#ffab82":onPad?"#faff8e":"#7ff3ff";
   c.shadowColor=blocked?"#ff4785":onPad?"#ffff55":"#39eaff";
-  c.shadowBlur=15;c.lineWidth=4;c.stroke();
+  c.shadowBlur=4;c.lineWidth=3.5;c.stroke();
   c.beginPath();c.moveTo(p.x,p.y+5);c.lineTo(p.x-6,p.y+16);
   c.lineTo(p.x+6,p.y+16);c.closePath();
   c.fillStyle=blocked?"#ffe4ac":onPad?"#faffb9":"#dcfcff";c.fill();
@@ -708,13 +708,13 @@ function mount(root){
  }
  function paint(now){
   if(!live||!root.isConnected)return;
-  const dpr=Math.min(2,window.devicePixelRatio||1);
-  c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
+  c.setTransform(renderDpr,0,0,renderDpr,0,0);c.clearRect(0,0,W,H);
   c.save();
   if(shake>0)c.translate(rand(-shake,shake),rand(-shake,shake));
   drawTunnel(now);
-  pads.slice().sort((a,b)=>b.z-a.z).forEach(drawPad);
-  waves.slice().sort((a,b)=>b.z-a.z).forEach(drawWave);
+  // Newest waves/pads are already the farthest; no per-frame copies or sort.
+  for(let i=pads.length-1;i>=0;i--)drawPad(pads[i]);
+  for(let i=waves.length-1;i>=0;i--)drawWave(waves[i]);
   c.restore();
   for(const p of sparks){
    const t=wallPoint(screenAngle(p.a),p.z);
@@ -778,17 +778,17 @@ function mount(root){
   if(!bounds.width)return;
   // Horizontal swipe = orbital rotation, no teleporting inside the circle.
   const dx=clamp(e.clientX-dragX,-bounds.width*.25,bounds.width*.25);
-  const delta=dx/bounds.width*TAU*1.25;
+  const delta=dx/bounds.width*TAU*1.0;
   const stamp=Number(e.timeStamp)||Date.now();
   const sec=clamp((stamp-dragLastTs)/1000,.016,.12);
-  dragVelocity=lerp(dragVelocity,clamp(delta/sec,-4.1,4.1),.48);
+  dragVelocity=lerp(dragVelocity,clamp(delta/sec,-3.35,3.35),.43);
   angle=(angle+delta+TAU)%TAU;
   dragLastTs=stamp;dragX=e.clientX;
  }
  function boardUp(e){
   if(dragPointer!==e.pointerId)return;
   const stamp=Number(e.timeStamp)||Date.now();
-  turnVelocity=clamp(dragVelocity*(stamp-dragLastTs>140?.28:.8),-3.9,3.9);
+  turnVelocity=clamp(dragVelocity*(stamp-dragLastTs>140?.28:.72),-3.15,3.15);
   dragPointer=null;dragVelocity=0;
 }
  screen.addEventListener("pointerdown",boardDown);
