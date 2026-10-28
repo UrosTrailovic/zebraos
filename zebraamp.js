@@ -51,8 +51,8 @@ function trackArtist(track){
  if(path.indexOf("STUDIO/BUREAU/Zebra Tape 2/")===0){
   var name=path.split("/").pop().replace(/\.[^.]+$/,"").toLowerCase().replace(/[^a-z0-9]/g,"");
   if(name==="6stouse")return "Jony";
-  if(name==="5iwannadance")return "Zebra & Ekko";
-  if(name==="1domaintro"||name==="9backhome")return "Zebra & Cubic";
+  if(name==="5iwannadance"||name==="9backhome")return "Zebra & Ekko";
+  if(name==="1domaintro")return "Zebra & Cubic";
  }
  return "Zebra";
 }

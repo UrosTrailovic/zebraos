@@ -225,7 +225,7 @@ function finishSessionBoot(){
   sessionBooting=false;clearTimeout(sessionTimer);sessionAudio.pause();
   session=pendingSession;pendingSession=null;
   adminApproved=false;closeAll();
-  if(window.ZebraWallpaper)window.ZebraWallpaper.apply(session);else setWall(getStore("zebra.wall."+session)||session);desk();if(window.ZebraTools)window.ZebraTools.stickyDesktop(session);show("desktop-screen");
+  if(window.ZebraWallpaper)window.ZebraWallpaper.apply(session);else setWall(getStore("zebra.wall."+session)||session);desk();show("desktop-screen");if(window.ZebraTools)window.ZebraTools.stickyDesktop(session);
 }
 function beginSessionBoot(id){
   if(sessionBooting)return;

@@ -128,9 +128,14 @@ function stickyDesktop(session){
    panel.style.background=colors[note.color]||colors.yellow;
    function reposition(){
     var nw=panel.offsetWidth||180,nh=panel.offsetHeight||168;
-    note.x=Math.max(0,Math.min(maxW()-nw-1,Number(note.x)||0));
-    note.y=Math.max(0,Math.min(maxH()-nh-1,Number(note.y)||0));
-    panel.style.left=note.x+"px";panel.style.top=note.y+"px";
+    var x=Number(note.x)||0,y=Number(note.y)||0;
+    var width=maxW(),height=maxH();
+    // Don't overwrite saved coordinates while the desktop is hidden (0x0),
+    // or when opening on a smaller screen. Only dragging changes storage.
+    x=Math.max(0,width>0?Math.min(width-nw-1,x):x);
+    y=Math.max(0,height>0?Math.min(height-nh-1,y):y);
+    panel.style.left=x+"px";panel.style.top=y+"px";
+    return {x:x,y:y};
    }
    var bar=E("div","zu-sticky-bar");
    var grip=E("span","zu-sticky-grip","⋮⋮ "+sane(note.title,32));
@@ -157,9 +162,12 @@ function stickyDesktop(session){
    grip.onpointerdown=function(ev){
     if(ev.button!==0&&ev.pointerType==="mouse")return;
     ev.preventDefault();
-    var x=ev.clientX,y=ev.clientY,l=note.x,t=note.y;
+    var x=ev.clientX,y=ev.clientY,l=parseFloat(panel.style.left)||0,t=parseFloat(panel.style.top)||0;
     try{grip.setPointerCapture(ev.pointerId);}catch(_){}
-    var move=function(e){note.x=l+e.clientX-x;note.y=t+e.clientY-y;reposition();};
+    var move=function(e){
+     note.x=l+e.clientX-x;note.y=t+e.clientY-y;
+     var bounded=reposition();note.x=bounded.x;note.y=bounded.y;
+    };
     var end=function(){grip.removeEventListener("pointermove",move);grip.removeEventListener("pointerup",end);grip.removeEventListener("pointercancel",end);persist();};
     grip.addEventListener("pointermove",move);grip.addEventListener("pointerup",end);grip.addEventListener("pointercancel",end);
    };
