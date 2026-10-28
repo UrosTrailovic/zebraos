@@ -24,7 +24,9 @@ function rectRound(ctx,x,y,w,h,r){
 }
 /* Player travels along the INNER CIRCUMFERENCE of a perfectly straight tube.
  * The camera is the player: position is one world-space ANGLE, not an XY ship. */
-const SECTORS=16,STEP=TAU/SECTORS,HIT_Z=1.6,SPAWN_Z=12.6;
+// One unified perspective for the tunnel skin, lighting and objects.
+// Longer draw distance does not change the player hit plane or collision math.
+const SECTORS=16,STEP=TAU/SECTORS,HIT_Z=1.6,SPAWN_Z=20.6,RENDER_FAR_Z=23.4;
 const PATTERN_COUNT=16;
 const LEVELS=[
  {id:"1",name:"INITIATION",subtitle:"PASSAGES LARGES",speed:.77,gap:1.55,spin:.04,patterns:[0,1,3,7,10,13]},
@@ -980,9 +982,9 @@ function mount(root){
   if(stroke){c.strokeStyle=stroke;c.lineWidth=.6;c.stroke();}
  }
  function drawRing(z,index){
-  if(z<0||z>14.2)return;
+  if(z<0||z>RENDER_FAR_Z)return;
   const g=geometryCache,r=wallPoint(0,z).r;
-  const near=clamp(1-z/14.2,0,1),cyan=index%5===0;
+  const near=clamp(1-z/RENDER_FAR_Z,0,1),cyan=index%5===0;
   // Controlled changes of the line itself, not a fat bloom filter.
   const beat=clamp(audioFx.kick*.65+audioFx.bass*.35,0,1);
   const high=clamp(audioFx.high,0,1);
@@ -1007,10 +1009,11 @@ function mount(root){
   // An indigo panel skin follows the camera's angular roll. The panels move
   // at exactly the same world speed as the neon hoops and the obstacle walls.
   const panelLength=.81,panelOffset=(mode==="menu"?(now*.0016):travel)%panelLength;
-  for(let row=16;row>=0;row--){
+  const panelRows=Math.ceil(RENDER_FAR_Z/panelLength)+1;
+  for(let row=panelRows;row>=0;row--){
    const z=row*panelLength-panelOffset;
-   if(z<0||z>12.9)continue;
-   const fade=clamp(1-z/13,0,1);
+   if(z<0||z>RENDER_FAR_Z)continue;
+   const fade=clamp(1-z/RENDER_FAR_Z,0,1);
    const bassLight=clamp(audioFx.bass*.13+audioFx.kick*.1,0,.23);
    const highLight=clamp(audioFx.high*.48,0,.48);
    for(let sector=0;sector<SECTORS;sector++){
@@ -1021,12 +1024,12 @@ function mount(root){
     wallPatch(a+.006,b-.006,z,z+panelLength,fill,
       row<5&&sector%4===0?"rgba(180,76,195,.12)":null,row<5?2:1);
     // Treble-driven cyan bands are painted onto the tunnel itself.
-    if(row%3===1&&sector%4===2&&z<10.5){
+    if(row%3===1&&sector%4===2&&z<RENDER_FAR_Z*.75){
      wallPatch(a+.09,b-.09,z+.19,z+.25,
       "rgba(107,241,255,"+(.12+highLight)+")",null,1);
     }
     // Tiny luminous rivets flash toward the camera along with the wall.
-    if(row%3===0&&sector%4===1&&z<10.5){
+    if(row%3===0&&sector%4===1&&z<RENDER_FAR_Z*.75){
      const p=wallPoint((a+b)*.5,z+.28);
      c.fillStyle="rgba(248,73,226,"+clamp(.24+.5*fade+highLight*.65,0,.9)+")";
      c.beginPath();c.arc(p.x,p.y,Math.max(.8,2.5*fade),0,TAU);c.fill();
@@ -1036,7 +1039,7 @@ function mount(root){
   // Industrial radial rails: structural shadow first, phosphor trace on top.
   for(let i=0;i<24;i++){
    const a=screenAngle(i*TAU/24);
-   const near=wallPoint(a,.04),far=wallPoint(a,14.6);
+   const near=wallPoint(a,.04),far=wallPoint(a,RENDER_FAR_Z+.35);
    const cyan=i%4===0;
    c.beginPath();c.moveTo(near.x,near.y);c.lineTo(far.x,far.y);
    c.strokeStyle=cyan?"rgba(65,218,246,.13)":"rgba(253,75,210,.1)";
@@ -1050,7 +1053,8 @@ function mount(root){
   }
   const spacing=.48;
   const phase=(mode==="menu"?(now*.0016):travel)%spacing;
-  for(let i=29;i>=0;i--)drawRing(i*spacing-phase,i);
+  const ringCount=Math.ceil(RENDER_FAR_Z/spacing)+1;
+  for(let i=ringCount;i>=0;i--)drawRing(i*spacing-phase,i);
   c.restore();
   if(turboLight>.005){
    c.fillStyle="rgba(187,117,238,"+(turboLight*.092)+")";
@@ -1079,7 +1083,7 @@ function mount(root){
   }
  }
  function drawWave(w){
-  if(w.cleared||w.z>15||w.z<-.40)return;
+  if(w.cleared||w.z>RENDER_FAR_Z||w.z<-.40)return;
   // Same radius, angular sector and depth interpolation as drawTunnel().
   c.save();c.lineJoin="round";
   for(const id of w.sectors){
@@ -1105,7 +1109,7 @@ function mount(root){
   c.restore();
  }
  function drawPad(pad){
-  if(pad.z>15||pad.z<-.45||pad.credited)return;
+  if(pad.z>RENDER_FAR_Z||pad.z<-.45||pad.credited)return;
   c.save();c.lineJoin="round";c.lineCap="round";
   const near=Math.max(.04,pad.z),far=near+pad.length;
   const pulse=.74+.26*Math.sin(elapsed*13+near);
@@ -1359,6 +1363,8 @@ function mount(root){
    renderHud();
   },
   death:()=>({active:screen.classList.contains("er-death"),overlay:overlay.classList.contains("er-stage-over"),icon:!crashIcon.hidden,title:logo.textContent}),
+  viewDistance:()=>({far:RENDER_FAR_Z,spawn:SPAWN_Z,hit:HIT_Z,
+   ringCount:Math.ceil(RENDER_FAR_Z/.48)+1,panelRows:Math.ceil(RENDER_FAR_Z/.81)+1}),
   pattern:pattern,collisionAt:collisionAt,hitDepth:HIT_Z
  };
  renderSound();toMenu();renderHud();
