@@ -167,6 +167,11 @@ function mount(root){
  brandLogo.src="/assets/games/echo-raccer-logo.png";
  brandLogo.alt="Echo Racer";
  const logo=node("h2","er-title","ECHO RACER");
+ const crashIcon=node("img","er-crash-icon");
+ crashIcon.src="/assets/games/warning.png";crashIcon.alt="";
+ crashIcon.hidden=true;
+ const crashSub=node("div","er-crash-sub","SIGNAL PERDU — VAISSEAU DÉTRUIT");
+ crashSub.hidden=true;
  const status=node("div","er-title-sub","PHOSPHOR TUNNEL / SYSTEM 01");
  const prompt=node("div","er-start-call","PRESS BUTTON TO PLAY");
  const expl=node("p","er-help","VUE SUBJECTIVE · TOURNE AUTOUR DU TUNNEL POUR TROUVER LE PASSAGE");
@@ -197,7 +202,8 @@ function mount(root){
   const choosing=stage==="levels";
   overlay.classList.toggle("er-stage-levels",choosing);
   overlay.classList.toggle("er-stage-home",!choosing);
-  brandLogo.hidden=false;logo.hidden=true;
+  brandLogo.hidden=false;logo.hidden=true;crashIcon.hidden=true;crashSub.hidden=true;
+  overlay.classList.remove("er-stage-over");screen.classList.remove("er-death");
   levelPicker.hidden=!choosing;overlayButton.hidden=choosing;
   backButton.hidden=!choosing;status.hidden=!choosing;
   prompt.hidden=true;expl.hidden=true;hint.hidden=!choosing;
@@ -213,7 +219,7 @@ function mount(root){
   if(mode!=="menu"||menuStage==="levels")return;
   renderMenuStage("levels");
  }
- overlay.append(brandLogo,logo,status,prompt,levelPicker,expl,hint,overlayButton,backButton);
+ overlay.append(brandLogo,crashIcon,logo,crashSub,status,prompt,levelPicker,expl,hint,overlayButton,backButton);
  const dashboard=node("div","er-dashboard");
  dashboard.setAttribute("role","group");dashboard.setAttribute("aria-label","Vitesse et recharge du boost");
  function instrument(label,cls,unit){
@@ -512,6 +518,26 @@ function mount(root){
    o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+.20);
   }catch(_){}
  }
+ function playDeathSound(){
+  if(!live||!soundEnabled||globalMuted())return;
+  try{
+   const context=ensureAudioContext();
+   if(!context)return;
+   if(context.state==="suspended")context.resume().catch(()=>{});
+   const now=context.currentTime;
+   for(const [start,freq,volume,duration] of [[0,510,.045,.56],[.095,155,.052,.88]]){
+    const osc=context.createOscillator(),gain=context.createGain();
+    osc.type="sawtooth";
+    osc.frequency.setValueAtTime(freq,now+start);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(40,freq*.22),now+start+duration);
+    gain.gain.setValueAtTime(.0001,now+start);
+    gain.gain.exponentialRampToValueAtTime(volume,now+start+.025);
+    gain.gain.exponentialRampToValueAtTime(.0001,now+start+duration);
+    osc.connect(gain);gain.connect(context.destination);
+    osc.start(now+start);osc.stop(now+start+duration+.02);
+   }
+  }catch(_){}
+ }
  function lightSegments(segments,ratio){
   const n=clamp(Math.round(ratio*segments.length),0,segments.length);
   segments.forEach((led,i)=>led.classList.toggle("lit",i<n));
@@ -547,6 +573,8 @@ function mount(root){
   invuln=0;pulseCharge=2;pulseGlow=padBoostTime=flash=shake=0;
   nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;
   shipBoostFade=0;turboLight=0;warningLife=0;warningBeepDelay=0;warningChirp=0;
+  screen.classList.remove("er-death");overlay.classList.remove("er-stage-over");
+  crashIcon.hidden=true;crashSub.hidden=true;
   message=selectedLevel.id==="free"?"FREE ROAM · BOOST ILLIMITÉ":"TROUVE LE PASSAGE";messageLife=2;keys.clear();levelPicker.hidden=true;backButton.hidden=true;overlay.hidden=true;
   beep("collect");startMusic(true);renderHud();
  }
@@ -559,14 +587,17 @@ function mount(root){
   renderHud();
  }
  function gameOver(){
-  stopMusic();nitroHeld=false;nitroActive=false;mode="over";keys.clear();flash=.5;shake=6;beep("hit");
+  stopMusic();nitroHeld=false;nitroActive=false;mode="over";keys.clear();flash=1.8;shake=12;
+  playDeathSound();screen.classList.add("er-death");
   warningLife=0;warningBeepDelay=0;
   if(score>best){best=Math.floor(score);save("best."+selectedLevel.id,best);}
   overlay.hidden=false;brandLogo.hidden=true;logo.hidden=false;logo.textContent="GAME OVER";
+  crashIcon.hidden=false;crashSub.hidden=false;
+  overlay.classList.remove("er-stage-home","er-stage-levels");
+  overlay.classList.add("er-stage-over");
   levelPicker.hidden=true;backButton.hidden=false;
   status.hidden=false;status.textContent="SCORE "+Math.floor(score)+"  ·  RECORD "+best;
   prompt.hidden=true;expl.hidden=true;hint.hidden=true;
-  overlay.classList.remove("er-stage-home","er-stage-levels");
   overlayButton.hidden=false;overlayButton.classList.add("er-overlay-restart");
   overlayButton.textContent="↻ REJOUER";overlayButton.setAttribute("aria-label","Rejouer le niveau");
   renderHud();
@@ -1174,6 +1205,7 @@ function mount(root){
    if(lives===0)gameOver();
    renderHud();
   },
+  death:()=>({active:screen.classList.contains("er-death"),overlay:overlay.classList.contains("er-stage-over"),icon:!crashIcon.hidden,title:logo.textContent}),
   pattern:pattern,collisionAt:collisionAt,hitDepth:HIT_Z
  };
  renderSound();toMenu();renderHud();
