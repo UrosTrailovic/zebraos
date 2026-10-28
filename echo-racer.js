@@ -37,6 +37,7 @@ const LEVELS=[
 const GAP_MIN=15.2,GAP_MAX=21.4,START_GATE_AT=.48;
 // A separate rhythm of collectible wall pads between the hazard waves.
 const PAD_START=7.2,PAD_GAP_MIN=33,PAD_GAP_MAX=47;
+const NITRO_BURN_SECONDS=3.2,NITRO_REFILL_SECONDS=5,NITRO_REGEN_WAIT=.45;
 function angularDelta(a,b){return ((a-b+PI)%TAU+TAU)%TAU-PI;}
 function inGap(i,start,width){
  return ((i-start+SECTORS)%SECTORS)<width;
@@ -93,7 +94,8 @@ function mount(root){
  let angle=0,turnVelocity=0,lives=MAX_LIVES,score=0;
  let best=Number(load("best."+selectedLevel.id,selectedLevel.id==="3"?load("best","0"):"0"))||0;
  let distance=0,travel=0,passed=0,combo=0,waves=[],pads=[],nextGateAt=START_GATE_AT,nextPadAt=PAD_START,lastGateAt=-100,trail=[],sparks=[],currentSpeed=0,gateCount=0,padCount=0,scoreMultiplier=1;
- let invuln=0,pulseCharge=2,pulseGlow=0,boostTime=0,padBoostTime=0,boostCooldown=0;
+ let invuln=0,pulseCharge=2,pulseGlow=0,padBoostTime=0;
+ let nitroHeld=false,nitroActive=false,nitroFuel=1,nitroRegenWait=0;
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
  let soundEnabled=load("sfx","on")!=="off",audioCtx=null;
  // Dedicated Echo Racer audio system: never touch ZebraAMP or other games.
@@ -103,7 +105,7 @@ function mount(root){
  const flyUrl="/assets/spaceship-fly-sfx.mp3";
  const boostUrl="/assets/boostsfx.mp3";
  const FLY_VOLUME=.13,BOOST_VOLUME=.43,FLY_FADE_SECONDS=1.5;
- let flySound=null,boostSound=null,flyFade=0;
+ let flySound=null,boostSound=null,flyFade=0,boostSoundMode="";
  const audioFx={bass:0,mid:0,high:0,kick:0,previousBass:0,slowBass:0,beatCooldown:0,energy:0};
  let dragPointer=null,dragX=0,dragLastTs=0,dragVelocity=0;
  const wrap=node("section","er zg zg-retro");
@@ -474,7 +476,8 @@ function mount(root){
   mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
   hudTimer=bestSaveTimer=audioSampleTimer=0;
   waves=[];pads=[];nextGateAt=selectedLevel.id==="free"?Infinity:START_GATE_AT;nextPadAt=selectedLevel.id==="free"?Infinity:PAD_START;lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
-  invuln=0;pulseCharge=2;pulseGlow=boostTime=padBoostTime=boostCooldown=flash=shake=0;
+  invuln=0;pulseCharge=2;pulseGlow=padBoostTime=flash=shake=0;
+  nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;
   shipBoostFade=0;turboLight=0;
   message=selectedLevel.id==="free"?"FREE ROAM · BOOST ILLIMITÉ":"TROUVE LE PASSAGE";messageLife=2;keys.clear();levelPicker.hidden=true;overlay.hidden=true;
   beep("collect");startMusic(true);renderHud();
@@ -482,20 +485,21 @@ function mount(root){
  function toMenu(){
   if(mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
   stopMusic();mode="menu";keys.clear();waves=[];pads=[];trail=[];turnVelocity=0;
-  elapsed=0;padBoostTime=0;boostTime=0;boostCooldown=0;currentSpeed=0;score=0;scoreMultiplier=1;
+  elapsed=0;padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;
+  currentSpeed=0;score=0;scoreMultiplier=1;
   overlay.hidden=false;levelPicker.hidden=false;
   logo.textContent="ECHO RACER";prompt.textContent="CHOISIS TON CIRCUIT";
   renderLevelPicker();overlayButton.textContent="▶ DÉMARRER";renderHud();
  }
  function gameOver(){
-  stopMusic();mode="over";keys.clear();flash=.5;shake=6;beep("hit");
+  stopMusic();nitroHeld=false;nitroActive=false;mode="over";keys.clear();flash=.5;shake=6;beep("hit");
   if(score>best){best=Math.floor(score);save("best."+selectedLevel.id,best);}
   levelPicker.hidden=true;overlay.hidden=false;logo.textContent="GAME OVER";prompt.textContent="RUN TERMINÉ";
   status.textContent="SCORE "+Math.floor(score)+"  ·  RECORD "+best;
   overlayButton.textContent="↻ REJOUER";renderHud();
  }
  function togglePause(){
-  if(mode==="running"){mode="paused";pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;overlay.hidden=false;
+  if(mode==="running"){endNitro();mode="paused";pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;overlay.hidden=false;
    logo.textContent="PAUSE";prompt.textContent="SIGNAL SUSPENDU";status.textContent="LE TUNNEL T'ATTEND";
    overlayButton.textContent="▶ REPRENDRE";
   }else if(mode==="paused"){mode="running";overlay.hidden=true;startMusic(false);}
@@ -504,7 +508,7 @@ function mount(root){
  function tap(which){
   if(which==="pause"){togglePause();return;}
   if(which==="pulse"){pulse();return;}
-  if(which==="boost"){boost();return;}
+  if(which==="boost"){beginNitro();return;}
   if(mode!=="running")return;
   // Single press = tiny rotation; holding the key rotates continuously.
   if(which==="left"||which==="right"){
@@ -532,12 +536,34 @@ function mount(root){
   }else{message="ONDE LIBÉRÉE";messageLife=.7;}
   renderHud();
  }
- function boost(){
-  if(mode!=="running"||(boostCooldown>0&&selectedLevel.id!=="free"))return;
-  boostTime=1.7;boostCooldown=selectedLevel.id==="free"?0:5;
+ function beginNitro(){
+  if(mode!=="running"||nitroHeld)return;
+  nitroHeld=true;
+  if(selectedLevel.id!=="free"&&nitroFuel<=0)return;
+  nitroActive=true;nitroRegenWait=0;
   shipBoostFade=1;turboLight=1;
-  message=selectedLevel.id==="free"?"BOOST ∞":"BOOST ×2";messageLife=.8;
-  playBoostSfx();beep("collect");renderHud();
+  message=selectedLevel.id==="free"?"NITRO ∞":"NITRO";messageLife=.7;
+  playBoostSfx(true);renderHud();
+ }
+ function endNitro(){
+  nitroHeld=false;
+  if(!nitroActive)return;
+  nitroActive=false;
+  if(selectedLevel.id!=="free"&&nitroFuel<1)nitroRegenWait=NITRO_REGEN_WAIT;
+  stopNitroSfx();renderHud();
+ }
+ function updateNitro(dt){
+  if(mode!=="running")return;
+  if(nitroActive&&selectedLevel.id!=="free"){
+   nitroFuel=clamp(nitroFuel-dt/NITRO_BURN_SECONDS,0,1);
+   if(nitroFuel<=0){
+    nitroActive=false;nitroRegenWait=NITRO_REGEN_WAIT;
+    stopNitroSfx();
+   }
+  }else if(!nitroHeld&&selectedLevel.id!=="free"&&nitroFuel<1){
+   nitroRegenWait=Math.max(0,nitroRegenWait-dt);
+   if(nitroRegenWait<=0)nitroFuel=clamp(nitroFuel+dt/NITRO_REFILL_SECONDS,0,1);
+  }
  }
  function createWave(){
   const choices=selectedLevel.patterns||Array.from({length:PATTERN_COUNT},(_,i)=>i);
@@ -581,7 +607,8 @@ function mount(root){
   const throttle=(keys.has("up")?.52:0)-(keys.has("down")?.55:0);
   // A boost pad is stronger than manual boost, but they do not multiply
   // together into an uncontrollable/untestable collision speed.
-  const boostMultiplier=padBoostTime>0?1.85:boostTime>0?1.55:1;
+  updateNitro(dt);
+  const boostMultiplier=padBoostTime>0?1.85:nitroActive?1.55:1;
   const targetSpeed=clamp(4.15+Math.min(1.55,distance/3000*.43)+throttle,3.5,5.7)*selectedLevel.speed*boostMultiplier;
   currentSpeed=targetSpeed>=currentSpeed?targetSpeed:
    targetSpeed+(currentSpeed-targetSpeed)*Math.exp(-dt*1.48);
@@ -593,9 +620,8 @@ function mount(root){
   travel+=dz;
   distance+=dz*125;
   score+=dt*(15+Math.min(35,distance/210))*scoreMultiplier;
-  invuln=Math.max(0,invuln-dt);boostTime=Math.max(0,boostTime-dt);
+  invuln=Math.max(0,invuln-dt);
   padBoostTime=Math.max(0,padBoostTime-dt);
-  boostCooldown=Math.max(0,boostCooldown-dt);
   pulseGlow=Math.max(0,pulseGlow-dt);messageLife=Math.max(0,messageLife-dt);
   flash=Math.max(0,flash-dt*1.8);shake=Math.max(0,shake-dt*16);
   // Separate obstacles by WORLD distance, not seconds. At faster speeds,
@@ -627,10 +653,10 @@ function mount(root){
     pad.credited=true;
     if(collisionAt(angle,pad)){
      padBoostTime=Math.max(padBoostTime,2.8);
-     boostTime=0;
+     shipBoostFade=1;turboLight=1;
      score+=275*scoreMultiplier;
      pulseGlow=.68;message="TURBO PAD +275";messageLife=1.2;
-     burst(angle,"#72f7ff",34);playBoostSfx();beep("collect");
+     burst(angle,"#72f7ff",34);if(!nitroActive)playBoostSfx(false);beep("collect");
     }
    }
   }
@@ -909,7 +935,7 @@ function mount(root){
   }
   if(mode==="running")advance(dt);
   tickEngine(dt);
-  const turbo=mode==="running"&&(boostTime>0||padBoostTime>0)?1:0;
+  const turbo=mode==="running"&&(nitroActive||padBoostTime>0)?1:0;
   if(turbo){shipBoostFade=1;turboLight=1;}
   else{
    shipBoostFade*=Math.exp(-dt*10);
@@ -945,7 +971,7 @@ function mount(root){
    if(k==="p"||k==="escape"){togglePause();return;}
    if(mode==="paused"){togglePause();return;}
    if(k===" "){pulse();return;}
-   if(k==="q"){boost();return;}
+   if(k==="q"){beginNitro();return;}
   }
  }
  function keyUp(e){
@@ -1016,10 +1042,11 @@ function mount(root){
  root._zebraDispose=dispose;
  root._echoDebug={
   snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,pulseCharge,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
-  advance:advance,start:start,pulse:pulse,boost:boost,menu:toMenu,pause:togglePause,
+  advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
   ship:()=>({idleLoaded:shipReady.idle,boostLoaded:shipReady.boost,boostMix:shipBoostFade,tunnelLight:turboLight}),
   level:()=>({id:selectedLevel.id,free:selectedLevel.id==="free",gap:selectedLevel.gap}),
-  gauges:()=>({speed:Math.round(currentSpeed*25),charge:selectedLevel.id==="free"?1:clamp(1-boostCooldown/5,0,1),boosting:boostTime>0||padBoostTime>0}),
+  gauges:()=>({speed:Math.round(currentSpeed*25),charge:selectedLevel.id==="free"?1:nitroFuel,boosting:nitroActive||padBoostTime>0,
+   held:nitroHeld,manualBoost:nitroActive,regenWait:nitroRegenWait}),
   engineAudio:()=>({flyLoaded:!!flySound,boostLoaded:!!boostSound,flyPlaying:!!flySound&&!flySound.paused,boostPlaying:!!boostSound&&!boostSound.paused,flyVolume:flySound?flySound.volume:0,flyFade}),
   selectLevel:(id)=>{
    if(mode!=="menu")return false;
