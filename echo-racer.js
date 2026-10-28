@@ -1,4 +1,4 @@
-/* Echo Racer — ZebraOS. Straight-ahead phosphor tunnel, rendered entirely
+/* Echo Racer — ZebraOS. Curving phosphor tunnel, rendered entirely
  * in Canvas 2D. Gameplay and soundtrack are independent of other ZebraOS apps.
  * No WebGL, no external rendering library, no duplicate audio source nodes. */
 (function(){
