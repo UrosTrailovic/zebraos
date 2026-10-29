@@ -1,14 +1,16 @@
 /* ZebraAMP 3.0 — lecteur du studio, sans framework.
- * Album public : index STUDIO/BUREAU/Zebra Tape 2.
+ * Albums officiels : Zebra Tape 2 et Zebralogy, indexés dans STUDIO/BUREAU.
  * Playlists personnelles : métadonnées localStorage, fichiers audio IndexedDB.
  * Un seul élément Audio ; EQ Web Audio non destructif ; import multiple et tri.
  * Le lecteur ne charge AUCUN morceau fictif et ne limite pas à neuf pistes.
  */
 (function(){
 "use strict";
-var ALBUM="zebra-tape-2",OPENED="fichiers-ouverts",KEY="zebraamp-v3",DB="zebraamp-v3-audio";
+var ALBUM="zebra-tape-2",ZEBRALOGY="zebralogy",OPENED="fichiers-ouverts",KEY="zebraamp-v3",DB="zebraamp-v3-audio";
 var audio=new Audio();audio.preload="auto";audio.volume=.7;
 var album={id:ALBUM,name:"Zebra Tape 2",readonly:true,tracks:[]};
+var zebralogy={id:ZEBRALOGY,name:"Zebralogy",readonly:true,tracks:[]};
+var officialPlaylists=[album,zebralogy];
 var playlists=[],current=ALBUM,currentId=null,loadedUrl=null,loadedBlob=null,view=null;
 var coverCache=new Map(),displayedCover=null;
 var ctx=null,filters=[],analyser=null,graphTried=false,reverbGraph=null;
@@ -56,7 +58,7 @@ function trackArtist(track){
  }
  return "Zebra";
 }
-function getList(){return current===ALBUM?album:playlists.find(function(p){return p.id===current;})||album;}
+function getList(){return current===ALBUM?album:current===ZEBRALOGY?zebralogy:playlists.find(function(p){return p.id===current;})||album;}
 function getTrack(){return getList().tracks.find(function(t){return t.id===currentId;})||null;}
 function format(t){if(!Number.isFinite(t)||t<0)return "00:00";t=Math.floor(t);return String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");}
 function status(text){notifyText=text||"";renderStatus();}
@@ -72,7 +74,7 @@ function restore(){
   if(!d||typeof d!=="object")return;
   if(Array.isArray(d.playlists))playlists=d.playlists.slice(0,60).filter(function(p){
    return p&&typeof p.id==="string"&&typeof p.name==="string"&&
-    p.id!==ALBUM&&p.id!==OPENED&&Array.isArray(p.tracks);
+    p.id!==ALBUM&&p.id!==ZEBRALOGY&&p.id!==OPENED&&Array.isArray(p.tracks);
   }).map(function(p){return{id:p.id,name:p.name.slice(0,90),readonly:false,
    coverKey:p.coverKey==="cover:"+p.id?p.coverKey:null,
    tracks:p.tracks.filter(function(t){return t&&typeof t.id==="string"&&
@@ -136,17 +138,8 @@ function dbOp(type,id,value){
 }
 function urlFor(path){return "https://raw.githubusercontent.com/UrosTrailovic/zebraos/main/"+path.split("/").map(encodeURIComponent).join("/");}
 function looksAudio(name){return /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(name||"");}
-function syncAlbum(entries){
- if(!Array.isArray(entries))return;
- // Les MP3 peuvent être à la racine de Zebra Tape 2 OU dans Son, SONS,
- // voire un autre sous-dossier. La casse des noms ne doit pas bloquer.
- var root="STUDIO/BUREAU/";
- var folder=entries.find(function(x){
-  return x.type==="dir" && x.path.split("/").slice(0,-1).join("/")===root.slice(0,-1)
-    && (x.name||x.path.split("/").pop()).toLocaleLowerCase("fr")==="zebra tape 2";
- });
- var prefix=(folder?folder.path:root+"Zebra Tape 2")+"/";
- album.tracks=entries.filter(function(x){
+function publicTracksIn(entries,prefix){
+ return entries.filter(function(x){
   return x.type==="file"&&typeof x.path==="string"&&x.path.startsWith(prefix)
     &&looksAudio(x.name||x.path.split("/").pop());
  }).sort(function(a,b){
@@ -155,10 +148,21 @@ function syncAlbum(entries){
  }).map(function(x){
   return {id:"public:"+x.path,name:label(x.name||x.path.split("/").pop()),kind:"public",path:x.path};
  });
+}
+function syncAlbum(entries){
+ if(!Array.isArray(entries))return;
+ var root="STUDIO/BUREAU/";
+ var folder=entries.find(function(x){
+  return x.type==="dir"&&x.path.split("/").slice(0,-1).join("/")===root.slice(0,-1)
+    &&(x.name||x.path.split("/").pop()).toLocaleLowerCase("fr")==="zebra tape 2";
+ });
+ album.tracks=publicTracksIn(entries,(folder?folder.path:root+"Zebra Tape 2")+"/");
+ zebralogy.tracks=publicTracksIn(entries,root+"Sonnnn/Zebralogy/");
  albumChecked=true;
- if(current===ALBUM){
-  if(currentId&&!album.tracks.some(function(t){return t.id===currentId;})){
-   audio.pause();currentId=null;audio.removeAttribute("src");releaseUrl();
+ var active=current===ALBUM?album:current===ZEBRALOGY?zebralogy:null;
+ if(active){
+  if(currentId&&!active.tracks.some(function(t){return t.id===currentId;})){
+   ++loadingId;audio.pause();currentId=null;audio.removeAttribute("src");releaseUrl();
   }
   render();
  }
@@ -170,7 +174,7 @@ function updatePublic(){
   if(!result||!result.ok||!Array.isArray(result.entries))
    return {ok:false,error:result&&result.error||"Index des fichiers inaccessible."};
   syncAlbum(result.entries);
-  return {ok:true,count:album.tracks.length};
+  return {ok:true,count:album.tracks.length,zebralogyCount:zebralogy.tracks.length};
  }).catch(function(err){
   return {ok:false,error:err.message||"Connexion au dépôt impossible."};
  });
@@ -353,7 +357,7 @@ function discardOpenedPlaylist(){
  });
 }
 function setPlaylist(id){
- if(id!==ALBUM&&!playlists.some(function(p){return p.id===id;}))return;
+ if(id!==ALBUM&&id!==ZEBRALOGY&&!playlists.some(function(p){return p.id===id;}))return;
  if(current!==id){
   ++loadingId; // Cancel any asynchronous track load from the old playlist.
   audio.pause();currentId=null;audio.removeAttribute("src");releaseUrl();
@@ -370,7 +374,7 @@ function createPlaylist(name,shouldSwitch){
 }
 /* Mini-covers JPEG locales : pas de chargement réseau ni d'attente IndexedDB.
  * 256 x 256 px et compression forte ; même stockage que les préférences.
- * Zebra Tape 2 reste publique et non modifiable. */
+ * Les deux albums officiels restent publics et non modifiables. */
 function coverStorageKey(id){return "zebraamp-cover-v1-"+id;}
 function releaseCover(id){
  var url=coverCache.get(id);
@@ -429,10 +433,16 @@ function renderCover(){
  var cover=view.querySelector(".amp3-cover"),art=view.querySelector(".amp3-cover-image");
  if(!cover||!art)return;
  var p=getList(),id=p.id;
- var key=p.readonly?"album":p.coverKey?("custom:"+id+":"+p.coverKey):"empty:"+id;
+ var key=p.readonly?"official:"+id:p.coverKey?("custom:"+id+":"+p.coverKey):"empty:"+id;
  if(displayedCover===key)return;
  displayedCover=key;
  if(p.readonly){
+  if(p.id===ZEBRALOGY){
+   applyCoverImage(art,cover,
+    "/STUDIO/BUREAU/Sonnnn/Zebralogy/zebralogyCover.jpg?cover=1",
+    urlFor("STUDIO/BUREAU/Sonnnn/Zebralogy/zebralogyCover.jpg"));
+   return;
+  }
   var embeddedCover=window.ZebraTape2CoverData;
   if(embeddedCover){
    cover.classList.remove("amp3-cover-empty");
@@ -816,7 +826,7 @@ function render(){
  if(!view||!view.isConnected)return;
  var list=getList(),sel=view.querySelector("[data-amp-select]");
  var last=sel.value;sel.innerHTML="";
- [album].concat(playlists).forEach(function(p){
+ officialPlaylists.concat(playlists).forEach(function(p){
   var opt=el("option","",p.name);
   opt.value=p.id;sel.appendChild(opt);
  });
@@ -831,8 +841,8 @@ function render(){
  if(!list.tracks.length){
   rows.appendChild(el("div","amp3-empty",list.readonly?
    albumChecked?
-    "Aucun morceau trouvé sur GitHub. Vérifie STUDIO/BUREAU/Zebra Tape 2/Son : les fichiers audio doivent être enregistrés avec « Commit changes ».":
-    "Chargement de Zebra Tape 2 depuis GitHub…":
+    "Aucun morceau trouvé dans "+(list.id===ZEBRALOGY?"STUDIO/BUREAU/Sonnnn/Zebralogy":"STUDIO/BUREAU/Zebra Tape 2/Son")+". Vérifie les fichiers GitHub.":
+    "Chargement de "+list.name+" depuis GitHub…":
    "Playlist vide. Importe un ou plusieurs morceaux, même en une seule fois."));
  }else{
   list.tracks.forEach(function(t,i){
@@ -1230,10 +1240,13 @@ function open(){
  var actions=el("div","amp3-bottom");
  actions.appendChild(b("＋ IMPORTER DES SONS",function(){var input=document.getElementById("file-music");if(input)input.click();},"amp3-btn amp3-import")).setAttribute("data-amp-import","");
  actions.appendChild(b("↻ ACTUALISER",function(){
-  status("Recherche des morceaux dans Zebra Tape 2…");
+  status("Actualisation des albums officiels…");
   updatePublic().then(function(result){
-   if(result.ok)status(result.count+" morceau(x) trouvé(s) dans Zebra Tape 2.");
-   else status("Actualisation impossible : "+result.error);
+   if(result.ok){
+    var p=getList();
+    if(p.readonly)status((p.id===ZEBRALOGY?result.zebralogyCount:result.count)+" morceau(x) trouvé(s) dans "+p.name+".");
+    else status("Albums officiels actualisés.");
+   }else status("Actualisation impossible : "+result.error);
   });
  },"amp3-btn"));
  root.appendChild(actions);
@@ -1244,8 +1257,9 @@ function open(){
  // Actualise aussi après une réouverture de ZebraAMP, sans attendre un clic.
  updatePublic().then(function(result){
    if(result.ok){
-     if(current===ALBUM)status(result.count+" morceau(x) dans Zebra Tape 2.");
-   }else if(current===ALBUM)status("Mise à jour indisponible : "+result.error);
+     var p=getList();
+     if(p.readonly)status((p.id===ZEBRALOGY?result.zebralogyCount:result.count)+" morceau(x) dans "+p.name+".");
+   }else if(getList().readonly)status("Mise à jour indisponible : "+result.error);
  });
 }
 function stop(){
@@ -1256,7 +1270,7 @@ function stop(){
 var api={
  open:open,init:init,stop:stop,importFiles:importFiles,openPublic:openPublic,openBlob:openBlob,
  pick:pick,play:play,updatePublic:updatePublic,analyser:function(){return analyser;},
- debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,speed:speed,preservePitch:preservePitch,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected),reverbSeconds:reverbGraph?reverbGraph.seconds:null,nativeFallback:nativeFallback,paused:audio.paused,muted:audio.muted,volume:audio.volume,readyState:audio.readyState};}
+ debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,zebralogy:zebralogy.tracks.length,official:officialPlaylists.map(function(p){return{id:p.id,name:p.name,count:p.tracks.length};}),speed:speed,preservePitch:preservePitch,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected),reverbSeconds:reverbGraph?reverbGraph.seconds:null,nativeFallback:nativeFallback,paused:audio.paused,muted:audio.muted,volume:audio.volume,readyState:audio.readyState};}
 };
 Object.defineProperty(api,"media",{enumerable:true,get:function(){return audio;}});
 window.ZebraAMP=api;
