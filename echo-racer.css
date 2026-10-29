@@ -921,3 +921,52 @@
   scrollbar-width:thin;scrollbar-color:#c799c9 #1c1025;
  }
 }
+
+
+/* Echo Racer 8.0 — navigation par manette sur mobile et repères de hitbox.
+   Rouge = vraie zone tactile, même lorsqu'un PNG ne la remplit pas. */
+@media(max-width:700px){
+ .zebra-game-body .er .er-pad .zt-control{
+  outline:2px solid #ff3030!important;
+  outline-offset:-2px!important;
+  border-radius:0!important;
+  -webkit-tap-highlight-color:transparent;
+ }
+ .zebra-game-body .er .er-pad .zt-control:active{
+  outline-color:#ff7777!important;
+ }
+ /* Le moniteur affiche les menus ; A/B et les directions les pilotent. */
+ .zebra-game-body .er .er-stage-home .er-overlay-button,
+ .zebra-game-body .er .er-stage-levels .er-level-button,
+ .zebra-game-body .er .er-stage-levels .er-menu-back,
+ .zebra-game-body .er .er-stage-pause .er-overlay-button,
+ .zebra-game-body .er .er-stage-pause .er-pause-action,
+ .zebra-game-body .er .er-stage-over .er-overlay-button,
+ .zebra-game-body .er .er-stage-over .er-menu-back{
+  pointer-events:none;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-levels .er-level-button{
+  position:relative;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-levels .er-level-button.selected{
+  outline:2px solid #8ef5ff!important;
+  outline-offset:-2px!important;
+  background-color:rgba(79,210,244,.16);
+  filter:brightness(1.21) drop-shadow(0 0 6px #84f5ff);
+  transform:none;
+ }
+ .zebra-game-body .er .er-overlay.er-stage-levels .er-level-button.selected::before{
+  content:"▶";position:absolute;left:4px;top:50%;transform:translateY(-50%);
+  color:#8cf8ff;font:bold 12px "Courier New",monospace;
+  text-shadow:0 0 6px #27d6ff;
+ }
+ .zebra-game-body .er .er-stage-home .er-overlay-button.selected,
+ .zebra-game-body .er .er-stage-pause .er-overlay-button.selected,
+ .zebra-game-body .er .er-stage-pause .er-pause-action.selected,
+ .zebra-game-body .er .er-stage-over .er-overlay-button.selected,
+ .zebra-game-body .er .er-stage-over .er-menu-back.selected{
+  outline:2px solid #8ef5ff!important;
+  outline-offset:0!important;
+  filter:brightness(1.18) drop-shadow(0 0 7px #53dfff);
+ }
+}
