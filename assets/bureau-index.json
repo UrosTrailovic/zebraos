@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-29T12:42:52.501Z",
+  "generatedAt": "2026-10-29T12:43:45.567220+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -479,14 +479,14 @@
       "size": 7420499
     },
     {
-      "path": "STUDIO/BUREAU/Sonnnn/Zebralogy/zebralogyCover.jpg",
-      "type": "file",
-      "size": 11864
-    },
-    {
       "path": "STUDIO/BUREAU/Sonnnn/Zebralogy/trythis.txt",
       "type": "file",
       "size": 75
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Zebralogy/zebralogyCover.jpg",
+      "type": "file",
+      "size": 11864
     },
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
