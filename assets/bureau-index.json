@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-29T12:19:38.752170+00:00",
+  "generatedAt": "2026-10-29T12:34:38.486745+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -452,6 +452,36 @@
     {
       "path": "STUDIO/BUREAU/Sonnnn/Zebralogy",
       "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Zebralogy/1 - Rilik.mp3",
+      "type": "file",
+      "size": 8597787
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Zebralogy/2 - ___.mp3",
+      "type": "file",
+      "size": 7344946
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Zebralogy/3 - Communication.mp3",
+      "type": "file",
+      "size": 4793859
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Zebralogy/4 - Space Trap.mp3",
+      "type": "file",
+      "size": 7487105
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Zebralogy/5 - Kišam Bonus track.mp3",
+      "type": "file",
+      "size": 7420499
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Zebralogy/zebralogyCover.jpg",
+      "type": "file",
+      "size": 11864
     },
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
