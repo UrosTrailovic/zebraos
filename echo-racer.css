@@ -970,3 +970,7 @@
   filter:brightness(1.18) drop-shadow(0 0 7px #53dfff);
  }
 }
+
+/* hidden must win over themed display:flex/grid, otherwise menu panels leak
+   into the wrong stage on compact screens. */
+.zebra-game-body .er [hidden]{display:none!important}
