@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Oxanium:wght@400;500;600;700;800&family=Share+Tech+Mono&display=swap");
 /* Echo Racer 1.0 — phosphor tunnel / solid desktop hardware.
    Canvas is a straight 2D forward projection, not WebGL.
    All selectors are scoped: Tetris / Znake / ZebraAMP remain unchanged. */
@@ -981,7 +982,7 @@
    References: angular motorcycle cluster, seven-segment CRT, cyan
    tracer lines, pink speed-strip. Scoped entirely to Echo Racer.
    =============================================================== */
-@import url("https://fonts.googleapis.com/css2?family=Oxanium:wght@400;500;600;700;800&family=Share+Tech+Mono&display=swap");
+
 
 .zebra-game-body .er{
  --er-ice:#bbf5ff;
