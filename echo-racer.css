@@ -1325,3 +1325,297 @@
 @media(prefers-reduced-motion:reduce){
  .zebra-game-body .er .er-seg{transition:none}
 }
+
+
+/* ---------------------------------------------------------------
+   ECHO RACER 11 — REAL TWO-ARC LCD
+   All titles and values share the same 14-segment emitter geometry.
+   Both arcs sit in one black physical monitor.
+   --------------------------------------------------------------- */
+.zebra-game-body .er .er-hud,
+.zebra-game-body .er .er-dashboard{
+ background:#020504!important;
+ border:2px solid #505b56!important;
+ border-top-color:#798780!important;
+ border-bottom-color:#303935!important;
+ box-shadow:inset 0 0 0 2px #0c1411,inset 0 0 18px #000,0 2px 4px #0008!important;
+}
+.zebra-game-body .er .er-hud::before,
+.zebra-game-body .er .er-dashboard::before{
+ background:linear-gradient(180deg,#06100d,#010303 48%,#030807)!important;
+}
+.zebra-game-body .er .er-hud::after,
+.zebra-game-body .er .er-dashboard::after {
+ content:"";position:absolute;pointer-events:none;
+ inset:4px;z-index:10;
+ opacity:.72;
+ background:
+  repeating-linear-gradient(0deg,#0007 0px,#0007 1px,transparent 1px,transparent 3px),
+  linear-gradient(180deg,transparent 0%,rgba(194,255,228,.00) 43%,
+   rgba(174,255,215,.14) 48%,rgba(145,251,202,.05) 52%,transparent 58%);
+ background-size:100% 3px,100% 165px;
+ background-position:0 0,0 -180px;
+ mix-blend-mode:screen;
+ animation:er-hud-glass-roll 8.5s linear infinite;
+}
+@keyframes er-hud-glass-roll{
+ from{background-position:0 0,0 -180px}
+ to{background-position:0 0,0 215px}
+}
+.zebra-game-body .er .er-digital,
+.zebra-game-body .er .er-meter-label,
+.zebra-game-body .er .er-dashboard-name{
+ --lcd:#d6ffe9;
+ display:inline-flex!important;
+ align-items:center;justify-content:center;
+ min-width:0;flex:0 0 auto;
+ color:var(--lcd)!important;
+ text-shadow:none!important;
+ font-family:inherit!important;
+}
+.zebra-game-body .er .er-meter-label,
+.zebra-game-body .er .er-dashboard-name{
+ --digit-w:5px;--digit-gap:1px;
+ white-space:nowrap;gap:var(--digit-gap);
+ min-height:calc(var(--digit-w)*1.78);
+ height:calc(var(--digit-w)*1.78);
+ filter:drop-shadow(0 0 1px #a7f9d888);
+}
+.zebra-game-body .er .er-meter-number{
+ --digit-w:clamp(9px,1.6vw,15px);
+ --digit-gap:1.2px;
+}
+.zebra-game-body .er .er-seg{
+ background:currentColor;
+ opacity:.025;
+}
+.zebra-game-body .er .er-seg.lit{
+ opacity:.95;
+ filter:drop-shadow(0 0 1.5px #caffea);
+}
+.zebra-game-body .er .er-seg-g1,
+.zebra-game-body .er .er-seg-g2{
+ top:44%;height:12%;width:34%;
+ clip-path:polygon(0 50%,16% 0,100% 0,100% 100%,16% 100%);
+}
+.zebra-game-body .er .er-seg-g1{left:16%}
+.zebra-game-body .er .er-seg-g2{right:16%;transform:scaleX(-1)}
+.zebra-game-body .er .er-seg-h,
+.zebra-game-body .er .er-seg-i,
+.zebra-game-body .er .er-seg-j,
+.zebra-game-body .er .er-seg-k{
+ width:12%;height:37%;top:9%;
+ clip-path:polygon(50% 0,100% 11%,100% 89%,50% 100%,0 89%,0 11%);
+ transform-origin:center;
+}
+.zebra-game-body .er .er-seg-h{left:27%;transform:rotate(-43deg)}
+.zebra-game-body .er .er-seg-i{right:27%;transform:rotate(43deg)}
+.zebra-game-body .er .er-seg-j{left:27%;top:auto;bottom:9%;transform:rotate(43deg)}
+.zebra-game-body .er .er-seg-k{right:27%;top:auto;bottom:9%;transform:rotate(-43deg)}
+.zebra-game-body .er .er-seg-l,
+.zebra-game-body .er .er-seg-m{
+ left:45%;width:10%;height:35%;
+ clip-path:polygon(50% 0,100% 14%,100% 86%,50% 100%,0 86%,0 14%);
+}
+.zebra-game-body .er .er-seg-l{top:8%}
+.zebra-game-body .er .er-seg-m{bottom:8%}
+.zebra-game-body .er .er-meter {
+ gap:9px!important;
+}
+.zebra-game-body .er .er-hud .er-meter-label{
+ letter-spacing:0!important;
+ padding:0!important;margin:0!important;
+}
+
+/* One coherent instrument: SPEED (upper) and BOOST (lower)
+   are the same steep curve, translated down 22% of the sweep area. */
+.zebra-game-body .er .er-dashboard {
+ --er-dashboard-height:152px;
+ position:relative!important;
+ isolation:isolate!important;
+ display:block!important;
+ width:min(390px,90%);max-width:none;
+ height:var(--er-dashboard-height)!important;
+ min-height:var(--er-dashboard-height)!important;
+ margin:0;padding:0!important;
+ clip-path:none!important;
+ border-radius:8px!important;
+ overflow:hidden;
+ pointer-events:none;
+}
+.zebra-game-body .er .er-dashboard-header{display:none!important}
+.zebra-game-body .er .er-dashboard-row,
+.zebra-game-body .er .er-dashboard-row + .er-dashboard-row{
+ position:absolute!important;
+ inset:0!important;
+ display:block!important;
+ height:100%!important;
+ min-height:0!important;
+ width:100%!important;
+ margin:0!important;
+ padding:0!important;
+ border:0!important;
+ background:transparent!important;
+ clip-path:none!important;
+}
+.zebra-game-body .er .er-dashboard-speed{
+ border-right:0!important;
+}
+.zebra-game-body .er .er-dashboard-readout {
+ position:absolute!important;
+ display:flex!important;align-items:flex-end!important;
+ gap:5px!important;
+ top:11px;left:14px;right:auto;
+ width:auto;min-width:0;
+ z-index:6;
+}
+.zebra-game-body .er .er-dashboard-boost .er-dashboard-readout{
+ left:auto;right:14px;
+}
+.zebra-game-body .er .er-dashboard-name{
+ --digit-w:5.5px;--digit-gap:1px;
+ min-width:0!important;
+ margin:0 3px 3px 0!important;
+}
+.zebra-game-body .er .er-dashboard-digits{
+ --digit-w:16px;--digit-gap:2px;
+ min-height:calc(var(--digit-w)*1.78)!important;
+ margin:0!important;
+ flex:0 0 auto!important;
+ filter:drop-shadow(0 0 2px #caffee90);
+}
+.zebra-game-body .er .er-dashboard-unit{
+ font:600 9px/1 "Oxanium","Courier New",monospace!important;
+ color:#b2c7bb!important;
+ margin:0 0 2px!important;
+}
+.zebra-game-body .er .er-dashboard-bar{
+ position:absolute!important;
+ inset:43px 15px 10px!important;
+ display:block!important;
+ height:auto!important;min-height:0!important;
+ width:auto!important;
+ padding:0!important;margin:0!important;
+ border:0!important;overflow:visible;
+ background:transparent!important;filter:none!important;
+ z-index:2;
+}
+.zebra-game-body .er .er-dashboard-bar::before,
+.zebra-game-body .er .er-dashboard-bar::after{content:none!important}
+.zebra-game-body .er .er-gauge-rail {
+ display:block;
+ position:absolute;inset:0;
+ width:100%;height:100%;
+ overflow:visible;
+ opacity:.82;pointer-events:none;
+}
+.zebra-game-body .er .er-gauge-rail path {
+ fill:none;
+ stroke:#294035;
+ stroke-width:2.8;
+ vector-effect:non-scaling-stroke;
+ stroke-linecap:round;
+}
+.zebra-game-body .er .er-dashboard-led,
+.zebra-game-body .er .er-dashboard-speed .er-dashboard-led,
+.zebra-game-body .er .er-dashboard-boost .er-dashboard-led {
+ position:absolute!important;
+ display:block!important;
+ left:var(--gauge-x)!important;
+ top:var(--gauge-y)!important;
+ bottom:auto!important;
+ transform:translate(-50%,-50%) rotate(var(--gauge-angle))!important;
+ transform-origin:center!important;
+ width:11px!important;height:5px!important;
+ min-width:0!important;min-height:0!important;
+ border:0!important;
+ clip-path:polygon(12% 0,100% 0,88% 100%,0 100%)!important;
+ background:#30463a!important;
+ box-shadow:none!important;filter:none!important;
+ opacity:.50!important;
+}
+.zebra-game-body .er .er-dashboard-led.lit,
+.zebra-game-body .er .er-dashboard-speed .er-dashboard-led.lit,
+.zebra-game-body .er .er-dashboard-boost .er-dashboard-led.lit {
+ background:#d5ffe7!important;
+ filter:drop-shadow(0 0 3px #b9ffdcaf)!important;
+ opacity:1!important;
+}
+.zebra-game-body .er .er-dashboard-boost .er-dashboard-led.lit{
+ background:#c5eedd!important;
+}
+.zebra-game-body .er .er-dashboard-status {
+ position:absolute!important;top:auto!important;
+ bottom:6px;right:13px;
+ display:block!important;width:auto;
+ padding:0!important;margin:0!important;
+ min-height:0!important;
+ font:600 9px/1 "Oxanium",monospace!important;
+ text-align:right!important;
+ letter-spacing:.5px;
+ color:#849b8f!important;
+ z-index:4;
+}
+.zebra-game-body .er .er-dashboard-speed .er-dashboard-status{
+ display:none!important;
+}
+
+/* On a compact phone the two arcs still share the same full-width glass. */
+@media(max-width:700px){
+ .zebra-game-body .er .er-hud .er-meter{
+  gap:7px!important;
+  min-height:54px;height:54px;
+ }
+ .zebra-game-body .er .er-meter-label{
+  --digit-w:clamp(3.8px,1.12vw,5px);--digit-gap:.7px;
+ }
+ .zebra-game-body .er .er-meter-number {
+  --digit-w:clamp(7px,2.4vw,10px);--digit-gap:1px;
+ }
+ .zebra-game-body .er .er-dashboard{
+  --er-dashboard-height:145px;
+  position:relative!important;inset:auto!important;
+  width:100%!important;max-width:none!important;
+  height:145px!important;min-height:145px!important;
+  flex:0 0 145px!important;
+  display:block!important;
+  padding:0!important;margin:0!important;
+ }
+ .zebra-game-body .er .er-dashboard-bar{
+  inset:43px 11px 10px!important;
+ }
+ .zebra-game-body .er .er-dashboard-readout{
+  top:9px;left:9px;gap:3px!important;
+ }
+ .zebra-game-body .er .er-dashboard-boost .er-dashboard-readout{
+  left:auto;right:9px;
+ }
+ .zebra-game-body .er .er-dashboard-name{
+  --digit-w:clamp(4px,1.3vw,5px);--digit-gap:.7px;
+  margin:0 2px 3px 0!important;
+ }
+ .zebra-game-body .er .er-dashboard-digits{
+  --digit-w:clamp(11px,3.15vw,13px);--digit-gap:1px;
+ }
+ .zebra-game-body .er .er-dashboard-unit{
+  font-size:7px!important;
+ }
+ .zebra-game-body .er .er-dashboard-led{
+  width:9px!important;height:4px!important;
+ }
+ .zebra-game-body .er .er-dashboard-status{font-size:7px!important}
+}
+@media(max-width:700px) and (max-height:700px){
+ .zebra-game-body .er .er-dashboard{
+  --er-dashboard-height:115px;
+  height:115px!important;min-height:115px!important;flex-basis:115px!important;
+ }
+ .zebra-game-body .er .er-dashboard-bar{
+  inset:37px 10px 8px!important;
+ }
+ .zebra-game-body .er .er-dashboard-digits{--digit-w:10px}
+}
+@media(prefers-reduced-motion:reduce){
+ .zebra-game-body .er .er-hud::after,
+ .zebra-game-body .er .er-dashboard::after{animation:none!important}
+}
