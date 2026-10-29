@@ -1130,7 +1130,7 @@
  border:0!important;clip-path:none!important;
  background:transparent!important;gap:2px;
 }
-.zebra-game-body .er .er-dashboard-row:first-of-type{
+.zebra-game-body .er .er-dashboard-speed{
  border-right:1px solid #263533!important;
 }
 .zebra-game-body .er .er-dashboard-readout{
@@ -1175,12 +1175,15 @@
  left:calc(var(--gauge-x) * 1%);
  bottom:calc(var(--gauge-rise) * 1% - 3px);
  width:4.5%;height:11px;min-width:0;
- transform:rotate(calc(var(--gauge-tilt) * 1deg)) skewX(-13deg);
+ transform:rotate(-24deg) skewX(-13deg);
  transform-origin:center;
  border:0!important;clip-path:polygon(15% 0,100% 0,85% 100%,0 100%);
  box-shadow:none!important;
  background:#273b36!important;
  opacity:.52;
+}
+.zebra-game-body .er .er-dashboard-boost .er-dashboard-led{
+ transform:rotate(-31deg) skewX(-13deg);
 }
 .zebra-game-body .er .er-dashboard-led.lit,
 .zebra-game-body .er .er-dashboard-speed .er-dashboard-led.lit,
@@ -1274,7 +1277,7 @@
   gap:1px;padding:5px 4px 3px!important;height:100%;
   border:0!important;
  }
- .zebra-game-body .er .er-dashboard-row:first-of-type{
+ .zebra-game-body .er .er-dashboard-speed{
   border-right:1px solid #263533!important;
  }
  .zebra-game-body .er .er-dashboard-readout{display:flex;gap:3px;align-items:flex-end}
