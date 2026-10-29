@@ -1698,7 +1698,10 @@ function mount(root){
  screen.addEventListener("pointercancel",boardUp);
  function onVisibility(){
   if(document.hidden&&mode==="running")togglePause();
-  else if(!document.hidden){fitCanvas();last=0;}
+  else if(!document.hidden){
+   fitCanvas();last=0;
+   try{paint(performance.now());}catch(e){console.error("Echo Racer resume",e);}
+  }
  }
  function onBlur(){endNitro();keys.clear();}
  document.addEventListener("visibilitychange",onVisibility);
@@ -1717,7 +1720,7 @@ function mount(root){
   window.removeEventListener("blur",onBlur);
   document.removeEventListener("keydown",keyDown);
   document.removeEventListener("keyup",keyUp);
-  if(ro){ro.disconnect();ro=null;}else window.removeEventListener("resize",fitCanvas);
+  if(ro){ro.disconnect();ro=null;}else window.removeEventListener("resize",restoreCanvas);
   if(musicSource)try{musicSource.disconnect();}catch(_){}
   if(musicAnalyser)try{musicAnalyser.disconnect();}catch(_){}
   if(musicGain)try{musicGain.disconnect();}catch(_){}
@@ -1796,9 +1799,21 @@ function mount(root){
   pattern:pattern,collisionAt:collisionAt,hitDepth:HIT_Z
  };
  renderSound();toMenu();renderHud();
- if(typeof ResizeObserver!=="undefined"){ro=new ResizeObserver(fitCanvas);ro.observe(screen);}
- else window.addEventListener("resize",fitCanvas);
- requestAnimationFrame(fitCanvas);
+ // A resize resets the backing bitmap to black. On battery-saving Android
+ // requestAnimationFrame can be delayed, so repaint synchronously right here.
+ function restoreCanvas(){
+  fitCanvas();
+  try{paint(performance.now());}catch(e){
+   root._erLastRenderError=String(e);
+   console.error("Echo Racer restore canvas",e);
+  }
+ }
+ canvas.addEventListener("contextlost",e=>{e.preventDefault();root._erContextLost=true;});
+ canvas.addEventListener("contextrestored",()=>{root._erContextLost=false;restoreCanvas();});
+ if(typeof ResizeObserver!=="undefined"){
+  ro=new ResizeObserver(restoreCanvas);ro.observe(screen);
+ }else window.addEventListener("resize",restoreCanvas);
+ restoreCanvas();
  raf=requestAnimationFrame(frameTick);
  return dispose;
 }
