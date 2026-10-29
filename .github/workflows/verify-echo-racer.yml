@@ -1,0 +1,77 @@
+name: Vérifier Echo Racer rendu mobile
+on:
+  push:
+    paths:
+      - 'echo-racer.js'
+      - 'echo-racer.css'
+      - 'app.js'
+      - '.github/workflows/verify-echo-racer.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mobile-canvas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Monter Echo Racer dans Chromium mobile et analyser son canvas
+        run: |
+          cat > _verify_echo_mobile.html <<'HTML'
+          <!doctype html><html lang="fr"><head><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <link rel="stylesheet" href="/style.css">
+          <link rel="stylesheet" href="/echo-racer.css">
+          <style>html,body{margin:0;background:#222}.window{position:relative;height:900px;width:390px}
+          .window-body{height:100%;width:100%;padding:0}</style>
+          </head><body><div class="window focused">
+            <div id="game" class="window-body zebra-game-body"></div>
+          </div>
+          <script>
+          const errors=[];
+          window.addEventListener("error",e=>errors.push(e.message+":"+e.filename+":"+e.lineno));
+          window.addEventListener("unhandledrejection",e=>errors.push("PROMISE:"+e.reason));
+          window.onerror=(message,src,line)=>{errors.push(String(message)+":"+line)};
+          </script>
+          <script src="/echo-racer.js"></script>
+          <script>
+          window.addEventListener("load",()=>{
+           const root=document.querySelector("#game");
+           try{
+            window.ZebraEchoRacer.mount(root);
+            const debug=root._echoDebug;
+            debug.openLevels();
+            debug.controller("pulse");
+            debug.advance(.05);
+            setTimeout(()=>{
+             const canvas=root.querySelector(".er-canvas");
+             const context=canvas.getContext("2d",{willReadFrequently:true});
+             const w=canvas.width,h=canvas.height;
+             let pixels=[],nonblack=0;
+             for(let y=50;y<h-50;y+=Math.max(10,Math.floor(h/12))){
+              for(let x=30;x<w-30;x+=Math.max(10,Math.floor(w/12))){
+               const p=context.getImageData(x,y,1,1).data;
+               if(p[0]+p[1]+p[2]>36)nonblack++;
+               pixels.push(p[0]+","+p[1]+","+p[2]);
+              }
+             }
+             const snap=debug.snapshot();
+             const report={errors,mode:snap.mode,score:snap.score,
+              canvas:{width:w,height:h,nonblack,unique:new Set(pixels).size},
+              screen:root.querySelector(".er-screen").getBoundingClientRect().height,
+              hud:root.querySelector(".er-hud").getBoundingClientRect().height,
+              gauge:root.querySelector(".er-dashboard").getBoundingClientRect().height};
+             console.log("ECHO_MOBILE_REPORT",JSON.stringify(report));
+             document.body.dataset.report=JSON.stringify(report);
+             document.body.dataset.result=errors.length===0&&w>200&&h>200&&snap.mode==="running"
+              &&snap.score>0&&nonblack>20&&report.canvas.unique>25?"ok":"failed";
+            },1200);
+           }catch(e){errors.push("MOUNT:"+e.stack);document.body.dataset.report=JSON.stringify({errors});document.body.dataset.result="failed";}
+          });
+          </script></body></html>
+          HTML
+          python3 -m http.server 8765 >/tmp/echo-http.log 2>&1 &
+          sleep 1
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=390,900 --virtual-time-budget=3900 --dump-dom http://127.0.0.1:8765/_verify_echo_mobile.html >/tmp/echo-test.html 2>/tmp/echo-chrome.log
+          grep -o 'data-report="[^"]*"' /tmp/echo-test.html | head -1 || true
+          grep -o 'data-result="[^"]*"' /tmp/echo-test.html | head -1 || true
+          grep -q 'data-result="ok"' /tmp/echo-test.html
