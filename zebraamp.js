@@ -1060,7 +1060,7 @@ function open(){
  w.innerHTML="";displayedCover=null;
  var root=el("div","amp3");
  var top=el("div","amp3-head");
- var bootTitle=el("strong","amp3-boot-title","ZEBRAAMP 3.7");
+ var bootTitle=el("strong","amp3-boot-title","ZEBRAAMP 3.8");
  var bootHello=el("span","amp3-boot-hello","");
  top.append(bootTitle,bootHello);top.appendChild(el("span","amp3-studio-label","STUDIO PLAYER"));root.appendChild(top);
  var stripe=el("div","amp3-zebra-plate");
