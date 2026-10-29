@@ -134,11 +134,25 @@ function mount(root){
  heading.appendChild(wordmark);wrap.appendChild(heading);
  // Seven-segment phosphor digits: genuine segmented geometry, without a font
  // download or a canvas redraw each time a score changes.
- const SEGMENTS={0:"abcdef",1:"bc",2:"abdeg",3:"abcdg",4:"bcfg",
-  5:"acdfg",6:"acdefg",7:"abc",8:"abcdefg",9:"abcdfg","-":"g"};
- const SEGMENT_NAMES="abcdefg";
+ const SEGMENTS={
+  "0":"a b c d e f","1":"b c","2":"a b d e g1 g2","3":"a b c d g1 g2",
+  "4":"b c f g1 g2","5":"a c d f g1 g2","6":"a c d e f g1 g2",
+  "7":"a b c","8":"a b c d e f g1 g2","9":"a b c d f g1 g2",
+  "A":"a b c e f g1 g2","B":"a b c d e f g1 g2 l m",
+  "C":"a d e f","D":"a b c d e f l m","E":"a d e f g1 g2",
+  "F":"a e f g1 g2","G":"a c d e f g2",
+  "H":"b c e f g1 g2","I":"a d l m","J":"b c d e",
+  "K":"e f g1 h k","L":"d e f","M":"b c e f h i",
+  "N":"b c e f h k","O":"a b c d e f","P":"a b e f g1 g2",
+  "Q":"a b c d e f k","R":"a b e f g1 g2 k",
+  "S":"a c d f g1 g2","T":"a l m","U":"b c d e f",
+  "V":"e f j k","W":"b c d e f j k","X":"h i j k",
+  "Y":"b c d f g1 g2","Z":"a d i j","-":"g1 g2",
+  ".":"m", "/":"i j"," ":""
+ };
+ const SEGMENT_NAMES="a b c d e f g1 g2 h i j k l m".split(" ");
  function setDigital(display,value){
-  const text=String(value);
+  const text=String(value).toUpperCase();
   if(display._erDisplayValue===text)return;
   display._erDisplayValue=text;
   display.setAttribute("aria-label",text);
@@ -156,9 +170,10 @@ function mount(root){
    if(digit.dataset.char===char)continue;
    digit.dataset.char=char;
    if(glyph)digit.textContent="∞";
-   else{
-    const active=SEGMENTS[char]||"";
-    for(let j=0;j<7;j++)digit.children[j].classList.toggle("lit",active.includes(SEGMENT_NAMES[j]));
+   else {
+    const active=new Set((SEGMENTS[char]||"").split(" "));
+    for(let j=0;j<SEGMENT_NAMES.length;j++)
+     digit.children[j].classList.toggle("lit",active.has(SEGMENT_NAMES[j]));
    }
   }
  }
@@ -172,7 +187,7 @@ function mount(root){
  let scoreLabel=null;
  function metric(label,kind,footer){
   const box=node("div","er-meter er-meter-"+kind);
-  const title=node("span","er-meter-label",label);
+  const title=node("span","er-meter-label");setDigital(title,label);
   if(label==="SCORE")scoreLabel=title;
   const value=digital("er-meter-number");
   const base=node("div","er-meter-foot",footer);
@@ -376,23 +391,49 @@ function mount(root){
  function instrument(label,cls,unit){
   const row=node("div","er-dashboard-row "+cls),
    readout=node("div","er-dashboard-readout");
-  const labelEl=node("span","er-dashboard-name",label);
+  const labelEl=node("span","er-dashboard-name");setDigital(labelEl,label);
   const value=digital("er-dashboard-digits");
   const unitEl=node("span","er-dashboard-unit",unit);
   readout.append(labelEl,value,unitEl);
   const bar=node("div","er-dashboard-bar");bar.setAttribute("aria-hidden","true");
   const segments=[];
-  for(let i=0;i<17;i++){
+  const isBoost=cls==="er-dashboard-boost";
+  // The two gauges use exactly the same near-vertical-to-horizontal curve.
+  // Boost is translated downward, with consistent perpendicular tick blades.
+  function pointAt(t){
+   const mt=1-t;
+   const x=mt*mt*mt*4+3*mt*mt*t*4+3*mt*t*t*54+t*t*t*96;
+   const y=mt*mt*mt*70+3*mt*mt*t*16+3*mt*t*t*9+t*t*t*8+(isBoost?22:0);
+   return {x,y};
+  }
+  const ns="http://www.w3.org/2000/svg";
+  const rail=document.createElementNS(ns,"svg");
+  rail.classList.add("er-gauge-rail");
+  rail.setAttribute("viewBox","0 0 100 100");
+  rail.setAttribute("preserveAspectRatio","none");
+  rail.setAttribute("aria-hidden","true");
+  const trace=document.createElementNS(ns,"path");
+  trace.setAttribute("d",isBoost?"M 4 92 C 4 38 54 31 96 30":"M 4 70 C 4 16 54 9 96 8");
+  rail.appendChild(trace);bar.appendChild(rail);
+  const samples=[],total=175;
+  let arc=0,prev=pointAt(0);
+  samples.push({p:prev,length:0});
+  for(let j=1;j<=total;j++){
+   const p=pointAt(j/total);
+   arc+=Math.hypot((p.x-prev.x)*3.2,(p.y-prev.y)*.96);
+   samples.push({p,length:arc});prev=p;
+  }
+  for(let i=0;i<21;i++){
+   const target=arc*i/20;
+   let n=1;while(n<samples.length-1&&samples[n].length<target)n++;
+   const p=samples[n].p;
+   const p0=pointAt(Math.max(0,(n-1)/total));
+   const p1=pointAt(Math.min(1,(n+1)/total));
+   const degrees=Math.atan2((p1.y-p0.y)*.96,(p1.x-p0.x)*3.2)*180/Math.PI+90;
    const led=node("span","er-dashboard-led");
-   const progress=i/16;
-   // Real raised, curved tachometer sweep, not one skewed straight bar.
-   // Boost climbs in an opposite accelerating curve.
-   const rise=cls==="er-dashboard-speed"
-    ? 10+75*Math.sin(progress*Math.PI*.5)
-    : 8+78*(progress*progress*(3-2*progress));
-   led.style.setProperty("--gauge-x",(3+i*5.55).toFixed(2)+"%");
-   led.style.setProperty("--gauge-rise",rise.toFixed(2)+"%");
-   led.style.setProperty("--gauge-tilt",String(cls==="er-dashboard-speed"?-24:-31));
+   led.style.setProperty("--gauge-x",p.x.toFixed(2)+"%");
+   led.style.setProperty("--gauge-y",p.y.toFixed(2)+"%");
+   led.style.setProperty("--gauge-angle",degrees.toFixed(1)+"deg");
    bar.appendChild(led);segments.push(led);
   }
   const statusEl=node("span","er-dashboard-status","");
@@ -829,7 +870,7 @@ function mount(root){
   segments.forEach((led,i)=>led.classList.toggle("lit",i<n));
  }
  function renderHud(){
-  scoreLabel.textContent="SCORE";
+  // Fixed phosphor label already uses the same segmented font as the digits.
   setDigital(scoreEl,String(Math.floor(score)).padStart(5,"0"));
   setDigital(bestEl,String(Math.floor(best)).padStart(5,"0"));
   setDigital(shieldEl,String(lives).padStart(2,"0"));
@@ -889,6 +930,10 @@ function mount(root){
   overlay.classList.remove("er-stage-over","er-stage-pause");pauseActions.hidden=true;
   crashIcon.hidden=true;crashSub.hidden=true;
   message=selectedLevel.id==="free"?"FREE ROAM · BOOST ILLIMITÉ":"TROUVE LE PASSAGE";messageLife=2;keys.clear();levelPicker.hidden=true;backButton.hidden=true;overlay.hidden=true;
+  // Draw the first tunnel frame immediately: avoid a blank panel when
+  // Android throttles its first animation frame after a touch gesture.
+  fitCanvas();
+  try{paint(performance.now());}catch(error){console.error("Echo Racer initial frame",error);}
   beep("collect");startMusic(true);renderHud();
  }
  function toMenu(){
@@ -1559,7 +1604,12 @@ function mount(root){
    if(shipBoostFade<.002)shipBoostFade=0;
    if(turboLight<.002)turboLight=0;
   }
-  sampleMusic(dt);paint(now);
+  sampleMusic(dt);
+  try{paint(now);}catch(error){
+   if(!root._erLastRenderError||root._erLastRenderError!==String(error))
+    console.error("Echo Racer render:",error);
+   root._erLastRenderError=String(error);
+  }
  }
  function keyDown(e){
   if(!live||document.hidden||e.altKey||e.ctrlKey||e.metaKey)return;
@@ -1646,7 +1696,10 @@ function mount(root){
  screen.addEventListener("pointermove",boardMove);
  screen.addEventListener("pointerup",boardUp);
  screen.addEventListener("pointercancel",boardUp);
- function onVisibility(){if(document.hidden&&mode==="running")togglePause();}
+ function onVisibility(){
+  if(document.hidden&&mode==="running")togglePause();
+  else if(!document.hidden){fitCanvas();last=0;}
+ }
  function onBlur(){endNitro();keys.clear();}
  document.addEventListener("visibilitychange",onVisibility);
  window.addEventListener("blur",onBlur);
@@ -1706,6 +1759,7 @@ function mount(root){
    best=Number(load("best."+id,id==="3"?load("best","0"):"0"))||0;
    renderHud();return true;
   },
+  lastRenderError:()=>root._erLastRenderError||null,
   stage:()=>menuStage,menuSelection:()=>({index:menuIndex,id:LEVELS[menuIndex].id,pauseIndex,overIndex}),controller:controllerInput,openLevels:showLevelSelect,
   pauseMenu:()=>({visible:!pauseActions.hidden,mode,stage:overlay.classList.contains("er-stage-pause"),soundLabel:pauseSound.textContent}),
   warning:()=>({life:warningLife,beepDelay:warningBeepDelay,visible:!warningLayer.hidden}),
