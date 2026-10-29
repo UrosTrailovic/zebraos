@@ -390,8 +390,8 @@ function mount(root){
    const rise=cls==="er-dashboard-speed"
     ? 10+75*Math.sin(progress*Math.PI*.5)
     : 8+78*(progress*progress*(3-2*progress));
-   led.style.setProperty("--gauge-x",String(3+i*5.55));
-   led.style.setProperty("--gauge-rise",String(rise));
+   led.style.setProperty("--gauge-x",(3+i*5.55).toFixed(2)+"%");
+   led.style.setProperty("--gauge-rise",rise.toFixed(2)+"%");
    led.style.setProperty("--gauge-tilt",String(cls==="er-dashboard-speed"?-24:-31));
    bar.appendChild(led);segments.push(led);
   }
