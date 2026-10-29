@@ -1172,8 +1172,8 @@
 .zebra-game-body .er .er-dashboard-led.lit {
  position:absolute;
  display:block;flex:none;
- left:calc(var(--gauge-x) * 1%);
- bottom:calc(var(--gauge-rise) * 1% - 3px);
+ left:var(--gauge-x);
+ bottom:calc(var(--gauge-rise) - 3px);
  width:4.5%;height:11px;min-width:0;
  transform:rotate(-24deg) skewX(-13deg);
  transform-origin:center;
