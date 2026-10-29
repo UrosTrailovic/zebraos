@@ -1479,7 +1479,7 @@ function mount(root){
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable)return;
   if(mode==="crashing"||(mode==="over"&&deathLock>0)){e.preventDefault();return;}
   // Native buttons handle their own Enter/Space; no double activation.
-  if(e.target.closest&&e.target.closest(".er-pad button, .er-overlay button"))return;
+  if((e.key==="Enter"||e.key===" ")&&e.target.closest&&e.target.closest(".er-pad button, .er-overlay button"))return;
   const k=e.key.toLowerCase(),control={
    arrowleft:"left",a:"left",arrowright:"right",d:"right",
    arrowup:"up",w:"up",arrowdown:"down",s:"down"
