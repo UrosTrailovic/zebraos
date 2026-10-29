@@ -338,7 +338,13 @@ function mount(host,path,opts){
    b.appendChild(icon(item,opts.osIcon,viewSizes[view]));
    b.appendChild(node("span","github-file-name",item.name));
    b.appendChild(node("small","github-file-size",item.type==="dir"?"Dossier":item.type==="app"?"Application":sizeText(item.size)));
-   b.onclick=function(){if(item.type==="dir")mount(host,item.path,opts);else preview(item,opts);};
+   function openEntry(){if(item.type==="dir")mount(host,item.path,opts);else preview(item,opts);}
+   b.onclick=function(e){
+    files.querySelectorAll(".file-entry").forEach(function(x){x.classList.remove("selected");});
+    b.classList.add("selected");
+    if(e.detail===0||e.pointerType==="touch"||window.matchMedia("(pointer: coarse)").matches)openEntry();
+   };
+   b.ondblclick=function(){if(!window.matchMedia("(pointer: coarse)").matches)openEntry();};
    files.appendChild(b);
   });
   var date="";
