@@ -258,11 +258,17 @@ async function mount(host,parent,opt){
     var symbol=E("span","file-symbol");symbol.appendChild(opt.osIcon(iconName(item),32));
     b.appendChild(symbol);b.appendChild(E("span","local-file-name",item.name));
     b.appendChild(E("small","github-file-size",item.kind==="folder"?"Dossier":bytes(item.bytes||item.blob&&item.blob.size)));
-    b.onclick=function(){
-      if(isTrash)return;
-      if(item.kind==="folder")mount(host,item.id,opt);
-      else preview(host,item,opt);
-    };
+    function openEntry(){
+       if(isTrash)return;
+       if(item.kind==="folder")mount(host,item.id,opt);
+       else preview(host,item,opt);
+     }
+     b.onclick=function(e){
+       list.querySelectorAll(".file-entry").forEach(function(x){x.classList.remove("selected");});
+       b.classList.add("selected");
+       if(e.detail===0||e.pointerType==="touch"||window.matchMedia("(pointer: coarse)").matches)openEntry();
+     };
+     b.ondblclick=function(){if(!window.matchMedia("(pointer: coarse)").matches)openEntry();};
     wrapper.appendChild(b);
     var more=btn("⋯","local-file-more",function(){
       var existing=host.querySelector(".local-file-menu");if(existing)existing.remove();
