@@ -132,10 +132,68 @@ function mount(root){
  headerLogo.alt="ECHO RACER";
  wordmark.appendChild(headerLogo);
  heading.appendChild(wordmark);wrap.appendChild(heading);
+ // Seven-segment phosphor digits: genuine segmented geometry, without a font
+ // download or a canvas redraw each time a score changes.
+ const SEGMENTS={0:"abcdef",1:"bc",2:"abdeg",3:"abcdg",4:"bcfg",
+  5:"acdfg",6:"acdefg",7:"abc",8:"abcdefg",9:"abcdfg","-":"g"};
+ const SEGMENT_NAMES="abcdefg";
+ function setDigital(display,value){
+  const text=String(value);
+  if(display._erDisplayValue===text)return;
+  display._erDisplayValue=text;
+  display.setAttribute("aria-label",text);
+  if(display.children.length!==text.length)display.replaceChildren();
+  for(let i=0;i<text.length;i++){
+   const char=text[i],glyph=char==="∞";
+   let digit=display.children[i];
+   if(!digit||digit.classList.contains("er-digit-symbol")!==glyph){
+    digit=node("span",glyph?"er-digit-symbol":"er-digit");
+    digit.setAttribute("aria-hidden","true");
+    if(!glyph)for(const seg of SEGMENT_NAMES)digit.appendChild(node("i","er-seg er-seg-"+seg));
+    if(display.children[i])display.replaceChild(digit,display.children[i]);
+    else display.appendChild(digit);
+   }
+   if(digit.dataset.char===char)continue;
+   digit.dataset.char=char;
+   if(glyph)digit.textContent="∞";
+   else{
+    const active=SEGMENTS[char]||"";
+    for(let j=0;j<7;j++)digit.children[j].classList.toggle("lit",active.includes(SEGMENT_NAMES[j]));
+   }
+  }
+ }
+ function digital(cls){
+  const el=node("strong","er-digital "+(cls||""));
+  el.setAttribute("role","img");
+  return el;
+ }
  const hud=node("div","er-hud");
+ hud.setAttribute("aria-label","Instrumentation Echo Racer");
  let scoreLabel=null;
- function metric(label){const box=node("div","er-meter"),title=node("span","",label);box.appendChild(title);if(label==="SCORE")scoreLabel=title;const value=node("strong","","0");box.appendChild(value);hud.appendChild(box);return value;}
- const scoreEl=metric("SCORE"),bestEl=metric("RECORD"),shieldEl=metric("BOUCLIERS"),energyEl=metric("PULSE");
+ function metric(label,kind,footer){
+  const box=node("div","er-meter er-meter-"+kind);
+  const title=node("span","er-meter-label",label);
+  if(label==="SCORE")scoreLabel=title;
+  const value=digital("er-meter-number");
+  const base=node("div","er-meter-foot",footer);
+  box.append(title,value,base);
+  if(kind==="shield"||kind==="pulse"){
+   const rack=node("div","er-meter-rack");
+   value._erSlots=[];
+   for(let i=0;i<3;i++){
+    const indicator=node("i","er-meter-slot");
+    indicator.setAttribute("aria-hidden","true");
+    rack.appendChild(indicator);value._erSlots.push(indicator);
+   }
+   box.appendChild(rack);
+  }
+  hud.appendChild(box);
+  return value;
+ }
+ const scoreEl=metric("SCORE","score","TOTAL / PTS"),
+  bestEl=metric("RECORD","best","PERSONAL BEST"),
+  shieldEl=metric("BOUCLIERS","shield","HULL STATUS"),
+  energyEl=metric("PULSE","pulse","WAVE CHARGE");
  const frame=node("div","er-frame");
  const screen=node("div","er-screen");
  const canvas=node("canvas","er-canvas");canvas.width=W;canvas.height=H;canvas.setAttribute("aria-label","Tunnel spatial violet et rose, rotation autour des barrières lumineuses");
@@ -187,7 +245,14 @@ function mount(root){
  const crashSub=node("div","er-crash-sub","SIGNAL PERDU — VAISSEAU DÉTRUIT");
  crashSub.hidden=true;
  const status=node("div","er-title-sub","PHOSPHOR TUNNEL / SYSTEM 01");
- const prompt=node("div","er-start-call","PRESS BUTTON TO PLAY");
+ const prompt=node("div","er-start-call","SYSTEM READY");
+ const introDiagnostic=node("div","er-intro-diagnostic");
+ introDiagnostic.setAttribute("aria-hidden","true");
+ introDiagnostic.append(node("span","er-intro-tag","NEURAL LINK / 01"),
+  node("span","er-intro-light","● CORE ONLINE"));
+ const introTrack=node("div","er-intro-track");
+ introTrack.setAttribute("aria-hidden","true");
+ for(let i=0;i<21;i++)introTrack.appendChild(node("i","er-intro-cell"));
  const expl=node("p","er-help","VUE SUBJECTIVE · TOURNE AUTOUR DU TUNNEL POUR TROUVER LE PASSAGE");
  const hint=node("p","er-hint","← → TOURNE · ↑ ↓ VITESSE · ESPACE NITRO (MAINTENIR) · Q PULSE · P PAUSE");
  const overlayButton=node("button","er-overlay-button","▶ DÉMARRER");
@@ -274,7 +339,8 @@ function mount(root){
   pauseActions.hidden=true;
   levelPicker.hidden=!choosing;overlayButton.hidden=choosing;
   backButton.hidden=!choosing;status.hidden=!choosing;
-  prompt.hidden=true;expl.hidden=true;hint.hidden=!choosing;
+  prompt.hidden=choosing;introDiagnostic.hidden=choosing;introTrack.hidden=choosing;
+  expl.hidden=true;hint.hidden=!choosing;
   if(choosing){status.textContent="CHOISIS TON CIRCUIT";
    hint.textContent="↑ ↓ CHOISIR · A VALIDER · B RETOUR · 1–5 AU CLAVIER";
   }
@@ -301,16 +367,22 @@ function mount(root){
  const pauseSound=pauseAction("♫ SON ON","er-pause-sound",()=>soundButton.click());
  const pauseMenu=pauseAction("☷ MENU","er-pause-menu",()=>toMenu());
  pauseActions.append(pauseRestart,pauseSound,pauseMenu);pauseActions.hidden=true;
- overlay.append(brandLogo,crashIcon,logo,crashSub,status,prompt,levelPicker,expl,hint,overlayButton,backButton,pauseActions);
+ overlay.append(introDiagnostic,brandLogo,introTrack,crashIcon,logo,crashSub,status,prompt,levelPicker,expl,hint,overlayButton,backButton,pauseActions);
  const dashboard=node("div","er-dashboard");
- dashboard.setAttribute("role","group");dashboard.setAttribute("aria-label","Vitesse et recharge du boost");
+ dashboard.setAttribute("role","group");dashboard.setAttribute("aria-label","Tableau de bord vitesse et boost");
+ const dashHeader=node("div","er-dashboard-header");
+ dashHeader.append(node("span","","ECHO / TELEMETRY"),node("span","","HYPERDRIVE · 02"));
+ dashboard.appendChild(dashHeader);
  function instrument(label,cls,unit){
-  const row=node("div","er-dashboard-row "+cls),readout=node("div","er-dashboard-readout");
-  const value=node("strong","er-dashboard-digits","000");
-  readout.append(node("span","er-dashboard-name",label),value,node("span","er-dashboard-unit",unit));
+  const row=node("div","er-dashboard-row "+cls),
+   readout=node("div","er-dashboard-readout");
+  const labelEl=node("span","er-dashboard-name",label);
+  const value=digital("er-dashboard-digits");
+  const unitEl=node("span","er-dashboard-unit",unit);
+  readout.append(labelEl,value,unitEl);
   const bar=node("div","er-dashboard-bar");bar.setAttribute("aria-hidden","true");
   const segments=[];
-  for(let i=0;i<15;i++){const led=node("span","er-dashboard-led");bar.appendChild(led);segments.push(led);}
+  for(let i=0;i<17;i++){const led=node("span","er-dashboard-led");bar.appendChild(led);segments.push(led);}
   const statusEl=node("span","er-dashboard-status","");
   row.append(readout,bar,statusEl);dashboard.appendChild(row);
   return{row,value,segments,statusEl};
@@ -746,20 +818,23 @@ function mount(root){
  }
  function renderHud(){
   scoreLabel.textContent="SCORE";
-  scoreEl.textContent=Math.floor(score).toLocaleString("fr");
-  bestEl.textContent=Math.floor(best).toLocaleString("fr");
-  shieldEl.textContent="◆".repeat(lives)+"◇".repeat(MAX_LIVES-lives);
-  energyEl.textContent="✦".repeat(pulseCharge)+"·".repeat(3-pulseCharge);
+  setDigital(scoreEl,String(Math.floor(score)).padStart(5,"0"));
+  setDigital(bestEl,String(Math.floor(best)).padStart(5,"0"));
+  setDigital(shieldEl,String(lives).padStart(2,"0"));
+  setDigital(energyEl,String(pulseCharge).padStart(2,"0"));
+  shieldEl._erSlots.forEach((el,i)=>el.classList.toggle("lit",i<lives));
+  energyEl._erSlots.forEach((el,i)=>el.classList.toggle("lit",i<pulseCharge));
   const speed=Math.round((mode==="menu"?0:currentSpeed)*25);
-  speedGauge.value.textContent=String(speed).padStart(3,"0");
+  setDigital(speedGauge.value,String(speed).padStart(3,"0"));
   lightSegments(speedGauge.segments,clamp(speed/310,0,1));
   const free=selectedLevel.id==="free";
   const active=mode==="running"&&(nitroActive||padBoostTime>0);
   const charge=free?1:nitroFuel;
-  boostGauge.value.textContent=free?"∞":String(Math.round(charge*100)).padStart(3,"0");
+  setDigital(boostGauge.value,free?"∞":String(Math.round(charge*100)).padStart(3,"0"));
   boostGauge.statusEl.textContent=padBoostTime>0?"TURBO":nitroActive?"NITRO":free?"ILLIMITÉ":
    charge>=.999?"PRÊT":nitroRegenWait>0?"PAUSE":"RECHARGE";
   boostGauge.row.classList.toggle("er-dashboard-active",active);
+  dashboard.classList.toggle("er-boost-active",active);
   lightSegments(boostGauge.segments,charge);
   eventText.textContent=mode==="running"&&messageLife>0?message:"";
   eventText.classList.toggle("visible",mode==="running"&&messageLife>0);
@@ -834,7 +909,8 @@ function mount(root){
   // Existing red impact, glitch and death synth play AFTER blackout.
   flash=1.8;shake=12;playDeathSound();
   screen.classList.add("er-death");
-  overlay.hidden=false;brandLogo.hidden=true;logo.hidden=false;logo.textContent="GAME OVER";
+  overlay.hidden=false;introDiagnostic.hidden=true;introTrack.hidden=true;
+  brandLogo.hidden=true;logo.hidden=false;logo.textContent="GAME OVER";
   crashIcon.hidden=false;crashSub.hidden=false;
   overlay.classList.remove("er-stage-home","er-stage-levels","er-stage-pause");
   pauseActions.hidden=true;
@@ -848,7 +924,8 @@ function mount(root){
  }
  function togglePause(){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
-  if(mode==="running"){endNitro();mode="paused";pauseIndex=0;pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;backButton.hidden=true;overlay.hidden=false;
+  if(mode==="running"){endNitro();mode="paused";pauseIndex=0;
+   introDiagnostic.hidden=true;introTrack.hidden=true;pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;backButton.hidden=true;overlay.hidden=false;
    overlay.classList.add("er-stage-pause");pauseActions.hidden=false;
    brandLogo.hidden=true;logo.hidden=false;logo.textContent="PAUSE";
    prompt.hidden=false;prompt.textContent="SIGNAL SUSPENDU";
