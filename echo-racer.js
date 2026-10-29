@@ -382,7 +382,19 @@ function mount(root){
   readout.append(labelEl,value,unitEl);
   const bar=node("div","er-dashboard-bar");bar.setAttribute("aria-hidden","true");
   const segments=[];
-  for(let i=0;i<17;i++){const led=node("span","er-dashboard-led");bar.appendChild(led);segments.push(led);}
+  for(let i=0;i<17;i++){
+   const led=node("span","er-dashboard-led");
+   const progress=i/16;
+   // Real raised, curved tachometer sweep, not one skewed straight bar.
+   // Boost climbs in an opposite accelerating curve.
+   const rise=cls==="er-dashboard-speed"
+    ? 10+75*Math.sin(progress*Math.PI*.5)
+    : 8+78*(progress*progress*(3-2*progress));
+   led.style.setProperty("--gauge-x",String(3+i*5.55));
+   led.style.setProperty("--gauge-rise",String(rise));
+   led.style.setProperty("--gauge-tilt",String(cls==="er-dashboard-speed"?-24:-31));
+   bar.appendChild(led);segments.push(led);
+  }
   const statusEl=node("span","er-dashboard-status","");
   row.append(readout,bar,statusEl);dashboard.appendChild(row);
   return{row,value,segments,statusEl};
