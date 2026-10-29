@@ -977,133 +977,98 @@
 .zebra-game-body .er [hidden]{display:none!important}
 
 
-/* ===============================================================
-   ECHO RACER 9.0 — VECTOR LCD / ELECTROLUMINESCENT COCKPIT
-   References: angular motorcycle cluster, seven-segment CRT, cyan
-   tracer lines, pink speed-strip. Scoped entirely to Echo Racer.
-   =============================================================== */
 
-
-.zebra-game-body .er{
- --er-ice:#bbf5ff;
- --er-cyan:#53ddff;
- --er-magenta:#fa59dd;
- --er-ink:#040b1a;
- --er-line:rgba(90,219,255,.78);
+/* Echo Racer 10 — real dark instrument glass, phosphor display.
+   No colorful plates, fake gradients, sci-fi bevel polygons or neon borders. */
+.zebra-game-body .er {
+ --er-screen:#020505;
+ --er-phosphor:#dcfff1;
+ --er-phosphor-dim:#a2b8b0;
  font-family:"Oxanium","Courier New",monospace;
 }
-.zebra-game-body .er .er-hud{
- position:relative;
- isolation:isolate;
- display:grid;
- grid-template-columns:1.22fr 1.22fr .9fr .9fr;
- gap:3px;
- padding:4px;
- flex:0 0 auto;
- margin:0;
- clip-path:polygon(0 17%,2.6% 0,96.5% 0,100% 18%,100% 83%,97.3% 100%,2.6% 100%,0 83%);
- background:linear-gradient(110deg,#2b7fa4 0%,#a7edff 14%,#3e6c9c 39%,#fd70d9 76%,#4cd9fa 100%);
- box-shadow:none;
+
+/* One continuous physical screen, not four decorative cards. */
+.zebra-game-body .er .er-hud {
+ display:grid;grid-template-columns:1.19fr 1.19fr .9fr .9fr;
+ position:relative;isolation:isolate;overflow:hidden;
+ flex:0 0 auto;gap:0;margin:0;padding:5px;
+ border:2px solid #656e70;border-top-color:#9ba2a1;
+ border-bottom-color:#363d40;border-radius:6px;
+ clip-path:none;
+ background:#080d0e;
+ box-shadow:inset 0 0 0 2px #151e20,0 1px 3px #000;
 }
-.zebra-game-body .er .er-hud::before{
- content:"";
- position:absolute;
- inset:2px;
- z-index:-1;
- clip-path:polygon(0 16%,2.5% 0,97% 0,100% 17%,100% 84%,97% 100%,2.5% 100%,0 84%);
- background:
-  repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.24) 2px 3px,transparent 3px 5px),
-  radial-gradient(ellipse at 45% 145%,#203657 0%,transparent 70%),
-  linear-gradient(#060e21,#020616);
+.zebra-game-body .er .er-hud::before {
+ content:"";pointer-events:none;position:absolute;inset:4px;z-index:0;
+ clip-path:none;border-radius:2px;
+ background:linear-gradient(180deg,#081112 0%,#010303 35%,#020606 100%);
+ box-shadow:inset 0 0 18px #000;
 }
-.zebra-game-body .er .er-meter{
- --digit-w:clamp(8px,1.64vw,13px);
- --lcd:#b1edff;
- position:relative;isolation:isolate;
- display:flex;flex-direction:column;align-items:center;justify-content:space-between;
- min-width:0;min-height:75px;gap:1px;
- padding:9px 3px 6px;margin:0;border:0!important;
+.zebra-game-body .er .er-hud::after {
+ content:"";pointer-events:none;position:absolute;inset:4px;z-index:4;
  background:
-  radial-gradient(ellipse at 50% 70%,rgba(41,107,166,.19),transparent 80%),
-  linear-gradient(159deg,#111d3c 0%,#02091c 52%,#08091d 100%);
- clip-path:polygon(0 0,92% 0,100% 19%,100% 82%,93% 100%,0 100%,7% 80%,7% 20%);
- color:var(--lcd);
+  repeating-linear-gradient(0deg,#0002 0 1px,transparent 1px 3px),
+  linear-gradient(115deg,transparent 5%,#ffffff07 33%,transparent 48%);
+ opacity:.65;
+}
+.zebra-game-body .er .er-meter,
+.zebra-game-body .er .er-meter:first-child,
+.zebra-game-body .er .er-meter:last-child {
+ --lcd:var(--er-phosphor);
+ min-width:0;min-height:62px;height:62px;position:relative;
+ display:flex;align-items:center;justify-content:center;flex-direction:column;
+ padding:5px 2px;gap:5px;margin:0;
+ border:0!important;border-right:1px solid #273535!important;
+ border-radius:0!important;clip-path:none!important;
+ color:var(--er-phosphor);
+ background:transparent!important;
  box-shadow:none!important;
- overflow:hidden;
+ overflow:visible;
 }
-.zebra-game-body .er .er-meter:nth-child(1){clip-path:polygon(0 0,93% 0,100% 20%,100% 81%,94% 100%,0 100%,0 0)}
-.zebra-game-body .er .er-meter:nth-child(4){clip-path:polygon(0 0,92% 0,100% 17%,100% 83%,91% 100%,0 100%,7% 81%,7% 19%)}
-.zebra-game-body .er .er-meter::before{
- content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
- background:
-  linear-gradient(100deg,transparent 5%,rgba(179,235,255,.08) 34%,transparent 44%),
-  repeating-linear-gradient(0deg,rgba(0,0,0,.17) 0 1px,transparent 1px 3px);
- border-top:1px solid rgba(150,226,255,.30);
- border-bottom:1px solid rgba(70,196,239,.35);
+.zebra-game-body .er .er-meter:last-child {border-right:0!important}
+.zebra-game-body .er .er-meter::before,
+.zebra-game-body .er .er-meter::after{content:none!important}
+.zebra-game-body .er .er-meter-label {
+ color:#a7b7b1!important;
+ font:600 9px/1 "Oxanium","Courier New",monospace!important;
+ letter-spacing:1px!important;text-shadow:none!important;
 }
-.zebra-game-body .er .er-meter::after{
- content:"";position:absolute;z-index:1;pointer-events:none;
- left:13%;right:9%;bottom:4px;height:1px;
- background:linear-gradient(90deg,transparent,var(--lcd),transparent);
- box-shadow:0 0 6px var(--lcd);opacity:.75;
-}
-.zebra-game-body .er .er-meter-score{--lcd:#b0edff}
-.zebra-game-body .er .er-meter-best{--lcd:#c9dcff}
-.zebra-game-body .er .er-meter-shield{--lcd:#ffb5f4}
-.zebra-game-body .er .er-meter-pulse{--lcd:#6af2ff}
-.zebra-game-body .er .er-meter-label{
- color:#abc6df!important;
- font:700 9px/1 "Oxanium",monospace!important;
- letter-spacing:1.4px;
- text-shadow:0 0 5px #55bffb8a;
+.zebra-game-body .er .er-meter-foot,
+.zebra-game-body .er .er-meter-rack {display:none!important}
+
+/* CSS seven segment geometry is deliberately mechanical and dim off-state. */
+.zebra-game-body .er .er-digital {
+ --digit-w:13px;--digit-gap:2px;
+ display:inline-flex!important;align-items:center;justify-content:center;
+ flex:0 0 auto;min-width:0;gap:var(--digit-gap);
+ margin:0!important;padding:0!important;
+ font:1px/1 monospace!important;letter-spacing:0!important;
+ color:var(--er-phosphor)!important;
+ text-shadow:none!important;
+ filter:drop-shadow(0 0 2px #c5ffe66a);
  white-space:nowrap;
 }
-.zebra-game-body .er .er-meter-foot{
- width:100%;color:rgba(126,202,232,.62);
- font:600 7px/1 "Share Tech Mono",monospace;
- letter-spacing:.8px;text-align:center;white-space:nowrap;
+.zebra-game-body .er .er-meter-number {
+ --digit-w:clamp(9px,1.65vw,15px);
+ --digit-gap:clamp(1px,.18vw,2px);
+ min-height:calc(var(--digit-w)*1.78);
 }
-
-/* Each digit is composed of seven actual luminous polygons. Unlit
-   electrodes remain barely visible behind the powered segments. */
-.zebra-game-body .er .er-digital{
- --digit-w:13px;
- --digit-gap:2px;
- position:relative;
- display:inline-flex!important;
- align-items:center;justify-content:center;
- gap:var(--digit-gap);width:auto;min-width:0;
- padding:0;margin:0;
- font:700 1px/1 "Oxanium",monospace!important;
- white-space:nowrap;letter-spacing:0;
- color:var(--lcd,#a9f5ff)!important;
- text-shadow:none!important;
- filter:drop-shadow(0 0 3px currentColor);
- flex-shrink:0;
-}
-.zebra-game-body .er .er-meter-number{
- --digit-w:clamp(8px,1.64vw,13px);
- --digit-gap:clamp(1px,.20vw,3px);
- min-height:calc(var(--digit-w) * 1.78);
-}
-.zebra-game-body .er .er-digit{
- display:block;position:relative;
- width:var(--digit-w);height:calc(var(--digit-w) * 1.78);
- min-width:var(--digit-w);flex:0 0 var(--digit-w);
+.zebra-game-body .er .er-digit {
+ display:block;position:relative;flex:0 0 var(--digit-w);
+ width:var(--digit-w);height:calc(var(--digit-w)*1.78);
  color:inherit;
 }
-.zebra-game-body .er .er-seg{
- display:block;position:absolute;
- background:currentColor;opacity:.105;
+.zebra-game-body .er .er-seg {
+ position:absolute;display:block;
+ background:currentColor;opacity:.025;
  transition:opacity .085s ease;
 }
-.zebra-game-body .er .er-seg.lit{
- opacity:1;
- filter:drop-shadow(0 0 2px currentColor);
+.zebra-game-body .er .er-seg.lit {
+ opacity:1;filter:drop-shadow(0 0 2px #ddffee);
 }
 .zebra-game-body .er .er-seg-a,
 .zebra-game-body .er .er-seg-d,
-.zebra-game-body .er .er-seg-g{
+.zebra-game-body .er .er-seg-g {
  left:18%;width:64%;height:12%;
  clip-path:polygon(12% 0,88% 0,100% 50%,88% 100%,12% 100%,0 50%);
 }
@@ -1113,7 +1078,7 @@
 .zebra-game-body .er .er-seg-b,
 .zebra-game-body .er .er-seg-c,
 .zebra-game-body .er .er-seg-e,
-.zebra-game-body .er .er-seg-f{
+.zebra-game-body .er .er-seg-f {
  width:19%;height:38%;
  clip-path:polygon(50% 0,100% 14%,100% 86%,50% 100%,0 86%,0 14%);
 }
@@ -1121,341 +1086,239 @@
 .zebra-game-body .er .er-seg-c{right:0;bottom:8%}
 .zebra-game-body .er .er-seg-e{left:0;bottom:8%}
 .zebra-game-body .er .er-seg-f{left:0;top:8%}
-.zebra-game-body .er .er-digit-symbol{
- display:inline-flex;align-items:center;justify-content:center;
- min-width:calc(var(--digit-w)*1.65);
- height:calc(var(--digit-w)*1.78);
- color:inherit;font:800 calc(var(--digit-w)*1.65)/1 "Oxanium",monospace;
- text-shadow:0 0 8px currentColor;
-}
-.zebra-game-body .er .er-meter-rack{
+.zebra-game-body .er .er-digit-symbol {
  display:flex;align-items:center;justify-content:center;
- gap:2px;width:80%;height:7px;margin:0 auto 1px;
-}
-.zebra-game-body .er .er-meter-slot{
- width:23%;height:6px;flex:0 1 21%;
- background:#34405c;
- border:1px solid #4f6383;
- clip-path:polygon(19% 0,100% 0,81% 100%,0 100%);
- opacity:.55;
-}
-.zebra-game-body .er .er-meter-slot.lit{
- opacity:1;background:var(--lcd);
- border-color:var(--lcd);
- filter:drop-shadow(0 0 4px var(--lcd));
+ min-width:calc(var(--digit-w)*1.5);
+ height:calc(var(--digit-w)*1.78);
+ color:inherit;
+ font:700 calc(var(--digit-w)*1.65)/1 "Oxanium",monospace!important;
+ text-shadow:0 0 3px #bffff2;
 }
 
-/* Angular twin instrumentation cluster, not two flat progress bars. */
-.zebra-game-body .er .er-dashboard{
- --dash-metal:#5fd1fb;
- display:grid;
- grid-template-columns:repeat(2,minmax(0,1fr));
- grid-template-rows:12px minmax(0,1fr);
- column-gap:5px;row-gap:3px;
+/* The gauges share one true physical LCD with a shaped, raised sweep. */
+.zebra-game-body .er .er-dashboard {
+ position:absolute;z-index:4;bottom:11px;left:11px;
  isolation:isolate;
- position:absolute;z-index:4;
- bottom:11px;left:11px;right:auto;transform:none;
- width:min(372px,86%);height:104px;
- padding:7px 9px 8px;margin:0;
- border:0!important;border-radius:0!important;
- clip-path:polygon(0 15%,4% 0,94% 0,100% 15%,100% 83%,95% 100%,6% 100%,0 83%);
- background:linear-gradient(112deg,#82e8fc,#277dad 30%,#d65cf6 77%,#83e5fe);
- box-shadow:none!important;
- color:#c1f6ff;
- pointer-events:none;
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ grid-template-rows:1fr;gap:0;
+ padding:5px 7px;
+ width:min(385px,85%);height:133px;max-width:none;
+ border:2px solid #5e6667!important;border-top-color:#899393!important;
+ border-bottom-color:#2e3436!important;border-radius:7px!important;
+ clip-path:none!important;
+ background:#060a0a!important;
+ box-shadow:inset 0 0 0 2px #141d1e,inset 0 0 24px #000,0 2px 4px #0009!important;
+ color:var(--er-phosphor);pointer-events:none;
 }
-.zebra-game-body .er .er-dashboard::before{
- content:"";position:absolute;z-index:-1;inset:2px;pointer-events:none;
- clip-path:polygon(0 14%,3% 0,95% 0,100% 16%,100% 84%,95% 100%,4% 100%,0 84%);
- background:
-  radial-gradient(ellipse at 50% 140%,rgba(24,82,132,.47),transparent 72%),
-  repeating-linear-gradient(0deg,transparent 0 2px,#0004 2px 3px,transparent 3px 5px),
-  linear-gradient(#14203c,#030818 72%);
+.zebra-game-body .er .er-dashboard::before {
+ content:"";position:absolute;inset:5px;z-index:-1;pointer-events:none;
+ clip-path:none!important;border-radius:2px;
+ background:linear-gradient(180deg,#030908,#010303 55%,#030807);
 }
-.zebra-game-body .er .er-dashboard::after{
- content:"";position:absolute;inset:4px;z-index:3;pointer-events:none;
- background:linear-gradient(113deg,transparent 8%,rgba(166,225,255,.09) 31%,transparent 39%);
- opacity:.9;
+.zebra-game-body .er .er-dashboard::after {
+ content:"";position:absolute;inset:5px;z-index:5;pointer-events:none;
+ background:repeating-linear-gradient(0deg,#0002 0 1px,transparent 1px 3px);
+ opacity:.7;
 }
-.zebra-game-body .er .er-dashboard-header{
- grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;
- padding:0 9px 2px;
- font:600 8px/1 "Oxanium",monospace;
- letter-spacing:1.6px;
- color:rgba(150,230,254,.75);
- border-bottom:1px solid #54cafa65;
- text-shadow:0 0 5px #38d6fd;
+.zebra-game-body .er .er-dashboard-header{display:none!important}
+.zebra-game-body .er .er-dashboard-row,
+.zebra-game-body .er .er-dashboard-row + .er-dashboard-row {
+ --lcd:var(--er-phosphor);
+ position:relative;display:flex;flex-direction:column;
+ justify-content:space-between;min-width:0;height:100%;
+ padding:7px 8px 5px!important;margin:0;
+ border:0!important;clip-path:none!important;
+ background:transparent!important;gap:2px;
 }
-.zebra-game-body .er .er-dashboard-header span:last-child{color:#f5a3e7}
-.zebra-game-body .er .er-dashboard-row{
- --lcd:#aaf3ff;
- display:flex;flex-direction:column;justify-content:center;
- min-width:0;height:auto;gap:5px;
- border:0!important;border-radius:0!important;
- padding:5px 5px 4px!important;
- background:
-  linear-gradient(120deg,rgba(23,72,115,.19),transparent 62%),
-  linear-gradient(180deg,rgba(1,10,24,.67),rgba(7,13,33,.35));
- clip-path:polygon(0 0,96% 0,100% 20%,100% 83%,95% 100%,0 100%,3% 81%,3% 16%);
+.zebra-game-body .er .er-dashboard-row:first-of-type{
+ border-right:1px solid #263533!important;
 }
-.zebra-game-body .er .er-dashboard-boost{--lcd:#ff89e4}
 .zebra-game-body .er .er-dashboard-readout{
- display:flex;align-items:flex-end;justify-content:space-between;
- min-width:0;gap:3px;white-space:nowrap;
+ display:flex;align-items:flex-end;gap:5px;min-width:0;white-space:nowrap;
 }
 .zebra-game-body .er .er-dashboard-name{
  min-width:0;flex:0 0 auto;
- font:800 9px/1 "Oxanium",monospace;
- letter-spacing:.6px;color:#a3cbe9;
- text-shadow:0 0 5px #75d9fb;
+ font:700 10px/1 "Oxanium","Courier New",monospace!important;
+ letter-spacing:.5px;color:#b5c5be!important;text-shadow:none!important;
 }
-.zebra-game-body .er .er-dashboard-boost .er-dashboard-name{color:#ffc0ef}
+.zebra-game-body .er .er-dashboard-boost .er-dashboard-name{color:#b5c5be!important}
 .zebra-game-body .er .er-dashboard-digits{
- --digit-w:clamp(11px,1.9vw,17px);
- --digit-gap:2px;
- flex:0 1 auto;
+ --digit-w:clamp(13px,2vw,19px);--digit-gap:2px;
  min-height:calc(var(--digit-w)*1.78);
- margin:0 0 0 auto!important;
+ margin:0 0 0 auto!important;flex:0 0 auto;
 }
 .zebra-game-body .er .er-dashboard-unit{
- min-width:0;margin:0 0 2px;
- font:600 8px/1 "Oxanium",monospace;color:#a1cddd;
+ margin-bottom:2px;min-width:0;flex:0 0 auto;
+ color:#abbdb5;font:600 9px/1 "Oxanium",monospace;
 }
+/* The sweep climbs ~80% of its own 54px height: visibly curved and
+   raised, with individually tilted phosphor blades instead of one line. */
 .zebra-game-body .er .er-dashboard-bar{
- position:relative;
- display:flex;align-items:stretch;
- height:13px;min-height:13px;gap:2px;
- width:100%;margin:0;padding:1px 0 0;
- border-top:1px solid var(--lcd);
- filter:drop-shadow(0 0 3px var(--lcd));
+ position:relative;display:block;flex:1 1 auto;
+ width:100%;height:auto;min-height:53px;
+ margin:1px 0 0;padding:0;
+ border:0;filter:none;overflow:visible;
+ background:transparent;
 }
-.zebra-game-body .er .er-dashboard-led{
- flex:1 1 0;min-width:0;height:100%;
- transform:none;
- border:0!important;
- background:#243448!important;
+.zebra-game-body .er .er-dashboard-bar::before{
+ content:"";position:absolute;inset:0;pointer-events:none;
+ background:#243934;opacity:.5;
+ clip-path:polygon(0 91%,5% 80%,12% 67%,20% 54%,29% 42%,40% 32%,53% 24%,68% 18%,84% 14%,98% 13%,100% 25%,84% 26%,68% 30%,53% 36%,40% 45%,29% 55%,20% 67%,12% 80%,5% 93%,0 100%);
+}
+.zebra-game-body .er .er-dashboard-boost .er-dashboard-bar::before{
+ clip-path:polygon(0 95%,10% 94%,20% 91%,31% 86%,42% 77%,54% 65%,66% 49%,77% 34%,88% 21%,100% 12%,100% 26%,88% 34%,77% 46%,66% 61%,54% 78%,42% 87%,31% 95%,20% 99%,0 100%);
+}
+.zebra-game-body .er .er-dashboard-led,
+.zebra-game-body .er .er-dashboard-led.lit {
+ position:absolute;
+ display:block;flex:none;
+ left:calc(var(--gauge-x) * 1%);
+ bottom:calc(var(--gauge-rise) * 1% - 3px);
+ width:4.5%;height:11px;min-width:0;
+ transform:rotate(calc(var(--gauge-tilt) * 1deg)) skewX(-13deg);
+ transform-origin:center;
+ border:0!important;clip-path:polygon(15% 0,100% 0,85% 100%,0 100%);
  box-shadow:none!important;
- clip-path:polygon(25% 0,100% 0,75% 100%,0 100%);
- opacity:.53;
+ background:#273b36!important;
+ opacity:.52;
 }
-.zebra-game-body .er .er-dashboard-speed .er-dashboard-led.lit{
- opacity:1;background:linear-gradient(#e8feff,#32cbf8)!important;
-}
-.zebra-game-body .er .er-dashboard-boost .er-dashboard-led.lit{
- opacity:1;background:linear-gradient(#ffe1fa,#f244c7)!important;
+.zebra-game-body .er .er-dashboard-led.lit,
+.zebra-game-body .er .er-dashboard-speed .er-dashboard-led.lit,
+.zebra-game-body .er .er-dashboard-boost .er-dashboard-led.lit {
+ background:#d1fff1!important;opacity:1;
+ filter:drop-shadow(0 0 3px #a5fbe6);
 }
 .zebra-game-body .er .er-dashboard-status{
- position:static;
- display:block;
- font:600 8px/1 "Oxanium",monospace;
- letter-spacing:1.7px;
- color:#d8aada;text-align:right;
- padding-right:3px;
+ display:block;position:static;top:auto;right:auto;
+ padding:0 2px;margin:0;
+ min-height:10px;
+ color:#859c94!important;text-shadow:none!important;
+ font:600 8px/1 "Oxanium",monospace!important;
+ letter-spacing:.7px;text-align:right;
 }
-.zebra-game-body .er .er-dashboard-boost.er-dashboard-active .er-dashboard-status{
- color:#fff1ff;text-shadow:0 0 7px #ff57d5;
+.zebra-game-body .er .er-dashboard-active .er-dashboard-status{
+ color:#c8ffeb!important;
 }
 .zebra-game-body .er .er-dashboard.er-boost-active{
- background:linear-gradient(112deg,#82e8fc,#277dad 30%,#ff9bec 77%,#83e5fe);
+ background:#060a0a!important;
 }
 
-/* Arcade BIOS / initial screen: diagnostic rails, angular monitor bezel. */
-.zebra-game-body .er .er-overlay.er-stage-home{
- gap:9px;justify-content:center;
- background:
-  radial-gradient(ellipse at 50% 56%,rgba(16,55,94,.71),rgba(2,6,22,.92) 69%),
-  repeating-linear-gradient(0deg,transparent 0 3px,rgba(1,5,16,.5) 3px 4px);
+/* Boot and menu: dark monitor, logo and restrained phosphor labels only. */
+.zebra-game-body .er .er-overlay.er-stage-home,
+.zebra-game-body .er .er-overlay.er-stage-levels{
+ gap:11px;
+ background:linear-gradient(180deg,#040708f0,#030507f8)!important;
+ text-shadow:none;
 }
 .zebra-game-body .er .er-stage-home::before,
-.zebra-game-body .er .er-stage-levels::before{
- content:"";position:absolute;z-index:-1;pointer-events:none;
- inset:13px 14px;
- border:1px solid rgba(80,216,255,.60);
- clip-path:polygon(0 8%,5% 0,95% 0,100% 8%,100% 92%,95% 100%,5% 100%,0 92%);
- box-shadow:inset 0 0 25px #0368a52f,0 0 16px #01abeb47;
-}
+.zebra-game-body .er .er-stage-levels::before{content:none!important}
+.zebra-game-body .er .er-intro-diagnostic,
+.zebra-game-body .er .er-intro-track{display:none!important}
 .zebra-game-body .er .er-stage-home .er-brand-logo{
- width:min(85%,385px);height:auto;max-height:100px;
- object-fit:contain;margin:3px auto;
- filter:drop-shadow(0 0 12px #42dcfb9c) drop-shadow(0 0 19px #ff3bc365);
-}
-.zebra-game-body .er .er-intro-diagnostic{
- width:min(85%,390px);
- display:flex;justify-content:space-between;align-items:center;gap:8px;
- border-top:1px solid #54ddff93;border-bottom:1px solid #318dbd86;
- padding:6px 7px 5px;margin:0 auto;
- color:#a9eaff;
- background:linear-gradient(90deg,transparent,#061c35c7 18%,#041226ce 80%,transparent);
- font:600 9px/1 "Oxanium",monospace;letter-spacing:1.4px;
- text-shadow:0 0 6px #49b9f9;
-}
-.zebra-game-body .er .er-intro-light{color:#84ffeb;text-shadow:0 0 8px #2bffdd}
-.zebra-game-body .er .er-intro-track{
- width:min(80%,340px);height:14px;
- display:flex;align-items:stretch;justify-content:center;
- gap:3px;margin:0 auto 2px;
-}
-.zebra-game-body .er .er-intro-cell{
- flex:1 1 0;min-width:0;
- clip-path:polygon(23% 0,100% 0,77% 100%,0 100%);
- background:linear-gradient(#9defff,#2bb9e4);
- box-shadow:0 0 6px #60d8ff;
- opacity:.8;
- animation:er-diagnostic-pulse 2.5s ease-in-out infinite alternate;
-}
-.zebra-game-body .er .er-intro-cell:nth-child(4n){background:linear-gradient(#ffbbee,#e735bf);animation-delay:-.7s}
-.zebra-game-body .er .er-intro-cell:nth-child(3n){animation-delay:-1.4s}
-@keyframes er-diagnostic-pulse{
- 0%{opacity:.28;filter:brightness(.6)}
- 100%{opacity:1;filter:brightness(1.3)}
+ width:min(80%,340px);max-height:107px;
+ filter:none;margin:4px auto;
 }
 .zebra-game-body .er .er-stage-home .er-start-call{
  display:block;
- padding:8px 19px;margin:0 auto;
- width:min(70%,300px);
- border:1px solid #61dfff!important;border-radius:0;
- clip-path:polygon(9% 0,91% 0,100% 50%,91% 100%,9% 100%,0 50%);
- background:
-  repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.16) 2px 3px),
-  linear-gradient(95deg,#092d50,#030d25 52%,#22183b);
- box-shadow:inset 0 0 11px #3fb8f977!important;
- color:#e6ffff;
- text-shadow:0 0 6px #87edff,0 0 15px #40cfff;
- font:800 clamp(11px,2vw,16px)/1.15 "Oxanium",monospace;
- letter-spacing:2.7px;
- animation:er-start-flicker 1.8s steps(3,end) infinite;
+ width:auto;min-height:0;padding:5px 13px;margin:4px auto;
+ border:0!important;border-radius:0!important;clip-path:none!important;
+ background:transparent!important;box-shadow:none!important;
+ color:#d6f7e5!important;
+ font:700 12px/1.3 "Oxanium",monospace!important;
+ letter-spacing:2.3px!important;text-shadow:0 0 3px #a4fbd94c!important;
+ animation:none!important;
 }
-@keyframes er-start-flicker{50%{filter:brightness(.8)}}
-.zebra-game-body .er .er-stage-home .er-overlay-button{
- display:flex!important;
- align-items:center;justify-content:center;
- width:min(72%,270px);height:45px;
- padding:0 8px;margin:0 auto;
- border:1px solid #7eeaff!important;border-radius:0;
- clip-path:polygon(7% 0,93% 0,100% 50%,93% 100%,7% 100%,0 50%);
- background:
-  linear-gradient(110deg,transparent,#49c9f42d 50%,transparent),
-  linear-gradient(#071e37,#060e25)!important;
- color:#dffcff!important;
- font:800 14px/1 "Oxanium",monospace!important;
- letter-spacing:2px;
- text-shadow:0 0 7px #70eaff!important;
- box-shadow:none!important;
- filter:drop-shadow(0 0 5px #3eb9fc);
-}
-.zebra-game-body .er .er-stage-home .er-overlay-button:hover{filter:brightness(1.25) drop-shadow(0 0 8px #33cbff)}
-.zebra-game-body .er .er-overlay.er-stage-levels{
- background:
-  repeating-linear-gradient(0deg,transparent 0 3px,#02071752 3px 4px),
-  radial-gradient(ellipse at 50% 25%,#143454e3,#040b20f5 80%);
+.zebra-game-body .er .er-stage-home .er-overlay-button {
+ display:block!important;width:min(72%,230px);height:41px;min-height:0;
+ border:1px solid #616c68!important;border-radius:3px!important;
+ clip-path:none!important;
+ background:#0c1715!important;box-shadow:inset 0 0 11px #172e28!important;
+ color:#dcfff1!important;
+ font:700 12px/1 "Oxanium",monospace!important;
+ text-shadow:0 0 4px #9dfbd87a!important;
+ filter:none!important;
 }
 .zebra-game-body .er .er-stage-levels .er-title-sub{
- font:800 11px/1.1 "Oxanium",monospace;
- color:#a3eaff;letter-spacing:2.3px;text-shadow:0 0 8px #4ad9ff;
+ color:#d6f9e9;font:700 10px/1 "Oxanium",monospace;
+ letter-spacing:1px;text-shadow:none;
 }
-.zebra-game-body .er .er-stage-levels .er-level-button.selected{
- filter:brightness(1.25) drop-shadow(0 0 8px #4cd9fc);
-}
-.zebra-game-body .er .er-stage-levels .er-level-button{
- transition:filter .13s ease;
-}
-
-/* Screen glare and phosphor grain without affecting interactions. */
 .zebra-game-body .er .er-overlay::after{
- content:"";position:absolute;inset:0;pointer-events:none;z-index:8;
- background:
-  repeating-linear-gradient(0deg,rgba(0,0,0,.12) 0px,rgba(0,0,0,.12) 1px,transparent 1px,transparent 4px),
-  linear-gradient(105deg,transparent 8%,rgba(113,206,255,.06) 26%,transparent 32%);
- mix-blend-mode:screen;
+ content:"";pointer-events:none;position:absolute;inset:0;z-index:8;
+ background:repeating-linear-gradient(0deg,#0001 0 1px,transparent 1px 3px);
 }
-
-/* Compact handheld layout: keep the driving viewport and controller intact. */
 @media(max-width:700px){
- .zebra-game-body .er .er-hud{gap:2px;padding:3px}
- .zebra-game-body .er .er-meter{
-  --digit-w:clamp(7px,2.3vw,10px);
-  min-height:56px;height:56px;
-  padding:5px 2px 4px;gap:1px;
+ .zebra-game-body .er .er-hud{padding:3px;gap:0}
+ .zebra-game-body .er .er-meter,
+ .zebra-game-body .er .er-meter:first-child,
+ .zebra-game-body .er .er-meter:last-child{
+  height:54px;min-height:54px;padding:4px 1px;gap:5px;
  }
  .zebra-game-body .er .er-meter-label{
-  font-size:clamp(6px,1.78vw,8px)!important;letter-spacing:.35px;
+  font-size:clamp(6px,1.7vw,8px)!important;letter-spacing:.15px!important;
  }
  .zebra-game-body .er .er-meter-number{
-  --digit-w:clamp(7px,2.15vw,9px);
-  --digit-gap:1px;
+  --digit-w:clamp(7px,2.35vw,10px);--digit-gap:1px;
  }
- .zebra-game-body .er .er-meter-foot{
-  font-size:5px;letter-spacing:0;
- }
- .zebra-game-body .er .er-meter-rack{height:5px;gap:1px;margin-top:-1px}
- .zebra-game-body .er .er-meter-slot{height:5px}
  .zebra-game-body .er .er-dashboard{
-  display:grid;
+  position:static;inset:auto;left:auto;right:auto;bottom:auto;
+  width:100%;max-width:none;display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
-  grid-template-rows:12px minmax(0,1fr);
-  height:92px;min-height:92px;flex:0 0 92px;
-  width:100%;max-width:none;
-  position:static;inset:auto;left:auto;bottom:auto;transform:none;
-  gap:2px 3px;padding:5px 8px 7px;
-  border:0!important;border-radius:0!important;
-  box-shadow:none!important;
+  grid-template-rows:1fr;gap:0;
+  height:112px;min-height:112px;flex:0 0 112px;
+  padding:4px 6px!important;border:2px solid #697272!important;
+  border-radius:6px!important;
  }
- .zebra-game-body .er .er-dashboard-header{
-  grid-column:1/-1;font-size:7px;letter-spacing:.65px;padding:0 9px 3px;
- }
- .zebra-game-body .er .er-dashboard-row{
-  min-width:0;height:100%;padding:4px 2px 3px!important;
+ .zebra-game-body .er .er-dashboard-row,
+ .zebra-game-body .er .er-dashboard-row + .er-dashboard-row {
   display:flex;flex-direction:column;justify-content:space-between;
+  gap:1px;padding:5px 4px 3px!important;height:100%;
   border:0!important;
  }
- .zebra-game-body .er .er-dashboard-readout{
-  display:flex;gap:2px;align-items:flex-end;
+ .zebra-game-body .er .er-dashboard-row:first-of-type{
+  border-right:1px solid #263533!important;
  }
+ .zebra-game-body .er .er-dashboard-readout{display:flex;gap:3px;align-items:flex-end}
  .zebra-game-body .er .er-dashboard-name{
-  min-width:0;flex:0 1 auto;font-size:8px;letter-spacing:0;
+  font-size:clamp(7px,2.1vw,9px)!important;letter-spacing:0;
  }
  .zebra-game-body .er .er-dashboard-digits{
-  --digit-w:clamp(10px,3.3vw,13px);
-  --digit-gap:1px;
-  margin-left:auto!important;
+  --digit-w:clamp(10px,3.1vw,13px);--digit-gap:1px;
+  margin-left:auto!important;min-width:0;
  }
  .zebra-game-body .er .er-dashboard-unit{
-  flex:0 0 auto;min-width:0;margin-bottom:2px;font-size:7px;
+  font-size:7px;min-width:0;margin-bottom:2px;
  }
  .zebra-game-body .er .er-dashboard-bar{
-  width:100%;height:12px;min-height:12px;gap:1px;
-  margin:0;padding:1px 0 0;
+  width:100%;min-height:52px;height:auto;
+  margin:0;padding:0;display:block;
+  filter:none;flex:1 1 auto;
  }
+ .zebra-game-body .er .er-dashboard-led,
+ .zebra-game-body .er .er-dashboard-led.lit{height:10px}
  .zebra-game-body .er .er-dashboard-status{
-  display:block;position:static;top:auto;right:auto;
-  font-size:7px;letter-spacing:1px;text-align:right;padding-right:3px;
+  display:block!important;font-size:7px!important;
+  letter-spacing:0;text-align:right;
  }
- .zebra-game-body .er .er-stage-home{padding:8px 10px;gap:7px}
- .zebra-game-body .er .er-stage-home .er-brand-logo{max-height:76px;width:min(80%,280px)}
- .zebra-game-body .er .er-intro-diagnostic{
-  width:92%;font-size:7px;letter-spacing:.35px;
-  padding:4px 5px;
+ .zebra-game-body .er .er-stage-home .er-brand-logo{
+  max-height:76px;width:min(75%,275px);
  }
- .zebra-game-body .er .er-intro-track{height:9px;gap:2px;width:85%}
  .zebra-game-body .er .er-stage-home .er-start-call{
-  font-size:12px;letter-spacing:1.3px;padding:7px 13px;
- }
- .zebra-game-body .er .er-stage-home .er-overlay-button{
-  width:min(75%,240px);height:41px;font-size:12px!important;
+  font-size:11px!important;padding:4px 8px;
  }
 }
-@media(max-width:700px) and (max-height:700px){
- .zebra-game-body .er .er-meter{height:49px;min-height:49px}
- .zebra-game-body .er .er-dashboard{height:76px;min-height:76px;flex-basis:76px}
- .zebra-game-body .er .er-dashboard-header{font-size:6px}
- .zebra-game-body .er .er-dashboard-digits{--digit-w:10px}
- .zebra-game-body .er .er-dashboard-row{gap:1px;padding:2px!important}
- .zebra-game-body .er .er-dashboard-bar{height:8px;min-height:8px}
- .zebra-game-body .er .er-stage-home .er-brand-logo{max-height:52px}
- .zebra-game-body .er .er-intro-track{height:7px}
+@media(max-width:700px) and (max-height:620px){
+ .zebra-game-body .er .er-dashboard{
+  height:88px;min-height:88px;flex-basis:88px;
+ }
+ .zebra-game-body .er .er-dashboard-bar{min-height:35px}
+ .zebra-game-body .er .er-dashboard-led,
+ .zebra-game-body .er .er-dashboard-led.lit{height:8px}
+ .zebra-game-body .er .er-meter,
+ .zebra-game-body .er .er-meter:first-child,
+ .zebra-game-body .er .er-meter:last-child{
+  min-height:47px;height:47px;
+ }
 }
 @media(prefers-reduced-motion:reduce){
- .zebra-game-body .er .er-intro-cell,
- .zebra-game-body .er .er-stage-home .er-start-call{animation:none!important}
  .zebra-game-body .er .er-seg{transition:none}
 }
