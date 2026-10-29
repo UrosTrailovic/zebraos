@@ -55,7 +55,17 @@ jobs:
               }
              }
              const snap=debug.snapshot();
+             const hudTitles=[...root.querySelectorAll(".er-meter-label")];
+             const speedBlades=[...root.querySelectorAll(".er-dashboard-speed .er-dashboard-led")];
+             const boostBlades=[...root.querySelectorAll(".er-dashboard-boost .er-dashboard-led")];
+             const segmentedTitles=hudTitles.length===4&&hudTitles.every(el=>el.querySelectorAll(".er-digit").length>0);
+             const parallelArcs=speedBlades.length===21&&boostBlades.length===21
+               &&speedBlades.every((blade,i)=>Math.abs(parseFloat(blade.style.getPropertyValue("--gauge-x"))-parseFloat(boostBlades[i].style.getPropertyValue("--gauge-x")))<.01
+                 &&Math.abs((parseFloat(boostBlades[i].style.getPropertyValue("--gauge-y"))-parseFloat(blade.style.getPropertyValue("--gauge-y")))-22)<.1);
+             const hudFits=[...root.querySelectorAll(".er-meter")].every(el=>el.scrollWidth<=el.clientWidth+2);
+             const gaugeFits=root.querySelector(".er-dashboard").getBoundingClientRect().width>300;
              const report={errors,mode:snap.mode,score:snap.score,
+              segmentedTitles,parallelArcs,hudFits,gaugeFits,
               canvas:{width:w,height:h,nonblack,unique:new Set(pixels).size},
               screen:root.querySelector(".er-screen").getBoundingClientRect().height,
               hud:root.querySelector(".er-hud").getBoundingClientRect().height,
@@ -63,7 +73,7 @@ jobs:
              console.log("ECHO_MOBILE_REPORT",JSON.stringify(report));
              document.body.dataset.report=JSON.stringify(report);
              document.body.dataset.result=errors.length===0&&w>200&&h>200&&snap.mode==="running"
-              &&snap.score>0&&nonblack>20&&report.canvas.unique>25?"ok":"failed";
+              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits?"ok":"failed";
             },1200);
            }catch(e){errors.push("MOUNT:"+e.stack);document.body.dataset.report=JSON.stringify({errors});document.body.dataset.result="failed";}
           });
