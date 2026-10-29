@@ -103,7 +103,7 @@ function mount(root){
  let invuln=0,pulseCharge=2,pulseGlow=0,padBoostTime=0;
  let nitroHeld=false,nitroActive=false,nitroFuel=1,nitroRegenWait=0,nitroBurnTime=0;
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
- let menuStage="home",warningLife=0,warningBeepDelay=0,warningChirp=0;
+ let menuStage="home",menuIndex=Math.max(0,LEVELS.indexOf(selectedLevel)),pauseIndex=0,overIndex=0,warningLife=0,warningBeepDelay=0,warningChirp=0;
  const DEATH_FADE_SECONDS=1.15,DEATH_ANIMATION_SECONDS=1.15;
  let deathFade=0,deathLock=0;
  let soundEnabled=load("sfx","on")!=="off",audioCtx=null;
@@ -202,15 +202,68 @@ function mount(root){
   // Entire native pixel-art image is the button; no CSS or text overlay.
   btn.onclick=()=>{
    if(mode!=="menu"||menuStage!=="levels")return;
-   selectedLevel=level;save("level",level.id);
-   best=Number(load("best."+level.id,level.id==="3"?load("best","0"):"0"))||0;
-   start();
+   menuIndex=index;
+   confirmLevel();
   };
   levelPicker.appendChild(btn);return btn;
  });
  const backButton=node("button","er-menu-back","MENU");
  backButton.type="button";backButton.setAttribute("aria-label","Retour au menu principal");
  backButton.onclick=()=>toMenu();
+ function paintMenuSelection(){
+  levelButtons.forEach((btn,i)=>{
+   const active=mode==="menu"&&menuStage==="levels"&&i===menuIndex;
+   btn.classList.toggle("selected",active);
+   btn.setAttribute("aria-current",active?"true":"false");
+  });
+  overlayButton.classList.toggle("selected",mode==="menu"&&menuStage==="home"||
+   mode==="paused"&&pauseIndex===0||mode==="over"&&overIndex===0);
+  backButton.classList.toggle("selected",mode==="over"&&overIndex===1);
+  [pauseRestart,pauseSound,pauseMenu].forEach((btn,i)=>btn.classList.toggle("selected",mode==="paused"&&pauseIndex===i+1));
+ }
+ function confirmLevel(){
+  if(mode!=="menu"||menuStage!=="levels")return;
+  selectedLevel=LEVELS[menuIndex];save("level",selectedLevel.id);
+  best=Number(load("best."+selectedLevel.id,selectedLevel.id==="3"?load("best","0"):"0"))||0;
+  start();
+ }
+ function controllerInput(which){
+  if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
+  const backward=which==="up"||which==="left";
+  const forward=which==="down"||which==="right";
+  if(mode==="menu"){
+   if(menuStage==="home"){
+    if(which==="pulse"||which==="pause")showLevelSelect();
+    return;
+   }
+   if(backward||forward){
+    menuIndex=(menuIndex+(forward?1:-1)+LEVELS.length)%LEVELS.length;
+    beep("switch");paintMenuSelection();return;
+   }
+   if(which==="pulse"){confirmLevel();return;}
+   if(which==="boost"||which==="pause"){renderMenuStage("home");return;}
+   return;
+  }
+  if(mode==="paused"){
+   if(backward||forward){
+    pauseIndex=(pauseIndex+(forward?1:-1)+4)%4;beep("switch");paintMenuSelection();return;
+   }
+   if(which==="pulse"){
+    if(pauseIndex===0)togglePause();
+    else if(pauseIndex===1)start();
+    else if(pauseIndex===2)soundButton.click();
+    else toMenu();
+   }else if(which==="boost"||which==="pause")togglePause();
+   return;
+  }
+  if(mode==="over"){
+   if(backward||forward){overIndex=1-overIndex;beep("switch");paintMenuSelection();return;}
+   if(which==="pulse"){if(overIndex===0)start();else toMenu();}
+   else if(which==="boost"||which==="pause")toMenu();
+   return;
+  }
+  if(mode==="running")tap(which);
+ }
  function renderMenuStage(stage){
   menuStage=stage;
   const choosing=stage==="levels";
@@ -223,15 +276,17 @@ function mount(root){
   backButton.hidden=!choosing;status.hidden=!choosing;
   prompt.hidden=true;expl.hidden=true;hint.hidden=!choosing;
   if(choosing){status.textContent="CHOISIS TON CIRCUIT";
-   hint.textContent="1–5 : CHOIX DU NIVEAU · ÉCHAP : RETOUR";
+   hint.textContent="↑ ↓ CHOISIR · A VALIDER · B RETOUR · 1–5 AU CLAVIER";
   }
   overlayButton.classList.remove("er-overlay-restart");
   overlayButton.textContent="▶ JOUER";
   overlayButton.setAttribute("aria-label","Jouer — sélectionner un niveau");
   backButton.setAttribute("aria-label","Retour à l'accueil Echo Racer");
+  paintMenuSelection();
  }
  function showLevelSelect(){
   if(mode!=="menu"||menuStage==="levels")return;
+  menuIndex=Math.max(0,LEVELS.indexOf(selectedLevel));
   renderMenuStage("levels");
  }
  // SELECT opens these controls via the pause overlay, not a permanent bar.
@@ -298,19 +353,17 @@ function mount(root){
  cross.appendChild(node("div","zt-cross-shape"));
  function holdButton(label,cls,which){
   const b=node("button","zt-control "+cls,label);b.type="button";b.setAttribute("aria-label",label);
+  // Virtual controller has one action per press in menus. Pointerdown, not
+  // synthetic click, keeps mobile and keyboard behavior consistent.
   b.onclick=function(e){
-   if(e.detail===0&&which!=="boost"){
-    if(mode==="paused"){if(which==="pause")togglePause();}
-    else if(mode==="menu"||mode==="over")start();
-    else if(mode==="running")tap(which);
-   }
+   if(e.detail===0&&which!=="boost")controllerInput(which);
   };
   if(which==="boost"){
    b.addEventListener("keydown",e=>{
     if(e.key!==" "&&e.key!=="Enter")return;
     e.preventDefault();e.stopPropagation();
     if(mode==="running")beginNitro();
-    else if(mode==="menu"||mode==="over")start();
+    else if(!e.repeat)controllerInput("boost");
    });
    b.addEventListener("keyup",e=>{
     if(e.key===" "||e.key==="Enter"){e.preventDefault();e.stopPropagation();endNitro();}
@@ -319,9 +372,9 @@ function mount(root){
   b.addEventListener("pointerdown",function(e){
    if(e.button!==undefined&&e.button!==0)return;
    e.preventDefault();
-   if(mode==="paused"){if(which==="pause")togglePause();return;}
-   if(mode!=="running"){if(mode==="menu"||mode==="over")start();return;}
-   tap(which);if(["up","down","left","right"].includes(which))keys.add(which);
+   if(mode!=="running"){controllerInput(which);return;}
+   tap(which);
+   if(["up","down","left","right"].includes(which))keys.add(which);
    try{b.setPointerCapture(e.pointerId);}catch(_){}
   });
   const up=()=>{keys.delete(which);if(which==="boost")endNitro();};
@@ -791,11 +844,11 @@ function mount(root){
   prompt.hidden=true;expl.hidden=true;hint.hidden=true;
   overlayButton.hidden=false;overlayButton.classList.add("er-overlay-restart");
   overlayButton.textContent="↻ REJOUER";overlayButton.setAttribute("aria-label","Rejouer le niveau");
-  crashCurtain.hidden=true;lockDeathControls(true);renderHud();
+  crashCurtain.hidden=true;lockDeathControls(true);overIndex=0;paintMenuSelection();renderHud();
  }
  function togglePause(){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
-  if(mode==="running"){endNitro();mode="paused";pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;backButton.hidden=true;overlay.hidden=false;
+  if(mode==="running"){endNitro();mode="paused";pauseIndex=0;pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;backButton.hidden=true;overlay.hidden=false;
    overlay.classList.add("er-stage-pause");pauseActions.hidden=false;
    brandLogo.hidden=true;logo.hidden=false;logo.textContent="PAUSE";
    prompt.hidden=false;prompt.textContent="SIGNAL SUSPENDU";
@@ -804,6 +857,7 @@ function mount(root){
    overlay.classList.remove("er-stage-home","er-stage-levels");
    overlayButton.hidden=false;overlayButton.classList.remove("er-overlay-restart");
    overlayButton.textContent="▶ REPRENDRE";overlayButton.setAttribute("aria-label","Reprendre la course");
+   paintMenuSelection();
   }else if(mode==="paused"){mode="running";overlay.hidden=true;overlay.classList.remove("er-stage-pause");pauseActions.hidden=true;startMusic(false);}
   else start();renderHud();
  }
@@ -1424,37 +1478,39 @@ function mount(root){
   if(parent&&(!parent.classList.contains("focused")||parent.classList.contains("minimized")))return;
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable)return;
   if(mode==="crashing"||(mode==="over"&&deathLock>0)){e.preventDefault();return;}
-  // Enter/Space on level buttons must select, not immediately start.
-  if(mode==="menu"&&e.target.closest&&e.target.closest(".er-level-picker"))return;
-  if(mode==="menu"&&menuStage==="levels"&&/^[1-5]$/.test(e.key)){
-   e.preventDefault();
-   const id=e.key==="5"?"free":e.key;
-   const btn=levelButtons[LEVELS.findIndex(x=>x.id===id)];
-   if(btn)btn.click();
-   return;
-  }
+  // Native buttons handle their own Enter/Space; no double activation.
+  if(e.target.closest&&e.target.closest(".er-pad button, .er-overlay button"))return;
   const k=e.key.toLowerCase(),control={
    arrowleft:"left",a:"left",arrowright:"right",d:"right",
    arrowup:"up",w:"up",arrowdown:"down",s:"down"
   };
   const dir=control[k];
-  if(dir){
-   e.preventDefault();
-   if(mode==="menu"){showLevelSelect();return;}
-   if(mode!=="running"){if(mode==="over"&&!e.repeat)start();return;}
-   keys.add(dir);return;
+  if(mode==="menu"){
+   if(menuStage==="levels"&&/^[1-5]$/.test(k)){
+    e.preventDefault();if(e.repeat)return;
+    menuIndex=Number(k)-1;confirmLevel();return;
+   }
+   if(dir){e.preventDefault();if(!e.repeat){
+    if(menuStage==="home")showLevelSelect();else controllerInput(dir);
+   }return;}
+   if(k==="enter"||k===" "||k==="q"){e.preventDefault();if(!e.repeat){
+    if(menuStage==="home")showLevelSelect();else confirmLevel();
+   }return;}
+   if(k==="escape"||k==="backspace"){e.preventDefault();if(!e.repeat)renderMenuStage("home");return;}
+   return;
   }
+  if(mode==="paused"||mode==="over"){
+   if(dir){e.preventDefault();if(!e.repeat)controllerInput(dir);return;}
+   if(k==="enter"||k==="q"||k===" "){e.preventDefault();if(!e.repeat)controllerInput("pulse");return;}
+   if(k==="escape"||k==="backspace"){e.preventDefault();if(!e.repeat)controllerInput("boost");return;}
+   if(k==="p"&&mode==="paused"){e.preventDefault();if(!e.repeat)togglePause();return;}
+  }
+  if(dir){e.preventDefault();if(mode==="running")keys.add(dir);return;}
   if(k==="enter"||k===" "||k==="q"||k==="p"||k==="escape"){
    e.preventDefault();if(e.repeat)return;
-   if(mode==="menu"){
-     if(k==="escape"){toMenu();return;}
-     showLevelSelect();return;
-    }
-    if(mode==="over"){start();return;}
    if(k==="p"||k==="escape"){togglePause();return;}
-   if(mode==="paused"){togglePause();return;}
-   if(k===" "){beginNitro();return;}
-   if(k==="q"){pulse();return;}
+   if(k===" ")beginNitro();
+   else if(k==="q")pulse();
   }
  }
  function keyUp(e){
@@ -1468,8 +1524,9 @@ function mount(root){
   if(e.button!==undefined&&e.button!==0)return;
   if(e.target.closest&&e.target.closest("button"))return;
   if(mode!=="running"){
-   if(mode==="menu")showLevelSelect();
-   else if(mode==="over")start();
+   // Mobile screen is a display: menu navigation belongs to the controller.
+   if(e.pointerType==="touch"||e.pointerType==="pen")return;
+   if(mode==="menu"&&menuStage==="home")showLevelSelect();
    return;
   }
   if(e.pointerType!=="touch"&&e.pointerType!=="pen")return;
@@ -1560,7 +1617,7 @@ function mount(root){
    best=Number(load("best."+id,id==="3"?load("best","0"):"0"))||0;
    renderHud();return true;
   },
-  stage:()=>menuStage,openLevels:showLevelSelect,
+  stage:()=>menuStage,menuSelection:()=>({index:menuIndex,id:LEVELS[menuIndex].id,pauseIndex,overIndex}),controller:controllerInput,openLevels:showLevelSelect,
   pauseMenu:()=>({visible:!pauseActions.hidden,mode,stage:overlay.classList.contains("er-stage-pause"),soundLabel:pauseSound.textContent}),
   warning:()=>({life:warningLife,beepDelay:warningBeepDelay,visible:!warningLayer.hidden}),
   deathSequence:()=>({phase:mode,blackoutTime:deathFade,lockTime:deathLock,
