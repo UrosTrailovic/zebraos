@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-29T12:43:45.567220+00:00",
+  "generatedAt": "2026-10-29T12:47:35.764147+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -441,11 +441,6 @@
       "size": 6637065
     },
     {
-      "path": "STUDIO/BUREAU/Sonnnn/ZEPRA-KISAM-V6.mp3",
-      "type": "file",
-      "size": 7420500
-    },
-    {
       "path": "STUDIO/BUREAU/Sonnnn/Zebra Tape 1",
       "type": "dir"
     },
@@ -474,7 +469,7 @@
       "size": 7487105
     },
     {
-      "path": "STUDIO/BUREAU/Sonnnn/Zebralogy/5 - Kišam Bonus track.mp3",
+      "path": "STUDIO/BUREAU/Sonnnn/Zebralogy/5 - Kišam Ghost track.mp3",
       "type": "file",
       "size": 7420499
     },
