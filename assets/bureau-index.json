@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-10-28T07:27:29.403032+00:00",
+  "generatedAt": "2026-10-29T12:19:38.752170+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -447,6 +447,10 @@
     },
     {
       "path": "STUDIO/BUREAU/Sonnnn/Zebra Tape 1",
+      "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Zebralogy",
       "type": "dir"
     },
     {
