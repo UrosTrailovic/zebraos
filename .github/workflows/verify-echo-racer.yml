@@ -82,7 +82,21 @@ jobs:
               &&hudBox.bottom<=gaugeBox.top+3&&gaugeBox.bottom<=padBox.top+3;
              const scoreAndGaugeMatch=getComputedStyle(root.querySelector(".er-meter-number")).color
               ===getComputedStyle(root.querySelector(".er-dashboard-digits")).color;
+             const pad=root.querySelector(".er-pad");
+             const aButton=pad.querySelector(".zt-a"),bButton=pad.querySelector(".zt-b"),
+              selectButton=pad.querySelector(".zt-select");
+             const controlsWithoutTetris=pad.querySelectorAll("img").length===0
+               &&!pad.classList.contains("zt-skin-ready")
+               &&!getComputedStyle(pad).backgroundImage.includes("tetris-controls")
+               &&root.querySelector(".er-steering-label")===null;
+             const buttonsInOrder=!!aButton&&!!bButton&&!!selectButton
+               &&aButton.getBoundingClientRect().left<bButton.getBoundingClientRect().left
+               &&aButton.getBoundingClientRect().width>40
+               &&bButton.getBoundingClientRect().width>40
+               &&getComputedStyle(aButton).color==="rgb(237, 201, 239)"
+               &&getComputedStyle(selectButton).display!=="none";
              const report={errors,mode:snap.mode,score:snap.score,
+              controlsWithoutTetris,buttonsInOrder,
               steeringRight,steeringCentered,mobileOrder,scoreAndGaugeMatch,
               positions:[screenBox.top,hudBox.top,gaugeBox.top,padBox.top].map(Math.round),
               segmentedTitles,parallelArcs,hudFits,gaugeFits,
@@ -93,7 +107,7 @@ jobs:
              console.log("ECHO_MOBILE_REPORT",JSON.stringify(report));
              document.body.dataset.report=JSON.stringify(report);
              document.body.dataset.result=errors.length===0&&w>200&&h>200&&snap.mode==="running"
-              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch?"ok":"failed";
+              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder?"ok":"failed";
             },1200);
            }catch(e){errors.push("MOUNT:"+e.stack);document.body.dataset.report=JSON.stringify({errors});document.body.dataset.result="failed";}
           });
