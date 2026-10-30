@@ -93,7 +93,8 @@ jobs:
                &&aButton.getBoundingClientRect().left<bButton.getBoundingClientRect().left
                &&aButton.getBoundingClientRect().width>40
                &&bButton.getBoundingClientRect().width>40
-               &&getComputedStyle(aButton).color==="rgb(237, 201, 239)"
+               &&getComputedStyle(aButton).color===getComputedStyle(bButton).color
+               &&getComputedStyle(aButton).color!=="rgba(0, 0, 0, 0)"
                &&getComputedStyle(selectButton).display!=="none";
              const ab=pad.querySelector(".zt-ab"),abStyle=getComputedStyle(ab);
              const cleanButtonPlate=abStyle.transform==="none"
