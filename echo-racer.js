@@ -123,6 +123,7 @@ function mount(root){
  let boostBuffer=null,boostSource=null,boostOutput=null,boostLoad=null,boostAudioFailed=false;
  const audioFx={bass:0,mid:0,high:0,kick:0,previousBass:0,slowBass:0,beatCooldown:0,energy:0};
  let dragPointer=null,dragX=0,dragLastTs=0,dragVelocity=0;
+ let sliderPointer=null,steerValue=0,menuSliderDir=0,menuSliderNext=0;
  const wrap=node("section","er zg zg-retro");
  wrap.setAttribute("aria-label","Echo Racer — jeu du tunnel phosphore");
  const heading=node("div","er-heading");
@@ -514,15 +515,70 @@ function mount(root){
   button.appendChild(img);img.src=spriteRoot+path;
   return new Promise(resolve=>{img.onload=()=>resolve(true);img.onerror=()=>resolve(false);});
  }
- const buttons=[
-  [holdButton("Accélérer","zt-dir zt-dir-up","up"),"upTetris.png"],
-  [holdButton("Ralentir","zt-dir zt-dir-down","down"),"downTetris.png"],
-  [holdButton("Tourner à gauche","zt-dir zt-dir-left","left"),"leftTetris.png"],
-  [holdButton("Tourner à droite","zt-dir zt-dir-right","right"),"rightTetris.png"]
- ];
- buttons.forEach(pair=>cross.appendChild(pair[0]));
- cross.appendChild(node("span","zt-cross-center"));dpad.appendChild(cross);
- dpad.appendChild(node("span","zt-control-caption","DIRECTION"));
+ const steering=node("div","er-steering");
+ const steerLabel=node("div","er-steering-label","DIRECTION");
+ const steerTrack=node("div","er-steering-track");
+ const steerThumb=node("div","er-steering-thumb");
+ steerThumb.append(node("span","er-steering-grip"));
+ steerTrack.append(node("div","er-steering-groove"),steerThumb);
+ steerTrack.setAttribute("role","slider");
+ steerTrack.setAttribute("aria-label","Direction du vaisseau");
+ steerTrack.setAttribute("aria-valuemin","-100");
+ steerTrack.setAttribute("aria-valuemax","100");
+ steerTrack.setAttribute("aria-valuenow","0");
+ steerTrack.tabIndex=0;
+ steering.append(steerLabel,steerTrack,node("div","er-steering-markers","◀                     ●                     ▶"));
+ dpad.appendChild(steering);
+ function drawSteering(){
+  steerThumb.style.left=(50+steerValue*42)+"%";
+  steerTrack.setAttribute("aria-valuenow",String(Math.round(steerValue*100)));
+  steerTrack.classList.toggle("er-steering-engaged",Math.abs(steerValue)>.05);
+ }
+ function updateSteering(value,now){
+  steerValue=clamp(value,-1,1);drawSteering();
+  if(mode==="running"||Math.abs(steerValue)<.48){menuSliderDir=0;return;}
+  const dir=steerValue<0?-1:1;
+  if(menuSliderDir!==dir||now>=menuSliderNext){
+   controllerInput(dir<0?"left":"right");
+   menuSliderDir=dir;menuSliderNext=now+380;
+  }
+ }
+ function resetSteering(){
+  sliderPointer=null;steerValue=0;menuSliderDir=0;menuSliderNext=0;
+  steerThumb.classList.add("er-steering-return");drawSteering();
+ }
+ function steerFromPointer(e){
+  const r=steerTrack.getBoundingClientRect();
+  if(r.width)updateSteering(((e.clientX-r.left)/r.width-.5)/.42,performance.now());
+ }
+ steerTrack.addEventListener("pointerdown",e=>{
+  if((e.button!==undefined&&e.button!==0)||sliderPointer!==null)return;
+  e.preventDefault();sliderPointer=e.pointerId;
+  steerThumb.classList.remove("er-steering-return");
+  try{steerTrack.setPointerCapture(e.pointerId);}catch(_){}
+  steerFromPointer(e);
+ });
+ steerTrack.addEventListener("pointermove",e=>{
+  if(e.pointerId!==sliderPointer)return;
+  e.preventDefault();steerFromPointer(e);
+ });
+ function endSteering(e){
+  if(sliderPointer!==null&&e.pointerId===sliderPointer)resetSteering();
+ }
+ for(const event of ["pointerup","pointercancel","lostpointercapture"])
+  steerTrack.addEventListener(event,endSteering);
+ steerTrack.addEventListener("keydown",e=>{
+  if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")return;
+  e.preventDefault();e.stopPropagation();steerThumb.classList.remove("er-steering-return");
+  updateSteering(e.key==="ArrowLeft"?-1:1,performance.now());
+ });
+ steerTrack.addEventListener("keyup",e=>{
+  if(e.key==="ArrowLeft"||e.key==="ArrowRight"){
+   e.preventDefault();e.stopPropagation();resetSteering();
+  }
+ });
+ steerTrack.addEventListener("blur",resetSteering);
+ drawSteering();
  const actionSide=node("div","zt-action-side"),ab=node("div","zt-ab");
  const bAction=holdButton("B — Nitro (maintenir)","zt-ab-button zt-b","boost");
  const aAction=holdButton("A — Pulse","zt-ab-button zt-a","pulse");
@@ -531,7 +587,7 @@ function mount(root){
  const select=holdButton("SELECT — Pause","zt-select","pause");select.textContent="SELECT";
  actionSide.append(select,node("span","zt-control-caption","B : NITRO · A : PULSE"));
  pad.append(dpad,actionSide);
- const spriteJobs=buttons.map(pair=>attachSprite(pair[0],pair[1]));
+ const spriteJobs=[];
  spriteJobs.push(attachSprite(aAction,"btnAtetris.png"),attachSprite(bAction,"btnBtetris.png"),attachSprite(select,"selectTetris.png"));
  const skin=new Image();spriteJobs.push(new Promise(resolve=>{
   skin.onload=()=>resolve(true);skin.onerror=()=>resolve(false);skin.src=spriteRoot+"interfaceTetris.png";
@@ -915,7 +971,7 @@ function mount(root){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
   lockDeathControls(false);
-  mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
+  resetSteering();mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
   hudTimer=bestSaveTimer=audioSampleTimer=0;
   waves=[];pads=[];shields=[];
   nextGateAt=selectedLevel.id==="free"?Infinity:START_GATE_AT;
@@ -941,7 +997,7 @@ function mount(root){
   deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
   screen.classList.remove("er-crashing");lockDeathControls(false);
   if(mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
-  stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];trail=[];turnVelocity=0;
+  resetSteering();stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];trail=[];turnVelocity=0;
   elapsed=0;padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;nitroBurnTime=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
   overlay.hidden=false;renderMenuStage("home");
@@ -981,7 +1037,7 @@ function mount(root){
  }
  function togglePause(){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
-  if(mode==="running"){endNitro();mode="paused";pauseIndex=0;
+  if(mode==="running"){resetSteering();endNitro();mode="paused";pauseIndex=0;
    introDiagnostic.hidden=true;introTrack.hidden=true;pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;backButton.hidden=true;overlay.hidden=false;
    overlay.classList.add("er-stage-pause");pauseActions.hidden=false;
    brandLogo.hidden=true;logo.hidden=false;logo.textContent="PAUSE";
@@ -1090,7 +1146,9 @@ function mount(root){
   dt=clamp(dt,0,.05);elapsed+=dt;
   // Inverted orbital steering: pressing LEFT rotates the camera/ship toward
   // the opposite tunnel angle. Keep keyboard and touch D-pad consistent.
-  const steer=(keys.has("left")?1:0)-(keys.has("right")?1:0);
+  const digitalSteer=(keys.has("left")?1:0)-(keys.has("right")?1:0);
+  const analogSteer=Math.abs(steerValue)<.065?0:-Math.sign(steerValue)*Math.pow(Math.abs(steerValue),1.2);
+  const steer=digitalSteer||analogSteer;
   const targetTurn=steer*3.50;
   // Accelerate decisively, coast when released, brake quickly by counter-steer.
   const turnRate=steer?(turnVelocity*steer<0?10.2:7.1):3.5;
@@ -1592,6 +1650,8 @@ function mount(root){
    if(mode==="running")togglePause();
    return;
   }
+  if(mode!=="running"&&sliderPointer!==null&&Math.abs(steerValue)>=.48&&now>=menuSliderNext)
+   updateSteering(steerValue,now);
   if(mode==="running")advance(dt);
   advanceDeathSequence(dt);
   tickEngine(dt);
@@ -1703,7 +1763,7 @@ function mount(root){
    try{paint(performance.now());}catch(e){console.error("Echo Racer resume",e);}
   }
  }
- function onBlur(){endNitro();keys.clear();}
+ function onBlur(){resetSteering();endNitro();keys.clear();}
  document.addEventListener("visibilitychange",onVisibility);
  window.addEventListener("blur",onBlur);
  overlayButton.onclick=function(){
@@ -1714,7 +1774,7 @@ function mount(root){
  document.addEventListener("keydown",keyDown);
  document.addEventListener("keyup",keyUp);
  function dispose(){
-  live=false;cancelAnimationFrame(raf);keys.clear();
+  live=false;cancelAnimationFrame(raf);resetSteering();keys.clear();
   stopMusic();
   document.removeEventListener("visibilitychange",onVisibility);
   window.removeEventListener("blur",onBlur);
@@ -1763,6 +1823,7 @@ function mount(root){
    renderHud();return true;
   },
   lastRenderError:()=>root._erLastRenderError||null,
+   steering:()=>({value:steerValue,pointer:sliderPointer,velocity:turnVelocity}),
   stage:()=>menuStage,menuSelection:()=>({index:menuIndex,id:LEVELS[menuIndex].id,pauseIndex,overIndex}),controller:controllerInput,openLevels:showLevelSelect,
   pauseMenu:()=>({visible:!pauseActions.hidden,mode,stage:overlay.classList.contains("er-stage-pause"),soundLabel:pauseSound.textContent}),
   warning:()=>({life:warningLife,beepDelay:warningBeepDelay,visible:!warningLayer.hidden}),
