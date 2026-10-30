@@ -1619,3 +1619,177 @@
  .zebra-game-body .er .er-hud::after,
  .zebra-game-body .er .er-dashboard::after{animation:none!important}
 }
+
+
+/* Echo Racer 12 — foreground-first portable cockpit / coherent lavender LCD */
+.zebra-game-body .er .er-hud,
+.zebra-game-body .er .er-dashboard {
+ --er-phosphor:#e7bce9!important;
+ --lcd:#e7bce9!important;
+}
+.zebra-game-body .er .er-digital,
+.zebra-game-body .er .er-meter-label,
+.zebra-game-body .er .er-dashboard-name {
+ --lcd:#e7bce9!important;
+ color:#e7bce9!important;
+ filter:drop-shadow(0 0 2px rgba(234,165,240,.44))!important;
+}
+.zebra-game-body .er .er-meter-label,
+.zebra-game-body .er .er-dashboard-name,
+.zebra-game-body .er .er-dashboard-unit,
+.zebra-game-body .er .er-dashboard-status {
+ color:#d5b5d9!important;
+}
+.zebra-game-body .er .er-seg.lit {
+ filter:drop-shadow(0 0 2px rgba(255,190,247,.75))!important;
+}
+.zebra-game-body .er .er-dashboard-led.lit,
+.zebra-game-body .er .er-dashboard-speed .er-dashboard-led.lit,
+.zebra-game-body .er .er-dashboard-boost .er-dashboard-led.lit {
+ background:#ecc5f0!important;
+ filter:drop-shadow(0 0 3px rgba(246,174,250,.77))!important;
+}
+.zebra-game-body .er .er-gauge-rail path {stroke:#50374f!important}
+.zebra-game-body .er .er-dashboard-led,
+.zebra-game-body .er .er-dashboard-speed .er-dashboard-led,
+.zebra-game-body .er .er-dashboard-boost .er-dashboard-led {
+ background:#523c50!important;
+}
+.zebra-game-body .er .er-hud::after,
+.zebra-game-body .er .er-dashboard::after{
+ background:
+  repeating-linear-gradient(0deg,rgba(0,0,0,.38) 0 1px,transparent 1px 3px),
+  linear-gradient(180deg,transparent 0%,transparent 43%,
+   rgba(236,164,238,.14) 49%,rgba(236,164,238,.045) 54%,transparent 61%)!important;
+}
+
+/* Physically sliding, self-centering steering unit. */
+.zebra-game-body .er .er-steering-zone{
+ display:flex;align-items:center;justify-content:center;
+ min-width:0;min-height:0;width:100%;
+}
+.zebra-game-body .er .er-steering{
+ display:flex;flex-direction:column;align-items:stretch;justify-content:center;
+ gap:5px;width:100%;max-width:300px;min-width:0;
+ padding:6px 8px;
+ border:2px ridge #85828d;border-radius:8px;
+ background:linear-gradient(#19121f,#080810 55%,#1b1225);
+ box-shadow:inset 0 0 13px #000,0 2px 4px #0008;
+}
+.zebra-game-body .er .er-steering-label{
+ font:700 9px/1 "Oxanium",monospace;
+ letter-spacing:2px;text-align:center;color:#e6c5ea;
+ text-shadow:0 0 4px #b15cbd77;
+}
+.zebra-game-body .er .er-steering-track{
+ height:46px;width:100%;min-width:0;position:relative;
+ touch-action:none;user-select:none;
+ border:2px inset #69616e;border-radius:9px;
+ background:linear-gradient(180deg,#06050a,#211329 50%,#09060c);
+ box-shadow:inset 0 2px 4px #000,inset 0 0 8px #26172e;
+ outline:none;cursor:ew-resize;
+}
+.zebra-game-body .er .er-steering-track:focus-visible{
+ outline:2px solid #ebc6f3;outline-offset:2px;
+}
+.zebra-game-body .er .er-steering-groove {
+ position:absolute;left:5%;right:5%;top:50%;height:8px;
+ transform:translateY(-50%);
+ border:1px solid #755d79;border-radius:5px;
+ background:linear-gradient(#040407,#1d1021);
+ box-shadow:inset 0 2px 4px #000;
+ pointer-events:none;
+}
+.zebra-game-body .er .er-steering-groove::after{
+ content:"";position:absolute;left:50%;top:-12px;bottom:-12px;
+ border-left:2px solid #e6c1ef6b;
+}
+.zebra-game-body .er .er-steering-thumb {
+ position:absolute;left:50%;top:50%;z-index:3;
+ width:39px;height:47px;transform:translate(-50%,-50%);
+ border:3px ridge #c7bbcb;border-radius:7px;
+ background:linear-gradient(108deg,#c3b9cb,#5a405f 17%,#231828 37%,#765580 75%,#b9a3c4);
+ box-shadow:inset 2px 0 #fff5,inset -3px 0 #160f20,1px 2px 4px #000b;
+ pointer-events:none;
+ transition:none;
+}
+.zebra-game-body .er .er-steering-thumb.er-steering-return{
+ transition:left 240ms cubic-bezier(.18,.9,.22,1.12);
+}
+.zebra-game-body .er .er-steering-grip{
+ position:absolute;left:43%;top:8px;bottom:8px;width:6px;
+ background:repeating-linear-gradient(180deg,#25152b 0 2px,#bb8cbe 2px 4px);
+ border-radius:2px;box-shadow:1px 0 2px #130a16;
+}
+.zebra-game-body .er .er-steering-ends{
+ display:flex;justify-content:space-between;
+ font:700 10px/1 "Oxanium",monospace;
+ color:#af88b7;padding:0 7px;
+}
+.zebra-game-body .er .er-steering-track.er-steering-engaged{
+ box-shadow:inset 0 0 9px #5a285c,inset 0 2px 4px #000;
+}
+
+/* The game image occupies the top; both instrument panels follow it. */
+@media(max-width:700px){
+ .zebra-game-body .zg.er{
+  display:flex!important;flex-direction:column!important;
+  gap:5px!important;padding:4px!important;
+ }
+ .zebra-game-body .er .er-frame{
+  display:contents!important;
+ }
+ .zebra-game-body .er .er-screen{
+  order:0!important;
+  flex:1 1 0!important;
+  width:100%!important;max-width:none!important;
+  height:auto!important;min-height:150px!important;
+  padding:0!important;margin:0!important;
+  border:3px ridge #bc99c5!important;
+  box-shadow:inset 0 0 18px #000,0 0 0 1px #39203e!important;
+ }
+ .zebra-game-body .er .er-hud{
+  order:1!important;flex:0 0 62px!important;
+  height:62px!important;min-height:62px!important;
+  width:100%!important;
+ }
+ .zebra-game-body .er .er-meter{
+  min-height:52px!important;height:52px!important;
+ }
+ .zebra-game-body .er .er-dashboard{
+  order:2!important;flex:0 0 139px!important;
+  height:139px!important;min-height:139px!important;
+  position:relative!important;width:100%!important;
+ }
+ .zebra-game-body .er .er-pad{
+  order:3!important;flex:0 0 154px!important;
+  height:154px!important;min-height:154px!important;
+  grid-template-columns:53% 47%!important;
+  grid-template-rows:minmax(0,1fr)!important;
+ }
+ .zebra-game-body .er .zt-dpad{
+  grid-row:1!important;grid-column:1!important;
+  width:100%!important;height:100%!important;
+  display:flex!important;min-width:0!important;
+ }
+ .zebra-game-body .er .zt-action-side{
+  grid-row:1!important;grid-column:2!important;
+  min-width:0!important;height:100%!important;
+ }
+ .zebra-game-body .er .er-steering{
+  width:100%;max-width:none;padding:5px 6px;gap:4px;
+ }
+ .zebra-game-body .er .er-steering-track{height:47px}
+ .zebra-game-body .er .er-steering-thumb{width:35px;height:47px}
+ .zebra-game-body .er .er-steering-label{font-size:8px}
+ .zebra-game-body .er .er-steering-ends{font-size:9px}
+}
+@media(max-width:700px) and (max-height:700px){
+ .zebra-game-body .er .er-hud{height:54px!important;min-height:54px!important;flex-basis:54px!important}
+ .zebra-game-body .er .er-meter{height:46px!important;min-height:46px!important}
+ .zebra-game-body .er .er-dashboard{height:107px!important;min-height:107px!important;flex-basis:107px!important}
+ .zebra-game-body .er .er-dashboard-bar{inset:37px 10px 8px!important}
+ .zebra-game-body .er .er-pad{height:119px!important;min-height:119px!important;flex-basis:119px!important}
+ .zebra-game-body .er .er-steering-track{height:38px}
+ .zebra-game-body .er .er-steering-thumb{height:38px}
+}
