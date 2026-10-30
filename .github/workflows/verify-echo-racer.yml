@@ -78,8 +78,8 @@ jobs:
              const rect=name=>root.querySelector(name).getBoundingClientRect();
              const screenBox=rect(".er-screen"),hudBox=rect(".er-hud"),
               gaugeBox=rect(".er-dashboard"),padBox=rect(".er-pad");
-             const mobileOrder=screenBox.top<hudBox.top
-              &&hudBox.bottom<=gaugeBox.top+3&&gaugeBox.bottom<=padBox.top+3;
+             const mobileOrder=screenBox.top<gaugeBox.top
+              &&gaugeBox.bottom<=hudBox.top+3&&hudBox.bottom<=padBox.top+3;
              const scoreAndGaugeMatch=getComputedStyle(root.querySelector(".er-meter-number")).color
               ===getComputedStyle(root.querySelector(".er-dashboard-digits")).color;
              const pad=root.querySelector(".er-pad");
@@ -95,8 +95,17 @@ jobs:
                &&bButton.getBoundingClientRect().width>40
                &&getComputedStyle(aButton).color==="rgb(237, 201, 239)"
                &&getComputedStyle(selectButton).display!=="none";
+             const ab=pad.querySelector(".zt-ab"),abStyle=getComputedStyle(ab);
+             const cleanButtonPlate=abStyle.transform==="none"
+               &&abStyle.backgroundImage==="none"
+               &&parseFloat(abStyle.borderTopWidth)===0;
+             const aFace=new DOMMatrix(getComputedStyle(aButton).transform);
+             const bFace=new DOMMatrix(getComputedStyle(bButton).transform);
+             const uprightStagger=aButton.getBoundingClientRect().top>bButton.getBoundingClientRect().top+9
+               &&Math.abs(aFace.b)<.01&&Math.abs(aFace.c)<.01
+               &&Math.abs(bFace.b)<.01&&Math.abs(bFace.c)<.01;
              const report={errors,mode:snap.mode,score:snap.score,
-              controlsWithoutTetris,buttonsInOrder,
+              cleanButtonPlate,uprightStagger,controlsWithoutTetris,buttonsInOrder,
               steeringRight,steeringCentered,mobileOrder,scoreAndGaugeMatch,
               positions:[screenBox.top,hudBox.top,gaugeBox.top,padBox.top].map(Math.round),
               segmentedTitles,parallelArcs,hudFits,gaugeFits,
@@ -107,7 +116,7 @@ jobs:
              console.log("ECHO_MOBILE_REPORT",JSON.stringify(report));
              document.body.dataset.report=JSON.stringify(report);
              document.body.dataset.result=errors.length===0&&w>200&&h>200&&snap.mode==="running"
-              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder?"ok":"failed";
+              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger?"ok":"failed";
             },1200);
            }catch(e){errors.push("MOUNT:"+e.stack);document.body.dataset.report=JSON.stringify({errors});document.body.dataset.result="failed";}
           });
