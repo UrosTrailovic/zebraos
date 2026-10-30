@@ -199,7 +199,7 @@
   touch-action:manipulation;
  }
  .zebra-game-body .er .er-pad.zt-skin-ready{
-  background:#060564 url("/assets/games/tetris-controls/interfaceTetris.png") center/100% 100% no-repeat;
+  background:#060564 none center/100% 100% no-repeat;
   border:0;border-radius:0;box-shadow:none;
  }
  .zebra-game-body .er .er-footer{
@@ -1792,4 +1792,133 @@
  .zebra-game-body .er .er-pad{height:119px!important;min-height:119px!important;flex-basis:119px!important}
  .zebra-game-body .er .er-steering-track{height:38px}
  .zebra-game-body .er .er-steering-thumb{height:38px}
+}
+
+
+/* Echo Racer 13 — integrated controls, hand-built CSS only.
+   No Tetris panel art or directional caption. A is on the left, B on the right. */
+@media(max-width:700px){
+ .zebra-game-body .er .er-pad,
+ .zebra-game-body .er .er-pad.zt-skin-ready {
+  position:relative!important;
+  background:linear-gradient(170deg,#201328 0%,#0b0811 52%,#1d1125 100%)!important;
+  border:2px solid #65516c!important;
+  border-top-color:#9b86a1!important;
+  border-bottom-color:#443649!important;
+  border-radius:12px!important;
+  box-shadow:inset 0 1px 0 #d4b8e32c,inset 0 0 20px #000c,0 2px 3px #08050d!important;
+  padding:8px 10px!important;
+  gap:5px!important;
+  overflow:hidden!important;
+ }
+ .zebra-game-body .er .er-pad::before{
+  content:"";position:absolute;inset:4px;
+  border:1px solid #c89cd71c;border-radius:8px;
+  pointer-events:none;
+ }
+ .zebra-game-body .er .er-steering {
+  width:100%!important;max-width:none!important;
+  border:0!important;border-radius:0!important;
+  box-shadow:none!important;background:none!important;
+  padding:5px 3px!important;gap:5px!important;
+ }
+ .zebra-game-body .er .er-steering-label{display:none!important}
+ .zebra-game-body .er .er-steering-track{
+  height:51px!important;
+  border:2px solid #7b687f!important;
+  border-radius:9px!important;
+  background:linear-gradient(180deg,#09050e,#1b1020 52%,#0b0610)!important;
+  box-shadow:inset 0 2px 6px #000c,0 1px 0 #ddbbeb29!important;
+ }
+ .zebra-game-body .er .er-steering-thumb{
+  width:36px!important;height:49px!important;
+  border-radius:8px!important;
+  border:2px solid #a994b4!important;
+  background:linear-gradient(110deg,#b7a2bf 0%,#64496e 15%,#1d1524 45%,#563e5e 79%,#c5adce 100%)!important;
+  box-shadow:inset 2px 1px #ffffff52,inset -2px 0 #0008,1px 2px 4px #000c!important;
+ }
+ .zebra-game-body .er .er-steering-markers{
+  font:600 11px/1 "Oxanium",monospace!important;
+  color:#d9abdf!important;
+  letter-spacing:1px!important;
+  text-align:center!important;
+ }
+ .zebra-game-body .er .zt-action-side{
+  display:flex!important;flex-direction:column!important;
+  justify-content:center!important;align-items:center!important;
+  gap:8px!important;
+  min-width:0!important;
+ }
+ .zebra-game-body .er .zt-ab{
+  position:relative!important;
+  display:flex!important;flex-direction:row!important;
+  justify-content:center!important;align-items:center!important;
+  width:100%!important;max-width:none!important;
+  height:74px!important;min-height:74px!important;
+  gap:clamp(8px,2.7vw,16px)!important;
+  margin:0!important;padding:0!important;
+ }
+ .zebra-game-body .er .zt-ab-button,
+ .zebra-game-body .er .er-pad.zt-skin-ready .zt-ab-button {
+  position:relative!important;
+  left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;
+  flex:0 0 auto!important;
+  display:flex!important;justify-content:center!important;align-items:center!important;
+  width:clamp(52px,16vw,68px)!important;
+  height:clamp(52px,16vw,68px)!important;
+  min-width:0!important;min-height:0!important;
+  padding:0!important;
+  border:2px solid #9b83a3!important;
+  border-top-color:#e1c2e8!important;
+  border-radius:50%!important;
+  background:
+   radial-gradient(circle at 34% 23%,#382340,#1c1424 38%,#090911 73%,#211329 100%)!important;
+  box-shadow:inset 1px 2px 1px #f2d9f329,inset -2px -3px 3px #000b,0 3px 0 #080510,0 0 0 2px #3c2b43!important;
+  color:#edc9ef!important;
+  font:800 clamp(21px,6.5vw,27px)/1 "Oxanium","Courier New",monospace!important;
+  text-shadow:0 0 5px #dfb0df93!important;
+  cursor:pointer;touch-action:none;
+  outline:none!important;
+  filter:none!important;
+ }
+ .zebra-game-body .er .zt-ab-button:active{
+  transform:translateY(2px) scale(.98)!important;
+  background:radial-gradient(circle at 45% 45%,#36213c,#0b0710 83%)!important;
+  box-shadow:inset 0 2px 7px #000,0 1px 0 #07040b!important;
+ }
+ .zebra-game-body .er .zt-ab-button:focus-visible,
+ .zebra-game-body .er .zt-select:focus-visible{
+  outline:2px solid #e9bdec!important;outline-offset:3px!important;
+ }
+ .zebra-game-body .er .zt-select,
+ .zebra-game-body .er .er-pad.zt-skin-ready .zt-select {
+  position:relative!important;
+  align-self:center!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  width:min(86%,156px)!important;
+  min-width:0!important;min-height:30px!important;height:30px!important;
+  padding:0 12px!important;
+  border:1px solid #9d86a2!important;
+  border-top-color:#e0c5e2!important;
+  border-radius:8px!important;
+  background:linear-gradient(#302139,#140e1c 60%,#09080f)!important;
+  box-shadow:inset 0 1px 0 #ffffff2f,0 2px 0 #07040b!important;
+  color:#e6c2ec!important;
+  font:700 11px/1 "Oxanium",monospace!important;
+  letter-spacing:1.2px!important;text-shadow:0 0 4px #df9fdc61!important;
+  outline:none!important;
+ }
+ .zebra-game-body .er .zt-select:active {
+  transform:translateY(1px)!important;
+  box-shadow:inset 0 2px 5px #000!important;
+ }
+ .zebra-game-body .er .zt-control-sprite{display:none!important}
+}
+@media(max-width:700px) and (max-height:700px){
+ .zebra-game-body .er .er-pad{padding:4px 8px!important}
+ .zebra-game-body .er .er-steering-track{height:38px!important}
+ .zebra-game-body .er .er-steering-thumb{height:38px!important}
+ .zebra-game-body .er .zt-ab{height:56px!important;min-height:56px!important;gap:7px!important}
+ .zebra-game-body .er .zt-ab-button{width:51px!important;height:51px!important}
+ .zebra-game-body .er .zt-select{height:25px!important;min-height:25px!important;font-size:10px!important}
 }
