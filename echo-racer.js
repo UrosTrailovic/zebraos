@@ -509,14 +509,7 @@ function mount(root){
   b.addEventListener("contextmenu",e=>e.preventDefault());
   return b;
  }
- const spriteRoot="/assets/games/tetris-controls/";
- function attachSprite(button,path){
-  const img=node("img","zt-control-sprite");img.alt="";img.draggable=false;
-  button.appendChild(img);img.src=spriteRoot+path;
-  return new Promise(resolve=>{img.onload=()=>resolve(true);img.onerror=()=>resolve(false);});
- }
  const steering=node("div","er-steering");
- const steerLabel=node("div","er-steering-label","DIRECTION");
  const steerTrack=node("div","er-steering-track");
  const steerThumb=node("div","er-steering-thumb");
  steerThumb.append(node("span","er-steering-grip"));
@@ -527,7 +520,7 @@ function mount(root){
  steerTrack.setAttribute("aria-valuemax","100");
  steerTrack.setAttribute("aria-valuenow","0");
  steerTrack.tabIndex=0;
- steering.append(steerLabel,steerTrack,node("div","er-steering-markers","◀                     ●                     ▶"));
+ steering.append(steerTrack,node("div","er-steering-markers","◀                     ●                     ▶"));
  dpad.appendChild(steering);
  function drawSteering(){
   steerThumb.style.left=(50+steerValue*42)+"%";
@@ -580,19 +573,14 @@ function mount(root){
  steerTrack.addEventListener("blur",resetSteering);
  drawSteering();
  const actionSide=node("div","zt-action-side"),ab=node("div","zt-ab");
- const bAction=holdButton("B — Nitro (maintenir)","zt-ab-button zt-b","boost");
+ // Standalone Echo Racer hardware, no borrowed Tetris button sprites.
  const aAction=holdButton("A — Pulse","zt-ab-button zt-a","pulse");
- bAction.textContent="B";aAction.textContent="A";
- ab.append(bAction,aAction);actionSide.appendChild(ab);
+ const bAction=holdButton("B — Nitro (maintenir)","zt-ab-button zt-b","boost");
+ aAction.textContent="A";bAction.textContent="B";
+ ab.append(aAction,bAction);actionSide.appendChild(ab);
  const select=holdButton("SELECT — Pause","zt-select","pause");select.textContent="SELECT";
  actionSide.append(select,node("span","zt-control-caption","B : NITRO · A : PULSE"));
  pad.append(dpad,actionSide);
- const spriteJobs=[];
- spriteJobs.push(attachSprite(aAction,"btnAtetris.png"),attachSprite(bAction,"btnBtetris.png"),attachSprite(select,"selectTetris.png"));
- const skin=new Image();spriteJobs.push(new Promise(resolve=>{
-  skin.onload=()=>resolve(true);skin.onerror=()=>resolve(false);skin.src=spriteRoot+"interfaceTetris.png";
- }));
- Promise.all(spriteJobs).then(results=>{if(live&&pad.isConnected&&results.every(Boolean))pad.classList.add("zt-skin-ready");});
  wrap.append(pad);
  root.appendChild(wrap);
  function fitCanvas(){
