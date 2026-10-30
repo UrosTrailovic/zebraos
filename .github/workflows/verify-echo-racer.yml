@@ -64,7 +64,27 @@ jobs:
                  &&Math.abs((parseFloat(boostBlades[i].style.getPropertyValue("--gauge-y"))-parseFloat(blade.style.getPropertyValue("--gauge-y")))-22)<.1);
              const hudFits=[...root.querySelectorAll(".er-meter")].every(el=>el.scrollWidth<=el.clientWidth+2);
              const gaugeFits=root.querySelector(".er-dashboard").getBoundingClientRect().width>300;
+             const slider=root.querySelector(".er-steering-track");
+             const box=slider.getBoundingClientRect();
+             const pointer=(type,x,id=47)=>slider.dispatchEvent(new PointerEvent(type,{
+              bubbles:true,cancelable:true,pointerId:id,pointerType:"touch",button:0,
+              clientX:x,clientY:box.top+box.height/2
+             }));
+             pointer("pointerdown",box.right-8);
+             const steeringRight=debug.steering().value>.7;
+             pointer("pointerup",box.right-8);
+             const steeringCentered=debug.steering().value===0
+              &&slider.getAttribute("aria-valuenow")==="0";
+             const rect=name=>root.querySelector(name).getBoundingClientRect();
+             const screenBox=rect(".er-screen"),hudBox=rect(".er-hud"),
+              gaugeBox=rect(".er-dashboard"),padBox=rect(".er-pad");
+             const mobileOrder=screenBox.top<hudBox.top
+              &&hudBox.bottom<=gaugeBox.top+3&&gaugeBox.bottom<=padBox.top+3;
+             const scoreAndGaugeMatch=getComputedStyle(root.querySelector(".er-meter-number")).color
+              ===getComputedStyle(root.querySelector(".er-dashboard-digits")).color;
              const report={errors,mode:snap.mode,score:snap.score,
+              steeringRight,steeringCentered,mobileOrder,scoreAndGaugeMatch,
+              positions:[screenBox.top,hudBox.top,gaugeBox.top,padBox.top].map(Math.round),
               segmentedTitles,parallelArcs,hudFits,gaugeFits,
               canvas:{width:w,height:h,nonblack,unique:new Set(pixels).size},
               screen:root.querySelector(".er-screen").getBoundingClientRect().height,
@@ -73,7 +93,7 @@ jobs:
              console.log("ECHO_MOBILE_REPORT",JSON.stringify(report));
              document.body.dataset.report=JSON.stringify(report);
              document.body.dataset.result=errors.length===0&&w>200&&h>200&&snap.mode==="running"
-              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits?"ok":"failed";
+              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch?"ok":"failed";
             },1200);
            }catch(e){errors.push("MOUNT:"+e.stack);document.body.dataset.report=JSON.stringify({errors});document.body.dataset.result="failed";}
           });
