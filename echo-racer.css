@@ -1922,3 +1922,99 @@
  .zebra-game-body .er .zt-ab-button{width:51px!important;height:51px!important}
  .zebra-game-body .er .zt-select{height:25px!important;min-height:25px!important;font-size:10px!important}
 }
+
+
+/* Echo Racer 13.1 — no shared Tetris oval/rotation; proper staggered A/B.
+   Mobile stack: track -> speed/boost -> score -> controls. */
+@media(max-width:700px){
+ .zebra-game-body .zg.er .er-screen{
+  order:0!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard{
+  order:1!important;
+ }
+ .zebra-game-body .zg.er .er-hud{
+  order:2!important;
+ }
+ .zebra-game-body .zg.er .er-pad{
+  order:3!important;
+ }
+ /* style.css has a shared .zg-retro .zt-ab {transform:rotate(-13deg)}
+    rule. Explicitly cancel the inherited Tetris decorative oval. */
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-ab{
+  position:relative!important;
+  transform:none!important;
+  rotate:none!important;
+  border:0!important;
+  border-radius:0!important;
+  background:none!important;
+  box-shadow:none!important;
+  display:flex!important;
+  justify-content:center!important;
+  align-items:center!important;
+  gap:clamp(7px,2.2vw,12px)!important;
+  overflow:visible!important;
+ }
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-ab::before,
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-ab::after{
+  content:none!important;
+  display:none!important;
+ }
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-ab-button{
+  position:relative!important;
+  flex:0 0 auto!important;
+  left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;
+  width:clamp(52px,15vw,64px)!important;
+  height:clamp(52px,15vw,64px)!important;
+  min-width:0!important;min-height:0!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  padding:0!important;
+  border:2px solid #8c728f!important;
+  border-top-color:#d9afdc!important;
+  border-bottom-color:#49364e!important;
+  border-radius:9px!important;
+  background:linear-gradient(180deg,#291b30 0%,#130d1b 55%,#201427 100%)!important;
+  box-shadow:inset 0 1px 0 #edd0f136,inset 0 -2px 4px #000a,0 2px 3px #0009!important;
+  font:800 clamp(21px,6vw,26px)/1 "Oxanium",monospace!important;
+  color:#ecc7f1!important;
+  text-shadow:0 0 5px #e3a8f07a!important;
+  filter:none!important;
+  rotate:none!important;
+  outline:none!important;
+  -webkit-tap-highlight-color:transparent;
+ }
+ /* A stays lower on the left, B stays higher on the right.
+    Keep both faces horizontal — only move their vertical positions. */
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-a{
+  transform:translateY(8px)!important;
+ }
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-b{
+  transform:translateY(-8px)!important;
+ }
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-a:active{
+  transform:translateY(10px)!important;
+  box-shadow:inset 0 3px 6px #000,0 1px 0 #0008!important;
+ }
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-b:active{
+  transform:translateY(-6px)!important;
+  box-shadow:inset 0 3px 6px #000,0 1px 0 #0008!important;
+ }
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-select{
+  outline:none!important;
+ }
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-ab-button:focus-visible,
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-select:focus-visible{
+  outline:2px solid #e9bdec!important;
+  outline-offset:2px!important;
+ }
+}
+@media(max-width:700px) and (max-height:700px){
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-ab-button{
+  width:clamp(42px,13.8vw,51px)!important;
+  height:clamp(42px,13.8vw,51px)!important;
+ }
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-a{transform:translateY(5px)!important}
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-b{transform:translateY(-5px)!important}
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-a:active{transform:translateY(7px)!important}
+ .zebra-game-body .zg.er.zg-retro .er-pad .zt-b:active{transform:translateY(-3px)!important}
+}
