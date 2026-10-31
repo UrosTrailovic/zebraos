@@ -75,6 +75,25 @@ jobs:
              pointer("pointerup",box.right-8);
              const steeringCentered=debug.steering().value===0
               &&slider.getAttribute("aria-valuenow")==="0";
+             // Actual hit-testing at the very top and bottom of the left controls,
+             // not only on the visible narrow slider track.
+             const leftPanel=root.querySelector(".zt-dpad");
+             const panelRect=leftPanel.getBoundingClientRect();
+             const testEdge=(y,id)=>{
+              const x=Math.min(box.right-8,panelRect.right-10);
+              const target=document.elementFromPoint(x,y);
+              if(!target||!leftPanel.contains(target))return false;
+              const make=type=>target.dispatchEvent(new PointerEvent(type,{
+               bubbles:true,cancelable:true,pointerId:id,pointerType:"touch",button:0,
+               clientX:x,clientY:y
+              }));
+              make("pointerdown");
+              const moved=debug.steering().value>.5;
+              make("pointerup");
+              return moved&&debug.steering().value===0;
+             };
+             const fullHeightTouch=testEdge(panelRect.top+3,101)
+              &&testEdge(panelRect.bottom-3,102);
              const rect=name=>root.querySelector(name).getBoundingClientRect();
              const screenBox=rect(".er-screen"),hudBox=rect(".er-hud"),
               gaugeBox=rect(".er-dashboard"),padBox=rect(".er-pad");
@@ -106,7 +125,7 @@ jobs:
                &&Math.abs(aFace.b)<.01&&Math.abs(aFace.c)<.01
                &&Math.abs(bFace.b)<.01&&Math.abs(bFace.c)<.01;
              const report={errors,mode:snap.mode,score:snap.score,
-              cleanButtonPlate,uprightStagger,controlsWithoutTetris,buttonsInOrder,
+              fullHeightTouch,cleanButtonPlate,uprightStagger,controlsWithoutTetris,buttonsInOrder,
               steeringRight,steeringCentered,mobileOrder,scoreAndGaugeMatch,
               positions:[screenBox.top,hudBox.top,gaugeBox.top,padBox.top].map(Math.round),
               segmentedTitles,parallelArcs,hudFits,gaugeFits,
@@ -117,7 +136,7 @@ jobs:
              console.log("ECHO_MOBILE_REPORT",JSON.stringify(report));
              document.body.dataset.report=JSON.stringify(report);
              document.body.dataset.result=errors.length===0&&w>200&&h>200&&snap.mode==="running"
-              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger?"ok":"failed";
+              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger&&fullHeightTouch?"ok":"failed";
             },1200);
            }catch(e){errors.push("MOUNT:"+e.stack);document.body.dataset.report=JSON.stringify({errors});document.body.dataset.result="failed";}
           });
