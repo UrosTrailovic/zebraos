@@ -544,14 +544,14 @@ function mount(root){
   const r=steerTrack.getBoundingClientRect();
   if(r.width)updateSteering(((e.clientX-r.left)/r.width-.5)/.42,performance.now());
  }
- steerTrack.addEventListener("pointerdown",e=>{
+ dpad.addEventListener("pointerdown",e=>{
   if((e.button!==undefined&&e.button!==0)||sliderPointer!==null)return;
   e.preventDefault();sliderPointer=e.pointerId;
   steerThumb.classList.remove("er-steering-return");
-  try{steerTrack.setPointerCapture(e.pointerId);}catch(_){}
+  try{dpad.setPointerCapture(e.pointerId);}catch(_){}
   steerFromPointer(e);
  });
- steerTrack.addEventListener("pointermove",e=>{
+ dpad.addEventListener("pointermove",e=>{
   if(e.pointerId!==sliderPointer)return;
   e.preventDefault();steerFromPointer(e);
  });
@@ -559,7 +559,7 @@ function mount(root){
   if(sliderPointer!==null&&e.pointerId===sliderPointer)resetSteering();
  }
  for(const event of ["pointerup","pointercancel","lostpointercapture"])
-  steerTrack.addEventListener(event,endSteering);
+  dpad.addEventListener(event,endSteering);
  steerTrack.addEventListener("keydown",e=>{
   if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")return;
   e.preventDefault();e.stopPropagation();steerThumb.classList.remove("er-steering-return");
