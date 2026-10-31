@@ -109,7 +109,7 @@ function mount(root){
  let distance=0,travel=0,passed=0,combo=0,waves=[],pads=[],shields=[],
   nextGateAt=START_GATE_AT,nextPadAt=PAD_START,nextShieldAt=SHIELD_START,
   lastGateAt=-100,trail=[],sparks=[],currentSpeed=0,gateCount=0,padCount=0,shieldCount=0,scoreMultiplier=1;
- let invuln=0,pulseCharge=2,pulseGlow=0,padBoostTime=0;
+ let invuln=0,pulseCharge=2,pulseGlow=0,padBoostTime=0,pulseFx=0,pulseHitFx=0,shieldFlash=0;
  let nitroHeld=false,nitroActive=false,nitroFuel=1,nitroRegenWait=0,nitroBurnTime=0;
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
  let menuStage="home",menuIndex=Math.max(0,LEVELS.indexOf(selectedLevel)),pauseIndex=0,overIndex=0,warningLife=0,warningBeepDelay=0,warningChirp=0;
@@ -460,10 +460,18 @@ function mount(root){
  warningLayer.setAttribute("aria-label","Attention : dernier bouclier");
  warningLayer.append(warningIcon,node("span","er-shield-warning-label","DERNIER BOUCLIER"));
  warningLayer.hidden=true;
+ const shieldCollect=node("div","er-shield-collect","◆ BOUCLIER +1");
+ shieldCollect.setAttribute("aria-hidden","true");
+ shieldCollect.addEventListener("animationend",()=>shieldCollect.classList.remove("er-shield-collected"));
+ function showShieldCollect(){
+  shieldCollect.classList.remove("er-shield-collected");
+  void shieldCollect.offsetWidth;
+  shieldCollect.classList.add("er-shield-collected");
+ }
  const crashCurtain=node("div","er-crash-curtain");
  crashCurtain.hidden=true;crashCurtain.setAttribute("aria-hidden","true");
  // Instruments are part of frame: overlay on desktop, physical strip on mobile.
- screen.append(canvas,sheen,eventText,warningLayer,overlay,crashCurtain);
+ screen.append(canvas,sheen,eventText,warningLayer,shieldCollect,overlay,crashCurtain);
  frame.append(screen,dashboard);
  wrap.append(hud,frame);
  const footer=node("div","er-footer zg-buttons zt-buttons");
@@ -976,7 +984,8 @@ function mount(root){
   nextShieldAt=selectedLevel.id==="free"?Infinity:SHIELD_START;
   lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;shieldCount=0;
   trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
-  invuln=0;pulseCharge=2;pulseGlow=padBoostTime=flash=shake=0;
+  invuln=0;pulseCharge=2;pulseGlow=pulseFx=pulseHitFx=shieldFlash=padBoostTime=flash=shake=0;
+  shieldCollect.classList.remove("er-shield-collected");
   nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;nitroBurnTime=0;
   shipBoostFade=0;turboLight=0;warningLife=0;warningBeepDelay=0;warningChirp=0;
   screen.classList.remove("er-death","er-crashing");
@@ -995,6 +1004,7 @@ function mount(root){
   screen.classList.remove("er-crashing");lockDeathControls(false);
   if(mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
   resetSteering();stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];trail=[];turnVelocity=0;
+  shieldCollect.classList.remove("er-shield-collected");pulseFx=pulseHitFx=shieldFlash=0;
   elapsed=0;padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;nitroBurnTime=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
   overlay.hidden=false;renderMenuStage("home");
@@ -1061,22 +1071,37 @@ function mount(root){
   }
   // Up/down control forward speed only. There is no 2D ship translation.
  }
- function burst(position,color,count){
+ function burst(position,color,count,depth=1.6,wide=false){
   const a=typeof position==="number"?position:angle;
-  for(let i=0;i<count;i++)sparks.push({
-   a:a+rand(-.25,.25),z:rand(.9,2.0),va:rand(-1.2,1.2),vz:rand(-2.2,.7),
-   life:rand(.15,.55),max:.55,color
-  });
-  if(sparks.length>90)sparks.splice(0,sparks.length-90);
+  for(let i=0;i<count;i++){
+   const life=rand(wide?.46:.20,wide?1.05:.58);
+   sparks.push({
+    a:a+rand(wide?-1.1:-.27,wide?1.1:.27),
+    z:Math.max(.35,depth+rand(wide?-1.4:-.65,wide?1.4:.65)),
+    va:rand(wide?-3:-1.2,wide?3:1.2),vz:rand(-3.5,1.3),
+    life,max:life,color,size:wide?rand(2.5,6.3):4
+   });
+  }
+  if(sparks.length>160)sparks.splice(0,sparks.length-160);
+ }
+ function shatterWave(target){
+  // Actual debris comes from each part of the broken wall.
+  for(const id of target.sectors){
+   if(sparks.length>147)break;
+   burst(obstacleAngle(target,id),"#ffd6f5",3,target.z,true);
+  }
+  burst(angle,"#b6f7ff",45,Math.max(1.4,target.z),true);
+  pulseHitFx=1;shake=Math.max(shake,2.7);
  }
  function pulse(){
   if(mode!=="running"||pulseCharge<=0)return;
-  pulseCharge--;pulseGlow=.5;beep("pulse");
-  const target=waves.filter(w=>!w.cleared&&w.z>HIT_Z-.1&&w.z<HIT_Z+2.6).sort((a,b)=>a.z-b.z)[0];
+  pulseCharge--;pulseGlow=.95;pulseFx=1;beep("pulse");
+  const target=waves.filter(w=>!w.cleared&&w.z>=HIT_Z-.6&&w.z<=HIT_Z+PULSE_REACH)
+   .sort((a,b)=>a.z-b.z)[0];
   if(target){
-   target.cleared=true;score+=120;combo++;message="PULSE +120";messageLife=1;
-   burst(angle,"#8defff",24);
-  }else{message="ONDE LIBÉRÉE";messageLife=.7;}
+   target.cleared=true;score+=120;combo++;message="MUR DÉTRUIT · PULSE +120";messageLife=1.45;
+   shatterWave(target);
+  }else{message="ONDE LIBÉRÉE";messageLife=1.05;burst(angle,"#a6faff",30,2.1,true);}
   renderHud();
  }
  function beginNitro(){
@@ -1177,7 +1202,11 @@ function mount(root){
   score+=dt*(15+Math.min(35,distance/210))*scoreMultiplier;
   invuln=Math.max(0,invuln-dt);
   padBoostTime=Math.max(0,padBoostTime-dt);
-  pulseGlow=Math.max(0,pulseGlow-dt);messageLife=Math.max(0,messageLife-dt);
+  pulseGlow=Math.max(0,pulseGlow-dt);
+  pulseFx=Math.max(0,pulseFx-dt/1.0);
+  pulseHitFx=Math.max(0,pulseHitFx-dt/1.0);
+  shieldFlash=Math.max(0,shieldFlash-dt/1.25);
+  messageLife=Math.max(0,messageLife-dt);
   flash=Math.max(0,flash-dt*1.8);shake=Math.max(0,shake-dt*16);
   if(warningLife>0){
    warningLife=Math.max(0,warningLife-dt);
@@ -1615,13 +1644,38 @@ function mount(root){
   c.restore();
  }
  function drawPulseWave(){
-  // Ship replaces the persistent curved aiming arc + cyan triangle.
-  // Only the temporary pulse shockwave remains.
-  if(pulseGlow<=0)return;
-  const g=wallGeom(),p=wallPoint(PI/2,HIT_Z);
-  c.save();c.beginPath();c.arc(g.cx,g.cy,p.r+(1-pulseGlow)*W*.3,0,TAU);
-  c.lineWidth=3;c.strokeStyle="rgba(99,245,255,"+(pulseGlow*1.6)+")";
-  c.stroke();c.restore();
+  if(pulseFx<=0&&pulseGlow<=0&&shieldFlash<=0)return;
+  c.save();c.globalCompositeOperation="lighter";
+  const cx=W*.5,cy=H*.43;
+  if(pulseFx>0){
+   const progress=1-pulseFx;
+   for(let i=0;i<3;i++){
+    const radius=W*(.065+progress*(.49+i*.10));
+    c.beginPath();c.ellipse(cx,cy,radius,radius*.76,0,0,TAU);
+    c.lineWidth=2.5+(2-i)*1.1;
+    c.strokeStyle="rgba(140,246,255,"+clamp(pulseFx*(.90-i*.15),0,1)+")";
+    c.shadowColor="#68edff";c.shadowBlur=13;c.stroke();
+   }
+   c.strokeStyle="rgba(231,255,255,"+(pulseFx*.82)+")";
+   c.lineWidth=2.4;c.shadowBlur=9;
+   for(let i=0;i<18;i++){
+    const a=i*TAU/18+elapsed*.23,r=W*(.1+progress*.36),out=r+W*(.1+progress*.11);
+    c.beginPath();c.moveTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r*.76);
+    c.lineTo(cx+Math.cos(a)*out,cy+Math.sin(a)*out*.76);c.stroke();
+   }
+  }
+  if(pulseHitFx>0){
+   c.fillStyle="rgba(185,245,255,"+(pulseHitFx*.20)+")";
+   c.fillRect(0,0,W,H);
+  }
+  if(shieldFlash>0){
+   c.strokeStyle="rgba(210,255,235,"+(shieldFlash*.7)+")";
+   c.lineWidth=6+shieldFlash*5;c.shadowColor="#9affd8";c.shadowBlur=21;
+   c.strokeRect(8,8,W-16,H-16);
+   c.beginPath();c.arc(cx,H*.77,W*(.09+(1-shieldFlash)*.44),0,TAU);
+   c.lineWidth=4;c.stroke();
+  }
+  c.restore();
  }
  function paint(now){
   if(!live||!root.isConnected)return;
@@ -1637,7 +1691,10 @@ function mount(root){
   for(const p of sparks){
    const t=wallPoint(screenAngle(p.a),p.z);
    c.globalAlpha=clamp(p.life/p.max,0,1);
-   c.fillStyle=p.color;c.fillRect(t.x-2,t.y-2,4,4);
+   c.fillStyle=p.color;
+   const size=p.size||4;c.shadowColor=p.color;c.shadowBlur=size*1.7;
+   c.fillRect(t.x-size*.5,t.y-size*.5,size,size);
+   c.shadowBlur=0;
   }
   c.globalAlpha=1;
   drawPulseWave();
@@ -1808,7 +1865,7 @@ function mount(root){
  }
  root._zebraDispose=dispose;
  root._echoDebug={
-  snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,pulseCharge,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
+  snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
   injectPickup:(kind,sectors,z=HIT_Z+PICKUP_FRONT+.2)=>{
    const o={z,sectors:[...sectors],length:kind==="pad"?1.1:0,credited:false,shimmer:0};
