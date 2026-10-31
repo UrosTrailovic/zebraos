@@ -41,6 +41,9 @@ const GAP_MIN=15.2,GAP_MAX=21.4,START_GATE_AT=.48;
 // A separate rhythm of collectible wall pads between the hazard waves.
 const PAD_START=7.2,PAD_GAP_MIN=33,PAD_GAP_MAX=47;
 const SHIELD_START=34,SHIELD_GAP_MIN=51,SHIELD_GAP_MAX=77;
+const SHIELD_RARE_MIN=96,SHIELD_RARE_MAX=135;
+const PICKUP_FRONT=1.05,PICKUP_BACK=.85,PAD_SIDE=STEP*.29,SHIELD_SIDE=STEP*.36;
+const PULSE_REACH=8.4;
 const NITRO_BURN_SECONDS=3.2,NITRO_REFILL_SECONDS=5,NITRO_REGEN_WAIT=.45;
 function angularDelta(a,b){return ((a-b+PI)%TAU+TAU)%TAU-PI;}
 function inGap(i,start,width){
@@ -82,6 +85,12 @@ function collisionAt(player,wave){
  if(!wave||wave.cleared)return false;
  const angle=typeof player==="number"?player:player.angle||0;
  return wave.sectors.some(id=>Math.abs(angularDelta(angle,obstacleAngle(wave,id)))<=STEP*.5);
+}
+function pickupContact(angle,pickup,margin){
+ return pickup.sectors.some(i=>Math.abs(angularDelta(angle,obstacleAngle(pickup,i)))<=STEP*.5+margin);
+}
+function pickupDepth(oldZ,newZ,length=0){
+ return oldZ+length>=HIT_Z-PICKUP_BACK&&newZ<=HIT_Z+PICKUP_FRONT;
 }
 function nearMiss(player,wave){
  if(!wave||wave.cleared||collisionAt(player,wave))return false;
@@ -1200,50 +1209,57 @@ function mount(root){
    pads.push(pad);padCount++;
    nextPadAt+=rand(PAD_GAP_MIN,PAD_GAP_MAX);
   }
-  // Independent world-space shield calendar. Skip positions beside gates.
+  // Shield frequency depends on remaining lives: 3 = none; 2 = scarce;
+  // 1 = existing frequency. The schedule never builds a spawn backlog.
   while(travel>=nextShieldAt){
+   if(lives===MAX_LIVES){
+    nextShieldAt+=rand(SHIELD_RARE_MIN,SHIELD_RARE_MAX);continue;
+   }
    if(nextShieldAt-lastGateAt<7||nextGateAt-nextShieldAt<7){
     nextShieldAt+=7.5;continue;
    }
    const nearSector=Math.floor(angle/STEP);
    const center=(shieldCount===0||Math.random()<.58)?
-    (nearSector+Math.floor(rand(-2,3))+SECTORS)%SECTORS:
-    Math.floor(rand(0,SECTORS));
+    (nearSector+Math.floor(rand(-2,3))+SECTORS)%SECTORS:Math.floor(rand(0,SECTORS));
    shields.push({z:SPAWN_Z-(travel-nextShieldAt),
-     sectors:[center,(center+1)%SECTORS],credited:false,shimmer:rand(0,TAU)});
+    sectors:[center,(center+1)%SECTORS],credited:false,shimmer:rand(0,TAU)});
    shieldCount++;
-   nextShieldAt+=rand(SHIELD_GAP_MIN,SHIELD_GAP_MAX);
+   nextShieldAt+=lives===1?rand(SHIELD_GAP_MIN,SHIELD_GAP_MAX):
+    rand(SHIELD_RARE_MIN,SHIELD_RARE_MAX);
   }
+  // A pickup can be collected across a short depth window, including
+  // just after passing its visible edge. Angular forgiveness is pickup-only.
   for(const pickup of shields){
    const oldZ=pickup.z;pickup.z-=dz;
-   if(oldZ>HIT_Z&&pickup.z<=HIT_Z&&!pickup.credited){
-    pickup.credited=true;
-    if(collisionAt(angle,pickup)){
-     const gained=lives<MAX_LIVES;
-     if(gained){lives++;warningLife=0;warningBeepDelay=0;}
-     else score+=100*scoreMultiplier;
-     message=gained?"BOUCLIER +1":"BOUCLIER MAX +100";
-     messageLife=1.4;
-     burst(angle,"#a1ffe0",26);beep("collect");renderHud();
-    }
+   if(lives<MAX_LIVES&&!pickup.credited
+     &&pickupDepth(oldZ,pickup.z)
+     &&pickupContact(angle,pickup,SHIELD_SIDE)){
+    pickup.credited=true;lives++;
+    warningLife=0;warningBeepDelay=0;
+    message="BOUCLIER +1";messageLife=1.6;
+    shieldFlash=1;showShieldCollect();
+    burst(angle,"#c6ffe8",44,1.7,true);
+    beep("collect");renderHud();
+    // Full health never shows unneeded shield pickups.
+    if(lives===MAX_LIVES){shields=[];nextShieldAt=Math.max(nextShieldAt,travel+SHIELD_RARE_MIN);}
    }
   }
-  shields=shields.filter(p=>p.z>-.8);
+  shields=shields.filter(p=>p.z>HIT_Z-PICKUP_BACK-.2&&!p.credited);
   for(const pad of pads){
    const oldZ=pad.z;pad.z-=dz;
-   if(oldZ>HIT_Z&&pad.z<=HIT_Z&&!pad.credited){
+   if(!pad.credited&&pickupDepth(oldZ,pad.z,pad.length)
+     &&pickupContact(angle,pad,PAD_SIDE)){
     pad.credited=true;
-    if(collisionAt(angle,pad)){
-     padBoostTime=Math.max(padBoostTime,2.8);
-     shipBoostFade=1;turboLight=1;
-     score+=275*scoreMultiplier;
-     pulseGlow=.68;message="TURBO PAD +275";messageLife=1.2;
-     burst(angle,"#72f7ff",34);startBoostLoop();beep("collect");
-    }
+    padBoostTime=Math.max(padBoostTime,2.8);
+    shipBoostFade=1;turboLight=1;
+    score+=275*scoreMultiplier;
+    pulseGlow=.68;message="TURBO PAD +275";messageLife=1.2;
+    burst(angle,"#72f7ff",34);
+    startBoostLoop();beep("collect");
    }
   }
-  pads=pads.filter(p=>p.z>-.8);
-  for(const w of waves){
+  pads=pads.filter(p=>p.z+p.length>HIT_Z-PICKUP_BACK-.2&&!p.credited);
+    for(const w of waves){
    const oldZ=w.z;
    w.z-=dz;
    if(w.spin)w.rotation+=w.spin*dt;
@@ -1253,6 +1269,7 @@ function mount(root){
     w.credited=true;passed++;
     if(!w.cleared&&collisionAt(angle,w)&&invuln<=0){
      lives--;combo=0;invuln=1.35;flash=.47;shake=3;beep("hit");
+     if(lives>0)nextShieldAt=Math.min(nextShieldAt,travel+rand(lives===1?5:12,lives===1?11:24));
      if(lives===1){
       warningLife=2.25;warningBeepDelay=.15;warningChirp=0;
      }
@@ -1529,7 +1546,7 @@ function mount(root){
  }
  // Shield collectible attached to the same bent tube as every obstacle.
  function drawShieldPickup(pickup){
-  if(pickup.credited||pickup.z>RENDER_FAR_Z||pickup.z<-.45)return;
+  if(lives===MAX_LIVES||pickup.credited||pickup.z>RENDER_FAR_Z||pickup.z<-.45)return;
   const alpha=revealOpacity(pickup.z);if(alpha<.003)return;
   const a=screenAngle((pickup.sectors[0]+1)*STEP);
   const pos=wallPoint(a,Math.max(0,pickup.z));
@@ -1791,8 +1808,17 @@ function mount(root){
  }
  root._zebraDispose=dispose;
  root._echoDebug={
-  snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,pulseCharge,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
+  snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,pulseCharge,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
+  injectPickup:(kind,sectors,z=HIT_Z+PICKUP_FRONT+.2)=>{
+   const o={z,sectors:[...sectors],length:kind==="pad"?1.1:0,credited:false,shimmer:0};
+   if(kind==="pad")pads.push(o);else if(kind==="shield")shields.push(o);
+   return o;
+  },
+  injectWave:(sectors,z=HIT_Z+PULSE_REACH-.4)=>{
+   const o={kind:0,sectors:[...sectors],z,length:1,rotation:0,spin:0,cleared:false,credited:false};
+   waves.push(o);return o;
+  },
   ship:()=>({idleLoaded:shipReady.idle,boostLoaded:shipReady.boost,boostMix:shipBoostFade,tunnelLight:turboLight}),
   level:()=>({id:selectedLevel.id,free:selectedLevel.id==="free",gap:selectedLevel.gap}),
   gauges:()=>({speed:Math.round(currentSpeed*25),charge:selectedLevel.id==="free"?1:nitroFuel,boosting:nitroActive||padBoostTime>0,
@@ -1823,6 +1849,7 @@ function mount(root){
   simulateHit:()=>{
    if(mode!=="running")return;
    lives=Math.max(0,lives-1);invuln=1.35;flash=.47;shake=3;
+   if(lives>0)nextShieldAt=Math.min(nextShieldAt,travel+rand(lives===1?5:12,lives===1?11:24));
    if(lives===1){warningLife=2.25;warningBeepDelay=.15;warningChirp=0;}
    if(lives===0)gameOver();
    renderHud();
