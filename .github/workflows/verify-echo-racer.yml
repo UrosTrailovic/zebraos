@@ -124,7 +124,30 @@ jobs:
              const uprightStagger=aButton.getBoundingClientRect().top>bButton.getBoundingClientRect().top+9
                &&Math.abs(aFace.b)<.01&&Math.abs(aFace.c)<.01
                &&Math.abs(bFace.b)<.01&&Math.abs(bFace.c)<.01;
+             // Gameplay regressions: a late pickup is still collectible,
+             // full-health shields are absent, and distant pulse breaks a wall.
+             const noShieldsAtFull=debug.snapshot().lives===3
+               &&debug.snapshot().shields.length===0;
+             debug.simulateHit();
+             const shieldEligible=debug.snapshot().lives===2;
+             debug.injectPickup("shield",[0,1],2.45);
+             debug.advance(.05);
+             const healed=debug.snapshot();
+             const shieldRecovered=healed.lives===3&&healed.shieldFlash>0
+               &&root.querySelector(".er-shield-collect").classList.contains("er-shield-collected")
+               &&healed.shields.length===0;
+             // Behind the former fixed 1.6 collision plane, but still on the pad.
+             debug.injectPickup("pad",[0,1,2],1.22);
+             debug.advance(.05);
+             const boosted=debug.snapshot().padBoostTime>2;
+             const wall=debug.injectWave([0,1],9.3);
+             const beforePulse=debug.snapshot().pulseCharge;
+             debug.pulse();
+             const pulsed=debug.snapshot();
+             const longPulse=wall.cleared&&pulsed.pulseCharge===beforePulse-1
+               &&pulsed.pulseFx>0&&pulsed.pulseHitFx>0;
              const report={errors,mode:snap.mode,score:snap.score,
+              noShieldsAtFull,shieldEligible,shieldRecovered,boosted,longPulse,
               fullHeightTouch,cleanButtonPlate,uprightStagger,controlsWithoutTetris,buttonsInOrder,
               steeringRight,steeringCentered,mobileOrder,scoreAndGaugeMatch,
               positions:[screenBox.top,hudBox.top,gaugeBox.top,padBox.top].map(Math.round),
@@ -136,7 +159,7 @@ jobs:
              console.log("ECHO_MOBILE_REPORT",JSON.stringify(report));
              document.body.dataset.report=JSON.stringify(report);
              document.body.dataset.result=errors.length===0&&w>200&&h>200&&snap.mode==="running"
-              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger&&fullHeightTouch?"ok":"failed";
+              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger&&fullHeightTouch&&noShieldsAtFull&&shieldEligible&&shieldRecovered&&boosted&&longPulse?"ok":"failed";
             },1200);
            }catch(e){errors.push("MOUNT:"+e.stack);document.body.dataset.report=JSON.stringify({errors});document.body.dataset.result="failed";}
           });
