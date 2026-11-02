@@ -236,12 +236,25 @@ jobs:
              const editorSaved=debug.lcdEditor().layout.speedDigits.x===9.5
                &&(localStorage.getItem("zebra.echo-racer.lcd.positions.v1.mobile")||"").includes("9.5")
                &&getComputedStyle(root.querySelector(".er-dashboard-speed .er-dashboard-digits")).translate!=="none";
+             const movable=root.querySelector(".er-dashboard-speed .er-dashboard-digits");
+             const movableRect=movable.getBoundingClientRect();
+             const startX=movableRect.left+movableRect.width/2;
+             const startY=movableRect.top+movableRect.height/2;
+             const drag=(type,x,y)=>movable.dispatchEvent(new PointerEvent(type,{
+              bubbles:true,cancelable:true,pointerId:907,pointerType:"touch",button:0,
+              clientX:x,clientY:y
+             }));
+             drag("pointerdown",startX,startY);
+             drag("pointermove",startX+22,startY+6);
+             drag("pointerup",startX+22,startY+6);
+             const editorDragWorks=debug.lcdEditor().layout.speedDigits.x>9.5
+               &&debug.lcdEditor().layout.speedDigits.y>0;
              root.querySelector(".er-config-action").click();
              const editorReset=debug.lcdEditor().layout.speedDigits.x===0;
              debug.lcdClose();
              const editorClosed=!debug.lcdEditor().open;
              const report={errors,mode:snap.mode,score:snap.score,
-              boostIsContinuous,spacedInactiveSpeed,editorOpened,editorSaved,editorReset,editorClosed,
+              boostIsContinuous,spacedInactiveSpeed,editorOpened,editorSaved,editorDragWorks,editorReset,editorClosed,
               noShieldsAtFull,shieldEligible,shieldRecovered,boosted,longPulse,
               fullHeightTouch,cleanButtonPlate,uprightStagger,controlsWithoutTetris,buttonsInOrder,
               steeringRight,steeringCentered,mobileOrder,scoreAndGaugeMatch,
@@ -254,7 +267,7 @@ jobs:
              console.log("ECHO_MOBILE_REPORT",JSON.stringify(report));
              document.body.dataset.report=JSON.stringify(report);
              document.body.dataset.result=errors.length===0&&w>200&&h>200&&snap.mode==="running"
-              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger&&fullHeightTouch&&noShieldsAtFull&&shieldEligible&&shieldRecovered&&boosted&&longPulse&&frameLoaded&&neonReal&&barsCentered&&ledUpright&&italicReadouts&&straightRails&&balancedEndPods&&gaugeTitleAndUnits&&boostIsContinuous&&spacedInactiveSpeed&&editorOpened&&editorSaved&&editorReset&&editorClosed&&menuBoostEmpty&&startBoostEmpty&&boostRecharging?"ok":"failed";
+              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger&&fullHeightTouch&&noShieldsAtFull&&shieldEligible&&shieldRecovered&&boosted&&longPulse&&frameLoaded&&neonReal&&barsCentered&&ledUpright&&italicReadouts&&straightRails&&balancedEndPods&&gaugeTitleAndUnits&&boostIsContinuous&&spacedInactiveSpeed&&editorOpened&&editorSaved&&editorDragWorks&&editorReset&&editorClosed&&menuBoostEmpty&&startBoostEmpty&&boostRecharging?"ok":"failed";
             },1200);
            }catch(e){errors.push("MOUNT:"+e.stack);document.body.dataset.report=JSON.stringify({errors});document.body.dataset.result="failed";}
           });
