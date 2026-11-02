@@ -418,7 +418,7 @@ function mount(root){
   rail.setAttribute("preserveAspectRatio","none");
   rail.setAttribute("aria-hidden","true");
   const isBoost=cls==="er-dashboard-boost";
-  const baseY=isBoost?141:118;
+  const baseY=isBoost?141:112;
   function point(t){
    const smooth=t*t*(3-2*t);
    return {x:25+543*(.12*t+.88*smooth),
