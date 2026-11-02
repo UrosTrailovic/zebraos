@@ -2100,3 +2100,139 @@
   animation:er-shield-grab 1.35s linear both;
  }
 }
+
+
+/* Echo Racer 13.4 — Desktop cockpit layout repair.
+   An earlier version made the dual-arc gauge position:relative, while
+   .er-frame remained a horizontal flex row. Desktop then squeezed the
+   whole game into the left half and left a blank column under the gauge.
+   Match the stable mobile stack WITHOUT changing mobile touch controls. */
+@media(min-width:701px){
+ .window-body.zebra-game-body .zg.er{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  gap:6px!important;
+  padding:7px!important;
+  min-width:0!important;
+  min-height:0!important;
+  overflow:hidden!important;
+ }
+ /* The startup screen already contains the Echo Racer logo; an extra
+    top logo steals valuable gameplay space on PC. */
+ .zebra-game-body .zg.er .er-heading{
+  display:none!important;
+ }
+ /* Flatten the obsolete horizontal frame wrapper. Its children now
+    become full-width siblings, ordered as one real arcade display. */
+ .zebra-game-body .zg.er .er-frame{
+  display:contents!important;
+ }
+ .zebra-game-body .zg.er .er-screen{
+  order:0!important;
+  flex:1 1 0!important;
+  display:block!important;
+  position:relative!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  height:auto!important;
+  min-height:180px!important;
+  margin:0!important;
+  border:3px solid #785782!important;
+  border-top-color:#b08db8!important;
+  border-bottom-color:#4a2e55!important;
+  border-radius:4px!important;
+  background:#08040f!important;
+  box-shadow:inset 0 0 24px #000,0 0 0 2px #24102e!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard{
+  order:1!important;
+  position:relative!important;
+  inset:auto!important;
+  top:auto!important;
+  left:auto!important;
+  bottom:auto!important;
+  right:auto!important;
+  transform:none!important;
+  flex:0 0 122px!important;
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  height:122px!important;
+  min-height:122px!important;
+  margin:0!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-bar{
+  inset:40px 15px 9px!important;
+ }
+ .zebra-game-body .zg.er .er-hud{
+  order:2!important;
+  flex:0 0 70px!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:70px!important;
+  height:70px!important;
+  margin:0!important;
+  padding:4px!important;
+ }
+ .zebra-game-body .zg.er .er-hud .er-meter{
+  min-height:58px!important;
+  height:58px!important;
+  padding:5px 2px!important;
+ }
+ .zebra-game-body .zg.er .er-pad{display:contents!important}
+ .zebra-game-body .zg.er .er-footer{
+  order:3!important;
+  flex:0 0 48px!important;
+  height:48px!important;
+  min-height:48px!important;
+  width:100%!important;
+  margin:0!important;
+  gap:8px!important;
+  justify-content:space-between!important;
+ }
+ .zebra-game-body .zg.er .er-footer .er-hardware{
+  min-width:0!important;
+  max-width:none!important;
+  min-height:0!important;
+  height:100%!important;
+  flex:1 1 0!important;
+  background-size:contain!important;
+ }
+ /* Real controls are touch-only; keep the desktop keyboard/menu buttons. */
+ .zebra-game-body .zg.er .zt-dpad,
+ .zebra-game-body .zg.er .zt-action-side{
+  display:none!important;
+ }
+ /* Keep level cards in the center of the large primary display. */
+ .zebra-game-body .zg.er .er-overlay.er-stage-levels{
+  justify-content:center!important;
+  gap:clamp(4px,1vh,10px)!important;
+  padding:clamp(8px,2vh,18px)!important;
+ }
+ .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-brand-logo{
+  width:min(42%,270px)!important;
+  max-height:73px!important;
+ }
+ .zebra-game-body .zg.er .er-level-picker{
+  width:min(100%,370px)!important;
+  max-width:370px!important;
+  gap:3px!important;
+ }
+}
+/* Wide but relatively short desktop windows: protect the racing viewport. */
+@media(min-width:701px) and (max-height:680px){
+ .zebra-game-body .zg.er .er-dashboard{
+  flex-basis:98px!important;height:98px!important;min-height:98px!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-bar{inset:35px 15px 6px!important}
+ .zebra-game-body .zg.er .er-hud{
+  flex-basis:58px!important;height:58px!important;min-height:58px!important;
+ }
+ .zebra-game-body .zg.er .er-hud .er-meter{height:48px!important;min-height:48px!important}
+ .zebra-game-body .zg.er .er-footer{
+  flex-basis:42px!important;height:42px!important;min-height:42px!important;
+ }
+}
