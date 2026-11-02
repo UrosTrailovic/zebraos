@@ -410,9 +410,8 @@ function mount(root){
   numberLine.append(value,unitEl);
   readout.append(labelEl,numberLine);
 
-  // Two straight, parallel, slightly rising rails. Only the rectangular
-  // chips are italic/sheared, never individually rotated by the slope.
-  // Keep the phosphor on one SVG group filter to avoid mobile GPU lag.
+  // Two perfectly horizontal rails. The individual chips keep their
+  // forward-leaning italic silhouette. The rails NEVER incline.
   const bar=node("div","er-dashboard-bar");
   bar.setAttribute("aria-hidden","true");
   const ns="http://www.w3.org/2000/svg";
@@ -422,9 +421,9 @@ function mount(root){
   rail.setAttribute("preserveAspectRatio","none");
   rail.setAttribute("aria-hidden","true");
   const isBoost=cls==="er-dashboard-boost";
-  const baseY=isBoost?103:145;
+  const baseY=isBoost?53:105;
   function point(t){
-   return {x:22+552*t,y:baseY-57*t};
+   return {x:22+552*t,y:baseY};
   }
   const trace=document.createElementNS(ns,"path");
   trace.classList.add("er-gauge-curve");
