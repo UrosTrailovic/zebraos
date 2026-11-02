@@ -171,3 +171,74 @@ jobs:
           grep -o 'data-report="[^"]*"' /tmp/echo-test.html | head -1 || true
           grep -o 'data-result="[^"]*"' /tmp/echo-test.html | head -1 || true
           grep -q 'data-result="ok"' /tmp/echo-test.html
+
+          # Desktop regression: the game must fill the width, with NO empty
+          # right column beside it, and cockpit instruments stacked below.
+          cat > _verify_echo_desktop.html <<'HTML'
+          <!doctype html><html lang="fr"><head><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <link rel="stylesheet" href="/style.css">
+          <link rel="stylesheet" href="/echo-racer.css">
+          <style>html,body{margin:0;background:#222}
+          .window{position:relative;width:744px;height:788px}
+          .window-body{height:100%;width:100%;padding:0}</style>
+          </head><body><div class="window focused">
+          <div class="window-body zebra-game-body" id="game"></div></div>
+          <script>
+          const errors=[];
+          window.addEventListener("error",e=>errors.push(e.message));
+          window.addEventListener("unhandledrejection",e=>errors.push(String(e.reason)));
+          </script>
+          <script src="/echo-racer.js"></script>
+          <script>
+          addEventListener("load",()=>{
+           const root=document.querySelector("#game");
+           try{
+            window.ZebraEchoRacer.mount(root);
+            const debug=root._echoDebug;
+            debug.openLevels();
+            const rect=sel=>root.querySelector(sel).getBoundingClientRect();
+            const levelBox=rect(".er-level-picker");
+            const screenMenu=rect(".er-screen");
+            const menuCentered=Math.abs((levelBox.left+levelBox.right)/2-
+              (screenMenu.left+screenMenu.right)/2)<18
+              &&levelBox.top>screenMenu.top&&levelBox.bottom<screenMenu.bottom+2;
+            debug.controller("pulse");
+            debug.advance(.05);
+            setTimeout(()=>{
+             const wrap=rect(".zg.er"),screen=rect(".er-screen"),dash=rect(".er-dashboard"),
+              hud=rect(".er-hud"),footer=rect(".er-footer");
+             const canvas=root.querySelector("canvas.er-canvas");
+             const context=canvas.getContext("2d",{willReadFrequently:true});
+             const colors=new Set();let bright=0;
+             for(let y=40;y<canvas.height-40;y+=Math.max(18,Math.floor(canvas.height/14))){
+              for(let x=40;x<canvas.width-40;x+=Math.max(18,Math.floor(canvas.width/16))){
+               const p=context.getImageData(x,y,1,1).data;
+               colors.add(p[0]+","+p[1]+","+p[2]);
+               if(p[0]+p[1]+p[2]>40)bright++;
+              }
+             }
+             const order=screen.bottom<=dash.top+3&&dash.bottom<=hud.top+3
+              &&hud.bottom<=footer.top+3;
+             const fullWidth=screen.width>=wrap.width*.95
+              &&dash.width>=wrap.width*.95&&hud.width>=wrap.width*.95;
+             const fits=screen.height>=220&&footer.bottom<=wrap.bottom+3
+              &&screen.left>=wrap.left-3&&screen.right<=wrap.right+3;
+             const noSideColumn=getComputedStyle(root.querySelector(".er-frame")).display==="contents";
+             const report={errors,menuCentered,order,fullWidth,fits,noSideColumn,
+              screen:{w:screen.width,h:screen.height},dashboard:dash.width,
+              hud:hud.width,footer:footer.width,canvas:{w:canvas.width,h:canvas.height,bright,unique:colors.size},
+              positions:[screen.top,dash.top,hud.top,footer.top].map(Math.round)};
+             document.body.dataset.report=JSON.stringify(report);
+             document.body.dataset.result=errors.length===0&&menuCentered&&order
+              &&fullWidth&&fits&&noSideColumn&&bright>25&&colors.size>25?"ok":"failed";
+            },800);
+           }catch(error){errors.push(error.stack||String(error));
+            document.body.dataset.result="failed";document.body.dataset.report=JSON.stringify({errors});}
+          });
+          </script></body></html>
+          HTML
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=1000,1000 --virtual-time-budget=4000 --dump-dom http://127.0.0.1:8765/_verify_echo_desktop.html >/tmp/echo-desktop.html 2>/tmp/echo-desktop-chrome.log
+          grep -o 'data-report="[^"]*"' /tmp/echo-desktop.html | head -1 || true
+          grep -o 'data-result="[^"]*"' /tmp/echo-desktop.html | head -1 || true
+          grep -q 'data-result="ok"' /tmp/echo-desktop.html
