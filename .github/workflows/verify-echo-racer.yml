@@ -299,3 +299,16 @@ jobs:
           print("ECHO_GAUGE_SCREENSHOT_BASE64="+base64.b64encode(data).decode(),flush=True)
           print("ECHO_GAUGE_SCREENSHOT_BYTES="+str(len(data)),flush=True)
           PY
+
+          # Mobile 390px width gauge snapshot, in normal tall-phone media query.
+          sed -e 's/840px/390px/g' -e 's/824px/374px/g' \
+            -e 's/178px/155px/g' -e 's/162px/139px/g' \
+            _verify_echo_gauge.html > _verify_echo_gauge_phone.html
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --hide-scrollbars --window-size=600,900 --virtual-time-budget=2100 --screenshot=/tmp/echo-gauge-phone.png http://127.0.0.1:8765/_verify_echo_gauge_phone.html >/tmp/echo-gauge-phone-cli.log 2>&1
+          python3 - <<'PY'
+          import base64
+          with open("/tmp/echo-gauge-phone.png","rb") as f:
+            data=f.read()
+          print("ECHO_GAUGE_PHONE_BASE64="+base64.b64encode(data).decode(),flush=True)
+          print("ECHO_GAUGE_PHONE_BYTES="+str(len(data)),flush=True)
+          PY
