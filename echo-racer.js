@@ -635,6 +635,150 @@ function mount(root){
  pad.append(dpad,actionSide);
  wrap.append(pad);
  root.appendChild(wrap);
+ // TEMPORARY LCD POSITION EDITOR — live drag on PC or phone, persisted
+ // separately at narrow and wide breakpoints. No code editing required.
+ const cfgButton=node("button","er-config-toggle","⚙ CONFIG");
+ cfgButton.type="button";cfgButton.setAttribute("aria-label","Ouvrir les réglages temporaires du compteur");
+ dashboard.appendChild(cfgButton);
+ const cfgPanel=node("section","er-config-panel");
+ cfgPanel.setAttribute("role","dialog");cfgPanel.setAttribute("aria-label","Placement du compteur");
+ cfgPanel.hidden=true;
+ const cfgHeading=node("div","er-config-heading");
+ const cfgTitle=node("strong","","POSITION DES CHIFFRES");
+ const cfgClose=node("button","er-config-close","✕");
+ cfgClose.type="button";cfgClose.setAttribute("aria-label","Fermer les réglages");
+ cfgHeading.append(cfgTitle,cfgClose);
+ const cfgInstructions=node("p","er-config-help",
+  "Choisis un élément puis déplace-le au doigt ou à la souris sur l'écran du compteur. Ajuste X/Y si besoin.");
+ const cfgSelect=node("select","er-config-select");cfgSelect.setAttribute("aria-label","Élément à déplacer");
+ const cfgTargets={
+  speedTitle:{label:"VITESSE · titre",element:speedGauge.row.querySelector(".er-dashboard-name")},
+  speedDigits:{label:"VITESSE · chiffres",element:speedGauge.value},
+  speedUnit:{label:"VITESSE · KM/H",element:speedGauge.row.querySelector(".er-dashboard-unit")},
+  boostTitle:{label:"BOOST · titre",element:boostGauge.row.querySelector(".er-dashboard-name")},
+  boostDigits:{label:"BOOST · chiffres",element:boostGauge.value},
+  boostUnit:{label:"BOOST · %",element:boostGauge.row.querySelector(".er-dashboard-unit")}
+ };
+ for(const [id,entry] of Object.entries(cfgTargets)){
+  const option=node("option","",entry.label);option.value=id;cfgSelect.appendChild(option);
+  entry.element.dataset.erConfigId=id;
+ }
+ let cfgChosen="speedDigits",cfgMode="",cfgLayout={};
+ function cfgBreakpoint(){return window.matchMedia("(max-width:700px)").matches?"mobile":"desktop";}
+ function cfgLoad(mode){
+  let obj={};try{obj=JSON.parse(load("lcd.positions.v1."+mode,"{}"))||{};}catch(_){}
+  const result={};
+  for(const id of Object.keys(cfgTargets)){
+   const v=obj[id]||{};
+   result[id]={
+    x:clamp(Number(v.x)||0,-30,30),
+    y:clamp(Number(v.y)||0,-45,45)
+   };
+  }
+  return result;
+ }
+ function cfgSave(){save("lcd.positions.v1."+cfgMode,JSON.stringify(cfgLayout));}
+ const cfgX=node("input","er-config-range"),cfgY=node("input","er-config-range");
+ const cfgXNumber=node("output","er-config-value"),cfgYNumber=node("output","er-config-value");
+ function cfgControl(label,input,output){
+  const line=node("label","er-config-control");
+  const name=node("span","",label);line.append(name,input,output);return line;
+ }
+ for(const input of [cfgX,cfgY]){input.type="range";input.min="-30";input.max="30";input.step=".25";}
+ cfgY.min="-45";cfgY.max="45";
+ const cfgReset=node("button","er-config-action","CENTRER CET ÉLÉMENT");
+ cfgReset.type="button";
+ const cfgResetAll=node("button","er-config-action","RÉINITIALISER TOUT");
+ cfgResetAll.type="button";
+ const cfgCopy=node("button","er-config-action","COPIER MES POSITIONS");
+ cfgCopy.type="button";
+ const cfgInfo=node("div","er-config-info","Réglages enregistrés sur cet appareil.");
+ const cfgActions=node("div","er-config-actions");
+ cfgActions.append(cfgReset,cfgResetAll,cfgCopy);
+ cfgPanel.append(cfgHeading,cfgInstructions,cfgSelect,
+  cfgControl("Horizontal",cfgX,cfgXNumber),
+  cfgControl("Vertical",cfgY,cfgYNumber),cfgActions,cfgInfo);
+ wrap.appendChild(cfgPanel);
+ function cfgApply(){
+  const mode=cfgBreakpoint();
+  if(cfgMode!==mode){cfgMode=mode;cfgLayout=cfgLoad(mode);}
+  const width=dashboard.clientWidth||1,height=dashboard.clientHeight||1;
+  for(const [id,entry] of Object.entries(cfgTargets)){
+   const pos=cfgLayout[id]||{x:0,y:0};
+   entry.element.style.translate=(pos.x*width/100).toFixed(2)+"px "+
+    (pos.y*height/100).toFixed(2)+"px";
+  }
+ }
+ function cfgRefresh(){
+  cfgApply();
+  const pos=cfgLayout[cfgChosen];
+  cfgSelect.value=cfgChosen;
+  cfgX.value=String(pos.x);cfgY.value=String(pos.y);
+  cfgXNumber.textContent=pos.x.toFixed(2)+" %";
+  cfgYNumber.textContent=pos.y.toFixed(2)+" %";
+  for(const [id,entry] of Object.entries(cfgTargets))
+   entry.element.classList.toggle("er-config-selected",id===cfgChosen&&!cfgPanel.hidden);
+  cfgInfo.textContent="Mode "+(cfgMode==="mobile"?"MOBILE":"PC")+" · enregistré automatiquement";
+ }
+ function cfgSet(id,axis,v,commit=true){
+  cfgApply();cfgLayout[id][axis]=clamp(Number(v)||0,axis==="x"?-30:-45,axis==="x"?30:45);
+  cfgApply();if(commit)cfgSave();cfgRefresh();
+ }
+ function cfgOpen(){
+  cfgPanel.hidden=false;wrap.classList.add("er-config-open");
+  cfgButton.setAttribute("aria-expanded","true");
+  keys.clear();endNitro();cfgRefresh();
+ }
+ function cfgHide(){
+  cfgPanel.hidden=true;wrap.classList.remove("er-config-open");
+  cfgButton.setAttribute("aria-expanded","false");cfgRefresh();
+ }
+ cfgButton.setAttribute("aria-expanded","false");
+ cfgButton.addEventListener("click",()=>cfgPanel.hidden?cfgOpen():cfgHide());
+ cfgClose.addEventListener("click",cfgHide);
+ cfgSelect.addEventListener("change",()=>{cfgChosen=cfgSelect.value;cfgRefresh();});
+ cfgX.addEventListener("input",()=>cfgSet(cfgChosen,"x",cfgX.value));
+ cfgY.addEventListener("input",()=>cfgSet(cfgChosen,"y",cfgY.value));
+ cfgReset.addEventListener("click",()=>{
+  cfgLayout[cfgChosen]={x:0,y:0};cfgApply();cfgSave();cfgRefresh();
+ });
+ cfgResetAll.addEventListener("click",()=>{
+  for(const id of Object.keys(cfgTargets))cfgLayout[id]={x:0,y:0};
+  cfgApply();cfgSave();cfgRefresh();
+ });
+ cfgCopy.addEventListener("click",async()=>{
+  const msg="Echo Racer LCD "+cfgMode+": "+JSON.stringify(cfgLayout);
+  try{await navigator.clipboard.writeText(msg);cfgInfo.textContent="POSITIONS COPIÉES";}
+  catch(_){cfgInfo.textContent=msg;}
+ });
+ cfgPanel.addEventListener("pointerdown",e=>e.stopPropagation());
+ cfgPanel.addEventListener("keydown",e=>e.stopPropagation());
+ let cfgDragging=null;
+ for(const [id,entry] of Object.entries(cfgTargets)){
+  const el=entry.element;
+  el.addEventListener("pointerdown",e=>{
+   if(cfgPanel.hidden||cfgDragging||e.button!==0)return;
+   e.preventDefault();e.stopPropagation();
+   cfgChosen=id;cfgRefresh();
+   cfgDragging={id,pointer:e.pointerId,clientX:e.clientX,clientY:e.clientY,
+    x:cfgLayout[id].x,y:cfgLayout[id].y};
+   try{el.setPointerCapture(e.pointerId);}catch(_){}
+  });
+  el.addEventListener("pointermove",e=>{
+   if(!cfgDragging||cfgDragging.id!==id||cfgDragging.pointer!==e.pointerId)return;
+   e.preventDefault();e.stopPropagation();
+   cfgLayout[id].x=clamp(cfgDragging.x+(e.clientX-cfgDragging.clientX)*100/Math.max(1,dashboard.clientWidth),-30,30);
+   cfgLayout[id].y=clamp(cfgDragging.y+(e.clientY-cfgDragging.clientY)*100/Math.max(1,dashboard.clientHeight),-45,45);
+   cfgApply();cfgRefresh();
+  });
+  for(const type of ["pointerup","pointercancel","lostpointercapture"]){
+   el.addEventListener(type,e=>{
+    if(!cfgDragging||cfgDragging.id!==id||cfgDragging.pointer!==e.pointerId)return;
+    e.stopPropagation();cfgDragging=null;cfgSave();cfgRefresh();
+   });
+  }
+ }
+ cfgApply();
  function fitCanvas(){
   if(!live)return;
   const bounds=screen.getBoundingClientRect();
@@ -644,6 +788,7 @@ function mount(root){
   geometryCache={cx:W*.5,cy:H*.39,R:Math.max(W,H)*1.23,offset:5/9};
   const bw=Math.round(W*renderDpr),bh=Math.round(H*renderDpr);
   if(canvas.width!==bw||canvas.height!==bh){canvas.width=bw;canvas.height=bh;}
+  cfgApply();
  }
  fitCanvas();
  function globalMuted(){
@@ -1775,6 +1920,7 @@ function mount(root){
   if(!live||document.hidden||e.altKey||e.ctrlKey||e.metaKey)return;
   const parent=root.closest(".window");
   if(parent&&(!parent.classList.contains("focused")||parent.classList.contains("minimized")))return;
+  if(!cfgPanel.hidden){if(e.key==="Escape"){e.preventDefault();cfgHide();}return;}
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable)return;
   if(mode==="crashing"||(mode==="over"&&deathLock>0)){e.preventDefault();return;}
   // Native buttons handle their own Enter/Space; no double activation.
@@ -1813,6 +1959,7 @@ function mount(root){
   }
  }
  function keyUp(e){
+  if(!cfgPanel.hidden)return;
   const map={arrowleft:"left",a:"left",arrowright:"right",d:"right",arrowup:"up",w:"up",arrowdown:"down",s:"down"};
   const k=e.key.toLowerCase();
   if(k===" ")endNitro();
@@ -1903,6 +2050,9 @@ function mount(root){
  }
  root._zebraDispose=dispose;
  root._echoDebug={
+  lcdEditor:()=>({open:!cfgPanel.hidden,mode:cfgMode,layout:JSON.parse(JSON.stringify(cfgLayout)),targets:Object.keys(cfgTargets)}),
+  lcdSet:(id,x,y)=>{if(!cfgTargets[id])return false;cfgChosen=id;cfgSet(id,"x",x);cfgSet(id,"y",y);return true;},
+  lcdOpen:cfgOpen,lcdClose:cfgHide,
   snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
   injectPickup:(kind,sectors,z=HIT_Z+PICKUP_FRONT+.2)=>{
