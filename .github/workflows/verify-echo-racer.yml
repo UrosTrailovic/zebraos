@@ -39,9 +39,13 @@ jobs:
            try{
             window.ZebraEchoRacer.mount(root);
             const debug=root._echoDebug;
+            const menuBoostEmpty=debug.gauges().charge===0
+              &&root.querySelector(".er-dashboard-boost .er-dashboard-digits").getAttribute("aria-label")==="000";
             debug.openLevels();
             debug.controller("pulse");
+            const startBoostEmpty=debug.gauges().charge===0;
             debug.advance(.05);
+            const boostRecharging=debug.gauges().charge>0;
             setTimeout(()=>{
              const canvas=root.querySelector(".er-canvas");
              const context=canvas.getContext("2d",{willReadFrequently:true});
@@ -59,16 +63,24 @@ jobs:
              const speedBlades=[...root.querySelectorAll(".er-dashboard-speed .er-dashboard-led")];
              const boostBlades=[...root.querySelectorAll(".er-dashboard-boost .er-dashboard-led")];
              const segmentedTitles=hudTitles.length===4&&hudTitles.every(el=>el.querySelectorAll(".er-digit").length>0);
-             const parallelArcs=speedBlades.length===30&&boostBlades.length===30
+             const parallelArcs=speedBlades.length===25&&boostBlades.length===25
                &&speedBlades.every((blade,i)=>Math.abs(parseFloat(blade.style.getPropertyValue("--gauge-x"))-parseFloat(boostBlades[i].style.getPropertyValue("--gauge-x")))<.01
-                 &&Math.abs((parseFloat(boostBlades[i].style.getPropertyValue("--gauge-y"))-parseFloat(blade.style.getPropertyValue("--gauge-y")))-18.125)<.12);
+                 &&Math.abs((parseFloat(blade.style.getPropertyValue("--gauge-y"))-parseFloat(boostBlades[i].style.getPropertyValue("--gauge-y")))-26.25)<.12);
+             const ledUpright=speedBlades.every(el=>{
+                const n=(el.getAttribute("d").match(/-?\\d+(?:\\.\\d+)?/g)||[]).map(Number);
+                return n.length===8&&Math.abs(n[2]-n[0]-18)<.1
+                 &&Math.abs(n[4]-n[2]+6)<.1;
+               });
              const shellCss=getComputedStyle(root.querySelector(".er-dashboard")).backgroundImage;
              const frameLoaded=shellCss.includes("echo%20machine%20bg%201.png")||shellCss.includes("echo machine bg 1.png");
-             const litSegments=boostBlades.filter(x=>x.classList.contains("lit"));
-             const ledStyle=litSegments.length?getComputedStyle(litSegments[0]):null;
-             const neonReal=litSegments.length>=27&&!!ledStyle
-               &&ledStyle.fill==="rgb(255, 246, 255)"
-               &&ledStyle.filter!=="none";
+             const dimLayer=root.querySelector(".er-dashboard-boost .er-gauge-leds-ghost");
+             const glowingLayer=root.querySelector(".er-dashboard-speed .er-gauge-leds-lit");
+             const neonReal=!!dimLayer&&!!glowingLayer
+               &&getComputedStyle(glowingLayer).filter!=="none"
+               &&speedBlades.every(el=>getComputedStyle(el).filter==="none")
+               &&getComputedStyle(dimLayer.querySelector("path")).fill==="rgb(155, 54, 142)";
+             const italicReadouts=[...root.querySelectorAll(".er-dashboard-readout .er-dashboard-name")].every(el=>
+               getComputedStyle(el).transform!=="none");
              const barsCentered=root.querySelector(".er-dashboard-bar").getBoundingClientRect().width
                <root.querySelector(".er-dashboard").getBoundingClientRect().width*.55;
              const hudFits=[...root.querySelectorAll(".er-meter")].every(el=>el.scrollWidth<=el.clientWidth+2);
@@ -167,7 +179,7 @@ jobs:
               fullHeightTouch,cleanButtonPlate,uprightStagger,controlsWithoutTetris,buttonsInOrder,
               steeringRight,steeringCentered,mobileOrder,scoreAndGaugeMatch,
               positions:[screenBox.top,hudBox.top,gaugeBox.top,padBox.top].map(Math.round),
-              segmentedTitles,parallelArcs,hudFits,gaugeFits,frameLoaded,neonReal,barsCentered,leds:boostBlades.length,litCount:litSegments.length,litFill:ledStyle?.fill,litFilter:ledStyle?.filter,
+              segmentedTitles,parallelArcs,ledUpright,italicReadouts,menuBoostEmpty,startBoostEmpty,boostRecharging,hudFits,gaugeFits,frameLoaded,neonReal,barsCentered,leds:boostBlades.length,
               canvas:{width:w,height:h,nonblack,unique:new Set(pixels).size},
               screen:root.querySelector(".er-screen").getBoundingClientRect().height,
               hud:root.querySelector(".er-hud").getBoundingClientRect().height,
@@ -175,7 +187,7 @@ jobs:
              console.log("ECHO_MOBILE_REPORT",JSON.stringify(report));
              document.body.dataset.report=JSON.stringify(report);
              document.body.dataset.result=errors.length===0&&w>200&&h>200&&snap.mode==="running"
-              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger&&fullHeightTouch&&noShieldsAtFull&&shieldEligible&&shieldRecovered&&boosted&&longPulse&&frameLoaded&&neonReal&&barsCentered?"ok":"failed";
+              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger&&fullHeightTouch&&noShieldsAtFull&&shieldEligible&&shieldRecovered&&boosted&&longPulse&&frameLoaded&&neonReal&&barsCentered&&ledUpright&&italicReadouts&&menuBoostEmpty&&startBoostEmpty&&boostRecharging?"ok":"failed";
             },1200);
            }catch(e){errors.push("MOUNT:"+e.stack);document.body.dataset.report=JSON.stringify({errors});document.body.dataset.result="failed";}
           });
@@ -287,7 +299,12 @@ jobs:
           <script src="/echo-racer.js"></script>
           <script>
           addEventListener("load",()=>{
-            window.ZebraEchoRacer.mount(document.querySelector("#game"));
+            const root=document.querySelector("#game");
+            window.ZebraEchoRacer.mount(root);
+            const debug=root._echoDebug;
+            debug.selectLevel("free");
+            debug.start();
+            for(let k=0;k<103;k++)debug.advance(.05);
           });
           </script></body></html>
           HTML
