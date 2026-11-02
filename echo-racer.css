@@ -3033,3 +3033,195 @@
  .zebra-game-body .zg.er .er-dashboard-speed .er-dashboard-readout,
  .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{top:15%!important}
 }
+
+
+/* Echo Racer 14.5 — a truly segmented SPEED rail and one continuous
+   BOOST line. The unfilled SPEED chips keep real visible separation. */
+.zebra-game-body .zg.er .er-dashboard-speed .er-gauge-leds-ghost path.er-gauge-ghost{
+ fill:#722b72!important;
+ stroke:#9b438e!important;
+ stroke-width:.9!important;
+ opacity:.72!important;
+ filter:none!important;
+}
+.zebra-game-body .zg.er .er-dashboard .er-boost-track{
+ fill:#592c59!important;
+ stroke:#8d437e!important;
+ stroke-width:.9!important;
+ opacity:.82!important;
+ filter:none!important;
+}
+.zebra-game-body .zg.er .er-dashboard .er-boost-fill{
+ fill:#fff4ff!important;
+ stroke:#ffabf9!important;
+ stroke-width:1.2!important;
+ filter:drop-shadow(0 0 3px #ffb9f7)
+  drop-shadow(0 0 6px #f83eda)!important;
+}
+.zebra-game-body .zg.er .er-dashboard-boost .er-gauge-curve{
+ display:none!important;
+}
+.zebra-game-body .zg.er .er-dashboard .er-boost-fill[width="0"]{
+ opacity:0!important;
+}
+/* TEMPORARY LCD placement tool. A small button stays reachable in all
+   layouts; the editor occupies the gameplay area, not the gauge being moved. */
+.zebra-game-body .zg.er{
+ position:relative!important;
+}
+.zebra-game-body .zg.er .er-dashboard .er-config-toggle{
+ position:absolute!important;
+ top:4%!important;
+ left:50%!important;
+ right:auto!important;
+ transform:translateX(-50%)!important;
+ z-index:20!important;
+ width:auto!important;
+ height:22px!important;
+ min-width:49px!important;
+ padding:1px 7px!important;
+ border:1px solid #ad71b5!important;
+ border-radius:4px!important;
+ background:#1b0d23!important;
+ color:#e9b9e9!important;
+ font:700 10px/1 "Oxanium",monospace!important;
+ letter-spacing:.4px!important;
+ box-shadow:0 1px 3px #000,inset 0 1px 1px #dd9ddd42!important;
+ pointer-events:auto!important;
+ cursor:pointer!important;
+ touch-action:manipulation!important;
+}
+.zebra-game-body .zg.er .er-config-toggle:focus-visible{
+ outline:2px solid #ffdafa!important;
+ outline-offset:2px!important;
+}
+.zebra-game-body .zg.er .er-config-panel[hidden]{display:none!important;}
+.zebra-game-body .zg.er .er-config-panel{
+ position:absolute!important;
+ z-index:200!important;
+ top:40px!important;
+ right:8px!important;
+ left:auto!important;
+ width:min(304px,calc(100% - 16px))!important;
+ max-width:calc(100% - 16px)!important;
+ max-height:min(380px,65%)!important;
+ overflow:auto!important;
+ display:flex!important;
+ flex-direction:column!important;
+ gap:9px!important;
+ padding:13px!important;
+ border:2px solid #aa7fb8!important;
+ border-radius:9px!important;
+ background:linear-gradient(165deg,rgba(32,16,40,.99),rgba(8,4,14,.98))!important;
+ color:#f5dcfa!important;
+ font:12px/1.4 "Oxanium","Courier New",monospace!important;
+ box-shadow:0 12px 45px #000f,0 0 0 2px #2f183e,inset 0 1px 0 #c28fd058!important;
+ pointer-events:auto!important;
+ touch-action:pan-y!important;
+}
+.zebra-game-body .zg.er .er-config-heading{
+ display:flex!important;
+ align-items:center!important;
+ justify-content:space-between!important;
+ gap:12px!important;
+ color:#fff0ff!important;
+ font:800 13px/1.25 "Oxanium",monospace!important;
+}
+.zebra-game-body .zg.er .er-config-panel button,
+.zebra-game-body .zg.er .er-config-panel select{
+ color:#f8e0ff!important;
+ background:#2a1431!important;
+ border:1px solid #99649e!important;
+ border-radius:4px!important;
+ padding:7px!important;
+ font:700 11px/1.2 "Oxanium",monospace!important;
+ cursor:pointer!important;
+}
+.zebra-game-body .zg.er .er-config-panel button:focus-visible,
+.zebra-game-body .zg.er .er-config-panel input:focus-visible,
+.zebra-game-body .zg.er .er-config-panel select:focus-visible{
+ outline:2px solid #e9a8f5!important;
+}
+.zebra-game-body .zg.er .er-config-close{
+ flex:0 0 auto!important;
+ padding:4px 8px!important;
+}
+.zebra-game-body .zg.er .er-config-help{
+ font:11px/1.35 "Oxanium",monospace!important;
+ color:#d2b4d9!important;
+ margin:0!important;
+}
+.zebra-game-body .zg.er .er-config-select{width:100%!important;}
+.zebra-game-body .zg.er .er-config-control{
+ display:grid!important;
+ grid-template-columns:66px minmax(0,1fr) 60px!important;
+ align-items:center!important;
+ gap:7px!important;
+ min-width:0!important;
+}
+.zebra-game-body .zg.er .er-config-range{
+ display:block!important;
+ width:100%!important;
+ min-width:0!important;
+ height:26px!important;
+ margin:0!important;
+ accent-color:#e76be2!important;
+ cursor:ew-resize!important;
+ touch-action:pan-x!important;
+}
+.zebra-game-body .zg.er .er-config-value{
+ color:#ffd0f5!important;
+ text-align:right!important;
+ font:700 10px/1 "Oxanium",monospace!important;
+ white-space:nowrap!important;
+}
+.zebra-game-body .zg.er .er-config-actions{
+ display:grid!important;
+ grid-template-columns:1fr 1fr!important;
+ gap:6px!important;
+}
+.zebra-game-body .zg.er .er-config-action{
+ min-width:0!important;
+ white-space:normal!important;
+}
+.zebra-game-body .zg.er .er-config-action:last-child{
+ grid-column:span 2!important;
+}
+.zebra-game-body .zg.er .er-config-info{
+ color:#bda5c4!important;
+ font-size:10px!important;
+ word-break:break-word!important;
+}
+.zebra-game-body .zg.er.er-config-open .er-dashboard,
+.zebra-game-body .zg.er .er-dashboard .er-config-toggle{
+ pointer-events:auto!important;
+}
+.zebra-game-body .zg.er.er-config-open .er-dashboard-readout,
+.zebra-game-body .zg.er.er-config-open .er-dashboard-readout .er-dashboard-name,
+.zebra-game-body .zg.er.er-config-open .er-dashboard-readout .er-dashboard-digits,
+.zebra-game-body .zg.er.er-config-open .er-dashboard-readout .er-dashboard-unit{
+ pointer-events:auto!important;
+ cursor:grab!important;
+ touch-action:none!important;
+}
+.zebra-game-body .zg.er.er-config-open .er-dashboard-readout .er-config-selected{
+ outline:1px dashed #ffc3f3!important;
+ outline-offset:3px!important;
+ box-shadow:0 0 6px #ff65e857!important;
+ border-radius:2px!important;
+}
+@media(max-width:700px){
+ .zebra-game-body .zg.er .er-dashboard .er-config-toggle{
+  height:17px!important;
+  min-width:38px!important;
+  top:3%!important;
+  padding:1px 3px!important;
+  font-size:7px!important;
+ }
+ .zebra-game-body .zg.er .er-config-panel{
+  top:25px!important;
+  right:5px!important;
+  max-height:55%!important;
+  padding:10px!important;
+ }
+}
