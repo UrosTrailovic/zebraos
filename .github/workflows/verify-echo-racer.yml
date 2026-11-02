@@ -68,7 +68,16 @@ jobs:
                  &&Math.abs((parseFloat(blade.style.getPropertyValue("--gauge-y"))-parseFloat(boostBlades[i].style.getPropertyValue("--gauge-y")))-26.25)<.12);
              const yAt=i=>parseFloat(speedBlades[i].style.getPropertyValue("--gauge-y"))*1.6;
              const firstRise=Array.from({length:8},(_,i)=>yAt(i)-yAt(i+1));
-             const straightRails=firstRise.length===8&&firstRise.every(x=>Math.abs(x-57/30)<.12);
+             const straightRails=firstRise.length===8&&firstRise.every(x=>Math.abs(x)<.015);
+             const actualCenters=root.querySelectorAll(".er-dashboard-readout");
+             const dashboardRect=root.querySelector(".er-dashboard").getBoundingClientRect();
+             const readoutCenters=[...actualCenters].map(el=>{
+              const r=el.getBoundingClientRect();
+              return (r.left+r.right)/2;
+             });
+             const balancedEndPods=readoutCenters.length===2
+               &&Math.abs((readoutCenters[0]-dashboardRect.left)/dashboardRect.width-.155)<.015
+               &&Math.abs((readoutCenters[1]-dashboardRect.left)/dashboardRect.width-.845)<.015;
              const gaugeMeasurements=[...root.querySelectorAll(".er-dashboard-row")].map(row=>{
                const bounds=el=>el.getBoundingClientRect(),center=x=>(x.left+x.right)/2;
                const pod=bounds(row.querySelector(".er-dashboard-readout"));
@@ -82,6 +91,8 @@ jobs:
                const glass=bounds(root.querySelector(".er-dashboard"));
                return {titleCenterError:+Math.abs(center(title)-center(pod)).toFixed(2),
                 numberCenterError:+Math.abs(center(numberLine)-center(pod)).toFixed(2),
+                actualTitleWidth:+title.width.toFixed(1),
+                actualNumberWidth:+numberLine.width.toFixed(1),
                 groupCenterError:+Math.abs(center({left:digits.left,right:unit.right})-center(pod)).toFixed(2),
                 unitVerticalError:+Math.abs((digits.top+digits.bottom)/2-(unit.top+unit.bottom)/2).toFixed(2),
                 titleInside:title.top>=glass.top+glass.height*.10&&title.bottom<digits.top+3,
@@ -90,7 +101,7 @@ jobs:
                 digitsItalic:getComputedStyle(digitsEl).transform!=="none"};
              });
              const gaugeTitleAndUnits=gaugeMeasurements.length===2&&gaugeMeasurements.every(v=>
-               v.titleCenterError<5&&v.numberCenterError<3&&v.groupCenterError<5
+               v.titleCenterError<2&&v.numberCenterError<2&&v.groupCenterError<3
                &&v.unitVerticalError<15&&v.titleInside&&v.titleItalic&&v.unitItalic&&v.digitsItalic);
              const ledUpright=speedBlades.every(el=>{
                 const n=(el.getAttribute("d").match(/-?\d+(?:\.\d+)?/g)||[]).map(Number);
@@ -205,7 +216,7 @@ jobs:
               fullHeightTouch,cleanButtonPlate,uprightStagger,controlsWithoutTetris,buttonsInOrder,
               steeringRight,steeringCentered,mobileOrder,scoreAndGaugeMatch,
               positions:[screenBox.top,hudBox.top,gaugeBox.top,padBox.top].map(Math.round),
-              segmentedTitles,parallelArcs,straightRails,gaugeTitleAndUnits,gaugeMeasurements,firstRise,ledUpright,italicReadouts,menuBoostEmpty,startBoostEmpty,boostRecharging,hudFits,gaugeFits,frameLoaded,neonReal,barsCentered,leds:boostBlades.length,
+              segmentedTitles,parallelArcs,straightRails,balancedEndPods,gaugeTitleAndUnits,gaugeMeasurements,firstRise,ledUpright,italicReadouts,menuBoostEmpty,startBoostEmpty,boostRecharging,hudFits,gaugeFits,frameLoaded,neonReal,barsCentered,leds:boostBlades.length,
               canvas:{width:w,height:h,nonblack,unique:new Set(pixels).size},
               screen:root.querySelector(".er-screen").getBoundingClientRect().height,
               hud:root.querySelector(".er-hud").getBoundingClientRect().height,
@@ -213,7 +224,7 @@ jobs:
              console.log("ECHO_MOBILE_REPORT",JSON.stringify(report));
              document.body.dataset.report=JSON.stringify(report);
              document.body.dataset.result=errors.length===0&&w>200&&h>200&&snap.mode==="running"
-              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger&&fullHeightTouch&&noShieldsAtFull&&shieldEligible&&shieldRecovered&&boosted&&longPulse&&frameLoaded&&neonReal&&barsCentered&&ledUpright&&italicReadouts&&straightRails&&gaugeTitleAndUnits&&menuBoostEmpty&&startBoostEmpty&&boostRecharging?"ok":"failed";
+              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger&&fullHeightTouch&&noShieldsAtFull&&shieldEligible&&shieldRecovered&&boosted&&longPulse&&frameLoaded&&neonReal&&barsCentered&&ledUpright&&italicReadouts&&straightRails&&balancedEndPods&&gaugeTitleAndUnits&&menuBoostEmpty&&startBoostEmpty&&boostRecharging?"ok":"failed";
             },1200);
            }catch(e){errors.push("MOUNT:"+e.stack);document.body.dataset.report=JSON.stringify({errors});document.body.dataset.result="failed";}
           });
