@@ -65,7 +65,7 @@ jobs:
              const segmentedTitles=hudTitles.length===4&&hudTitles.every(el=>el.querySelectorAll(".er-digit").length>0);
              const parallelArcs=speedBlades.length===30&&boostBlades.length===30
                &&speedBlades.every((blade,i)=>Math.abs(parseFloat(blade.style.getPropertyValue("--gauge-x"))-parseFloat(boostBlades[i].style.getPropertyValue("--gauge-x")))<.01
-                 &&Math.abs((parseFloat(blade.style.getPropertyValue("--gauge-y"))-parseFloat(boostBlades[i].style.getPropertyValue("--gauge-y")))-26.25)<.12);
+                 &&Math.abs((parseFloat(blade.style.getPropertyValue("--gauge-y"))-parseFloat(boostBlades[i].style.getPropertyValue("--gauge-y")))-32.5)<.12);
              const yAt=i=>parseFloat(speedBlades[i].style.getPropertyValue("--gauge-y"))*1.6;
              const firstRise=Array.from({length:8},(_,i)=>yAt(i)-yAt(i+1));
              const straightRails=firstRise.length===8&&firstRise.every(x=>Math.abs(x)<.015);
