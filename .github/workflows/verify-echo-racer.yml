@@ -108,8 +108,15 @@ jobs:
               gaugeBox=rect(".er-dashboard"),padBox=rect(".er-pad");
              const mobileOrder=screenBox.top<gaugeBox.top
               &&gaugeBox.bottom<=hudBox.top+3&&hudBox.bottom<=padBox.top+3;
-             const scoreAndGaugeMatch=getComputedStyle(root.querySelector(".er-meter-number")).color
-              ===getComputedStyle(root.querySelector(".er-dashboard-digits")).color;
+             const scoreLcd=getComputedStyle(root.querySelector(".er-meter-number")).color;
+             const gaugeLcd=getComputedStyle(root.querySelector(".er-dashboard-digits")).color;
+             // Both displays stay in the same pink-purple family, while the
+             // new machine's main digits get the stronger white-hot core.
+             const rgb=v=>(v.match(/[\\d.]+/g)||[]).slice(0,3).map(Number);
+             const scoreRGB=rgb(scoreLcd),gaugeRGB=rgb(gaugeLcd);
+             const scoreAndGaugeMatch=scoreRGB.length===3&&gaugeRGB.length===3
+               &&scoreRGB[0]>scoreRGB[1]&&scoreRGB[2]>scoreRGB[1]
+               &&gaugeRGB[0]>gaugeRGB[1]&&gaugeRGB[2]>gaugeRGB[1];
              const pad=root.querySelector(".er-pad");
              const aButton=pad.querySelector(".zt-a"),bButton=pad.querySelector(".zt-b"),
               selectButton=pad.querySelector(".zt-select");
