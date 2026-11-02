@@ -404,11 +404,15 @@ function mount(root){
   const labelEl=node("span","er-dashboard-name",label);
   const value=digital("er-dashboard-digits");
   const unitEl=node("span","er-dashboard-unit",unit);
-  readout.append(labelEl,value,unitEl);
+  // A fixed-width physical display pod: center label and the complete
+  // number+unit line together, instead of aligning them in a shared grid.
+  const numberLine=node("div","er-dashboard-number-line");
+  numberLine.append(value,unitEl);
+  readout.append(labelEl,numberLine);
 
-  // Identical upright LEDs, varied only by their cut at the curved edge.
-  // BOOST is the upper, usually ghosted rail; SPEED is the lower live rail.
-  // Lighting is drawn by one SVG group filter, not 3 shadow filters per LED.
+  // Two straight, parallel, slightly rising rails. Only the rectangular
+  // chips are italic/sheared, never individually rotated by the slope.
+  // Keep the phosphor on one SVG group filter to avoid mobile GPU lag.
   const bar=node("div","er-dashboard-bar");
   bar.setAttribute("aria-hidden","true");
   const ns="http://www.w3.org/2000/svg";
@@ -418,13 +422,9 @@ function mount(root){
   rail.setAttribute("preserveAspectRatio","none");
   rail.setAttribute("aria-hidden","true");
   const isBoost=cls==="er-dashboard-boost";
-  const baseY=isBoost?97:139;
-  // Smooth climb: the old exp(-12*t) jumped ~23 SVG pixels between
-  // the first two LEDs. A gentler normalized exponential spreads that
-  // same rise across the first six chips without flattening the final arc.
+  const baseY=isBoost?103:145;
   function point(t){
-   const eased=(1-Math.exp(-4.6*t))/(1-Math.exp(-4.6));
-   return {x:22+552*t,y:baseY-87*eased};
+   return {x:22+552*t,y:baseY-57*t};
   }
   const trace=document.createElementNS(ns,"path");
   trace.classList.add("er-gauge-curve");
