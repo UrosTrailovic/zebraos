@@ -167,7 +167,7 @@ jobs:
               fullHeightTouch,cleanButtonPlate,uprightStagger,controlsWithoutTetris,buttonsInOrder,
               steeringRight,steeringCentered,mobileOrder,scoreAndGaugeMatch,
               positions:[screenBox.top,hudBox.top,gaugeBox.top,padBox.top].map(Math.round),
-              segmentedTitles,parallelArcs,hudFits,gaugeFits,frameLoaded,neonReal,barsCentered,leds:boostBlades.length,
+              segmentedTitles,parallelArcs,hudFits,gaugeFits,frameLoaded,neonReal,barsCentered,leds:boostBlades.length,litCount:litSegments.length,litFill:ledStyle?.fill,litFilter:ledStyle?.filter,
               canvas:{width:w,height:h,nonblack,unique:new Set(pixels).size},
               screen:root.querySelector(".er-screen").getBoundingClientRect().height,
               hud:root.querySelector(".er-hud").getBoundingClientRect().height,
