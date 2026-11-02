@@ -3225,3 +3225,41 @@
   padding:10px!important;
  }
 }
+
+
+/* Echo Machine 14.6 — precise centering measured against the PHYSICAL
+   LCD glass, not against a guessed left/right CSS inset. The SVG contains
+   its own symmetric x=24..576 drawing bounds, with x=300 as its center. */
+.zebra-game-body .zg.er .er-dashboard-speed .er-dashboard-bar,
+.zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-bar{
+ top:24%!important;
+ bottom:15%!important;
+ left:50%!important;
+ right:auto!important;
+ width:46.8%!important;
+ height:auto!important;
+ min-height:0!important;
+ margin:0!important;
+ padding:0!important;
+ transform:translateX(-50%)!important;
+ transform-origin:center!important;
+}
+@media(max-width:700px){
+ .zebra-game-body .zg.er .er-dashboard-speed .er-dashboard-bar,
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-bar{
+  top:26%!important;
+  bottom:14%!important;
+  left:50%!important;
+  right:auto!important;
+  width:46.8%!important;
+  height:auto!important;
+  transform:translateX(-50%)!important;
+ }
+}
+@media(max-width:700px) and (max-height:700px){
+ .zebra-game-body .zg.er .er-dashboard-speed .er-dashboard-bar,
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-bar{
+  top:26%!important;
+  bottom:12%!important;
+ }
+}
