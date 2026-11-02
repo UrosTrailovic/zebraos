@@ -418,7 +418,7 @@ function mount(root){
   rail.setAttribute("preserveAspectRatio","none");
   rail.setAttribute("aria-hidden","true");
   const isBoost=cls==="er-dashboard-boost";
-  const baseY=isBoost?109:151;
+  const baseY=isBoost?97:139;
   function point(t){
    return {x:22+552*t,y:baseY-87*(1-Math.exp(-12*t))};
   }
@@ -962,7 +962,7 @@ function mount(root){
   const charge=mode==="menu"?0:free?freeChargeVisual:nitroFuel;
   setDigital(boostGauge.value,free&&mode!=="menu"&&charge>=.999?"∞":
    String(Math.round(charge*100)).padStart(3,"0"));
-  boostGauge.statusEl.textContent=mode==="menu"?"PRÊT":padBoostTime>0?"TURBO":nitroActive?"NITRO":free?(charge>=.999?"ILLIMITÉ":"CHARGE"):
+  boostGauge.statusEl.textContent=mode==="menu"?"EN VEILLE":padBoostTime>0?"TURBO":nitroActive?"NITRO":free?(charge>=.999?"ILLIMITÉ":"CHARGE"):
    charge>=.999?"PRÊT":nitroRegenWait>0?"PAUSE":"RECHARGE";
   boostGauge.row.classList.toggle("er-dashboard-active",active);
   dashboard.classList.toggle("er-boost-active",active);
