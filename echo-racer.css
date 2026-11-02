@@ -2618,3 +2618,50 @@
   inset:26% 24.8% 12% 28.7%!important;
  }
 }
+
+
+/* Final LCD typography pass: titles and units now match the reference's
+   clear italic instrument print, without dimming the phosphor. */
+@media(min-width:701px){
+ .zebra-game-body .zg.er .er-dashboard-name,
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-name{
+  --digit-w:clamp(7.2px,1.1vw,9.4px)!important;
+  --digit-gap:1px!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-digits{
+  --digit-w:clamp(17px,2.45vw,24px)!important;
+  --digit-gap:1px!important;
+  transform:skewX(-5deg)!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-readout,
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{
+  top:15%!important;
+  row-gap:5px!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-unit{
+  font-size:clamp(9px,1.16vw,12px)!important;
+  margin-bottom:5px!important;
+ }
+}
+@media(max-width:700px){
+ .zebra-game-body .zg.er .er-dashboard-name,
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-name{
+  --digit-w:clamp(4.3px,1.3vw,5.8px)!important;
+  --digit-gap:.55px!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-digits{
+  --digit-w:clamp(11px,3.25vw,14px)!important;
+  transform:skewX(-5deg)!important;
+ }
+}
+/* Segment emitters are static solids; glow on the assembled digit instead
+   of running a separate CSS filter pipeline for every single segment. */
+.zebra-game-body .zg.er .er-seg.lit{
+ filter:none!important;
+}
+.zebra-game-body .zg.er .er-hud .er-digital{
+ filter:drop-shadow(0 0 2px #eab7f5a8)!important;
+}
+.zebra-game-body .zg.er .er-dashboard-digits{
+ filter:drop-shadow(0 0 3px #ff63dfb7)!important;
+}
