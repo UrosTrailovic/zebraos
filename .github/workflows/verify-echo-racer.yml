@@ -111,9 +111,31 @@ jobs:
                 unitItalic:getComputedStyle(unitEl).fontStyle==="italic",
                 digitsItalic:getComputedStyle(digitsEl).transform!=="none"};
              });
-             const gaugeTitleAndUnits=gaugeMeasurements.length===2&&gaugeMeasurements.every(v=>
-               v.titleCenterError<2&&v.numberCenterError<2&&v.groupCenterError<3
-               &&v.unitVerticalError<15&&v.titleInside&&v.titleItalic&&v.unitItalic&&v.digitsItalic);
+             // The USER intentionally offset titles and digits separately.
+             // Do not fail them against the obsolete auto-centering assumption.
+             const positionDefaults=debug.lcdEditor().layout;
+             const defaultHeightsMatch=positionDefaults.speedTitle.y===16.5
+               &&positionDefaults.boostTitle.y===positionDefaults.speedTitle.y
+               &&positionDefaults.boostDigits.y===positionDefaults.speedDigits.y
+               &&positionDefaults.boostUnit.y===positionDefaults.speedUnit.y;
+             const layoutOffsetsMeasured=Object.entries({
+               speedTitle:".er-dashboard-speed .er-dashboard-name",
+               speedDigits:".er-dashboard-speed .er-dashboard-digits",
+               speedUnit:".er-dashboard-speed .er-dashboard-unit",
+               boostTitle:".er-dashboard-boost .er-dashboard-name",
+               boostDigits:".er-dashboard-boost .er-dashboard-digits",
+               boostUnit:".er-dashboard-boost .er-dashboard-unit"
+             }).every(([id,selector])=>{
+               const expected=positionDefaults[id];
+               const shift=getComputedStyle(root.querySelector(selector)).translate;
+               const values=(shift.match(/-?[0-9.]+/g)||[]).map(Number);
+               return values.length===2&&
+                Math.abs(values[0]-expected.x*dashboardRect.width/100)<.9&&
+                Math.abs(values[1]-expected.y*dashboardRect.height/100)<.9;
+             });
+             const gaugeTitleAndUnits=gaugeMeasurements.length===2
+               &&gaugeMeasurements.every(v=>v.titleInside&&v.titleItalic&&v.unitItalic&&v.digitsItalic)
+               &&defaultHeightsMatch&&layoutOffsetsMeasured;
              const ledUpright=speedBlades.every(el=>{
                 const n=(el.getAttribute("d").match(/-?\d+(?:\.\d+)?/g)||[]).map(Number);
                 return n.length===8&&Math.abs(n[2]-n[0]-14)<.1
@@ -129,8 +151,12 @@ jobs:
                &&getComputedStyle(dimLayer.querySelector("path")).fill==="rgb(114, 43, 114)";
              const italicReadouts=[...root.querySelectorAll(".er-dashboard-readout .er-dashboard-name")].every(el=>
                getComputedStyle(el).transform!=="none");
-             const barsCentered=root.querySelector(".er-dashboard-bar").getBoundingClientRect().width
-               <root.querySelector(".er-dashboard").getBoundingClientRect().width*.55;
+             const railBoxes=[...root.querySelectorAll(".er-dashboard-bar")].map(el=>el.getBoundingClientRect());
+             const railCenters=railBoxes.map(r=>(r.left+r.right)/2);
+             const physicalCenter=(dashboardRect.left+dashboardRect.right)/2;
+             const barsCentered=railBoxes.length===2&&railBoxes.every(r=>r.width<dashboardRect.width*.55)
+               &&railCenters.every(x=>Math.abs(x-physicalCenter)<1.5)
+               &&Math.abs(railCenters[0]-railCenters[1])<.5;
              const hudFits=[...root.querySelectorAll(".er-meter")].every(el=>el.scrollWidth<=el.clientWidth+2);
              const gaugeFits=root.querySelector(".er-dashboard").getBoundingClientRect().width>300;
              const slider=root.querySelector(".er-steering-track");
@@ -234,7 +260,7 @@ jobs:
              horizontal.value="9.5";
              horizontal.dispatchEvent(new Event("input",{bubbles:true}));
              const editorSaved=debug.lcdEditor().layout.speedDigits.x===9.5
-               &&(localStorage.getItem("zebra.echo-racer.lcd.positions.v1.mobile")||"").includes("9.5")
+               &&(localStorage.getItem("zebra.echo-racer.lcd.positions.v2.mobile")||"").includes("9.5")
                &&getComputedStyle(root.querySelector(".er-dashboard-speed .er-dashboard-digits")).translate!=="none";
              const movable=root.querySelector(".er-dashboard-speed .er-dashboard-digits");
              const movableRect=movable.getBoundingClientRect();
@@ -250,7 +276,7 @@ jobs:
              const editorDragWorks=debug.lcdEditor().layout.speedDigits.x>9.5
                &&debug.lcdEditor().layout.speedDigits.y>0;
              root.querySelector(".er-config-action").click();
-             const editorReset=debug.lcdEditor().layout.speedDigits.x===0;
+             const editorReset=debug.lcdEditor().layout.speedDigits.x===0&&debug.lcdEditor().layout.speedDigits.y===18;
              debug.lcdClose();
              const editorClosed=!debug.lcdEditor().open;
              const report={errors,mode:snap.mode,score:snap.score,
@@ -259,7 +285,7 @@ jobs:
               fullHeightTouch,cleanButtonPlate,uprightStagger,controlsWithoutTetris,buttonsInOrder,
               steeringRight,steeringCentered,mobileOrder,scoreAndGaugeMatch,
               positions:[screenBox.top,hudBox.top,gaugeBox.top,padBox.top].map(Math.round),
-              segmentedTitles,parallelArcs,straightRails,balancedEndPods,gaugeTitleAndUnits,gaugeMeasurements,firstRise,ledUpright,italicReadouts,menuBoostEmpty,startBoostEmpty,boostRecharging,hudFits,gaugeFits,frameLoaded,neonReal,barsCentered,leds:boostBlades.length,
+              segmentedTitles,parallelArcs,straightRails,balancedEndPods,gaugeTitleAndUnits,gaugeMeasurements,positionDefaults,defaultHeightsMatch,layoutOffsetsMeasured,railCenters,physicalCenter,firstRise,ledUpright,italicReadouts,menuBoostEmpty,startBoostEmpty,boostRecharging,hudFits,gaugeFits,frameLoaded,neonReal,barsCentered,leds:boostBlades.length,
               canvas:{width:w,height:h,nonblack,unique:new Set(pixels).size},
               screen:root.querySelector(".er-screen").getBoundingClientRect().height,
               hud:root.querySelector(".er-hud").getBoundingClientRect().height,
