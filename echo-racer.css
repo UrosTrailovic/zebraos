@@ -2665,3 +2665,25 @@
 .zebra-game-body .zg.er .er-dashboard-digits{
  filter:drop-shadow(0 0 3px #ff63dfb7)!important;
 }
+
+
+/* Readable italic machine legends; the live numbers remain true 14-segment LCD. */
+.zebra-game-body .zg.er .er-dashboard-name,
+.zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-name{
+ font:italic 800 clamp(10px,1.46vw,15px)/1 "Oxanium","Arial Narrow",sans-serif!important;
+ letter-spacing:.8px!important;
+ text-transform:uppercase!important;
+ text-shadow:0 0 3px rgba(255,100,220,.55)!important;
+ min-height:0!important;
+ height:auto!important;
+ white-space:nowrap!important;
+ transform:skewX(-7deg)!important;
+ filter:none!important;
+}
+@media(max-width:700px){
+ .zebra-game-body .zg.er .er-dashboard-name,
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-name{
+  font-size:clamp(8px,2.15vw,10px)!important;
+  letter-spacing:.45px!important;
+ }
+}
