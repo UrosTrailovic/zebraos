@@ -423,7 +423,7 @@ function mount(root){
   const isBoost=cls==="er-dashboard-boost";
   const baseY=isBoost?53:105;
   function point(t){
-   return {x:22+552*t,y:baseY};
+   return {x:24+552*t,y:baseY};
   }
   const trace=document.createElementNS(ns,"path");
   trace.classList.add("er-gauge-curve");
@@ -438,12 +438,12 @@ function mount(root){
    // A SINGLE thin continuous LCD strip, not an array of rectangles.
    const track=document.createElementNS(ns,"rect");
    track.classList.add("er-boost-track");
-   track.setAttribute("x","22");track.setAttribute("y",String(baseY-3));
+   track.setAttribute("x","24");track.setAttribute("y",String(baseY-3));
    track.setAttribute("width","552");track.setAttribute("height","6");
    track.setAttribute("rx","2.8");
    const lit=document.createElementNS(ns,"rect");
    lit.classList.add("er-boost-fill");
-   lit.setAttribute("x","22");lit.setAttribute("y",String(baseY-3));
+   lit.setAttribute("x","24");lit.setAttribute("y",String(baseY-3));
    lit.setAttribute("width","0");lit.setAttribute("height","6");
    lit.setAttribute("rx","2.8");
    rail.append(track,lit);bar.appendChild(rail);
@@ -663,21 +663,35 @@ function mount(root){
   const option=node("option","",entry.label);option.value=id;cfgSelect.appendChild(option);
   entry.element.dataset.erConfigId=id;
  }
+ // User-approved positions are now the built-in baseline for everyone.
+ // On mobile, both BOOST and VITESSE share the exact same title/digit/unit Y.
+ // CONFIG stays available for further tweaks without changing game code.
+ const LCD_DEFAULTS={
+  desktop:{
+   speedTitle:{x:-3.5,y:8.5},speedDigits:{x:-1,y:10.75},speedUnit:{x:0,y:0},
+   boostTitle:{x:-2,y:8.5},boostDigits:{x:0,y:10.75},boostUnit:{x:0,y:0}
+  },
+  mobile:{
+   speedTitle:{x:-3,y:16.5},speedDigits:{x:0,y:18},speedUnit:{x:1.25,y:11.75},
+   boostTitle:{x:-2.25,y:16.5},boostDigits:{x:0,y:18},boostUnit:{x:1,y:11.75}
+  }
+ };
+ const LCD_LAYOUT_KEY="lcd.positions.v2.";
  let cfgChosen="speedDigits",cfgMode="",cfgLayout={};
  function cfgBreakpoint(){return window.matchMedia("(max-width:700px)").matches?"mobile":"desktop";}
  function cfgLoad(mode){
-  let obj={};try{obj=JSON.parse(load("lcd.positions.v1."+mode,"{}"))||{};}catch(_){}
-  const result={};
+  let obj={};try{obj=JSON.parse(load(LCD_LAYOUT_KEY+mode,"{}"))||{};}catch(_){}
+  const defaults=LCD_DEFAULTS[mode],result={};
   for(const id of Object.keys(cfgTargets)){
    const v=obj[id]||{};
    result[id]={
-    x:clamp(Number(v.x)||0,-30,30),
-    y:clamp(Number(v.y)||0,-45,45)
+    x:clamp(Number.isFinite(Number(v.x))&&v.x!==undefined?Number(v.x):defaults[id].x,-30,30),
+    y:clamp(Number.isFinite(Number(v.y))&&v.y!==undefined?Number(v.y):defaults[id].y,-45,45)
    };
   }
   return result;
  }
- function cfgSave(){save("lcd.positions.v1."+cfgMode,JSON.stringify(cfgLayout));}
+ function cfgSave(){save(LCD_LAYOUT_KEY+cfgMode,JSON.stringify(cfgLayout));}
  const cfgX=node("input","er-config-range"),cfgY=node("input","er-config-range");
  const cfgXNumber=node("output","er-config-value"),cfgYNumber=node("output","er-config-value");
  function cfgControl(label,input,output){
@@ -686,9 +700,9 @@ function mount(root){
  }
  for(const input of [cfgX,cfgY]){input.type="range";input.min="-30";input.max="30";input.step=".25";}
  cfgY.min="-45";cfgY.max="45";
- const cfgReset=node("button","er-config-action","CENTRER CET ÉLÉMENT");
+ const cfgReset=node("button","er-config-action","POSITION PAR DÉFAUT");
  cfgReset.type="button";
- const cfgResetAll=node("button","er-config-action","RÉINITIALISER TOUT");
+ const cfgResetAll=node("button","er-config-action","POSITIONS PAR DÉFAUT");
  cfgResetAll.type="button";
  const cfgCopy=node("button","er-config-action","COPIER MES POSITIONS");
  cfgCopy.type="button";
@@ -740,10 +754,10 @@ function mount(root){
  cfgX.addEventListener("input",()=>cfgSet(cfgChosen,"x",cfgX.value));
  cfgY.addEventListener("input",()=>cfgSet(cfgChosen,"y",cfgY.value));
  cfgReset.addEventListener("click",()=>{
-  cfgLayout[cfgChosen]={x:0,y:0};cfgApply();cfgSave();cfgRefresh();
+  cfgLayout[cfgChosen]={...LCD_DEFAULTS[cfgMode][cfgChosen]};cfgApply();cfgSave();cfgRefresh();
  });
  cfgResetAll.addEventListener("click",()=>{
-  for(const id of Object.keys(cfgTargets))cfgLayout[id]={x:0,y:0};
+  for(const id of Object.keys(cfgTargets))cfgLayout[id]={...LCD_DEFAULTS[cfgMode][id]};
   cfgApply();cfgSave();cfgRefresh();
  });
  cfgCopy.addEventListener("click",async()=>{
