@@ -2497,3 +2497,124 @@
   --digit-w:9px!important;
  }
 }
+
+
+/* ================================================================
+   ECHO MACHINE 14.1 — reference-matched segmented arc and typography
+   Upper = BOOST, lower = SPEED. All LED chips remain upright.
+   The original neon is preserved with one composite glow per arc,
+   not three drop-shadow filters multiplied by 50 LED chips.
+   ================================================================ */
+.zebra-game-body .zg.er .er-dashboard-readout,
+.zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{
+ top:16.4%!important;
+ gap:4px 5px!important;
+ align-items:end!important;
+}
+.zebra-game-body .zg.er .er-dashboard-readout{
+ left:9.7%!important;
+ right:auto!important;
+ justify-items:start!important;
+}
+.zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{
+ right:9%!important;
+ left:auto!important;
+ justify-items:end!important;
+}
+.zebra-game-body .zg.er .er-dashboard-name,
+.zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-name{
+ font-style:italic!important;
+ transform:skewX(-10deg)!important;
+ transform-origin:center bottom!important;
+ margin:0 0 0 3px!important;
+ color:#f8ccfa!important;
+}
+.zebra-game-body .zg.er .er-dashboard-digits{
+ transform:skewX(-8deg)!important;
+ transform-origin:center bottom!important;
+ color:#fff1ff!important;
+}
+.zebra-game-body .zg.er .er-dashboard-unit{
+ font-style:italic!important;
+ transform:skewX(-9deg)!important;
+ transform-origin:left bottom!important;
+ font-weight:800!important;
+ color:#f8ceee!important;
+ margin:0 0 3px 3px!important;
+}
+.zebra-game-body .zg.er .er-dashboard-bar{
+ inset:23% 23.5% 15% 29.7%!important;
+}
+.zebra-game-body .zg.er .er-gauge-rail .er-gauge-leds-ghost{
+ opacity:.68!important;
+}
+.zebra-game-body .zg.er .er-gauge-rail .er-gauge-leds-ghost path.er-gauge-ghost{
+ fill:#9b368e!important;
+ stroke:#cc56ba!important;
+ stroke-width:.65!important;
+ opacity:.75!important;
+ filter:none!important;
+}
+.zebra-game-body .zg.er .er-gauge-rail .er-gauge-leds-lit{
+ /* Glow is computed just ONCE for this SVG group. */
+ filter:drop-shadow(0 0 2px #ffc8fb) drop-shadow(0 0 5px #fb40d9)
+  drop-shadow(0 0 7px #ec19b9)!important;
+}
+.zebra-game-body .zg.er .er-gauge-rail .er-gauge-leds-lit path.er-dashboard-led,
+.zebra-game-body .zg.er .er-dashboard-speed .er-gauge-rail path.er-dashboard-led,
+.zebra-game-body .zg.er .er-dashboard-boost .er-gauge-rail path.er-dashboard-led{
+ opacity:0!important;
+ fill:#fff7ff!important;
+ stroke:#ffa9f8!important;
+ stroke-width:1.6!important;
+ filter:none!important;
+}
+.zebra-game-body .zg.er .er-gauge-rail .er-gauge-leds-lit path.er-dashboard-led.lit,
+.zebra-game-body .zg.er .er-dashboard-speed .er-gauge-rail path.er-dashboard-led.lit,
+.zebra-game-body .zg.er .er-dashboard-boost .er-gauge-rail path.er-dashboard-led.lit{
+ opacity:1!important;
+ fill:#fff7ff!important;
+ stroke:#ff9aef!important;
+ stroke-width:1.6!important;
+ filter:none!important;
+}
+/* Only the two SVG groups generate shadows; decorative trace stays faint. */
+.zebra-game-body .zg.er .er-gauge-rail .er-gauge-curve{
+ filter:none!important;
+ stroke:#62205c!important;
+ opacity:.15!important;
+ stroke-width:2!important;
+}
+@media(max-width:700px){
+ .zebra-game-body .zg.er .er-dashboard-readout,
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{
+  top:17.5%!important;
+  gap:3px 2px!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-readout{
+  left:9%!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{
+  right:8.5%!important;
+  left:auto!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-bar{
+  inset:25% 24.8% 14.5% 28.7%!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-name{
+  margin-left:1px!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-unit{
+  margin-bottom:2px!important;
+  font-size:7px!important;
+ }
+}
+@media(max-width:700px) and (max-height:700px){
+ .zebra-game-body .zg.er .er-dashboard-readout,
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{
+  top:15%!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-bar{
+  inset:26% 24.8% 12% 28.7%!important;
+ }
+}
