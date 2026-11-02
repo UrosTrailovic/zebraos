@@ -2925,3 +2925,111 @@
 }
 /* The bars themselves are now straight; do not reshape them in CSS.
    The same neon group glow and retro texture remain untouched. */
+
+
+/* ECHO MACHINE 14.4: symmetrical instrument centers + horizontal rails.
+   Important: center the REAL text and digit group, not merely their full-
+   width containers. This also prevents the misleading "centered" tests. */
+.zebra-game-body .zg.er .er-dashboard-speed .er-dashboard-readout,
+.zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{
+ box-sizing:border-box!important;
+ top:18%!important;
+ width:21%!important;
+ height:auto!important;
+ display:flex!important;
+ flex-direction:column!important;
+ justify-content:flex-start!important;
+ align-items:center!important;
+ text-align:center!important;
+ gap:5px!important;
+ transform:none!important;
+ padding:0!important;
+ margin:0!important;
+}
+.zebra-game-body .zg.er .er-dashboard-speed .er-dashboard-readout{
+ left:5%!important;
+ right:auto!important;
+}
+.zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{
+ left:auto!important;
+ right:5%!important;
+}
+.zebra-game-body .zg.er .er-dashboard-readout .er-dashboard-name,
+.zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout .er-dashboard-name{
+ display:block!important;
+ position:relative!important;
+ flex:0 0 auto!important;
+ align-self:center!important;
+ width:max-content!important;
+ max-width:100%!important;
+ height:auto!important;
+ padding:0!important;
+ margin:0!important;
+ font:italic 800 clamp(11px,1.55vw,16px)/1 "Oxanium","Arial Narrow",sans-serif!important;
+ letter-spacing:.35px!important;
+ text-align:center!important;
+ transform:skewX(-10deg)!important;
+ transform-origin:center!important;
+}
+.zebra-game-body .zg.er .er-dashboard-number-line{
+ position:relative!important;
+ display:flex!important;
+ flex:0 0 auto!important;
+ align-self:center!important;
+ flex-direction:row!important;
+ justify-content:center!important;
+ align-items:center!important;
+ width:max-content!important;
+ max-width:100%!important;
+ height:auto!important;
+ margin:0!important;
+ padding:0!important;
+ gap:4px!important;
+ transform:none!important;
+}
+.zebra-game-body .zg.er .er-dashboard-number-line .er-dashboard-digits{
+ flex:0 0 auto!important;
+ transform:skewX(-11deg)!important;
+ transform-origin:center!important;
+ margin:0!important;
+}
+.zebra-game-body .zg.er .er-dashboard-number-line .er-dashboard-unit{
+ flex:0 0 auto!important;
+ font-style:italic!important;
+ transform:skewX(-11deg)!important;
+ margin:0!important;
+}
+/* This is the real horizontal LED track surface; individual slanted
+   parallelograms and their single group-level glow stay unchanged. */
+.zebra-game-body .zg.er .er-dashboard-bar{
+ inset:24% 23.5% 15% 29.7%!important;
+}
+@media(max-width:700px){
+ .zebra-game-body .zg.er .er-dashboard-speed .er-dashboard-readout,
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{
+  width:22%!important;
+  top:17%!important;
+  gap:3px!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-speed .er-dashboard-readout{
+  left:4.5%!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{
+  right:4.5%!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-readout .er-dashboard-name,
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout .er-dashboard-name{
+  font-size:clamp(8px,2.25vw,11px)!important;
+  letter-spacing:0!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-number-line{
+  gap:2px!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-bar{
+  inset:26% 24.8% 14% 28.7%!important;
+ }
+}
+@media(max-width:700px) and (max-height:700px){
+ .zebra-game-body .zg.er .er-dashboard-speed .er-dashboard-readout,
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{top:15%!important}
+}
