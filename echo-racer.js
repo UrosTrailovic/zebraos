@@ -401,7 +401,7 @@ function mount(root){
  function instrument(label,cls,unit){
   const row=node("div","er-dashboard-row "+cls);
   const readout=node("div","er-dashboard-readout");
-  const labelEl=node("span","er-dashboard-name");setDigital(labelEl,label);
+  const labelEl=node("span","er-dashboard-name",label);
   const value=digital("er-dashboard-digits");
   const unitEl=node("span","er-dashboard-unit",unit);
   readout.append(labelEl,value,unitEl);
