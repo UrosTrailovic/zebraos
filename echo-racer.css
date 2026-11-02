@@ -2687,3 +2687,104 @@
   letter-spacing:.45px!important;
  }
 }
+
+
+/* Echo Machine 14.2 — instrument alignment (desktop + touch).
+   Align legends inside the physical glass, and center italic units on
+   the live digits. Only the SVG point curve changes the LED positions. */
+.zebra-game-body .zg.er .er-dashboard-readout,
+.zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{
+ top:20%!important;
+ display:grid!important;
+ grid-template-columns:max-content max-content!important;
+ grid-template-rows:max-content max-content!important;
+ align-items:center!important;
+ column-gap:4px!important;
+ row-gap:5px!important;
+ width:max-content!important;
+ min-width:0!important;
+ padding:0!important;
+ transform:none!important;
+}
+.zebra-game-body .zg.er .er-dashboard-speed .er-dashboard-readout{
+ left:10%!important;
+ right:auto!important;
+ justify-items:start!important;
+}
+.zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{
+ right:9.7%!important;
+ left:auto!important;
+ justify-items:end!important;
+}
+.zebra-game-body .zg.er .er-dashboard-name,
+.zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-name{
+ grid-row:1!important;
+ grid-column:1 / -1!important;
+ justify-self:start!important;
+ margin:0!important;
+ padding:0!important;
+ line-height:1.05!important;
+ font-style:italic!important;
+ transform:skewX(-7deg)!important;
+}
+.zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-name{
+ justify-self:end!important;
+}
+.zebra-game-body .zg.er .er-dashboard-digits{
+ grid-row:2!important;
+ grid-column:1!important;
+ align-self:center!important;
+ margin:0!important;
+}
+.zebra-game-body .zg.er .er-dashboard-unit{
+ grid-row:2!important;
+ grid-column:2!important;
+ align-self:center!important;
+ justify-self:start!important;
+ margin:0 0 0 2px!important;
+ line-height:1!important;
+ font-style:italic!important;
+ transform:skewX(-7deg)!important;
+}
+.zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-unit{
+ justify-self:end!important;
+}
+/* Keep rails safely below the label row and away from digit clusters. */
+.zebra-game-body .zg.er .er-dashboard-bar{
+ inset:24% 23.5% 15% 29.7%!important;
+}
+@media(min-width:701px){
+ .zebra-game-body .zg.er .er-dashboard-readout,
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{
+  top:18.5%!important;
+  row-gap:5px!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-name,
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-name{
+  font-size:clamp(11px,1.45vw,15px)!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-unit{
+  font-size:clamp(9px,1.12vw,12px)!important;
+ }
+}
+@media(max-width:700px){
+ .zebra-game-body .zg.er .er-dashboard-readout,
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{
+  top:19%!important;
+  column-gap:2px!important;
+  row-gap:3px!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-speed .er-dashboard-readout{
+  left:9%!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-boost .er-dashboard-readout{
+  right:8.5%!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-unit{
+  margin:0 0 0 1px!important;
+  font-size:7px!important;
+ }
+ .zebra-game-body .zg.er .er-dashboard-bar{
+  inset:26% 24.8% 14% 28.7%!important;
+ }
+}
