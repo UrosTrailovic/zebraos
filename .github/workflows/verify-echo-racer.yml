@@ -435,3 +435,47 @@ jobs:
           print("ECHO_GAUGE_PHONE_BASE64="+base64.b64encode(data).decode(),flush=True)
           print("ECHO_GAUGE_PHONE_BYTES="+str(len(data)),flush=True)
           PY
+
+          # REAL full game captures — not just a tiny isolated gauge mock.
+          # Desktop and mobile screenshots are inspected before deployment.
+          cat > _verify_echo_full_visual.html <<'HTML'
+          <!doctype html><html lang="fr"><head><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <link rel="stylesheet" href="/style.css">
+          <link rel="stylesheet" href="/echo-racer.css">
+          <style>
+            html,body{margin:0;background:#120a1c;overflow:hidden}
+            .window{width:740px;height:785px;position:relative}
+            .window-body{width:100%;height:100%;padding:0}
+          </style></head>
+          <body><div class="window"><div id="game" class="window-body zebra-game-body"></div></div>
+          <script src="/echo-racer.js"></script>
+          <script>
+            addEventListener("load",()=>{
+              const root=document.getElementById("game");
+              window.ZebraEchoRacer.mount(root);
+              const debug=root._echoDebug;
+              const dash=root.querySelector(".er-dashboard");
+              const speed=root.querySelector(".er-dashboard-speed .er-dashboard-digits");
+              const boost=root.querySelector(".er-dashboard-boost .er-dashboard-digits");
+              const rail=root.querySelector(".er-dashboard-speed .er-dashboard-bar");
+              const rect=n=>{const r=n.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height};};
+              document.body.dataset.layout=JSON.stringify({
+                mode:debug.lcdEditor().mode,settings:debug.lcdEditor().layout,
+                dashboard:rect(dash),rail:rect(rail),speed:rect(speed),boost:rect(boost)
+              });
+            });
+          </script></body></html>
+          HTML
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --hide-scrollbars --window-size=1000,1000 --virtual-time-budget=2500 --screenshot=/tmp/echo-final-desktop.png http://127.0.0.1:8765/_verify_echo_full_visual.html >/tmp/echo-final-desktop-cli.log 2>&1
+          sed -e 's/740px/390px/g' -e 's/785px/900px/g' _verify_echo_full_visual.html >_verify_echo_full_mobile.html
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --hide-scrollbars --window-size=600,1020 --virtual-time-budget=2500 --screenshot=/tmp/echo-final-mobile.png http://127.0.0.1:8765/_verify_echo_full_mobile.html >/tmp/echo-final-mobile-cli.log 2>&1
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=600,1020 --virtual-time-budget=2500 --dump-dom http://127.0.0.1:8765/_verify_echo_full_mobile.html > /tmp/echo-final-mobile-dom.html 2>/dev/null
+          grep -o 'data-layout="[^"]*"' /tmp/echo-final-mobile-dom.html | head -1 || true
+          python3 - <<'PY'
+          import base64
+          for label,path in [("ECHO_FULL_DESKTOP","/tmp/echo-final-desktop.png"),("ECHO_FULL_MOBILE","/tmp/echo-final-mobile.png")]:
+            with open(path,"rb") as f: data=f.read()
+            print(label+"_BASE64="+base64.b64encode(data).decode(),flush=True)
+            print(label+"_BYTES="+str(len(data)),flush=True)
+          PY
