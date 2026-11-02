@@ -110,7 +110,7 @@ function mount(root){
   nextGateAt=START_GATE_AT,nextPadAt=PAD_START,nextShieldAt=SHIELD_START,
   lastGateAt=-100,trail=[],sparks=[],currentSpeed=0,gateCount=0,padCount=0,shieldCount=0,scoreMultiplier=1;
  let invuln=0,pulseCharge=2,pulseGlow=0,padBoostTime=0,pulseFx=0,pulseHitFx=0,shieldFlash=0;
- let nitroHeld=false,nitroActive=false,nitroFuel=1,nitroRegenWait=0,nitroBurnTime=0;
+ let nitroHeld=false,nitroActive=false,nitroFuel=0,nitroRegenWait=0,nitroBurnTime=0,freeChargeVisual=0;
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
  let menuStage="home",menuIndex=Math.max(0,LEVELS.indexOf(selectedLevel)),pauseIndex=0,overIndex=0,warningLife=0,warningBeepDelay=0,warningChirp=0;
  const DEATH_FADE_SECONDS=1.15,DEATH_ANIMATION_SECONDS=1.15;
@@ -406,9 +406,9 @@ function mount(root){
   const unitEl=node("span","er-dashboard-unit",unit);
   readout.append(labelEl,value,unitEl);
 
-  // LED arcs are individual SVG polygons, not an image or thin CSS ticks.
-  // Both rails follow the same rapidly rising curve, like a real tachometer.
-  // Speed = upper rail; boost = lower rail. An unlit rail stays faintly visible.
+  // Identical upright LEDs, varied only by their cut at the curved edge.
+  // BOOST is the upper, usually ghosted rail; SPEED is the lower live rail.
+  // Lighting is drawn by one SVG group filter, not 3 shadow filters per LED.
   const bar=node("div","er-dashboard-bar");
   bar.setAttribute("aria-hidden","true");
   const ns="http://www.w3.org/2000/svg";
@@ -418,11 +418,9 @@ function mount(root){
   rail.setAttribute("preserveAspectRatio","none");
   rail.setAttribute("aria-hidden","true");
   const isBoost=cls==="er-dashboard-boost";
-  const baseY=isBoost?141:112;
+  const baseY=isBoost?109:151;
   function point(t){
-   const smooth=t*t*(3-2*t);
-   return {x:25+543*(.12*t+.88*smooth),
-    y:baseY-100*(1-Math.pow(1-t,5))};
+   return {x:22+552*t,y:baseY-87*(1-Math.exp(-12*t))};
   }
   const trace=document.createElementNS(ns,"path");
   trace.classList.add("er-gauge-curve");
@@ -433,37 +431,35 @@ function mount(root){
   }
   trace.setAttribute("d",d.trim());
   rail.appendChild(trace);
-  const samples=[],steps=600;
-  let arc=0,prev=point(0);
-  samples.push({t:0,arc:0});
-  for(let k=1;k<=steps;k++){
-   const t=k/steps,p=point(t);
-   arc+=Math.hypot(p.x-prev.x,p.y-prev.y);
-   samples.push({t,arc});prev=p;
-  }
-  const segments=[],COUNT=30;
+  const ghost=document.createElementNS(ns,"g");
+  ghost.classList.add("er-gauge-leds-ghost");
+  const luminous=document.createElementNS(ns,"g");
+  luminous.classList.add("er-gauge-leds-lit");
+  const segments=[],COUNT=25;
   for(let i=0;i<COUNT;i++){
-   const goal=arc*(i+.5)/COUNT;
-   let lo=0,hi=steps;
-   while(lo<hi){const mid=(lo+hi)>>1;if(samples[mid].arc<goal)lo=mid+1;else hi=mid;}
-   const t=samples[lo].t,p=point(t);
-   const p0=point(Math.max(0,t-.003)),p1=point(Math.min(1,t+.003));
-   const dx=p1.x-p0.x,dy=p1.y-p0.y,len=Math.hypot(dx,dy)||1;
-   const ux=dx/len,uy=dy/len,nx=-uy,ny=ux;
-   const halfW=9.55,halfH=isBoost?12.2:11.2;
+   const t=(i+.5)/COUNT,p=point(t);
+   const halfW=9.0,halfH=12.4;
+   // All cuts share the same shear (no rotation): the curve only
+   // changes each segment's height/position, like the reference gauge.
    const corners=[
-    [p.x-ux*halfW-nx*halfH,p.y-uy*halfW-ny*halfH],
-    [p.x+ux*halfW-nx*halfH,p.y+uy*halfW-ny*halfH],
-    [p.x+ux*halfW+nx*halfH,p.y+uy*halfW+ny*halfH],
-    [p.x-ux*halfW+nx*halfH,p.y-uy*halfW+ny*halfH]
+    [p.x-halfW+3.0,p.y-halfH],
+    [p.x+halfW+3.0,p.y-halfH],
+    [p.x+halfW-3.0,p.y+halfH],
+    [p.x-halfW-3.0,p.y+halfH]
    ];
+   const path=corners.map((v,j)=>(j?"L":"M")+v[0].toFixed(2)+" "+v[1].toFixed(2)).join(" ")+" Z";
+   const dim=document.createElementNS(ns,"path");
+   dim.classList.add("er-gauge-ghost");
+   dim.setAttribute("d",path);
+   ghost.appendChild(dim);
    const led=document.createElementNS(ns,"path");
    led.classList.add("er-dashboard-led");
-   led.setAttribute("d",corners.map((v,j)=>(j?"L":"M")+v[0].toFixed(2)+" "+v[1].toFixed(2)).join(" ")+" Z");
+   led.setAttribute("d",path);
    led.style.setProperty("--gauge-x",(p.x/6).toFixed(2)+"%");
    led.style.setProperty("--gauge-y",(p.y/1.6).toFixed(2)+"%");
-   rail.appendChild(led);segments.push(led);
+   luminous.appendChild(led);segments.push(led);
   }
+  rail.append(ghost,luminous);
   bar.appendChild(rail);
   const statusEl=node("span","er-dashboard-status","");
   row.append(readout,bar,statusEl);dashboard.appendChild(row);
@@ -962,9 +958,11 @@ function mount(root){
   lightSegments(speedGauge.segments,clamp(speed/310,0,1));
   const free=selectedLevel.id==="free";
   const active=mode==="running"&&(nitroActive||padBoostTime>0);
-  const charge=free?1:nitroFuel;
-  setDigital(boostGauge.value,free?"∞":String(Math.round(charge*100)).padStart(3,"0"));
-  boostGauge.statusEl.textContent=padBoostTime>0?"TURBO":nitroActive?"NITRO":free?"ILLIMITÉ":
+  // Show zero on the start screen; fill naturally after a race begins.
+  const charge=mode==="menu"?0:free?freeChargeVisual:nitroFuel;
+  setDigital(boostGauge.value,free&&mode!=="menu"&&charge>=.999?"∞":
+   String(Math.round(charge*100)).padStart(3,"0"));
+  boostGauge.statusEl.textContent=mode==="menu"?"PRÊT":padBoostTime>0?"TURBO":nitroActive?"NITRO":free?(charge>=.999?"ILLIMITÉ":"CHARGE"):
    charge>=.999?"PRÊT":nitroRegenWait>0?"PAUSE":"RECHARGE";
   boostGauge.row.classList.toggle("er-dashboard-active",active);
   dashboard.classList.toggle("er-boost-active",active);
@@ -1005,7 +1003,7 @@ function mount(root){
   trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
   invuln=0;pulseCharge=2;pulseGlow=pulseFx=pulseHitFx=shieldFlash=padBoostTime=flash=shake=0;
   shieldCollect.classList.remove("er-shield-collected");
-  nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;nitroBurnTime=0;
+  nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
   shipBoostFade=0;turboLight=0;warningLife=0;warningBeepDelay=0;warningChirp=0;
   screen.classList.remove("er-death","er-crashing");
   overlay.classList.remove("er-stage-over","er-stage-pause");pauseActions.hidden=true;
@@ -1024,7 +1022,7 @@ function mount(root){
   if(mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
   resetSteering();stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];trail=[];turnVelocity=0;
   shieldCollect.classList.remove("er-shield-collected");pulseFx=pulseHitFx=shieldFlash=0;
-  elapsed=0;padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=1;nitroRegenWait=0;nitroBurnTime=0;
+  elapsed=0;padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
   overlay.hidden=false;renderMenuStage("home");
   renderHud();
@@ -1142,6 +1140,7 @@ function mount(root){
  }
  function updateNitro(dt){
   if(mode!=="running")return;
+  if(selectedLevel.id==="free")freeChargeVisual=clamp(freeChargeVisual+dt/NITRO_REFILL_SECONDS,0,1);
   if(nitroActive)nitroBurnTime+=dt;
   if(nitroActive&&selectedLevel.id!=="free"){
    nitroFuel=clamp(nitroFuel-dt/NITRO_BURN_SECONDS,0,1);
@@ -1897,7 +1896,7 @@ function mount(root){
   },
   ship:()=>({idleLoaded:shipReady.idle,boostLoaded:shipReady.boost,boostMix:shipBoostFade,tunnelLight:turboLight}),
   level:()=>({id:selectedLevel.id,free:selectedLevel.id==="free",gap:selectedLevel.gap}),
-  gauges:()=>({speed:Math.round(currentSpeed*25),charge:selectedLevel.id==="free"?1:nitroFuel,boosting:nitroActive||padBoostTime>0,
+  gauges:()=>({speed:Math.round(currentSpeed*25),charge:mode==="menu"?0:selectedLevel.id==="free"?freeChargeVisual:nitroFuel,boosting:nitroActive||padBoostTime>0,
    held:nitroHeld,manualBoost:nitroActive,burnTime:nitroBurnTime,regenWait:nitroRegenWait}),
   engineAudio:()=>({flyLoaded:!!flySound,boostLoaded:!!boostSound,
    flyPlaying:!!flySound&&!flySound.paused,boostPlaying:!!boostSound&&!boostSound.paused,
