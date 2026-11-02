@@ -63,9 +63,24 @@ jobs:
              const speedBlades=[...root.querySelectorAll(".er-dashboard-speed .er-dashboard-led")];
              const boostBlades=[...root.querySelectorAll(".er-dashboard-boost .er-dashboard-led")];
              const segmentedTitles=hudTitles.length===4&&hudTitles.every(el=>el.querySelectorAll(".er-digit").length>0);
-             const parallelArcs=speedBlades.length===25&&boostBlades.length===25
+             const parallelArcs=speedBlades.length===30&&boostBlades.length===30
                &&speedBlades.every((blade,i)=>Math.abs(parseFloat(blade.style.getPropertyValue("--gauge-x"))-parseFloat(boostBlades[i].style.getPropertyValue("--gauge-x")))<.01
                  &&Math.abs((parseFloat(blade.style.getPropertyValue("--gauge-y"))-parseFloat(boostBlades[i].style.getPropertyValue("--gauge-y")))-26.25)<.12);
+             const yAt=i=>parseFloat(speedBlades[i].style.getPropertyValue("--gauge-y"))*1.6;
+             const firstRise=Array.from({length:5},(_,i)=>yAt(i)-yAt(i+1));
+             const smoothEntrance=firstRise.length===5
+               &&firstRise.every(x=>x>5&&x<16)
+               &&firstRise.every((x,i)=>i===0||x<=firstRise[i-1]+1.5);
+             const gaugeTitleAndUnits=[...root.querySelectorAll(".er-dashboard-row")].every(row=>{
+               const title=row.querySelector(".er-dashboard-name").getBoundingClientRect();
+               const digits=row.querySelector(".er-dashboard-digits").getBoundingClientRect();
+               const units=row.querySelector(".er-dashboard-unit").getBoundingClientRect();
+               const glass=root.querySelector(".er-dashboard").getBoundingClientRect();
+               return title.top>glass.top+glass.height*.11
+                 &&title.bottom<=digits.top+2
+                 &&Math.abs((digits.top+digits.bottom)/2-(units.top+units.bottom)/2)<14
+                 &&units.left>=digits.right-4;
+             });
              const ledUpright=speedBlades.every(el=>{
                 const n=(el.getAttribute("d").match(/-?\d+(?:\.\d+)?/g)||[]).map(Number);
                 return n.length===8&&Math.abs(n[2]-n[0]-18)<.1
@@ -179,7 +194,7 @@ jobs:
               fullHeightTouch,cleanButtonPlate,uprightStagger,controlsWithoutTetris,buttonsInOrder,
               steeringRight,steeringCentered,mobileOrder,scoreAndGaugeMatch,
               positions:[screenBox.top,hudBox.top,gaugeBox.top,padBox.top].map(Math.round),
-              segmentedTitles,parallelArcs,ledUpright,italicReadouts,menuBoostEmpty,startBoostEmpty,boostRecharging,hudFits,gaugeFits,frameLoaded,neonReal,barsCentered,leds:boostBlades.length,
+              segmentedTitles,parallelArcs,smoothEntrance,gaugeTitleAndUnits,firstRise,ledUpright,italicReadouts,menuBoostEmpty,startBoostEmpty,boostRecharging,hudFits,gaugeFits,frameLoaded,neonReal,barsCentered,leds:boostBlades.length,
               canvas:{width:w,height:h,nonblack,unique:new Set(pixels).size},
               screen:root.querySelector(".er-screen").getBoundingClientRect().height,
               hud:root.querySelector(".er-hud").getBoundingClientRect().height,
@@ -187,7 +202,7 @@ jobs:
              console.log("ECHO_MOBILE_REPORT",JSON.stringify(report));
              document.body.dataset.report=JSON.stringify(report);
              document.body.dataset.result=errors.length===0&&w>200&&h>200&&snap.mode==="running"
-              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger&&fullHeightTouch&&noShieldsAtFull&&shieldEligible&&shieldRecovered&&boosted&&longPulse&&frameLoaded&&neonReal&&barsCentered&&ledUpright&&italicReadouts&&menuBoostEmpty&&startBoostEmpty&&boostRecharging?"ok":"failed";
+              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger&&fullHeightTouch&&noShieldsAtFull&&shieldEligible&&shieldRecovered&&boosted&&longPulse&&frameLoaded&&neonReal&&barsCentered&&ledUpright&&italicReadouts&&smoothEntrance&&gaugeTitleAndUnits&&menuBoostEmpty&&startBoostEmpty&&boostRecharging?"ok":"failed";
             },1200);
            }catch(e){errors.push("MOUNT:"+e.stack);document.body.dataset.report=JSON.stringify({errors});document.body.dataset.result="failed";}
           });
