@@ -399,56 +399,75 @@ function mount(root){
  dashHeader.append(node("span","","ECHO / TELEMETRY"),node("span","","HYPERDRIVE · 02"));
  dashboard.appendChild(dashHeader);
  function instrument(label,cls,unit){
-  const row=node("div","er-dashboard-row "+cls),
-   readout=node("div","er-dashboard-readout");
+  const row=node("div","er-dashboard-row "+cls);
+  const readout=node("div","er-dashboard-readout");
   const labelEl=node("span","er-dashboard-name");setDigital(labelEl,label);
   const value=digital("er-dashboard-digits");
   const unitEl=node("span","er-dashboard-unit",unit);
   readout.append(labelEl,value,unitEl);
-  const bar=node("div","er-dashboard-bar");bar.setAttribute("aria-hidden","true");
-  const segments=[];
-  const isBoost=cls==="er-dashboard-boost";
-  // The two gauges use exactly the same near-vertical-to-horizontal curve.
-  // Boost is translated downward, with consistent perpendicular tick blades.
-  function pointAt(t){
-   const mt=1-t;
-   const x=mt*mt*mt*4+3*mt*mt*t*4+3*mt*t*t*54+t*t*t*96;
-   const y=mt*mt*mt*70+3*mt*mt*t*16+3*mt*t*t*9+t*t*t*8+(isBoost?22:0);
-   return {x,y};
-  }
+
+  // LED arcs are individual SVG polygons, not an image or thin CSS ticks.
+  // Both rails follow the same rapidly rising curve, like a real tachometer.
+  // Speed = upper rail; boost = lower rail. An unlit rail stays faintly visible.
+  const bar=node("div","er-dashboard-bar");
+  bar.setAttribute("aria-hidden","true");
   const ns="http://www.w3.org/2000/svg";
   const rail=document.createElementNS(ns,"svg");
   rail.classList.add("er-gauge-rail");
-  rail.setAttribute("viewBox","0 0 100 100");
+  rail.setAttribute("viewBox","0 0 600 160");
   rail.setAttribute("preserveAspectRatio","none");
   rail.setAttribute("aria-hidden","true");
+  const isBoost=cls==="er-dashboard-boost";
+  const baseY=isBoost?141:118;
+  function point(t){
+   const smooth=t*t*(3-2*t);
+   return {x:25+543*(.12*t+.88*smooth),
+    y:baseY-100*(1-Math.pow(1-t,5))};
+  }
   const trace=document.createElementNS(ns,"path");
-  trace.setAttribute("d",isBoost?"M 4 92 C 4 38 54 31 96 30":"M 4 70 C 4 16 54 9 96 8");
-  rail.appendChild(trace);bar.appendChild(rail);
-  const samples=[],total=175;
-  let arc=0,prev=pointAt(0);
-  samples.push({p:prev,length:0});
-  for(let j=1;j<=total;j++){
-   const p=pointAt(j/total);
-   arc+=Math.hypot((p.x-prev.x)*3.2,(p.y-prev.y)*.96);
-   samples.push({p,length:arc});prev=p;
+  trace.classList.add("er-gauge-curve");
+  let d="";
+  for(let k=0;k<=90;k++){
+   const p=point(k/90);
+   d+=(k?"L":"M")+p.x.toFixed(2)+" "+p.y.toFixed(2)+" ";
   }
-  for(let i=0;i<21;i++){
-   const target=arc*i/20;
-   let n=1;while(n<samples.length-1&&samples[n].length<target)n++;
-   const p=samples[n].p;
-   const p0=pointAt(Math.max(0,(n-1)/total));
-   const p1=pointAt(Math.min(1,(n+1)/total));
-   const degrees=Math.atan2((p1.y-p0.y)*.96,(p1.x-p0.x)*3.2)*180/Math.PI+90;
-   const led=node("span","er-dashboard-led");
-   led.style.setProperty("--gauge-x",p.x.toFixed(2)+"%");
-   led.style.setProperty("--gauge-y",p.y.toFixed(2)+"%");
-   led.style.setProperty("--gauge-angle",degrees.toFixed(1)+"deg");
-   bar.appendChild(led);segments.push(led);
+  trace.setAttribute("d",d.trim());
+  rail.appendChild(trace);
+  const samples=[],steps=600;
+  let arc=0,prev=point(0);
+  samples.push({t:0,arc:0});
+  for(let k=1;k<=steps;k++){
+   const t=k/steps,p=point(t);
+   arc+=Math.hypot(p.x-prev.x,p.y-prev.y);
+   samples.push({t,arc});prev=p;
   }
+  const segments=[],COUNT=30;
+  for(let i=0;i<COUNT;i++){
+   const goal=arc*(i+.5)/COUNT;
+   let lo=0,hi=steps;
+   while(lo<hi){const mid=(lo+hi)>>1;if(samples[mid].arc<goal)lo=mid+1;else hi=mid;}
+   const t=samples[lo].t,p=point(t);
+   const p0=point(Math.max(0,t-.003)),p1=point(Math.min(1,t+.003));
+   const dx=p1.x-p0.x,dy=p1.y-p0.y,len=Math.hypot(dx,dy)||1;
+   const ux=dx/len,uy=dy/len,nx=-uy,ny=ux;
+   const halfW=9.55,halfH=isBoost?12.2:11.2;
+   const corners=[
+    [p.x-ux*halfW-nx*halfH,p.y-uy*halfW-ny*halfH],
+    [p.x+ux*halfW-nx*halfH,p.y+uy*halfW-ny*halfH],
+    [p.x+ux*halfW+nx*halfH,p.y+uy*halfW+ny*halfH],
+    [p.x-ux*halfW+nx*halfH,p.y-uy*halfW+ny*halfH]
+   ];
+   const led=document.createElementNS(ns,"path");
+   led.classList.add("er-dashboard-led");
+   led.setAttribute("d",corners.map((v,j)=>(j?"L":"M")+v[0].toFixed(2)+" "+v[1].toFixed(2)).join(" ")+" Z");
+   led.style.setProperty("--gauge-x",(p.x/6).toFixed(2)+"%");
+   led.style.setProperty("--gauge-y",(p.y/1.6).toFixed(2)+"%");
+   rail.appendChild(led);segments.push(led);
+  }
+  bar.appendChild(rail);
   const statusEl=node("span","er-dashboard-status","");
   row.append(readout,bar,statusEl);dashboard.appendChild(row);
-  return{row,value,segments,statusEl};
+  return {row,value,segments,statusEl};
  }
  const speedGauge=instrument("VITESSE","er-dashboard-speed","KM/H");
  const boostGauge=instrument("BOOST","er-dashboard-boost","%");
