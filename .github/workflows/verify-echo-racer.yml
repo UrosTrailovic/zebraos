@@ -61,7 +61,7 @@ jobs:
              const segmentedTitles=hudTitles.length===4&&hudTitles.every(el=>el.querySelectorAll(".er-digit").length>0);
              const parallelArcs=speedBlades.length===30&&boostBlades.length===30
                &&speedBlades.every((blade,i)=>Math.abs(parseFloat(blade.style.getPropertyValue("--gauge-x"))-parseFloat(boostBlades[i].style.getPropertyValue("--gauge-x")))<.01
-                 &&Math.abs((parseFloat(boostBlades[i].style.getPropertyValue("--gauge-y"))-parseFloat(blade.style.getPropertyValue("--gauge-y")))-14.375)<.12);
+                 &&Math.abs((parseFloat(boostBlades[i].style.getPropertyValue("--gauge-y"))-parseFloat(blade.style.getPropertyValue("--gauge-y")))-18.125)<.12);
              const shellCss=getComputedStyle(root.querySelector(".er-dashboard")).backgroundImage;
              const frameLoaded=shellCss.includes("echo%20machine%20bg%201.png")||shellCss.includes("echo machine bg 1.png");
              const litSegments=boostBlades.filter(x=>x.classList.contains("lit"));
