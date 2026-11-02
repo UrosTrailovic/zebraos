@@ -419,8 +419,12 @@ function mount(root){
   rail.setAttribute("aria-hidden","true");
   const isBoost=cls==="er-dashboard-boost";
   const baseY=isBoost?97:139;
+  // Smooth climb: the old exp(-12*t) jumped ~23 SVG pixels between
+  // the first two LEDs. A gentler normalized exponential spreads that
+  // same rise across the first six chips without flattening the final arc.
   function point(t){
-   return {x:22+552*t,y:baseY-87*(1-Math.exp(-12*t))};
+   const eased=(1-Math.exp(-4.6*t))/(1-Math.exp(-4.6));
+   return {x:22+552*t,y:baseY-87*eased};
   }
   const trace=document.createElementNS(ns,"path");
   trace.classList.add("er-gauge-curve");
@@ -435,10 +439,10 @@ function mount(root){
   ghost.classList.add("er-gauge-leds-ghost");
   const luminous=document.createElementNS(ns,"g");
   luminous.classList.add("er-gauge-leds-lit");
-  const segments=[],COUNT=25;
+  const segments=[],COUNT=30;
   for(let i=0;i<COUNT;i++){
    const t=(i+.5)/COUNT,p=point(t);
-   const halfW=9.0,halfH=12.4;
+   const halfW=7.95,halfH=12.4;
    // All cuts share the same shear (no rotation): the curve only
    // changes each segment's height/position, like the reference gauge.
    const corners=[
