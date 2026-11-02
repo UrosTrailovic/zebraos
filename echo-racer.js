@@ -434,14 +434,31 @@ function mount(root){
   }
   trace.setAttribute("d",d.trim());
   rail.appendChild(trace);
+  if(isBoost){
+   // A SINGLE thin continuous LCD strip, not an array of rectangles.
+   const track=document.createElementNS(ns,"rect");
+   track.classList.add("er-boost-track");
+   track.setAttribute("x","22");track.setAttribute("y",String(baseY-3));
+   track.setAttribute("width","552");track.setAttribute("height","6");
+   track.setAttribute("rx","2.8");
+   const lit=document.createElementNS(ns,"rect");
+   lit.classList.add("er-boost-fill");
+   lit.setAttribute("x","22");lit.setAttribute("y",String(baseY-3));
+   lit.setAttribute("width","0");lit.setAttribute("height","6");
+   lit.setAttribute("rx","2.8");
+   rail.append(track,lit);bar.appendChild(rail);
+   const statusEl=node("span","er-dashboard-status","");
+   row.append(readout,bar,statusEl);dashboard.appendChild(row);
+   return {row,value,segments:[],fill:lit,track,statusEl};
+  }
   const ghost=document.createElementNS(ns,"g");
   ghost.classList.add("er-gauge-leds-ghost");
   const luminous=document.createElementNS(ns,"g");
   luminous.classList.add("er-gauge-leds-lit");
-  const segments=[],COUNT=30;
+  const segments=[],COUNT=26;
   for(let i=0;i<COUNT;i++){
    const t=(i+.5)/COUNT,p=point(t);
-   const halfW=7.95,halfH=12.4;
+   const halfW=7.0,halfH=12.4;
    // All cuts share the same shear (no rotation): the curve only
    // changes each segment's height/position, like the reference gauge.
    const corners=[
@@ -969,7 +986,7 @@ function mount(root){
    charge>=.999?"PRÊT":nitroRegenWait>0?"PAUSE":"RECHARGE";
   boostGauge.row.classList.toggle("er-dashboard-active",active);
   dashboard.classList.toggle("er-boost-active",active);
-  lightSegments(boostGauge.segments,charge);
+  boostGauge.fill.setAttribute("width",String(Math.round(clamp(charge,0,1)*552*10)/10));
   eventText.textContent=mode==="running"&&messageLife>0?message:"";
   eventText.classList.toggle("visible",mode==="running"&&messageLife>0);
   warningLayer.hidden=!(mode==="running"&&warningLife>0);
