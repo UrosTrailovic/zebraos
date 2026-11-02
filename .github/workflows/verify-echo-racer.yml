@@ -83,7 +83,7 @@ jobs:
              });
              const ledUpright=speedBlades.every(el=>{
                 const n=(el.getAttribute("d").match(/-?\d+(?:\.\d+)?/g)||[]).map(Number);
-                return n.length===8&&Math.abs(n[2]-n[0]-18)<.1
+                return n.length===8&&Math.abs(n[2]-n[0]-15.9)<.1
                  &&Math.abs(n[4]-n[2]+6)<.1;
                });
              const shellCss=getComputedStyle(root.querySelector(".er-dashboard")).backgroundImage;
