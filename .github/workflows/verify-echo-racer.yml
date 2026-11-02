@@ -72,7 +72,7 @@ jobs:
                &&root.querySelectorAll(".er-dashboard-boost .er-gauge-ghost").length===0;
              const spacedInactiveSpeed=speedBlades.length===26&&speedGhost.length===26
                &&(() => {
-                const paths=speedGhost.map(el=>(el.getAttribute("d").match(/-?\\d+(?:\\.\\d+)?/g)||[]).map(Number));
+                const paths=speedGhost.map(el=>(el.getAttribute("d").match(/-?\d+(?:\.\d+)?/g)||[]).map(Number));
                 return paths.every((p,i)=>p.length===8&&
                  (i===0||p[0]-paths[i-1][2]>4));
                })();
