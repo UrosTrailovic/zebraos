@@ -63,9 +63,20 @@ jobs:
              const speedBlades=[...root.querySelectorAll(".er-dashboard-speed .er-dashboard-led")];
              const boostBlades=[...root.querySelectorAll(".er-dashboard-boost .er-dashboard-led")];
              const segmentedTitles=hudTitles.length===4&&hudTitles.every(el=>el.querySelectorAll(".er-digit").length>0);
-             const parallelArcs=speedBlades.length===30&&boostBlades.length===30
-               &&speedBlades.every((blade,i)=>Math.abs(parseFloat(blade.style.getPropertyValue("--gauge-x"))-parseFloat(boostBlades[i].style.getPropertyValue("--gauge-x")))<.01
-                 &&Math.abs((parseFloat(blade.style.getPropertyValue("--gauge-y"))-parseFloat(boostBlades[i].style.getPropertyValue("--gauge-y")))-32.5)<.12);
+             const boostTrack=root.querySelector(".er-dashboard-boost .er-boost-track");
+             const boostFill=root.querySelector(".er-dashboard-boost .er-boost-fill");
+             const speedGhost=[...root.querySelectorAll(".er-dashboard-speed .er-gauge-ghost")];
+             const boostIsContinuous=boostBlades.length===0&&!!boostTrack&&!!boostFill
+               &&boostTrack.getAttribute("width")==="552"
+               &&Number(boostFill.getAttribute("width"))>0
+               &&root.querySelectorAll(".er-dashboard-boost .er-gauge-ghost").length===0;
+             const spacedInactiveSpeed=speedBlades.length===26&&speedGhost.length===26
+               &&(() => {
+                const paths=speedGhost.map(el=>(el.getAttribute("d").match(/-?\\d+(?:\\.\\d+)?/g)||[]).map(Number));
+                return paths.every((p,i)=>p.length===8&&
+                 (i===0||p[0]-paths[i-1][2]>4));
+               })();
+             const parallelArcs=boostIsContinuous&&spacedInactiveSpeed;
              const yAt=i=>parseFloat(speedBlades[i].style.getPropertyValue("--gauge-y"))*1.6;
              const firstRise=Array.from({length:8},(_,i)=>yAt(i)-yAt(i+1));
              const straightRails=firstRise.length===8&&firstRise.every(x=>Math.abs(x)<.015);
@@ -105,17 +116,17 @@ jobs:
                &&v.unitVerticalError<15&&v.titleInside&&v.titleItalic&&v.unitItalic&&v.digitsItalic);
              const ledUpright=speedBlades.every(el=>{
                 const n=(el.getAttribute("d").match(/-?\d+(?:\.\d+)?/g)||[]).map(Number);
-                return n.length===8&&Math.abs(n[2]-n[0]-15.9)<.1
+                return n.length===8&&Math.abs(n[2]-n[0]-14)<.1
                  &&Math.abs(n[4]-n[2]+6)<.1;
                });
              const shellCss=getComputedStyle(root.querySelector(".er-dashboard")).backgroundImage;
              const frameLoaded=shellCss.includes("echo%20machine%20bg%201.png")||shellCss.includes("echo machine bg 1.png");
-             const dimLayer=root.querySelector(".er-dashboard-boost .er-gauge-leds-ghost");
+             const dimLayer=root.querySelector(".er-dashboard-speed .er-gauge-leds-ghost");
              const glowingLayer=root.querySelector(".er-dashboard-speed .er-gauge-leds-lit");
              const neonReal=!!dimLayer&&!!glowingLayer
                &&getComputedStyle(glowingLayer).filter!=="none"
                &&speedBlades.every(el=>getComputedStyle(el).filter==="none")
-               &&getComputedStyle(dimLayer.querySelector("path")).fill==="rgb(155, 54, 142)";
+               &&getComputedStyle(dimLayer.querySelector("path")).fill==="rgb(114, 43, 114)";
              const italicReadouts=[...root.querySelectorAll(".er-dashboard-readout .er-dashboard-name")].every(el=>
                getComputedStyle(el).transform!=="none");
              const barsCentered=root.querySelector(".er-dashboard-bar").getBoundingClientRect().width
@@ -211,7 +222,26 @@ jobs:
              const pulsed=debug.snapshot();
              const longPulse=wall.cleared&&pulsed.pulseCharge===beforePulse-1
                &&pulsed.pulseFx>0&&pulsed.pulseHitFx>0;
+             // Test the actual temporary CONFIG button and input workflow.
+             const configBtn=root.querySelector(".er-config-toggle");
+             configBtn.click();
+             const editorOpened=debug.lcdEditor().open&&
+               root.querySelector(".er-config-panel").getBoundingClientRect().width>200;
+             const selection=root.querySelector(".er-config-select");
+             selection.value="speedDigits";
+             selection.dispatchEvent(new Event("change",{bubbles:true}));
+             const horizontal=root.querySelectorAll(".er-config-range")[0];
+             horizontal.value="9.5";
+             horizontal.dispatchEvent(new Event("input",{bubbles:true}));
+             const editorSaved=debug.lcdEditor().layout.speedDigits.x===9.5
+               &&(localStorage.getItem("zebra.echo-racer.lcd.positions.v1.mobile")||"").includes("9.5")
+               &&getComputedStyle(root.querySelector(".er-dashboard-speed .er-dashboard-digits")).translate!=="none";
+             root.querySelector(".er-config-action").click();
+             const editorReset=debug.lcdEditor().layout.speedDigits.x===0;
+             debug.lcdClose();
+             const editorClosed=!debug.lcdEditor().open;
              const report={errors,mode:snap.mode,score:snap.score,
+              boostIsContinuous,spacedInactiveSpeed,editorOpened,editorSaved,editorReset,editorClosed,
               noShieldsAtFull,shieldEligible,shieldRecovered,boosted,longPulse,
               fullHeightTouch,cleanButtonPlate,uprightStagger,controlsWithoutTetris,buttonsInOrder,
               steeringRight,steeringCentered,mobileOrder,scoreAndGaugeMatch,
@@ -224,7 +254,7 @@ jobs:
              console.log("ECHO_MOBILE_REPORT",JSON.stringify(report));
              document.body.dataset.report=JSON.stringify(report);
              document.body.dataset.result=errors.length===0&&w>200&&h>200&&snap.mode==="running"
-              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger&&fullHeightTouch&&noShieldsAtFull&&shieldEligible&&shieldRecovered&&boosted&&longPulse&&frameLoaded&&neonReal&&barsCentered&&ledUpright&&italicReadouts&&straightRails&&balancedEndPods&&gaugeTitleAndUnits&&menuBoostEmpty&&startBoostEmpty&&boostRecharging?"ok":"failed";
+              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger&&fullHeightTouch&&noShieldsAtFull&&shieldEligible&&shieldRecovered&&boosted&&longPulse&&frameLoaded&&neonReal&&barsCentered&&ledUpright&&italicReadouts&&straightRails&&balancedEndPods&&gaugeTitleAndUnits&&boostIsContinuous&&spacedInactiveSpeed&&editorOpened&&editorSaved&&editorReset&&editorClosed&&menuBoostEmpty&&startBoostEmpty&&boostRecharging?"ok":"failed";
             },1200);
            }catch(e){errors.push("MOUNT:"+e.stack);document.body.dataset.report=JSON.stringify({errors});document.body.dataset.result="failed";}
           });
