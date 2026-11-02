@@ -59,9 +59,18 @@ jobs:
              const speedBlades=[...root.querySelectorAll(".er-dashboard-speed .er-dashboard-led")];
              const boostBlades=[...root.querySelectorAll(".er-dashboard-boost .er-dashboard-led")];
              const segmentedTitles=hudTitles.length===4&&hudTitles.every(el=>el.querySelectorAll(".er-digit").length>0);
-             const parallelArcs=speedBlades.length===21&&boostBlades.length===21
+             const parallelArcs=speedBlades.length===30&&boostBlades.length===30
                &&speedBlades.every((blade,i)=>Math.abs(parseFloat(blade.style.getPropertyValue("--gauge-x"))-parseFloat(boostBlades[i].style.getPropertyValue("--gauge-x")))<.01
-                 &&Math.abs((parseFloat(boostBlades[i].style.getPropertyValue("--gauge-y"))-parseFloat(blade.style.getPropertyValue("--gauge-y")))-22)<.1);
+                 &&Math.abs((parseFloat(boostBlades[i].style.getPropertyValue("--gauge-y"))-parseFloat(blade.style.getPropertyValue("--gauge-y")))-14.375)<.12);
+             const shellCss=getComputedStyle(root.querySelector(".er-dashboard")).backgroundImage;
+             const frameLoaded=shellCss.includes("echo%20machine%20bg%201.png")||shellCss.includes("echo machine bg 1.png");
+             const litSegments=boostBlades.filter(x=>x.classList.contains("lit"));
+             const ledStyle=litSegments.length?getComputedStyle(litSegments[0]):null;
+             const neonReal=litSegments.length>=27&&!!ledStyle
+               &&ledStyle.fill==="rgb(255, 246, 255)"
+               &&ledStyle.filter!=="none";
+             const barsCentered=root.querySelector(".er-dashboard-bar").getBoundingClientRect().width
+               <root.querySelector(".er-dashboard").getBoundingClientRect().width*.55;
              const hudFits=[...root.querySelectorAll(".er-meter")].every(el=>el.scrollWidth<=el.clientWidth+2);
              const gaugeFits=root.querySelector(".er-dashboard").getBoundingClientRect().width>300;
              const slider=root.querySelector(".er-steering-track");
@@ -151,7 +160,7 @@ jobs:
               fullHeightTouch,cleanButtonPlate,uprightStagger,controlsWithoutTetris,buttonsInOrder,
               steeringRight,steeringCentered,mobileOrder,scoreAndGaugeMatch,
               positions:[screenBox.top,hudBox.top,gaugeBox.top,padBox.top].map(Math.round),
-              segmentedTitles,parallelArcs,hudFits,gaugeFits,
+              segmentedTitles,parallelArcs,hudFits,gaugeFits,frameLoaded,neonReal,barsCentered,leds:boostBlades.length,
               canvas:{width:w,height:h,nonblack,unique:new Set(pixels).size},
               screen:root.querySelector(".er-screen").getBoundingClientRect().height,
               hud:root.querySelector(".er-hud").getBoundingClientRect().height,
@@ -159,7 +168,7 @@ jobs:
              console.log("ECHO_MOBILE_REPORT",JSON.stringify(report));
              document.body.dataset.report=JSON.stringify(report);
              document.body.dataset.result=errors.length===0&&w>200&&h>200&&snap.mode==="running"
-              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger&&fullHeightTouch&&noShieldsAtFull&&shieldEligible&&shieldRecovered&&boosted&&longPulse?"ok":"failed";
+              &&snap.score>0&&nonblack>20&&report.canvas.unique>25&&segmentedTitles&&parallelArcs&&hudFits&&gaugeFits&&steeringRight&&steeringCentered&&mobileOrder&&scoreAndGaugeMatch&&controlsWithoutTetris&&buttonsInOrder&&cleanButtonPlate&&uprightStagger&&fullHeightTouch&&noShieldsAtFull&&shieldEligible&&shieldRecovered&&boosted&&longPulse&&frameLoaded&&neonReal&&barsCentered?"ok":"failed";
             },1200);
            }catch(e){errors.push("MOUNT:"+e.stack);document.body.dataset.report=JSON.stringify({errors});document.body.dataset.result="failed";}
           });
@@ -242,3 +251,44 @@ jobs:
           grep -o 'data-report="[^"]*"' /tmp/echo-desktop.html | head -1 || true
           grep -o 'data-result="[^"]*"' /tmp/echo-desktop.html | head -1 || true
           grep -q 'data-result="ok"' /tmp/echo-desktop.html
+
+          # Capture actual rendered phosphor gauge in headless Chromium.
+          # The image is only logged for visual verification by the author.
+          cat > _verify_echo_gauge.html <<'HTML'
+          <!doctype html><html lang="fr"><head><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <link rel="stylesheet" href="/style.css">
+          <link rel="stylesheet" href="/echo-racer.css">
+          <style>
+          html,body{margin:0;background:#14081c;overflow:hidden}
+          .window{width:840px;height:178px;position:relative}
+          .window-body{width:100%;height:100%;padding:0}
+          .zebra-game-body .zg.er{width:840px!important;height:178px!important;min-height:178px!important;padding:8px!important;gap:0!important}
+          .zebra-game-body .zg.er .er-frame{display:contents!important}
+          .zebra-game-body .zg.er .er-screen,
+          .zebra-game-body .zg.er .er-heading,
+          .zebra-game-body .zg.er .er-hud,
+          .zebra-game-body .zg.er .er-pad{display:none!important}
+          .zebra-game-body .zg.er .er-dashboard{
+           display:block!important;position:relative!important;order:0!important;
+           width:824px!important;max-width:824px!important;
+           height:162px!important;min-height:162px!important;flex:0 0 162px!important;
+           margin:0!important
+          }
+          </style></head><body>
+          <div class="window"><div class="window-body zebra-game-body" id="game"></div></div>
+          <script src="/echo-racer.js"></script>
+          <script>
+          addEventListener("load",()=>{
+            window.ZebraEchoRacer.mount(document.querySelector("#game"));
+          });
+          </script></body></html>
+          HTML
+          google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --hide-scrollbars --window-size=1000,320 --virtual-time-budget=2100 --screenshot=/tmp/echo-gauge-preview.png http://127.0.0.1:8765/_verify_echo_gauge.html >/tmp/echo-gauge-cli.log 2>&1
+          python3 - <<'PY'
+          import base64
+          with open("/tmp/echo-gauge-preview.png","rb") as f:
+            data=f.read()
+          print("ECHO_GAUGE_SCREENSHOT_BASE64="+base64.b64encode(data).decode(),flush=True)
+          print("ECHO_GAUGE_SCREENSHOT_BYTES="+str(len(data)),flush=True)
+          PY
