@@ -25,7 +25,7 @@ var presetValues={
  "Voix":[-4,-2,3,5,2]
 };
 var eqFreq=[70,250,1000,3500,11000],eqNames=["GRAVES","BAS-MÉD.","MÉDIUMS","PRÉSENCE","AIGUS"];
-var animation=null,spectrumRefresh=null,loadingId=0,notifyText="",initDone=false,albumChecked=false;
+var animation=null,spectrumRefresh=null,spectrumCleanup=null,loadingId=0,notifyText="",initDone=false,albumChecked=false;
 var visualizerPromise=null;
 function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
 function b(label,action,cls){var x=el("button",cls||"amp3-btn",label);x.type="button";x.onclick=action;return x;}
@@ -890,17 +890,38 @@ function visualize(){
  if(!view||!view.isConnected)return;
  var canvas=view.querySelector("canvas.amp3-spectrum"),c=canvas&&canvas.getContext("2d");
  if(!c)return;
- if(animation)cancelAnimationFrame(animation);
+ if(spectrumCleanup)spectrumCleanup();
  // L'analyseur audio est créé au premier clic ▶, APRES l'ouverture de
  // ZebraAMP. Ne surtout pas figer bins=null à l'ouverture de la fenêtre.
  var bins=null,miniBands=new Float32Array(32),miniLevels=new Float32Array(32);
  var last=0,pausedFramePainted=false;
+ var spectrumView=view,spectrumWindow=spectrumView.closest(".window");
+ function isHidden(){
+  return document.hidden||!!(spectrumWindow&&spectrumWindow.classList.contains("minimized"));
+ }
+ function schedule(){
+  if(!animation&&!audio.paused&&!isHidden()&&spectrumView.isConnected)
+   animation=requestAnimationFrame(frame);
+ }
+ function visibilityChanged(){
+  if(isHidden()){
+   if(animation)cancelAnimationFrame(animation);
+   animation=null;
+  }else{
+   last=0;pausedFramePainted=false;
+   if(audio.paused)frame(performance.now(),true);
+   else schedule();
+  }
+ }
+ var spectrumObserver=spectrumWindow&&window.MutationObserver?new MutationObserver(visibilityChanged):null;
+ if(spectrumObserver)spectrumObserver.observe(spectrumWindow,{attributes:true,attributeFilter:["class"]});
+ document.addEventListener("visibilitychange",visibilityChanged);
  function frame(now,force){
-  if(!view||!view.isConnected)return;
-  // Un appel direct par l'événement play/pause n'ajoute pas une 2e
-  // boucle requestAnimationFrame (économie batterie mobile).
-  if(!force)animation=requestAnimationFrame(frame);
-  if(document.hidden||(!force&&now-last<33))return;
+  if(!force)animation=null;
+  if(!view||view!==spectrumView||!spectrumView.isConnected||isHidden())return;
+  // Une seule boucle, uniquement quand la lecture est active et visible.
+  if(!force)schedule();
+  if(!force&&now-last<33)return;
   var elapsed=Math.max(.001,Math.min(.1,(now-last)/1000));
   last=now;
   // Ne pas redessiner indéfiniment le spectre noir en pause (batterie mobile).
@@ -964,8 +985,18 @@ function visualize(){
  spectrumRefresh=function(){
   pausedFramePainted=false;
   frame(performance.now(),true);
+  schedule();
  };
- animation=requestAnimationFrame(frame);
+ spectrumCleanup=function(){
+  if(animation)cancelAnimationFrame(animation);
+  animation=null;
+  document.removeEventListener("visibilitychange",visibilityChanged);
+  if(spectrumObserver)spectrumObserver.disconnect();
+  spectrumRefresh=null;spectrumCleanup=null;
+ };
+ // Peindre une image de veille, puis ne tourner que pendant la lecture.
+ frame(performance.now(),true);
+ schedule();
 }
 function loadVisualizer(){
  if(window.ZebraVisualizer)return Promise.resolve(window.ZebraVisualizer);
@@ -1264,7 +1295,7 @@ function open(){
 }
 function stop(){
  audio.pause();
- if(animation){cancelAnimationFrame(animation);animation=null;}
+ if(spectrumCleanup)spectrumCleanup();
  spectrumRefresh=null;view=null;
 }
 var api={
