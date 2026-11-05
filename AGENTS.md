@@ -79,6 +79,8 @@
 ### Journal des apprentissages durables
 - 2026-11-06 — Transmission inter-conversations — l'utilisateur souhaite que chaque agent maintienne le guide après les découvertes et changements vérifiés — `AGENTS.md` — règle de projet.
 
+- 2026-11-06 — Contrôles Echo Racer mobile — CSS historique `echo-racer.css` contient des fonds tactiles concurrents ; surcouche isolée `echo-racer-mobile-zebra.css` avec `::after` au-dessus du fond et sous les touches ; test Chromium local 390 px (fond visible, A cliquable) et 1100 px (masqué). Production à confirmer.
+
 ### Problèmes ouverts à vérifier, sans présumer de leur cause
 - Différences répétées entre modifications annoncées et rendu visible sur le domaine public ; identifier précisément commit, version servie, mécanisme de déploiement et résultat navigateur à chaque occurrence.
 
