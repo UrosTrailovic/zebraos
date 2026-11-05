@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-store"><title>ZebraOS — diagnostic de publication</title>
+<style>body{background:#12131d;color:#f5f0f5;font:16px/1.5 system-ui,Arial,sans-serif;max-width:780px;margin:35px auto;padding:0 18px}h1{font-size:27px}.ok{color:#75ef9f}.bad{color:#ff7f8c}li{margin:10px 0;overflow-wrap:anywhere}code{color:#e6b2ff}button{font:inherit;padding:12px;border-radius:6px;cursor:pointer}small{color:#b3b3c6}</style></head>
+<body><h1>Diagnostic de publication ZebraOS</h1>
+<p><b>Version témoin : 2026-11-06 / 01</b></p><p>Site ouvert : <code id="host"></code></p>
+<p>Cette page est indépendante de ZebraOS. Elle teste les vrais fichiers reçus de ce domaine.</p><button id="check" type="button">Revérifier les fichiers</button>
+<ul id="results"><li>Analyse en cours…</li></ul><small>Une erreur ici indique un fichier absent ou ancien sur le site accessible depuis cet ordinateur, pas forcément une erreur du dépôt GitHub.</small>
+<script>
+document.getElementById("host").textContent=location.href;
+const tests=[
+ ["index.html contient le chargeur récent","/index.html","app.js?v=11.46"],
+ ["app.js utilise le CSS récent","/app.js","echo-racer.css?v=14.13"],
+ ["CSS du cadre CRT présent","/echo-racer.css","echo-racer-crt-frame.png?v=2"],
+ ["Texture zèbre du lecteur appliquée","/echo-racer.css","textile.png?v=2"],
+ ["Nouveau cadre PNG accessible","/assets/games/echo-racer-crt-frame.png",null],
+ ["Texture ZebraAMP accessible","/assets/zebraamp/textile.png",null]
+];
+async function run(){
+ const ul=document.getElementById("results");ul.replaceChildren();
+ for(const [label,path,expected] of tests){
+  const li=document.createElement("li");ul.appendChild(li);
+  try{
+   const u=new URL(path,location.origin);u.searchParams.set("diagnostic",Date.now().toString());
+   const r=await fetch(u.toString(),{cache:"no-store"});
+   if(!r.ok)throw Error("HTTP "+r.status);
+   const isGood=expected?((await r.text()).includes(expected)):true;
+   li.className=isGood?"ok":"bad";
+   li.textContent=(isGood?"✓ ":"✕ ")+label+(isGood?"":" — version ancienne ou contenu différent")+" ("+r.status+")";
+  }catch(e){li.className="bad";li.textContent="✕ "+label+" — "+e.message}
+ }
+}
+document.getElementById("check").onclick=run;run();
+</script></body></html>
