@@ -45,5 +45,34 @@
 - Le dépôt GitHub est public ; les profils Admin/Zebra/Daniel sont une simulation et le contrôle d'accès client n'est **pas** une protection des données sensibles. Ne jamais y placer de token, secret ou contenu confidentiel.
 - Musique et médias doivent respecter les fichiers et crédits du projet ; ne pas effacer ni remplacer des morceaux sans instruction explicite.
 
+## Protocole obligatoire d'auto-maintenance de ce guide
+**Tout agent qui intervient sur ZebraOS doit maintenir ce fichier vivant.** Cette règle vaut aussi pour les interventions courtes, les reprises après une nouvelle conversation et les interventions d'autres assistants.
+
+1. **Au démarrage :** lire `AGENTS.md` en entier, vérifier `main`, les fichiers concernés et les dernières modifications. Repérer les informations périmées ou contradictoires. Ne jamais présumer que le guide est plus récent que le code.
+2. **Pendant l'intervention :** noter les découvertes techniques vérifiées (fichiers, responsabilités, dépendances, commandes, flux d'assets, contraintes de navigateur), les décisions réellement validées par l'utilisateur, les bugs reproduits et leur cause, ainsi que les tests exécutés et leurs résultats.
+3. **À la fin de chaque intervention qui apporte une connaissance durable :** **modifier et commiter `AGENTS.md` dans la même branche / livraison que le travail**, idéalement dans le même commit, même si l'utilisateur n'a pas demandé de mise à jour de documentation. Ne jamais laisser ces informations uniquement dans le chat.
+4. **Avant de terminer :** vérifier que la mise à jour est bien sur GitHub ; indiquer dans le compte rendu si `AGENTS.md` a été mis à jour et avec quel commit. Si l'accès en écriture est bloqué, le signaler explicitement et fournir le texte à intégrer : ne pas prétendre à une mise à jour.
+5. **Aucun changement artificiel :** si la tâche n'apprend rien de durable, ne pas modifier le guide juste pour créer un commit. En revanche, toute correction d'une information devenue fausse est prioritaire.
+
+### Structure de connaissance à entretenir
+- **Architecture / points d'entrée :** maintenir la carte réelle des modules, chemins et dépendances après refactorisation.
+- **Conventions et décisions validées :** remplacer les règles dépassées, dater les choix susceptibles de changer, expliquer la portée (mobile, desktop, une seule application).
+- **Journal des apprentissages durables :** inscrire ci-dessous des entrées courtes `AAAA-MM-JJ — sujet — constat vérifié — fichiers concernés — test/preuve`. Privilégier les informations qui éviteront à un prochain agent de reproduire une erreur.
+- **Problèmes ouverts :** distinguer anomalie reproductible, hypothèse et correction confirmée ; retirer ou archiver un problème une fois résolu.
+- **État de publication :** lorsque c'est utile, indiquer le commit et le résultat de vérification production, sans transformer un état temporaire en vérité permanente.
+
+### Règles de qualité pour cette auto-évolution
+- **Vérifier avant d'écrire.** Une intuition, un ancien message ou une intention artistique n'est pas une preuve du comportement actuel. Étiqueter les hypothèses et ne jamais annoncer « testé » sans test réel.
+- **Mettre à jour au lieu d'empiler.** Corriger les phrases anciennes, fusionner les doublons, supprimer les conseils obsolètes, garder un document consultable. Le journal n'est pas une copie exhaustive des commits.
+- **Ne pas écraser les préférences validées.** Une nouvelle demande de l'utilisateur prévaut sur les règles précédentes ; documenter le changement et sa portée.
+- **Ne pas inventer d'autonomie.** Le guide ne s'exécute pas tout seul : son actualisation est une obligation pour l'agent lorsqu'il travaille dans le dépôt et dispose des accès nécessaires.
+- **Ne pas exposer de données privées.** Le dépôt est public : exclure identifiants, tokens, données personnelles, conversations privées et liens de partage sensibles.
+
+### Journal des apprentissages durables
+- 2026-11-06 — Transmission inter-conversations — l'utilisateur souhaite que chaque agent maintienne le guide après les découvertes et changements vérifiés — `AGENTS.md` — règle de projet.
+
+### Problèmes ouverts à vérifier, sans présumer de leur cause
+- Différences répétées entre modifications annoncées et rendu visible sur le domaine public ; identifier précisément commit, version servie, mécanisme de déploiement et résultat navigateur à chaque occurrence.
+
 ## Reprise d'une nouvelle conversation
 Lire d'abord `AGENTS.md`, puis `README.md` et les fichiers du module demandé ; consulter les derniers commits et workflows avant de modifier. Dans le premier état des lieux, séparer **faits vérifiés dans GitHub**, **intentions issues des échanges** et **points non vérifiés**. Maintenir ce document si des règles durables changent, au lieu d'obliger l'utilisateur à réexpliquer les mêmes décisions.
