@@ -193,7 +193,7 @@ function showPerformance(ctx){
  var request=0,started=0,frames=0,stopped=false;
  var win=root.closest(".window");
  function reset(){
-  started=0;frames=0;last=0;
+  started=0;frames=0;
   value.textContent="—";fill.style.width="0%";
   meter.removeAttribute("aria-valuenow");
  }
