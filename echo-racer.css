@@ -3263,3 +3263,21 @@
   bottom:12%!important;
  }
 }
+
+/* Echo Racer — verre CRT (asset screenraccer.webp).
+   Overlay purement visuel : aucune modification du canvas, du HUD ou des contrôles.
+   Le noir de la texture n'occulte pas le jeu grâce au mélange screen. */
+.zebra-game-body .zg.er .er-screen{
+  border-radius:clamp(10px,2.2vw,24px);
+}
+.zebra-game-body .zg.er .er-screen::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:30;
+  pointer-events:none;
+  border-radius:inherit;
+  background:url("/assets/games/screenraccer.webp") center center / 100% 100% no-repeat;
+  mix-blend-mode:screen;
+  opacity:.8;
+}
