@@ -68,6 +68,7 @@ function mountPanel(root,ctx){
   ["Sons","♫","Sons de l’interface",function(){showSounds(ctx);}],
   ["Date et heure","◷","Calendrier et horloge",function(){showDateTime(ctx);}],
   ["Système","▤","Détails de l’ordinateur",function(){showSystem(ctx);}],
+  ["Performances","▥","Compteur FPS en direct",function(){showPerformance(ctx);}],
   ["À propos de ZebraOS","ⓘ","Informations sur ZebraOS",function(){showAbout(ctx);}]
  ];
  options.forEach(function(item){
@@ -86,7 +87,7 @@ function mountPanel(root,ctx){
   grid.appendChild(tile);
  });
  main.appendChild(grid);
- main.appendChild(e("div","zcp-status","6 éléments · Ordinateur du studio"));
+ main.appendChild(e("div","zcp-status","7 éléments · Ordinateur du studio"));
  root.appendChild(main);
 }
 function footer(root,buttons){
@@ -163,6 +164,65 @@ function showSystem(ctx){
  wrap.appendChild(group);
  footer(wrap,[["À propos…",function(){showAbout(ctx);}],["OK",function(){close(ctx,"system");}]]);
  root.appendChild(wrap);
+}
+/* Diagnostic graphique disponible dans toutes les sessions.
+ * Le compteur mesure la cadence requestAnimationFrame de cet onglet,
+ * pas les FPS internes d'un jeu ni le taux de rafraîchissement matériel.
+ * Aucun échantillonnage ne tourne quand la fenêtre est fermée/minimisée. */
+function showPerformance(ctx){
+ var root=windowBody(ctx,"performance","Performances — ZebraOS",490,385);
+ if(root._zebraDispose)root._zebraDispose();
+ root.innerHTML="";
+ var panel=e("div","zcp-dialog zcp-performance");
+ var tabs=e("div","zcp-tabs");tabs.appendChild(e("div","zcp-tab active","Performances"));panel.appendChild(tabs);
+ var field=e("fieldset","zcp-field zcp-performance-field");
+ field.appendChild(e("legend","","Affichage en temps réel"));
+ var value=e("strong","zcp-fps-value","—");
+ value.setAttribute("aria-label","Images par seconde");
+ var unit=e("span","zcp-fps-unit","FPS");
+ var reading=e("div","zcp-fps-reading");reading.append(value,unit);field.appendChild(reading);
+ var meter=e("div","zcp-fps-meter"),fill=e("div","zcp-fps-fill");
+ meter.setAttribute("role","progressbar");meter.setAttribute("aria-label","Cadence des images");
+ meter.setAttribute("aria-valuemin","0");meter.setAttribute("aria-valuemax","60");
+ meter.appendChild(fill);field.appendChild(meter);
+ var status=e("p","zcp-fps-status","Mesure en cours…");field.appendChild(status);
+ field.appendChild(e("p","zcp-help","Mesure de la cadence d'affichage de cet onglet. Une valeur basse peut indiquer un ralentissement, mais ne mesure pas les FPS internes des jeux."));
+ panel.appendChild(field);
+ footer(panel,[["Fermer",function(){close(ctx,"performance");}]]);
+ root.appendChild(panel);
+ var request=0,started=0,frames=0,stopped=false,last=0;
+ function reset(){
+  started=0;frames=0;last=0;
+  value.textContent="—";fill.style.width="0%";
+  meter.removeAttribute("aria-valuenow");
+ }
+ function frame(now){
+  if(stopped||!root.isConnected){dispose();return;}
+  if(document.hidden||!!root.closest(".window")?.classList.contains("minimized")){
+   reset();status.textContent="Mesure suspendue (fenêtre non visible).";
+   request=window.requestAnimationFrame(frame);return;
+  }
+  if(!started){started=now;last=now;frames=0;status.textContent="Mesure en cours…";}
+  frames++;
+  var elapsed=now-started;
+  if(elapsed>=1000){
+   var fps=Math.round(frames*1000/elapsed);
+   value.textContent=String(fps);
+   fill.style.width=Math.min(100,fps/60*100)+"%";
+   meter.setAttribute("aria-valuenow",String(Math.min(fps,60)));
+   status.textContent=fps>=50?"Affichage fluide":fps>=30?"Fluidité réduite":"Cadence faible";
+   started=now;frames=0;
+  }
+  request=window.requestAnimationFrame(frame);
+ }
+ function dispose(){
+  stopped=true;
+  if(request)window.cancelAnimationFrame(request);
+  request=0;
+  if(root._zebraDispose===dispose)root._zebraDispose=null;
+ }
+ root._zebraDispose=dispose;
+ request=window.requestAnimationFrame(frame);
 }
 function showWelcome(ctx){
  var root=windowBody(ctx,"welcome","Bienvenue dans ZebraOS",670,440);
@@ -315,6 +375,6 @@ function showDateTime(ctx){
 }
 window.ZebraControlPanel={
  mount:mountPanel,display:showDisplay,sounds:showSounds,dateTime:showDateTime,
- system:showSystem,about:showAbout,welcome:showWelcome,clock:displayTime
+ system:showSystem,performance:showPerformance,about:showAbout,welcome:showWelcome,clock:displayTime
 };
 }());
