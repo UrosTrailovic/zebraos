@@ -2474,3 +2474,14 @@
  70%{opacity:.05}
  100%{opacity:0}
 }
+
+/* Réglage de l'ordinateur — diagnostic FPS */
+.zcp-performance{display:flex;flex-direction:column;gap:12px;min-height:100%;box-sizing:border-box}
+.zcp-performance-field{padding:16px 18px;flex:1}
+.zcp-fps-reading{display:flex;align-items:baseline;justify-content:center;gap:12px;margin:12px 0 18px;font-variant-numeric:tabular-nums}
+.zcp-fps-value{font:700 clamp(44px,10vw,68px)/1 "Courier New",monospace;color:#163c30}
+.zcp-fps-unit{font:700 17px/1 "Courier New",monospace;color:#39574d}
+.zcp-fps-meter{height:14px;overflow:hidden;background:#d0d3ce;border:inset 2px #87948c}
+.zcp-fps-fill{height:100%;width:0;background:linear-gradient(90deg,#477c60,#1b5943);transition:width .35s ease}
+.zcp-fps-status{text-align:center;font-weight:bold;margin:12px 0}
+.zcp-performance .zcp-help{font-size:12px;line-height:1.45;margin:14px 0 0}
