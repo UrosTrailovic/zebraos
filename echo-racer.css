@@ -3305,3 +3305,51 @@
 .zebra-game-body .zg.er .er-footer > *{
   position:relative;z-index:1;
 }
+
+/* Echo Racer 14.14 — reveal the ZebraAMP textile physically.
+   Earlier the four buttons covered virtually 100% of the zebra background.
+   The new solid hardware tray leaves a visible textile lip top and bottom. */
+.zebra-game-body .zg.er .er-footer{
+  flex:0 0 70px!important;
+  height:70px!important;
+  min-height:70px!important;
+  padding:13px 11px!important;
+  border:2px solid #1b1821!important;
+  border-radius:10px!important;
+  background-color:#10150f!important;
+  background-image:url("/assets/zebraamp/textile.png?v=3")!important;
+  background-position:center center!important;
+  background-size:144px 48px!important;
+  background-repeat:repeat!important;
+  box-shadow:inset 0 2px 2px #ffffff54,inset 0 -3px 4px #0008,0 1px 0 #b9c6b966,0 3px 4px #0008!important;
+}
+.zebra-game-body .zg.er .er-footer > .er-hardware{
+  height:100%!important;
+  min-height:0!important;
+}
+.zebra-game-body .zg.er .er-footer::after{
+  content:"ZEBRA • CTRL 14.14";
+  position:absolute;
+  right:14px;
+  bottom:1px;
+  z-index:2;
+  pointer-events:none;
+  color:#e9e2d7;
+  text-shadow:0 1px 2px #000,0 0 2px #000;
+  font:700 8px/10px "Courier New",monospace;
+  letter-spacing:.7px;
+}
+@media(max-width:700px){
+ .zebra-game-body .zg.er .er-footer{
+   flex:0 0 58px!important;
+   height:58px!important;
+   min-height:58px!important;
+   padding:10px 6px!important;
+   gap:5px!important;
+ }
+ .zebra-game-body .zg.er .er-footer::after{
+   right:7px;
+   font-size:7px;
+   bottom:0;
+ }
+}
