@@ -1283,6 +1283,12 @@ function open(){
  root.appendChild(actions);
  root.appendChild(el("div","amp3-status","")).setAttribute("data-amp-status","");
  w.appendChild(root);
+ // Fermer la fenêtre libère les observateurs graphiques sans arrêter la musique.
+ w._zebraDispose=function(){
+  if(spectrumCleanup)spectrumCleanup();
+  if(view===w)view=null;
+  w._zebraDispose=null;
+ };
  requestAnimationFrame(function(){requestAnimationFrame(function(){if(bootHello.isConnected)startAmpBootGreeting(bootHello);});});
  render();renderEq();visualize();
  // Actualise aussi après une réouverture de ZebraAMP, sans attendre un clic.
