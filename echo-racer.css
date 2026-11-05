@@ -3276,7 +3276,7 @@
   inset:0;
   z-index:30;
   pointer-events:none;
-  background-image:url("/assets/games/screenracer2_0000_Layer%202.webp?v=2");
+  background-image:url("/assets/games/Cadre%20d_%C3%A9cran%20CRT%20r%C3%A9tro%20transparent_0000_Layer%202.png?v=1");
   background-position:center;
   background-size:100% 100%;
   background-repeat:no-repeat;
@@ -3284,4 +3284,24 @@
   opacity:1;
   /* Pourtour matériel opaque, sans voile sur le centre de l'écran. */
   box-shadow:inset 0 0 0 3px #100d17;
+}
+
+/* Echo Racer — ZebraAMP's actual zebra textile on the controller base.
+   Match its recessed hardware finish; leave gauges and gameplay untouched. */
+.zebra-game-body .zg.er .er-footer{
+  position:relative!important;
+  box-sizing:border-box!important;
+  padding:5px 7px!important;
+  border:2px solid #17151e!important;
+  border-radius:9px!important;
+  background:#10150f url("/assets/zebraamp/textile.png") repeat-x center / 144px 48px!important;
+  box-shadow:inset 0 2px 2px #ffffff54,inset 0 -3px 4px #0008,0 1px 0 #b9c6b966,0 3px 4px #0008!important;
+}
+.zebra-game-body .zg.er .er-footer::before{
+  content:"";position:absolute;inset:0;z-index:0;
+  border-radius:inherit;pointer-events:none;
+  background:linear-gradient(180deg,#ffffff40 0%,#ffffff0a 22%,transparent 45%,#00000012 66%,#00000075 100%);
+}
+.zebra-game-body .zg.er .er-footer > *{
+  position:relative;z-index:1;
 }
