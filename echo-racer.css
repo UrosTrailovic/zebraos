@@ -3282,4 +3282,6 @@
   background-repeat:no-repeat;
   mix-blend-mode:normal;
   opacity:1;
+  /* Pourtour matériel opaque, sans voile sur le centre de l'écran. */
+  box-shadow:inset 0 0 0 3px #100d17;
 }
