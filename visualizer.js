@@ -584,8 +584,9 @@ function mount(host,media,options){
     syncTuneScrollbar();
   });
   tunePanel.addEventListener("scroll",syncTuneScrollbar,{passive:true});
+  var tuneResizeObserver=null;
   if(window.ResizeObserver){
-    var tuneResizeObserver=new window.ResizeObserver(syncTuneScrollbar);
+    tuneResizeObserver=new window.ResizeObserver(syncTuneScrollbar);
     tuneResizeObserver.observe(tunePanel);
     tuneResizeObserver.observe(tuneTrack);
   }
@@ -706,10 +707,34 @@ function mount(host,media,options){
   canvas.addEventListener("touchend",function(e){if(e.changedTouches.length){var dx=e.changedTouches[0].clientX-startX;if(Math.abs(dx)>55){mode=(mode+(dx>0?-1:1)+presets.length)%presets.length;updatePreset();}}},{passive:true});
   var dpr=0,w=0,h=0;
   var signal=false;
+  // Ne programmer aucun rendu lorsque l'onglet ou la fenêtre est masqué.
+  // La visibilité relance la boucle; le rendu et les effets restent inchangés.
+  var hostWindow=shell.closest(".window");
+  function isHidden(){
+    return document.hidden||!!(hostWindow&&hostWindow.classList.contains("minimized"));
+  }
+  function schedule(){
+    if(!state.stopped&&!state.request&&!isHidden()&&shell.isConnected)
+      state.request=requestAnimationFrame(frame);
+  }
+  function visibilityChanged(){
+    if(state.stopped)return;
+    if(isHidden()){
+      if(state.request)cancelAnimationFrame(state.request);
+      state.request=0;
+    }else{
+      lastFrame=0;
+      schedule();
+    }
+  }
+  var windowObserver=hostWindow&&window.MutationObserver?new MutationObserver(visibilityChanged):null;
+  if(windowObserver)windowObserver.observe(hostWindow,{attributes:true,attributeFilter:["class"]});
+  document.addEventListener("visibilitychange",visibilityChanged);
   function frame(t){
+    state.request=0;
     if(state.stopped||!shell.isConnected){state.stop();return;}
-    state.request=requestAnimationFrame(frame);
-    if(document.hidden||shell.closest(".window")?.classList.contains("minimized"))return;
+    if(isHidden())return;
+    schedule();
     var step=lowPower?36:18;
     if(t-lastFrame<step)return;
     var dt=rounded(t-lastFrame,1,50);lastFrame=t;
@@ -756,9 +781,14 @@ function mount(host,media,options){
   state.stop=function(){
     if(state.stopped)return;
     state.stopped=true;if(state.request)cancelAnimationFrame(state.request);
+    state.request=0;
+    document.removeEventListener("visibilitychange",visibilityChanged);
+    if(windowObserver)windowObserver.disconnect();
+    if(tuneResizeObserver)tuneResizeObserver.disconnect();
     ["play","pause","ended","emptied"].forEach(function(event){media.removeEventListener(event,syncTransport);});
   };
-  state.request=requestAnimationFrame(frame);
+  host._zebraDispose=state.stop;
+  schedule();
 }
 window.ZebraVisualizer={mount:mount,presets:presets,sampleBands:sampleBands};
 }());
