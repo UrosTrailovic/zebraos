@@ -190,19 +190,36 @@ function showPerformance(ctx){
  panel.appendChild(field);
  footer(panel,[["Fermer",function(){close(ctx,"performance");}]]);
  root.appendChild(panel);
- var request=0,started=0,frames=0,stopped=false,last=0;
+ var request=0,started=0,frames=0,stopped=false;
+ var win=root.closest(".window");
  function reset(){
   started=0;frames=0;last=0;
   value.textContent="—";fill.style.width="0%";
   meter.removeAttribute("aria-valuenow");
  }
- function frame(now){
-  if(stopped||!root.isConnected){dispose();return;}
-  if(document.hidden||!!root.closest(".window")?.classList.contains("minimized")){
-   reset();status.textContent="Mesure suspendue (fenêtre non visible).";
-   request=window.requestAnimationFrame(frame);return;
+ function paused(){return document.hidden||!!(win&&win.classList.contains("minimized"));}
+ function schedule(){
+  if(stopped||request||paused())return;
+  request=window.requestAnimationFrame(frame);
+ }
+ function onVisibility(){
+  if(stopped)return;
+  if(paused()){
+   if(request)window.cancelAnimationFrame(request);
+   request=0;reset();status.textContent="Mesure suspendue (fenêtre non visible).";
+  }else{
+   status.textContent="Mesure en cours…";
+   schedule();
   }
-  if(!started){started=now;last=now;frames=0;status.textContent="Mesure en cours…";}
+ }
+ var observer=win&&window.MutationObserver?new MutationObserver(onVisibility):null;
+ if(observer)observer.observe(win,{attributes:true,attributeFilter:["class"]});
+ document.addEventListener("visibilitychange",onVisibility);
+ function frame(now){
+  request=0;
+  if(stopped||!root.isConnected){dispose();return;}
+  if(paused()){onVisibility();return;}
+  if(!started){started=now;frames=0;}
   frames++;
   var elapsed=now-started;
   if(elapsed>=1000){
@@ -213,16 +230,19 @@ function showPerformance(ctx){
    status.textContent=fps>=50?"Affichage fluide":fps>=30?"Fluidité réduite":"Cadence faible";
    started=now;frames=0;
   }
-  request=window.requestAnimationFrame(frame);
+  schedule();
  }
  function dispose(){
+  if(stopped)return;
   stopped=true;
   if(request)window.cancelAnimationFrame(request);
   request=0;
+  if(observer)observer.disconnect();
+  document.removeEventListener("visibilitychange",onVisibility);
   if(root._zebraDispose===dispose)root._zebraDispose=null;
  }
  root._zebraDispose=dispose;
- request=window.requestAnimationFrame(frame);
+ schedule();
 }
 function showWelcome(ctx){
  var root=windowBody(ctx,"welcome","Bienvenue dans ZebraOS",670,440);
