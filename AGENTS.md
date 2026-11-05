@@ -7,6 +7,14 @@
 - Avant chaque intervention : lire ce fichier, inspecter les fichiers concernés et les derniers commits ; les anciennes conversations et les documents anciens ne garantissent pas l'état actuel du code.
 - Éviter de réinventer une interface validée ou de toucher à d'autres applications sans raison. Respecter les textures fournies et les noms exacts, accents, casse et chemins des ressources.
 
+## Règle absolue : responsabilité du code et des pushs
+- **Le propriétaire ne touche JAMAIS au code.** Il ne doit jamais être invité à ouvrir un éditeur, modifier une ligne, copier-coller un patch, lancer une commande Git, commiter, pousser un fichier, corriger un chemin ou résoudre manuellement une erreur technique. Lui demander cela constitue un **échec grave de l'agent**.
+- **Par défaut, supposer que le travail de lecture/édition/commit/push est faisable par l'agent avec les outils disponibles**, même si une première approche échoue ou si un environnement semble limité. Ne pas déclarer « je ne peux pas pousser » sans avoir vérifié la bonne connexion, le dépôt, la branche, les permissions et les autres outils disponibles.
+- **Chercher activement une autre voie d'exécution** : connecteur GitHub, écriture via API de fichiers ou commits, création de branche/PR, autres outils d'édition autorisés. Une interface ou un outil indisponible ne prouve pas l'impossibilité globale.
+- **Exécuter plutôt que déléguer** : inspecter, modifier, tester, commiter et vérifier directement dans la mesure des droits réellement accordés. Ne pas demander au propriétaire de faire un push ou un correctif « à la place » de l'agent.
+- **En cas de blocage réel**, diagnostiquer précisément les tentatives et le message d'erreur, essayer les voies autorisées, puis être transparent sur ce qui n'a pas pu être accompli. Ne jamais inventer un commit ou une publication. Si une autorisation explicite ou une connexion est réellement indispensable, demander uniquement cette action d'autorisation, jamais un travail de code.
+- **Pour chaque demande technique**, la fin attendue est une livraison effective et vérifiée quand les outils et permissions le permettent, pas une simple explication ou un extrait de code à recopier.
+
 ## Architecture vérifiée dans le dépôt (novembre 2026)
 - Application Web statique en HTML/CSS/JavaScript natifs, sans chaîne de build obligatoire.
 - `index.html` : entrée, feuilles de style et scripts chargés avec versions de ressources.
