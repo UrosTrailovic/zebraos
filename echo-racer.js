@@ -1874,39 +1874,42 @@ function mount(root){
   }
   c.restore();
  }
- // Subtle screen-space bend: only the rendered track, obstacles and sparks
- // are warped. Collision coordinates and the cockpit remain untouched.
- // The buffer is allocated once and reused; no image readback.
+ // Visible, restrained CRT wave: the course image bends with track curvature.
+ // Cockpit and HUD are drawn afterwards. Physics, obstacles and collision
+ // positions are never modified by the screen-space postprocess.
  const bendBuffer=document.createElement("canvas");
  const bendCtx=bendBuffer.getContext("2d",{alpha:false});
  function warpTrack(){
   if(!bendCtx||mode!=="running")return;
-  const near=trackCenter(travel+5),far=trackCenter(travel+19);
-  const bendX=(far.x-near.x)/Math.max(1,W);
-  const bendY=(far.y-near.y)/Math.max(1,H);
-  const bendStrength=clamp(Math.hypot(bendX,bendY)*13,0,1);
-  if(bendStrength<.06)return;
-  const amplitude=Math.min(4.8,1.5+bendStrength*3.3);
+  const near=trackCenter(travel+4),far=trackCenter(travel+19);
+  const dx=far.x-near.x,dy=far.y-near.y;
+  const strength=clamp(Math.hypot(dx,dy)/Math.max(110,Math.min(W,H)*.36),0,1);
+  // At rest the glass breathes gently; pronounced bends produce about 9px
+  // of displacement at native CSS resolution, without extreme stretching.
+  const amplitude=(1.25+strength*8.5)*renderDpr;
   const width=canvas.width,height=canvas.height;
   if(bendBuffer.width!==width||bendBuffer.height!==height){
    bendBuffer.width=width;bendBuffer.height=height;
   }
-  // Draw at native pixel resolution to avoid sampling/flickering artefacts.
   bendCtx.setTransform(1,0,0,1,0,0);
   bendCtx.drawImage(canvas,0,0);
   c.save();c.setTransform(1,0,0,1,0,0);
-  const bands=24,step=height/bands;
-  const phase=travel*.12;
+  c.fillStyle="#05020a";c.fillRect(0,0,width,height);
+  const bands=32,phase=travel*.075;
   for(let i=0;i<bands;i++){
-   const y0=Math.floor(i*step),y1=Math.ceil((i+1)*step);
-   const bandHeight=Math.min(height-y0,y1-y0+1);
-   if(bandHeight<=0)continue;
+   const y0=Math.floor(i*height/bands);
+   const y1=Math.min(height,Math.ceil((i+1)*height/bands)+1);
+   const bh=y1-y0;
+   if(bh<=0)continue;
    const t=(i+.5)/bands;
-   const curve=Math.sin(t*Math.PI)*Math.sin(t*5.2+phase);
-   const offset=(bendX*.75+curve*.35)*amplitude*renderDpr;
-   // Always copy a full source row with a small overscan; uncovered
-   // edges retain their original dark tunnel background.
-   c.drawImage(bendBuffer,0,y0,width,bandHeight,offset,y0,width,bandHeight);
+   const envelope=Math.sin(Math.PI*t);
+   const wave=Math.sin(t*6.3+phase);
+   const direction=clamp(dx/Math.max(1,W*.22),-1,1);
+   const offset=Math.round(amplitude*envelope*(wave*.55+direction*.5));
+   const shifted=Math.min(width-1,Math.abs(offset));
+   const sampleWidth=width-shifted;
+   if(offset>=0)c.drawImage(bendBuffer,0,y0,sampleWidth,bh,shifted,y0,sampleWidth,bh);
+   else c.drawImage(bendBuffer,shifted,y0,sampleWidth,bh,0,y0,sampleWidth,bh);
   }
   c.restore();
  }
