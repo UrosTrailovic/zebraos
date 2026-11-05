@@ -743,17 +743,21 @@ var gameModules={
  snake:{name:"Znake.exe",width:650,height:700,global:"ZebraSnake",
   files:["snake.js?v=8.7"],css:"snake.css?v=8.9"},
  racer:{name:"Echo Racer.exe",width:750,height:790,global:"ZebraEchoRacer",
-  files:["echo-racer.js?v=14.8"],css:"echo-racer.css?v=14.12"},
+  files:["echo-racer.js?v=14.8"],css:"echo-racer.css?v=14.13"},
  paint:{name:"ZebraPaint.exe",width:850,height:640,global:"ZebraPaint",
   files:["paint.js?v=1.4"],css:"paint-responsive.css?v=1.4"}
 };
 var assetPromises={};
+/* Chaque nouvelle session recharge réellement les modules lazy et leurs styles.
+   La clé reste stable pendant la session : pas de téléchargements répétés. */
+var gameAssetSessionVersion=Date.now().toString(36);
 function loadAsset(url,css){
  if(assetPromises[url])return assetPromises[url];
  assetPromises[url]=new Promise(function(resolve,reject){
+  var freshUrl=url+(url.indexOf("?")===-1?"?":"&")+"session="+gameAssetSessionVersion;
   var el=document.createElement(css?"link":"script");
-  if(css){el.rel="stylesheet";el.href=url;}
-  else{el.src=url;el.async=false;}
+  if(css){el.rel="stylesheet";el.href=freshUrl;}
+  else{el.src=freshUrl;el.async=false;}
   el.onload=function(){resolve();};
   el.onerror=function(){
    delete assetPromises[url];el.remove();
