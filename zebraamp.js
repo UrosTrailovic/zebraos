@@ -15,7 +15,7 @@ var playlists=[],current=ALBUM,currentId=null,loadedUrl=null,loadedBlob=null,vie
 var coverCache=new Map(),displayedCover=null;
 var ctx=null,filters=[],analyser=null,graphTried=false,reverbGraph=null;
 var nativeFallback=false;
-var allSounds=[],dbPromise=null,dbAvailable=true,shuffle=false,repeat="tout",speed=1,preservePitch=false,reverb=0,volume=.7,eq=[0,0,0,0,0],preset="Neutre";
+var allSounds=[],dbPromise=null,dbAvailable=true,shuffle=false,shuffleSeen=new Set(),repeat="aucun",speed=1,preservePitch=false,reverb=0,volume=.7,eq=[0,0,0,0,0],preset="Neutre";
 var presetValues={
  "Neutre":[0,0,0,0,0],
  "Basses":[7,4,0,-1,-2],
@@ -82,7 +82,9 @@ function restore(){
   // À chaque nouvel accès au site, la playlist de démarrage est Zebra Tape 2.
   // Le changement de playlist reste possible ensuite pendant la session.
   if(!Number.isNaN(Number(d.volume)))volume=Math.max(0,Math.min(1,Number(d.volume)));
-  shuffle=!!d.shuffle;repeat=["aucun","tout","un"].includes(d.repeat)?d.repeat:"tout";
+  shuffle=!!d.shuffle;
+  // Migre les anciens réglages de répétition complète : fin = arrêt.
+  repeat=d.repeat==="un"?"un":"aucun";
   speed=Number.isFinite(Number(d.speed))?Math.max(.5,Math.min(1.5,Math.round(Number(d.speed)*20)/20)):1;
   // L’ancien mode « tonalité stable » est ignoré : vinyle en permanence.
   preservePitch=false;
@@ -363,6 +365,7 @@ function setPlaylist(id){
   audio.pause();currentId=null;audio.removeAttribute("src");releaseUrl();
   if(current===OPENED)discardOpenedPlaylist();
  }
+ if(current!==id)shuffleSeen.clear();
  current=id;store();render();
 }
 function createPlaylist(name,shouldSwitch){
@@ -677,6 +680,7 @@ async function pick(id,autoplay){
  init();
  var pl=getList(),item=pl.tracks.find(function(t){return t.id===id;});
  if(!item)return;
+ if(shuffle&&autoplay)shuffleSeen.add(id);
  if(currentId===id&&audio.src){if(autoplay)play();else render();return;}
  var token=++loadingId;
  currentId=id;audio.pause();status("Chargement…");render();
@@ -756,17 +760,31 @@ function prev(){
  if(audio.currentTime>3&&index>=0){audio.currentTime=0;return;}
  pick(tracks[(index-1+tracks.length)%tracks.length].id,true);
 }
+function finishPlaylist(){
+ // Le dernier morceau reste chargé, mais ne relance jamais la playlist.
+ audio.pause();
+ status("Fin de la playlist.");
+ renderProgress();
+}
 function next(manual){
  var tracks=getList().tracks;if(!tracks.length)return;
  if(repeat==="un"&&!manual){audio.currentTime=0;play();return;}
  var i=tracks.findIndex(function(t){return t.id===currentId;});
  if(shuffle&&tracks.length>1){
-  var n=Math.floor(Math.random()*(tracks.length-1));
-  if(n>=i&&i>=0)n++;
-  pick(tracks[n].id,true);return;
+  // Aléatoire sans répétition : finir après un passage sur tous les titres.
+  if(i>=0)shuffleSeen.add(currentId);
+  var remaining=tracks.filter(function(t){return !shuffleSeen.has(t.id);});
+  if(!remaining.length){
+   if(!manual){finishPlaylist();return;}
+   // Seule une navigation volontaire réinitialise un cycle terminé.
+   shuffleSeen.clear();
+   if(i>=0)shuffleSeen.add(currentId);
+   remaining=tracks.filter(function(t){return !shuffleSeen.has(t.id);});
+  }
+  pick(remaining[Math.floor(Math.random()*remaining.length)].id,true);return;
  }
  if(i+1>=tracks.length){
-  if(!manual&&repeat==="aucun"){audio.pause();return;}
+  if(!manual){finishPlaylist();return;}
   pick(tracks[0].id,true);return;
  }
  pick(tracks[i+1].id,true);
@@ -868,8 +886,8 @@ function render(){
  }
  view.querySelector("[data-amp-shuffle]").classList.toggle("enabled",shuffle);
  var repeatBtn=view.querySelector("[data-amp-repeat]");
- repeatBtn.textContent=repeat==="aucun"?"↻ ×":repeat==="un"?"↻ 1":"↻ ∞";
- repeatBtn.title=repeat==="aucun"?"Répétition désactivée":repeat==="un"?"Répéter ce morceau":"Répéter toute la playlist";
+ repeatBtn.textContent=repeat==="un"?"↻ 1":"↻ ×";
+ repeatBtn.title=repeat==="un"?"Répéter ce morceau":"Répétition désactivée";
  repeatBtn.setAttribute("aria-label",repeatBtn.title);
  repeatBtn.setAttribute("aria-pressed",String(repeat!=="aucun"));
  var shuffleBtn=view.querySelector("[data-amp-shuffle]");
@@ -1147,9 +1165,9 @@ function open(){
  var nextBtn=b("▶Ⅰ",function(){next(true);},"amp3-btn amp3-transport");nextBtn.title="Morceau suivant";transports.appendChild(nextBtn);
  controls.appendChild(transports);
  var modes=el("div","amp3-modes");
- var shuffleBtn=b("⇄",function(){shuffle=!shuffle;store();render();},"amp3-btn amp3-mode-shuffle");
+ var shuffleBtn=b("⇄",function(){shuffle=!shuffle;shuffleSeen.clear();if(shuffle&&currentId)shuffleSeen.add(currentId);store();render();},"amp3-btn amp3-mode-shuffle");
  shuffleBtn.setAttribute("data-amp-shuffle","");modes.appendChild(shuffleBtn);
- var repeatBtn=b("↻ ∞",function(){repeat=repeat==="tout"?"un":repeat==="un"?"aucun":"tout";store();render();},"amp3-btn amp3-mode-repeat");
+ var repeatBtn=b("↻ ×",function(){repeat=repeat==="un"?"aucun":"un";store();render();},"amp3-btn amp3-mode-repeat");
  repeatBtn.setAttribute("data-amp-repeat","");modes.appendChild(repeatBtn);
  var visualButton=b("VIS",openVisualizer,"amp3-btn amp3-visual-btn");
  visualButton.title="Ouvrir ZebraVIS en grand";visualButton.setAttribute("aria-label",visualButton.title);
