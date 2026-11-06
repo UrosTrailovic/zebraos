@@ -3,8 +3,8 @@
 (function(){
 "use strict";
 var $=function(id){return document.getElementById(id)};
-var users=[["visitor","Visiteur","Session publique","V"],["zebra","Zebra","Session du studio","Z"],["admin","Admin","Gestion du studio","A"],["daniel","Daniel","...","?"]];
-var wallpaper={visitor:"visitor",zebra:"zebra",admin:"admin",daniel:"daniel"};
+var users=[["visitor","Visiteur","Session publique","V"],["zebra","Zebra","Session du studio","Z"],["admin","Admin","Gestion du studio","A"]];
+var wallpaper={visitor:"visitor",zebra:"zebra",admin:"admin"};
 var session=null,opened={},z=20,seq=0,adminApproved=false,adminLoginUnlocked=false;
 /* Local filesystem replaces the former demo-only filenames. */
 var docs={
@@ -17,7 +17,7 @@ recycle:"NE PAS SUPPRIMER CE FICHIER.\n\nTrop tard."
 };
 /* Lightweight, local CC0 sound effects. The user's settings are kept in localStorage. */
 var soundCache={};
-function sfx(name){
+function sfx(name,clickMultiplier){
   if(getStore("zebra.sfx.muted")==="1")return;
   var data=window.ZebraSFXData;
   if(!data||!data[name])return;
@@ -26,7 +26,7 @@ function sfx(name){
     if(!clip){clip=new Audio(data[name]);clip.preload="auto";soundCache[name]=clip;}
     if(!clip.paused){clip=clip.cloneNode(true);}
     else {try{clip.currentTime=0}catch(e){}}
-    clip.volume=name==="mouseDown"?.58:name==="mouseUp"?.36:name==="error"?.24:.14;
+    clip.volume=(name==="mouseDown"?.58:name==="mouseUp"?.36:name==="error"?.24:.14)*(clickMultiplier===undefined?1:clickMultiplier);
     var promise=clip.play();
     if(promise&&promise.catch)promise.catch(function(){});
   }catch(e){}
@@ -76,11 +76,15 @@ function decodeMouseSamples(ctx){
     }catch(e){}
   });
 }
-function playMechanicalClick(name){
+function clickVolumeMultiplier(target){
+  var win=target&&target.closest?target.closest(".window"):null;
+  return win&&/^(amp|tetris|snake|racer)$/.test(win.dataset.appId||"")?.5:1;
+}
+function playMechanicalClick(name,multiplier){
   if(getStore("zebra.sfx.muted")==="1")return;
   try{
     var Context=window.AudioContext||window.webkitAudioContext;
-    if(!Context){sfx(name);return;}
+    if(!Context){sfx(name,multiplier);return;}
     if(!mouseContext)mouseContext=new Context();
     var ctx=mouseContext;
     if(!mouseSynth[name])mouseSynth[name]=makeMechanicalSwitch(ctx,name);
@@ -92,7 +96,7 @@ function playMechanicalClick(name){
     var source=ctx.createBufferSource();
     source.buffer=mouseSynth[name];
     var gain=ctx.createGain();
-    gain.gain.value=name==="mouseUp"?.44:.72;
+    gain.gain.value=(name==="mouseUp"?.44:.72)*(multiplier===undefined?1:multiplier);
     source.connect(gain);
     gain.connect(ctx.destination);
     source.start();
@@ -100,12 +104,12 @@ function playMechanicalClick(name){
     if(mouseSamples[name]){
       var sample=ctx.createBufferSource(),level=ctx.createGain();
       sample.buffer=mouseSamples[name];
-      level.gain.value=name==="mouseUp"?.8:1.15;
+      level.gain.value=(name==="mouseUp"?.8:1.15)*(multiplier===undefined?1:multiplier);
       sample.connect(level);level.connect(ctx.destination);
       sample.start();
     }
     decodeMouseSamples(ctx);
-  }catch(e){sfx(name);}
+  }catch(e){sfx(name,multiplier);}
 }
 
 /* Custom ZebraOS desktop sprite: user-supplied 128px PNGs, optimised for small UI sizes. */
@@ -268,7 +272,7 @@ function login(){
   if(u[0]==="visitor"){
     avatar.appendChild(el("span","user-silhouette"));
   }else{
-    var icons={zebra:"zebraos",admin:"control-panel",daniel:"help"};
+    var icons={zebra:"zebraos",admin:"control-panel"};
     avatar.appendChild(osIcon(icons[u[0]]||"help",72));
   }
   b.children[1].textContent=u[1];
@@ -588,6 +592,7 @@ function windowBox(id,title,width,height){
   return opened[id].w.querySelector(".window-body");
  }
  var w=el("div","window");
+ w.dataset.appId=id;
  if(id==="amp"){w.classList.add("amp-window");w.dataset.maxWidth="960";}
  var area=desktopWorkArea();
  w.style.width=Math.min(width,windowMaxWidth(w,area))+"px";
@@ -857,10 +862,10 @@ $("start-button").onclick=function(e){e.stopPropagation();$("start-menu").classL
    Desktop double-click still works normally. The click no longer relies on quiet OGG playback. */
 function isPrimaryPointer(e){return e.isPrimary!==false&&(e.pointerType!=="mouse"||e.button===0)}
 document.addEventListener("pointerdown",function(e){
-  if(isPrimaryPointer(e)&&e.pointerType!=="touch"&&e.target.closest(".screen.active"))playMechanicalClick("mouseDown");
+  if(isPrimaryPointer(e)&&e.pointerType!=="touch"&&e.target.closest(".screen.active"))playMechanicalClick("mouseDown",clickVolumeMultiplier(e.target));
 },{passive:true});
 document.addEventListener("pointerup",function(e){
-  if(isPrimaryPointer(e)&&e.target.closest(".screen.active")){if(e.pointerType==="touch")playMechanicalClick("mouseDown");else playMechanicalClick("mouseUp");}
+  if(isPrimaryPointer(e)&&e.target.closest(".screen.active")){if(e.pointerType==="touch")playMechanicalClick("mouseDown",clickVolumeMultiplier(e.target));else playMechanicalClick("mouseUp",clickVolumeMultiplier(e.target));}
 },{passive:true});
 
 $("file-wallpaper").onchange=function(e){var f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;if(window.ZebraWallpaper)window.ZebraWallpaper.importFile(f,session);else setWall(session||"visitor",URL.createObjectURL(f))};
