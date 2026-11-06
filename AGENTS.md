@@ -50,7 +50,7 @@
 - `CNAME` configure le domaine ; inspecter Pages/Actions avant d'affirmer un déploiement. **Ne pas confondre ZebraOS (GitHub Pages) avec l'atelier éditorial, qui est un autre dépôt/site Vercel.**
 - `sw.js` est actuellement prévu pour se désinstaller ; `index.html` contient une logique de nettoyage d'anciens caches `zebraos-code-*`. Vérifier le code courant avant toute modification de stratégie Service Worker.
 - `index.html` utilise des query strings de version sur des CSS/JS : vérifier leur mise à jour si nécessaire et ne pas masquer un mauvais déploiement derrière des versions arbitraires.
-- Le dépôt GitHub est public ; les profils Admin/Zebra/Daniel sont une simulation et le contrôle d'accès client n'est **pas** une protection des données sensibles. Ne jamais y placer de token, secret ou contenu confidentiel.
+- Le dépôt GitHub est public ; les profils Visiteur/Zebra/Admin sont une simulation et le contrôle d'accès client n'est **pas** une protection des données sensibles. Ne jamais y placer de token, secret ou contenu confidentiel.
 - Musique et médias doivent respecter les fichiers et crédits du projet ; ne pas effacer ni remplacer des morceaux sans instruction explicite.
 
 ## Protocole obligatoire d'auto-maintenance de ce guide
@@ -77,6 +77,7 @@
 - **Ne pas exposer de données privées.** Le dépôt est public : exclure identifiants, tokens, données personnelles, conversations privées et liens de partage sensibles.
 
 ### Journal des apprentissages durables
+- 2026-11-06 — Sessions et clic souris — Daniel retiré de la sélection des utilisateurs ; les profils actifs sont Visiteur, Zebra et Admin. Dans `app.js`, le son mécanique du clic (Web Audio et secours Audio) est divisé par deux seulement lorsque la cible du pointeur est dans une fenêtre `amp`, `tetris`, `snake` ou `racer`, y compris sur mobile ; outils, autres fenêtres et bureau conservent le volume normal. Identifiant d'application stocké dans `data-app-id` sur la fenêtre. `wallpaper.js` ne liste plus la session Daniel. Vérifier les deux plateformes après modification des fenêtres ou du moteur audio.
 - 2026-11-06 — Transmission inter-conversations — l'utilisateur souhaite que chaque agent maintienne le guide après les découvertes et changements vérifiés — `AGENTS.md` — règle de projet.
 
 - 2026-11-06 — Contrôles Echo Racer mobile — CSS historique `echo-racer.css` contient des fonds tactiles concurrents ; surcouche isolée `echo-racer-mobile-zebra.css` avec `::after` au-dessus du fond et sous les touches ; test Chromium local 390 px (fond visible, A cliquable) et 1100 px (masqué). Production à confirmer.
