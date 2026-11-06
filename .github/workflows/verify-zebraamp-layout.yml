@@ -86,13 +86,13 @@ jobs:
               report.modesTogether=vis.parentElement===repeat.parentElement
                 &&shuffle.parentElement===repeat.parentElement
                 &&repeat.textContent.trim().length<=4;
-              report.repeatCycle=repeat.textContent.includes("∞");
+              // Plus de répétition de toute la playlist : seulement aucun / un titre.
+              report.repeatCycle=repeat.textContent.includes("×")&&!repeat.textContent.includes("∞");
               repeat.click();
               report.repeatCycle=report.repeatCycle&&repeat.textContent.includes("1");
               repeat.click();
-              report.repeatCycle=report.repeatCycle&&repeat.textContent.includes("×");
-              repeat.click();
-              report.repeatCycle=report.repeatCycle&&repeat.textContent.includes("∞");
+              report.repeatCycle=report.repeatCycle&&repeat.textContent.includes("×")
+                &&!repeat.textContent.includes("∞");
               report.spectrumNotBlank=canvas.width>0&&canvas.height>0
                 &&canvas.getContext("2d").getImageData(5,5,1,1).data[3]>0;
               const group=root.querySelector(".amp3-speed-group");
