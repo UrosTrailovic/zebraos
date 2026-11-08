@@ -32,7 +32,10 @@
       "type": "app",
       "name": "Echo Racer.exe",
       "app": "racer",
-      "icon": "racer"
+      "icon": "racer",
+      "sessions": [
+        "admin"
+      ]
     },
     {
       "path": "STUDIO/BUREAU/Jeux/Tetris.exe.zebraos.json",

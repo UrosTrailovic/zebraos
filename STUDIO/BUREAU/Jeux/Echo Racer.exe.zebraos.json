@@ -1,5 +1,8 @@
 {
   "name": "Echo Racer.exe",
   "app": "racer",
-  "icon": "racer"
+  "icon": "racer",
+  "sessions": [
+    "admin"
+  ]
 }

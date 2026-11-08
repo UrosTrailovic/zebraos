@@ -56,7 +56,8 @@ function valid(entries){
    type:it.type,size:Number(it.size)||0,
    app:it.type==="app"?it.app:null,
    icon:it.type==="app"&&typeof it.icon==="string"?it.icon.slice(0,40):null,
-   sessions:it.type==="app"&&Array.isArray(it.sessions)?it.sessions.filter(function(id){return ["admin","zebra","visitor","daniel"].includes(id);}):null};
+   sessions:it.type==="app"?(it.app==="racer"?["admin"]:
+     Array.isArray(it.sessions)?it.sessions.filter(function(id){return ["admin","zebra","visitor"].includes(id);}):null):null};
  });
 }
 function visible(item){
@@ -206,6 +207,8 @@ function sizeText(bytes){
  return bytes+" o";
 }
 function preview(item,opts){
+ // Même avec un ancien index/une entrée conservée, le raccourci est Admin uniquement.
+ if(item.app==="racer"&&(!opts||opts.session!=="admin"))return;
  if(item.type==="app"){
   if(APP_IDS[item.app]&&opts&&typeof opts.openApp==="function")opts.openApp(item.app);
   return;

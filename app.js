@@ -773,6 +773,8 @@ function loadAsset(url,css){
  return assetPromises[url];
 }
 function loadGameModule(name){
+ // Echo Racer reste dans le dépôt, mais seul le bureau Admin peut le charger.
+ if(name==="racer"&&session!=="admin")return Promise.reject(Error("Application réservée à la session Admin."));
  var module=gameModules[name];if(!module)return Promise.reject(Error("Application inconnue"));
  if(window[module.global])return Promise.resolve(window[module.global]);
  if(module.pending)return module.pending;
@@ -818,6 +820,8 @@ function primeZnakeMenu(root){
  }catch(_){stopZnakeMenuPrimer(root);}
 }
 function openGame(name){
+ // Bloque aussi les anciens raccourcis ou appels directs à open("racer").
+ if(name==="racer"&&session!=="admin")return;
  var entry=gameModules[name];if(!entry)return;
  var root=windowBox(name,entry.name,
    Math.min(entry.width,window.innerWidth-16),Math.min(entry.height,window.innerHeight-50));
