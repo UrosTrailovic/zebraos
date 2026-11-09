@@ -3264,28 +3264,13 @@
  }
 }
 
-/* Echo Racer — bezel alpha natif, parfaitement superposé au viewport.
-   Pas de mode de fusion ni de vignette supplémentaire : le WebP détermine
-   seul les pixels transparents. Aucun impact sur les contrôles du jeu. */
-.zebra-game-body .zg.er .er-screen{
-  border-radius:0;
-}
+/* Echo Racer 16: screen is now the clear gameplay canvas itself.
+   Remove the bezel PNG and CRT scanline/vignette layer on the playing field.
+   The cockpit gauges and matte-plastic controller housing stay unchanged. */
+.zebra-game-body .zg.er .er-crt{display:none!important;}
 .zebra-game-body .zg.er .er-screen::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  z-index:30;
-  pointer-events:none;
-  background-image:url("/assets/games/echo-racer-crt-frame.png?v=2");
-  background-position:center;
-  background-size:100% 100%;
-  background-repeat:no-repeat;
-  mix-blend-mode:normal;
-  opacity:1;
-  /* Pourtour matériel opaque, sans voile sur le centre de l'écran. */
-  box-shadow:inset 0 0 0 3px #100d17;
+  content:none!important;display:none!important;background:none!important;
 }
-
 
 /* Echo Racer 15 — textured matte-black physical controls, desktop + mobile.
    Low-resolution 96px material sample; no ZebraAMP textile imports. */

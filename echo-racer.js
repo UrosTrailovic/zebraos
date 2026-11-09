@@ -28,7 +28,7 @@ function rectRound(ctx,x,y,w,h,r){
  * Experimental arcade curvature rather than full rigid-body 3D physics. */
 const SECTORS=16,STEP=TAU/SECTORS,HIT_Z=1.6,SPAWN_Z=29.4,RENDER_FAR_Z=32.6;
 const APPEAR_FADE_DEPTH=7.2;
-const PATTERN_COUNT=20;
+const PATTERN_COUNT=28;
 // Une seule course publique, infinie. Free roam reste disponible uniquement
 // pour les outils de diagnostic ; il n'existe plus de sélecteur de niveaux.
 const LEVELS=[
@@ -36,6 +36,7 @@ const LEVELS=[
  {id:"free",name:"FREE ROAM",subtitle:"DIAGNOSTIC SANS OBSTACLES",speed:1,gap:1,spin:0,patterns:[]}
 ];
 const MUSIC_DROP_AT=68,MUSIC_SECOND_DROP_AT=162,MUSIC_TAIL_AT=217,MUSIC_LOOP_FROM=68;
+const ENCORE_TRANSITION_SECONDS=5;
 // Distances are in world units. Short double-gates punctuate longer stretches.
 const GAP_MIN=15.2,GAP_MAX=21.4,START_GATE_AT=.48;
 // A separate rhythm of collectible wall pads between the hazard waves.
@@ -77,6 +78,14 @@ function pattern(kind){
    case 17:wall=(i%6)<4;break;                         // broken teeth
    case 18:wall=inGap(i,0,10)&&i%3!==1;break;          // open-side grating
    case 19:wall=!inGap(i,0,2)&&!inGap(i,5,3)&&!inGap(i,11,2);break;
+   case 20:wall=!inGap(i,1,4)&&!inGap(i,9,3);break;  // opposite offset gates
+   case 21:wall=(i%4)<3&&i!==7&&i!==15;break;        // broken laser lattice
+   case 22:wall=inGap(i,0,8)||inGap(i,11,3);break;    // long asymmetric dam
+   case 23:wall=!inGap(i,0,2)&&!inGap(i,6,4)&&!inGap(i,13,2);break;
+   case 24:wall=(i%6)<=2&&i!==6;break;                // interrupted spines
+   case 25:wall=!inGap(i,1,5)&&!inGap(i,9,4);break;   // two wide staggered exits
+   case 26:wall=(i%8)<6&&i!==4;break;                 // narrow parallel channels
+   case 27:wall=inGap(i,0,6)||inGap(i,10,5);break;    // split shield wall
    default:wall=false;
   }
   if(wall)blocks.push(i);
@@ -119,6 +128,8 @@ function mount(root){
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
  let menuStage="home",menuIndex=0,pauseIndex=0,overIndex=0,warningLife=0,warningBeepDelay=0,warningChirp=0;
  let directorStage=0,musicDropSurge=0,musicLoops=0;
+ // Five seconds without hazards: pink tunnel fades away, then reappears blue.
+ let encoreMode="normal",encoreTime=0;
  const DEATH_FADE_SECONDS=1.15,DEATH_ANIMATION_SECONDS=1.15;
  let deathFade=0,deathLock=0;
  let soundEnabled=load("sfx","on")!=="off",audioCtx=null;
@@ -802,18 +813,25 @@ function mount(root){
   try{
    music=new window.Audio(musicUrl);
    music.loop=false;music.volume=.82;music.preload="none";
-   // Le MP3 réel dure ~314 s, mais les 97 dernières secondes sont presque
-   // silencieuses. Boucler sur le passage intense évite une longue panne de jeu.
+   // The actual song has an audible end around 217 s; its last ~97 s
+   // are virtually silent. The first ending starts the visual intermission.
+   // Later repeats loop from the musical passage without resetting the blue world.
    music.addEventListener("timeupdate",()=>{
     if(!live||mode!=="running"||music.currentTime<MUSIC_TAIL_AT)return;
-    musicLoops++;
-    try{music.currentTime=MUSIC_LOOP_FROM;}catch(_){}
+    if(encoreMode==="normal")beginEncore();
+    else if(encoreMode==="blue"){
+     musicLoops++;
+     try{music.currentTime=MUSIC_LOOP_FROM;}catch(_){}
+    }
    });
    music.addEventListener("ended",()=>{
     if(!live||mode!=="running"||!soundEnabled)return;
+    if(encoreMode==="normal"){beginEncore();return;}
+    if(encoreMode!=="blue")return;
     musicLoops++;
     try{music.currentTime=MUSIC_LOOP_FROM;}catch(_){}
-    const resumed=music.play();if(resumed&&resumed.catch)resumed.catch(()=>{musicError=true;});
+    const resumed=music.play();
+    if(resumed&&resumed.catch)resumed.catch(()=>{musicError=true;});
    });
    music.onerror=function(){musicError=true;};
    const context=ensureAudioContext();
@@ -1008,7 +1026,7 @@ function mount(root){
    try{boostSound.pause();}catch(_){}
  }
  function startMusic(rewind){
-  if(!live||!soundEnabled||globalMuted()||document.hidden)return;
+  if(!live||!soundEnabled||globalMuted()||document.hidden||encoreMode==="transition")return;
   startEngine(rewind);
   if(nitroActive||padBoostTime>0)startBoostLoop();
   const track=ensureMusic();if(!track)return;
@@ -1175,6 +1193,7 @@ function mount(root){
   nextShieldAt=selectedLevel.id==="free"?Infinity:SHIELD_START;
   lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;shieldCount=0;
   directorStage=0;musicDropSurge=0;musicLoops=0;
+  encoreMode="normal";encoreTime=0;
   trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
   invuln=0;pulseCharge=2;pulseGlow=pulseFx=pulseHitFx=shieldFlash=padBoostTime=flash=shake=0;
   shieldCollect.classList.remove("er-shield-collected");
@@ -1197,7 +1216,7 @@ function mount(root){
   if(mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
   resetSteering();stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];trail=[];turnVelocity=0;
   shieldCollect.classList.remove("er-shield-collected");pulseFx=pulseHitFx=shieldFlash=0;
-  elapsed=0;padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
+  elapsed=0;encoreMode="normal";encoreTime=0;padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
   overlay.hidden=false;renderMenuStage("home");
   renderHud();
@@ -1334,13 +1353,13 @@ function mount(root){
    [0,1,2,3,4,5,6,7,9,10,11,12,13,14,16,17,18],
    Array.from({length:PATTERN_COUNT},(_,i)=>i)
   ];
-  const choices=tiers[directorStage<2?0:directorStage<4?1:directorStage<6?2:3];
+  const choices=tiers[encoreMode==="blue"?3:directorStage<2?0:directorStage<4?1:directorStage<6?2:3];
   let kind=choices[Math.floor(rand(0,choices.length))];
   if(kind===nextWave&&choices.length>1)
    kind=choices[(choices.indexOf(kind)+1+Math.floor(rand(0,choices.length-1)))%choices.length];
   nextWave=kind;
   const rotation=Math.floor(rand(0,SECTORS))*STEP;
-  const spinChance=directorStage<2?.035:directorStage<4?.13:.18+Math.min(.20,directorStage*.025);
+  const spinChance=directorStage<2?.035:directorStage<4?.13:encoreMode==="blue"?.32:.18+Math.min(.20,directorStage*.025);
   const spins=gateCount>3&&Math.random()<spinChance;
   const spin=spins?(Math.random()<.5?-1:1)*rand(.16,.42):0;
   const twist=rand(-.14,.14);
@@ -1349,14 +1368,71 @@ function mount(root){
    rotation,spin,twist,cleared:false,credited:false};
  }
  function nextGateGap(){
-  const hard=nextWave===2||nextWave===8||nextWave===9||nextWave===19;
+  const hard=[2,8,9,19,21,23,26].includes(nextWave);
   // Endlessly increasing density, never a wall of impossible instant hits.
   const cycle=gateCount%9;
   let gap=cycle===5&&directorStage>=2?rand(12.8,15.2):
     cycle===6?rand(22.0,26.0):rand(GAP_MIN,GAP_MAX);
   if(hard)gap+=2.8;
   const density=clamp(1-directorStage*.055,.62,1);
-  return Math.max(10.8,gap*density)*selectedLevel.gap;
+  return Math.max(13.2,gap*density)*selectedLevel.gap;
+ }
+ function smoothEncore(x){
+  x=clamp(x,0,1);
+  return x*x*(3-2*x);
+ }
+ function encoreVisibility(){
+  if(encoreMode!=="transition")return 1;
+  // Fade away for 2 seconds, hold a black tunnel for 1 second,
+  // then fade the new blue course in over 2 seconds.
+  return encoreTime<2?1-smoothEncore(encoreTime/2):
+   encoreTime<3?0:smoothEncore((encoreTime-3)/2);
+ }
+ function blueTunnel(){
+  return encoreMode==="blue"||encoreMode==="transition"&&encoreTime>=2;
+ }
+ function beginEncore(){
+  if(mode!=="running"||encoreMode!=="normal"||selectedLevel.id==="free")return false;
+  encoreMode="transition";encoreTime=0;
+  waves=[];pads=[];shields=[];sparks=[];
+  nextGateAt=nextPadAt=nextShieldAt=Infinity;
+  invuln=Math.max(invuln,ENCORE_TRANSITION_SECONDS+2);
+  padBoostTime=0;nitroHeld=false;nitroActive=false;nitroBurnTime=0;
+  pulseFx=pulseGlow=pulseHitFx=flash=shake=0;
+  pauseMusic();
+  message="FIN DU MORCEAU · TRANSITION";messageLife=2.1;
+  renderHud();
+  return true;
+ }
+ function completeEncore(){
+  if(encoreMode!=="transition")return;
+  encoreMode="blue";encoreTime=ENCORE_TRANSITION_SECONDS;
+  directorStage=Math.max(directorStage,5);
+  // A modest new base-speed step. Ordinary cruise is already engaging;
+  // nitro remains optional, not essential.
+  musicDropSurge=Math.max(musicDropSurge,.3);
+  nextGateAt=travel+10;
+  nextPadAt=travel+26;
+  nextShieldAt=travel+(lives===1?38:54);
+  invuln=Math.max(invuln,2);
+  message="PHASE BLEUE · NOUVELLE PRESSION";messageLife=2.4;
+  if(music){
+   musicLoops++;
+   try{music.currentTime=MUSIC_LOOP_FROM;}catch(_){}
+   startMusic(false);
+  }
+ }
+ function updateEncore(dt){
+  if(encoreMode==="normal"&&selectedLevel.id!=="free"){
+   // If playback is muted, the same progression uses running elapsed time.
+   const songClock=music&&!music.paused&&soundEnabled&&!globalMuted()?
+    music.currentTime:elapsed;
+   if(songClock>=MUSIC_TAIL_AT)beginEncore();
+  }
+  if(encoreMode==="transition"){
+   encoreTime=Math.min(ENCORE_TRANSITION_SECONDS,encoreTime+dt);
+   if(encoreTime>=ENCORE_TRANSITION_SECONDS)completeEncore();
+  }
  }
  function directMusicPressure(dt){
   // Song analysed on CI: dominant rise at 68 s, a second at 162 s.
@@ -1386,6 +1462,7 @@ function mount(root){
  function advance(dt){
   if(mode!=="running"||document.hidden)return;
   dt=clamp(dt,0,.05);elapsed+=dt;
+  updateEncore(dt);
   directMusicPressure(dt);
   // Inverted orbital steering: pressing LEFT rotates the camera/ship toward
   // the opposite tunnel angle. Keep keyboard and touch D-pad consistent.
@@ -1402,18 +1479,21 @@ function mount(root){
   // A boost pad is stronger than manual boost, but they do not multiply
   // together into an uncontrollable/untestable collision speed.
   updateNitro(dt);
-  // Endless runner: increasing challenge by survival, plus actual music
-  // energy and deliberate acceleration on the measured drop transitions.
-  const growth=Math.min(1.7,Math.log1p(Math.max(0,score)/3800)*.42);
-  const stageThrust=Math.min(3.0,directorStage*.36);
-  const musicThrust=audioFx.energy*.48+audioFx.kick*.12;
-  const base=clamp(4.15+stageThrust+growth+throttle+
-   musicThrust+musicDropSurge*.82,3.5,10.0)*selectedLevel.speed;
-  // A held nitro continues to gain thrust, instead of jumping to a ceiling.
-  const nitroThrust=1.38+1.1*(1-Math.exp(-nitroBurnTime*.72));
-  const multiplier=padBoostTime>0?2.5:nitroActive?nitroThrust:1;
+  // The normal cruise is the core game, not a slow waiting room for pads.
+  // Starts ~6.15 units/s (was 4.15) and ramps naturally with survival.
+  const growth=Math.min(1.45,Math.log1p(Math.max(0,score)/3800)*.36);
+  const stageThrust=Math.min(2.6,directorStage*.44);
+  const survivalThrust=Math.min(2.05,elapsed/105);
+  const musicThrust=audioFx.energy*.35+audioFx.kick*.09;
+  const encoreThrust=encoreMode==="blue"?.62:0;
+  const base=clamp(6.15+stageThrust+survivalThrust+growth+
+   throttle*.65+musicThrust+musicDropSurge*.44+encoreThrust,
+   5.4,12.5)*selectedLevel.speed;
+  // Turbo is still rewarding, but the basic flight stays exciting.
+  const nitroThrust=1.43+.30*(1-Math.exp(-nitroBurnTime*.72));
+  const multiplier=padBoostTime>0?1.85:nitroActive?nitroThrust:1;
   const targetSpeed=base*multiplier;
-  const response=targetSpeed>=currentSpeed?6.7:.62;
+  const response=targetSpeed>=currentSpeed?6.4:.75;
   currentSpeed+=(targetSpeed-currentSpeed)*(1-Math.exp(-dt*response));
   const speed=currentSpeed;
   // Score multiplier follows ACTUAL travel speed (including pad/manual boost).
@@ -1659,28 +1739,28 @@ function mount(root){
  function drawRing(z,index){
   if(z<0||z>RENDER_FAR_Z)return;
   const g=geometryCache,r=wallPoint(0,z).r,shift=tunnelBend(z);
-  const near=clamp(1-z/RENDER_FAR_Z,0,1),cyan=index%5===0;
+  const near=clamp(1-z/RENDER_FAR_Z,0,1),cyan=index%5===0,cold=blueTunnel();
   // Controlled changes of the line itself, not a fat bloom filter.
   const beat=clamp(audioFx.kick*.65+audioFx.bass*.35,0,1);
   const high=clamp(audioFx.high,0,1);
   c.beginPath();c.arc(g.cx+shift.x,g.cy+shift.y-g.offset*r,r,0,TAU);
   c.strokeStyle=cyan?
    "rgba(111,239,255,"+clamp(.32+.54*near+high*.12,0,.97)+")":
-   "rgba(255,62,209,"+clamp(.25+.53*near+beat*.18,0,.97)+")";
+   (cold?"rgba(101,149,255,":"rgba(255,62,209,")+clamp(.25+.53*near+beat*.18,0,.97)+")";
   c.lineWidth=(cyan?1.7:1.2)+near*(cyan?1.6:1.1)+beat*1.1;
-  c.shadowColor=cyan?"#50f6ff":"#ff35d5";
+  c.shadowColor=cyan?"#50f6ff":cold?"#478bff":"#ff35d5";
   c.shadowBlur=cyan?2:0;c.stroke();c.shadowBlur=0;
  }
  function drawTunnel(now){
-  const g=wallGeom();
+  const g=wallGeom(),cold=blueTunnel();
   bendCache.clear();
-  c.fillStyle="#05020a";c.fillRect(0,0,W,H);
+  c.fillStyle=cold?"#020912":"#05020a";c.fillRect(0,0,W,H);
   const vanishing=tunnelBend(RENDER_FAR_Z);
   const gradient=c.createRadialGradient(g.cx+vanishing.x,g.cy+vanishing.y,3,g.cx,g.cy,g.R*1.35);
-  gradient.addColorStop(0,"#0b0619");
-  gradient.addColorStop(.4,"#0e071b");
-  gradient.addColorStop(.81,"#1b0a24");
-  gradient.addColorStop(1,"#05020b");
+  gradient.addColorStop(0,cold?"#030e23":"#0b0619");
+  gradient.addColorStop(.4,cold?"#07192d":"#0e071b");
+  gradient.addColorStop(.81,cold?"#102a43":"#1b0a24");
+  gradient.addColorStop(1,cold?"#030a18":"#05020b");
   c.fillStyle=gradient;c.fillRect(0,0,W,H);
   c.save();c.lineCap="round";c.lineJoin="round";
   // An indigo panel skin follows the camera's angular roll. The panels move
@@ -1698,11 +1778,15 @@ function mount(root){
    const sectorStep=z>15?2:1;
    for(let sector=0;sector<SECTORS;sector+=sectorStep){
     const a=screenAngle(sector*STEP),b=a+sectorStep*STEP;
-    const fill=(sector+row)%4===0?"rgba(107,30,113,"+(.37+bassLight)+")":
-      (sector+row)%2?"rgba(44,16,62,"+(.48+bassLight*.55)+")":
-      "rgba(67,18,79,"+(.43+bassLight*.8)+")";
+    const fill=cold?
+      (sector+row)%4===0?"rgba(29,89,140,"+(.37+bassLight)+")":
+       (sector+row)%2?"rgba(15,51,91,"+(.48+bassLight*.55)+")":
+       "rgba(22,67,115,"+(.43+bassLight*.8)+")":
+      (sector+row)%4===0?"rgba(107,30,113,"+(.37+bassLight)+")":
+       (sector+row)%2?"rgba(44,16,62,"+(.48+bassLight*.55)+")":
+       "rgba(67,18,79,"+(.43+bassLight*.8)+")";
     wallPatch(a+.006,b-.006,z,z+panelLength,fill,
-      row<5&&sector%4===0?"rgba(180,76,195,.12)":null,row<5?2:1);
+      row<5&&sector%4===0?(cold?"rgba(77,155,218,.13)":"rgba(180,76,195,.12)"):null,row<5?2:1);
     // Treble-driven cyan bands are painted onto the tunnel itself.
     if(row%3===1&&sector%4===2&&z<RENDER_FAR_Z*.75){
      wallPatch(a+.09,b-.09,z+.19,z+.25,
@@ -1711,7 +1795,7 @@ function mount(root){
     // Tiny luminous rivets flash toward the camera along with the wall.
     if(row%3===0&&sector%4===1&&z<RENDER_FAR_Z*.75){
      const p=wallPoint((a+b)*.5,z+.28);
-     c.fillStyle="rgba(248,73,226,"+clamp(.24+.5*fade+highLight*.65,0,.9)+")";
+     c.fillStyle=(cold?"rgba(95,164,255,":"rgba(248,73,226,")+clamp(.24+.5*fade+highLight*.65,0,.9)+")";
      c.beginPath();c.arc(p.x,p.y,Math.max(.8,2.5*fade),0,TAU);c.fill();
     }
    }
@@ -1727,12 +1811,12 @@ function mount(root){
     const z=(RENDER_FAR_Z+.35)*step/24,pt=wallPoint(a,z);
     c.lineTo(pt.x,pt.y);
    }
-   c.strokeStyle=cyan?"rgba(65,218,246,.13)":"rgba(253,75,210,.1)";
+   c.strokeStyle=cyan?"rgba(65,218,246,.13)":cold?"rgba(73,122,255,.11)":"rgba(253,75,210,.1)";
    c.lineWidth=cyan?9:5;c.shadowBlur=0;c.stroke();
    c.strokeStyle=cyan?"rgba(109,240,255,"+clamp(.72+audioFx.high*.28,0,1)+")":
-                           "rgba(210,76,237,"+clamp(.43+audioFx.mid*.36,0,1)+")";
+                           (cold?"rgba(92,150,255,":"rgba(210,76,237,")+clamp(.43+audioFx.mid*.36,0,1)+")";
    c.lineWidth=(cyan?2.4:1.4)+audioFx.high*(cyan?.8:.5)+audioFx.kick*.35;
-   c.shadowColor=cyan?"#48eefe":"#ff48c6";
+   c.shadowColor=cyan?"#48eefe":cold?"#4f92fa":"#ff48c6";
    c.shadowBlur=cyan?2:0;
    c.stroke();c.shadowBlur=0;
   }
@@ -1742,14 +1826,14 @@ function mount(root){
   for(let i=ringCount;i>=0;i--)drawRing(i*spacing-phase,i);
   c.restore();
   if(turboLight>.005){
-   c.fillStyle="rgba(187,117,238,"+(turboLight*.092)+")";
+   c.fillStyle=(cold?"rgba(91,178,255,":"rgba(187,117,238,")+(turboLight*.092)+")";
    c.fillRect(0,0,W,H);
   }
   // Deep indigo pupil, feathered rather than a flat black pasted circle.
   const core=c.createRadialGradient(g.cx+vanishing.x,g.cy+vanishing.y,0,
    g.cx+vanishing.x,g.cy+vanishing.y,g.R*.17);
-  core.addColorStop(0,"rgba(8,1,17,.9)");
-  core.addColorStop(1,"rgba(8,1,17,0)");
+  core.addColorStop(0,cold?"rgba(1,7,20,.9)":"rgba(8,1,17,.9)");
+  core.addColorStop(1,cold?"rgba(1,7,20,0)":"rgba(8,1,17,0)");
   c.fillStyle=core;
   c.fillRect(g.cx+vanishing.x-g.R*.2,g.cy+vanishing.y-g.R*.2,g.R*.4,g.R*.4);
   // Physically small, music-driven phosphor strips instead of a blurred
@@ -1763,7 +1847,7 @@ function mount(root){
     if(amount<.13)continue;
     wallPatch(a,a+STEP*.67,z,z+.10+amount*.30,
      i%2===0?
-      "rgba(255,112,225,"+(.17+amount*.58)+")":
+      (cold?"rgba(86,153,255,":"rgba(255,112,225,")+(.17+amount*.58)+")":
       "rgba(110,246,255,"+(.17+amount*.55)+")",null,1);
    }
   }
@@ -1781,12 +1865,19 @@ function mount(root){
    const z=Math.max(.04,w.z),far=z+w.length;
    // Distinct material families help players identify gate silhouettes.
    const skin=w.kind%4;
-   const skinFill=skin===0?"#ef3a5c":skin===1?"#d9267b":
+   const newLaser=w.kind>=20;
+   const skinFill=newLaser?"#145e87":skin===0?"#ef3a5c":skin===1?"#d9267b":
      skin===2?"#eb493d":"#a52ed2";
-   const skinEdge=skin===0?"#ffb19c":skin===1?"#ffc1de":
+   const skinEdge=newLaser?"#85ecff":skin===0?"#ffb19c":skin===1?"#ffc1de":
      skin===2?"#ffe4aa":"#eb96ff";
-   c.shadowColor=skin===3?"#db4aff":"#ff4e82";c.shadowBlur=2;
-   wallPatch(a,b,z,far,skinFill,skinEdge,6);
+   c.shadowColor=newLaser?"#43baff":skin===3?"#db4aff":"#ff4e82";c.shadowBlur=newLaser?5:2;
+   wallPatch(a,b,z,far,skinFill,skinEdge,newLaser?3:6);
+   if(newLaser){
+    // Light cross-braces mark the late-game barriers without altering hitboxes.
+    const aa=wallPoint(a+.03,z+.10),bb=wallPoint(b-.03,far-.10);
+    c.beginPath();c.moveTo(aa.x,aa.y);c.lineTo(bb.x,bb.y);
+    c.strokeStyle="#b6f7ff";c.lineWidth=1.5;c.stroke();
+   }
    c.shadowBlur=0;
    // Pale amber warning edge separates dangerous gates from pink wall trim.
    const q0=wallPoint(a+.025,z+.035),q1=wallPoint(b-.025,z+.035);
@@ -1960,7 +2051,14 @@ function mount(root){
   }
   c.globalAlpha=1;
   warpTrack();
-  drawPulseWave();
+  // Only the world fades: controls and score stay present. The ship remains
+  // visible in the five-second void while the tunnel disappears completely.
+  if(encoreMode==="transition"){
+   c.save();
+   c.fillStyle="rgba(2,4,10,"+(1-encoreVisibility())+")";
+   c.fillRect(0,0,W,H);
+   c.restore();
+  }else drawPulseWave();
   drawShip(); // Ship is now the only permanent POV marker.
   if(flash>0){
    c.fillStyle="rgba(255,70,143,"+(flash*.23)+")";c.fillRect(0,0,W,H);
@@ -2126,8 +2224,10 @@ function mount(root){
   lcdEditor:()=>({open:!cfgPanel.hidden,mode:cfgMode,layout:JSON.parse(JSON.stringify(cfgLayout)),targets:Object.keys(cfgTargets)}),
   lcdSet:(id,x,y)=>{if(!cfgTargets[id])return false;cfgChosen=id;cfgSet(id,"x",x);cfgSet(id,"y",y);return true;},
   lcdOpen:cfgOpen,lcdClose:cfgHide,
-  snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,directorStage,musicDropSurge,pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
+  snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,directorStage,musicDropSurge,
+   encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
+  triggerEncore:beginEncore,draw:()=>paint(performance.now()),
   injectPickup:(kind,sectors,z=HIT_Z+PICKUP_FRONT+.2)=>{
    const o={z,sectors:[...sectors],length:kind==="pad"?1.1:0,credited:false,shimmer:0};
    if(kind==="pad")pads.push(o);else if(kind==="shield")shields.push(o);

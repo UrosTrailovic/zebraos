@@ -32,6 +32,10 @@ jobs:
             noLevelMenu:js.includes('const levelButtons=[]')&&js.includes('if(mode==="menu")start();'),
             songDropMap:js.includes('MUSIC_DROP_AT=68')&&js.includes('MUSIC_SECOND_DROP_AT=162'),
             plasticTexture:css.includes('data:image/webp;base64,'),
+            transitionAndSpeed:js.includes('ENCORE_TRANSITION_SECONDS=5')
+              &&js.includes('function beginEncore()')
+              &&js.includes('const base=clamp(6.15')
+              &&js.includes('const multiplier=padBoostTime>0?1.85'),
             noZebraControls:!css.includes('textile.png')&&!index.includes('href="echo-racer-mobile-zebra.css')
           };
           console.log('STATIC_CHECKS',JSON.stringify(checks));
@@ -106,8 +110,32 @@ jobs:
              for(let i=0;i<8;i++)debug.advance(.04);
              const snap=debug.snapshot();
              result.runStarted=snap.score>0&&snap.currentSpeed>0&&snap.mode==='running';
-             result.patterns=Array.from({length:20},(_,k)=>window.ZebraEchoRacer.pattern(k)).every(a=>a.length>0&&a.length<16);
+             result.patterns=Array.from({length:28},(_,k)=>window.ZebraEchoRacer.pattern(k)).every(a=>a.length>0&&a.length<16);
              result.noRenderError=!debug.lastRenderError();
+             result.clearGameplayGlass=getComputedStyle(host.querySelector('.er-crt')).display==='none'
+               &&getComputedStyle(host.querySelector('.er-screen'),'::before').content==='none';
+             // Verify an ordinary non-turbo run already feels fast.
+             for(let i=0;i<85;i++)debug.advance(.04);
+             result.cruiseWithoutTurbo=debug.snapshot().currentSpeed>5.7
+               &&!debug.gauges().manualBoost;
+             // Transition must be hazard-free and exactly five game seconds.
+             debug.triggerEncore();
+             const first=debug.snapshot();
+             for(let i=0;i<55;i++)debug.advance(.04);
+             const dark=debug.snapshot();
+             for(let i=0;i<70;i++)debug.advance(.04);
+             const blue=debug.snapshot();
+             result.transitionStartsClear=first.encore.mode==='transition'
+               &&first.waves.length===0&&first.shields.length===0&&first.pads.length===0;
+             result.midwayBlack=dark.encore.mode==='transition'
+               &&dark.encore.visibility===0&&dark.waves.length===0;
+             result.fiveSecondReveal=blue.encore.mode==='blue'
+               &&blue.encore.visibility===1&&blue.encore.blue;
+             result.modestBlueSpeed=blue.currentSpeed>5.7&&blue.currentSpeed<15
+               &&!debug.gauges().manualBoost;
+             result.noCrashInTransition=blue.lives===first.lives;
+             debug.draw();
+             result.blueTunnelRendered=!debug.lastRenderError();
              result.errors=errors;
              document.body.dataset.check=JSON.stringify(result);
              document.body.dataset.pass=Object.entries(result).every(([k,v])=>k==='errors'?v.length===0:v===true)?'ok':'failed';
