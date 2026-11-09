@@ -1,0 +1,110 @@
+name: Vérifier Echo Racer endless, plastique et sessions
+on:
+  push:
+    paths:
+      - 'echo-racer.js'
+      - 'echo-racer.css'
+      - 'app.js'
+      - 'index.html'
+      - '.github/workflows/verify-echo-endless.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  endless-browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Valider la syntaxe et les accès
+        run: |
+          node --check echo-racer.js
+          node --check app.js
+          node --check wallpaper.js
+          node - <<'JS'
+          const fs=require('node:fs');
+          const app=fs.readFileSync('app.js','utf8');
+          const js=fs.readFileSync('echo-racer.js','utf8');
+          const css=fs.readFileSync('echo-racer.css','utf8');
+          const index=fs.readFileSync('index.html','utf8');
+          const checks={
+            sessions:app.includes('var users=[["zebra","Zebra"')&&!app.includes('"Visiteur","Session publique"'),
+            adminOnlyEcho:app.includes('name==="racer"&&session!=="admin"'),
+            noLevelMenu:js.includes('const levelButtons=[]')&&js.includes('if(mode==="menu")start();'),
+            songDropMap:js.includes('MUSIC_DROP_AT=68')&&js.includes('MUSIC_SECOND_DROP_AT=162'),
+            plasticTexture:css.includes('data:image/webp;base64,'),
+            noZebraControls:!css.includes('textile.png')&&!index.includes('href="echo-racer-mobile-zebra.css')
+          };
+          console.log('STATIC_CHECKS',JSON.stringify(checks));
+          if(Object.values(checks).some(v=>!v))process.exit(1);
+          JS
+      - name: Vérifier dans Chromium réel (PC et mobile)
+        run: |
+          cat >_verify_echo_endless.html <<'HTML'
+          <!doctype html><html lang="fr"><head><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <link rel="stylesheet" href="/style.css">
+          <link rel="stylesheet" href="/echo-racer.css">
+          <style>
+           html,body{margin:0;background:#19191d}
+           .window{width:100%;max-width:750px;height:790px}
+           .window-body{width:100%;height:100%;padding:0}
+          </style></head><body><div class="window focused">
+           <div id="game" class="window-body zebra-game-body"></div>
+          </div>
+          <script src="/echo-racer.js"></script>
+          <script>
+           const errors=[];addEventListener('error',e=>errors.push(e.message));
+           addEventListener('unhandledrejection',e=>errors.push(String(e.reason)));
+           addEventListener('load',()=>{
+            const result={};
+            try{
+             const host=document.getElementById('game');
+             window.ZebraEchoRacer.mount(host);
+             const debug=host._echoDebug;
+             const levelBox=host.querySelector('.er-level-picker');
+             const pad=host.querySelector('.er-pad');
+             const footer=host.querySelector('.er-footer');
+             const button=host.querySelector('.er-overlay-button');
+             result.levelPickerHidden=levelBox.hidden&&getComputedStyle(levelBox).display==='none';
+             result.playLabel=button.textContent.includes('JOUER');
+             result.plasticFooter=getComputedStyle(footer).backgroundImage.includes('data:image/webp');
+             result.plasticMobile=getComputedStyle(pad).backgroundImage.includes('data:image/webp');
+             result.noZebra=/data:image\/webp/.test(getComputedStyle(footer).backgroundImage)
+               &&!getComputedStyle(footer).backgroundImage.includes('textile');
+             button.click();
+             result.directPlay=debug.snapshot().mode==='running';
+             for(let i=0;i<8;i++)debug.advance(.04);
+             const snap=debug.snapshot();
+             result.runStarted=snap.score>0&&snap.currentSpeed>0&&snap.mode==='running';
+             result.patterns=Array.from({length:20},(_,k)=>window.ZebraEchoRacer.pattern(k)).every(a=>a.length>0&&a.length<16);
+             result.noRenderError=!debug.lastRenderError();
+             result.errors=errors;
+             document.body.dataset.check=JSON.stringify(result);
+             document.body.dataset.pass=Object.entries(result).every(([k,v])=>k==='errors'?v.length===0:v===true)?'ok':'failed';
+            }catch(e){document.body.dataset.pass='exception';document.body.dataset.check=String(e.stack||e);}
+           });
+          </script></body></html>
+          HTML
+          python3 -m http.server 8765 >/tmp/echo-endless-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          sleep 1
+          for v in desktop mobile; do
+            if [ "$v" = mobile ]; then RES="--window-size=420,1000"; else RES="--window-size=1020,900"; fi
+            google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=2500 $RES \
+              --dump-dom "http://127.0.0.1:8765/_verify_echo_endless.html" >/tmp/echo-endless-${v}.html 2>/tmp/echo-endless-${v}.err
+            echo "ENDLESS_BROWSER_${v}=$(grep -o 'data-pass="[^"]*"' /tmp/echo-endless-${v}.html | head -1)"
+            grep -o 'data-check="[^"]*"' /tmp/echo-endless-${v}.html | head -1
+            grep -q 'data-pass="ok"' /tmp/echo-endless-${v}.html
+            google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=900 $RES \
+              --screenshot="/tmp/echo-endless-${v}.png" "http://127.0.0.1:8765/_verify_echo_endless.html" >/dev/null 2>&1
+          done
+      - name: Garder les captures de test
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: echo-endless-browser-screens
+          path: |
+            /tmp/echo-endless-desktop.png
+            /tmp/echo-endless-mobile.png
+          if-no-files-found: ignore
