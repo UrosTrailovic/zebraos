@@ -36,6 +36,32 @@ jobs:
           };
           console.log('STATIC_CHECKS',JSON.stringify(checks));
           if(Object.values(checks).some(v=>!v))process.exit(1);
+          // The real music director gets tested at both measured transitions.
+          const start=js.indexOf(' function directMusicPressure(dt){');
+          const end=js.indexOf(' function advance(dt){',start);
+          if(start<0||end<0)throw Error('director function absent');
+          const body=js.slice(start,end);
+          const run=(seconds,elapsed,initialStage,muted=false)=>{
+            const fn=new Function('clock','time','initial','muted',`
+              let directorStage=initial,musicDropSurge=0,musicLoops=0,
+                  message='',messageLife=0,flash=0,soundEnabled=!muted;
+              const MUSIC_SECOND_DROP_AT=162,MUSIC_DROP_AT=68;
+              const music=muted?null:{paused:false,currentTime:clock};
+              let elapsed=time;
+              const beep=()=>{};
+              ${body}
+              directMusicPressure(.05);
+              return {stage:directorStage,message,boost:musicDropSurge};
+            `);
+            return fn(seconds,elapsed,initialStage,muted);
+          };
+          const slow=run(66,66,1),drop=run(68,68,1),
+                second=run(162,162,3),noAudio=run(162,162,3,true);
+          const phases={beforeDrop:slow.stage===1,firstDrop:drop.stage===2&&drop.boost>1,
+            secondDrop:second.stage===4&&second.boost>1,
+            fallbackNoAudio:noAudio.stage===4};
+          console.log('MUSIC_DIRECTOR',JSON.stringify(phases));
+          if(Object.values(phases).some(v=>!v))process.exit(1);
           JS
       - name: Vérifier dans Chromium réel (PC et mobile)
         run: |
@@ -68,6 +94,10 @@ jobs:
              result.levelPickerHidden=levelBox.hidden&&getComputedStyle(levelBox).display==='none';
              result.playLabel=button.textContent.includes('JOUER');
              result.plasticFooter=getComputedStyle(footer).backgroundImage.includes('data:image/webp');
+             result.desktopButtonsReadable=Array.from(footer.querySelectorAll('.er-hardware')).every(el=>{
+               const st=getComputedStyle(el);
+               return Number.parseFloat(st.fontSize)>=10&&st.color!=='rgba(0, 0, 0, 0)'&&el.textContent.trim().length>0;
+             });
              result.plasticMobile=getComputedStyle(pad).backgroundImage.includes('data:image/webp');
              result.noZebra=/data:image\/webp/.test(getComputedStyle(footer).backgroundImage)
                &&!getComputedStyle(footer).backgroundImage.includes('textile');
