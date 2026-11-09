@@ -3346,3 +3346,14 @@
  }
  .zebra-game-body .zg.er .er-pad::after{content:none!important;display:none!important;}
 }
+
+/* Restored legible labels: old PNG-only buttons had font-size:0.
+   A textured physical button MUST render its actual action text. */
+.zebra-game-body .zg.er .er-footer .er-hardware{
+  font:700 11px/1.12 "Oxanium","Courier New",monospace!important;
+  letter-spacing:.15px!important;
+  text-transform:uppercase!important;
+  white-space:nowrap!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  image-rendering:auto!important;
+}
