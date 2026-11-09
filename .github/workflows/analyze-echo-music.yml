@@ -16,6 +16,8 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg
+      - name: Installer ffmpeg pour analyse du MP3
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - name: Mesurer l'enveloppe du morceau réel, sans modifier le son
         run: |
           python3 - <<'PY'
