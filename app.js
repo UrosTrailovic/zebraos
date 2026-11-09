@@ -3,7 +3,7 @@
 (function(){
 "use strict";
 var $=function(id){return document.getElementById(id)};
-var users=[["visitor","Visiteur","Session publique","V"],["zebra","Zebra","Session du studio","Z"],["admin","Admin","Gestion du studio","A"]];
+var users=[["zebra","Zebra","Session du studio","Z"],["admin","Admin","Gestion du studio","A"]];
 var wallpaper={visitor:"visitor",zebra:"zebra",admin:"admin"};
 var session=null,opened={},z=20,seq=0,adminApproved=false,adminLoginUnlocked=false;
 /* Local filesystem replaces the former demo-only filenames. */
@@ -232,6 +232,7 @@ function finishSessionBoot(){
   if(window.ZebraWallpaper)window.ZebraWallpaper.apply(session);else setWall(getStore("zebra.wall."+session)||session);desk();show("desktop-screen");if(window.ZebraTools)window.ZebraTools.stickyDesktop(session);
 }
 function beginSessionBoot(id){
+  if(id!=="zebra"&&id!=="admin")return;
   if(sessionBooting)return;
   pendingSession=id;sessionBooting=true;
   var name=users.filter(function(u){return u[0]===id})[0];
@@ -345,6 +346,7 @@ function requestAdminPassword(){
   input.focus();
 }
 function start(id){
+  if(id!=="zebra"&&id!=="admin")return;
   if(id==="admin"&&!adminLoginUnlocked){requestAdminPassword();return;}
   beginSessionBoot(id);
 }
@@ -748,7 +750,7 @@ var gameModules={
  snake:{name:"Znake.exe",width:650,height:700,global:"ZebraSnake",
   files:["snake.js?v=8.7"],css:"snake.css?v=8.9"},
  racer:{name:"Echo Racer.exe",width:750,height:790,global:"ZebraEchoRacer",
-  files:["echo-racer.js?v=14.8"],css:"echo-racer.css?v=14.15"},
+  files:["echo-racer.js?v=15.0"],css:"echo-racer.css?v=15.0"},
  paint:{name:"ZebraPaint.exe",width:850,height:640,global:"ZebraPaint",
   files:["paint.js?v=1.4"],css:"paint-responsive.css?v=1.4"}
 };

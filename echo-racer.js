@@ -28,14 +28,14 @@ function rectRound(ctx,x,y,w,h,r){
  * Experimental arcade curvature rather than full rigid-body 3D physics. */
 const SECTORS=16,STEP=TAU/SECTORS,HIT_Z=1.6,SPAWN_Z=29.4,RENDER_FAR_Z=32.6;
 const APPEAR_FADE_DEPTH=7.2;
-const PATTERN_COUNT=16;
+const PATTERN_COUNT=20;
+// Une seule course publique, infinie. Free roam reste disponible uniquement
+// pour les outils de diagnostic ; il n'existe plus de sélecteur de niveaux.
 const LEVELS=[
- {id:"1",name:"INITIATION",subtitle:"PASSAGES LARGES",speed:.77,gap:1.55,spin:.04,patterns:[0,1,3,7,10,13]},
- {id:"2",name:"CIRCUIT",subtitle:"RYTHME CROISSANT",speed:.91,gap:1.2,spin:.14,patterns:[0,1,2,3,5,7,10,11,13,14]},
- {id:"3",name:"RAPIDE",subtitle:"RÈGLES CLASSIQUES",speed:1,gap:1,spin:.28,patterns:null},
- {id:"4",name:"EXTRÊME",subtitle:"VITESSE MAXIMALE",speed:1.16,gap:.84,spin:.44,patterns:null},
- {id:"free",name:"FREE ROAM",subtitle:"SANS OBSTACLES · BOOST ∞",speed:1,gap:1,spin:0,patterns:[]}
+ {id:"run",name:"ENDLESS",subtitle:"COURSE INFINIE",speed:1,gap:1,spin:0,patterns:null},
+ {id:"free",name:"FREE ROAM",subtitle:"DIAGNOSTIC SANS OBSTACLES",speed:1,gap:1,spin:0,patterns:[]}
 ];
+const MUSIC_DROP_AT=68,MUSIC_SECOND_DROP_AT=162,MUSIC_TAIL_AT=217,MUSIC_LOOP_FROM=68;
 // Distances are in world units. Short double-gates punctuate longer stretches.
 const GAP_MIN=15.2,GAP_MAX=21.4,START_GATE_AT=.48;
 // A separate rhythm of collectible wall pads between the hazard waves.
@@ -72,7 +72,12 @@ function pattern(kind){
    case 12:wall=(i%6)<3;break;                         // triple stepped teeth
    case 13:wall=inGap(i,0,6)||inGap(i,10,3);break;    // uneven opposing arches
    case 14:wall=!inGap(i,0,4)&&!inGap(i,7,4);break;   // close double holes
-   default:wall=inGap(i,0,5)||inGap(i,8,4)||i===14;  // scattered blocks
+   case 15:wall=inGap(i,0,5)||inGap(i,8,4)||i===14;break;
+   case 16:wall=!inGap(i,0,4)&&!inGap(i,8,3);break;   // twin offset windows
+   case 17:wall=(i%6)<4;break;                         // broken teeth
+   case 18:wall=inGap(i,0,10)&&i%3!==1;break;          // open-side grating
+   case 19:wall=!inGap(i,0,2)&&!inGap(i,5,3)&&!inGap(i,11,2);break;
+   default:wall=false;
   }
   if(wall)blocks.push(i);
  }
@@ -103,16 +108,17 @@ function mount(root){
  let live=true,raf=0,ro=null,last=0,mode="menu",keys=new Set();
  let renderDpr=1,hudTimer=0,bestSaveTimer=0,audioSampleTimer=0;
  let geometryCache={cx:W*.5,cy:H*.39,R:Math.max(W,H)*1.23,offset:5/9};
- let selectedLevel=LEVELS.find(x=>x.id===load("level","3"))||LEVELS[2];
+ let selectedLevel=LEVELS[0];
  let angle=0,turnVelocity=0,lives=MAX_LIVES,score=0;
- let best=Number(load("best."+selectedLevel.id,selectedLevel.id==="3"?load("best","0"):"0"))||0;
+ let best=Number(load("best.run",load("best.3",load("best","0"))))||0;
  let distance=0,travel=0,passed=0,combo=0,waves=[],pads=[],shields=[],
   nextGateAt=START_GATE_AT,nextPadAt=PAD_START,nextShieldAt=SHIELD_START,
   lastGateAt=-100,trail=[],sparks=[],currentSpeed=0,gateCount=0,padCount=0,shieldCount=0,scoreMultiplier=1;
  let invuln=0,pulseCharge=2,pulseGlow=0,padBoostTime=0,pulseFx=0,pulseHitFx=0,shieldFlash=0;
  let nitroHeld=false,nitroActive=false,nitroFuel=0,nitroRegenWait=0,nitroBurnTime=0,freeChargeVisual=0;
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
- let menuStage="home",menuIndex=Math.max(0,LEVELS.indexOf(selectedLevel)),pauseIndex=0,overIndex=0,warningLife=0,warningBeepDelay=0,warningChirp=0;
+ let menuStage="home",menuIndex=0,pauseIndex=0,overIndex=0,warningLife=0,warningBeepDelay=0,warningChirp=0;
+ let directorStage=0,musicDropSurge=0,musicLoops=0;
  const DEATH_FADE_SECONDS=1.15,DEATH_ANIMATION_SECONDS=1.15;
  let deathFade=0,deathLock=0;
  let soundEnabled=load("sfx","on")!=="off",audioCtx=null;
@@ -283,20 +289,8 @@ function mount(root){
  const overlayButton=node("button","er-overlay-button","▶ DÉMARRER");
  overlayButton.type="button";
  const levelPicker=node("div","er-level-picker");
- levelPicker.setAttribute("role","group");levelPicker.setAttribute("aria-label","Choisir un niveau");
- const levelButtons=LEVELS.map((level,index)=>{
-  const btn=node("button","er-level-button");
-  btn.type="button";btn.title=level.subtitle;
-  btn.setAttribute("aria-label",(level.id==="free"?"Free Roam":"Niveau "+level.id)+" — "+level.name);
-  btn.style.setProperty("--level-texture",'url("/assets/games/lvl'+(index+1)+'.png")');
-  // Entire native pixel-art image is the button; no CSS or text overlay.
-  btn.onclick=()=>{
-   if(mode!=="menu"||menuStage!=="levels")return;
-   menuIndex=index;
-   confirmLevel();
-  };
-  levelPicker.appendChild(btn);return btn;
- });
+ levelPicker.hidden=true;
+ const levelButtons=[];
  const backButton=node("button","er-menu-back","MENU");
  backButton.type="button";backButton.setAttribute("aria-label","Retour au menu principal");
  backButton.onclick=()=>toMenu();
@@ -312,26 +306,15 @@ function mount(root){
   [pauseRestart,pauseSound,pauseMenu].forEach((btn,i)=>btn.classList.toggle("selected",mode==="paused"&&pauseIndex===i+1));
  }
  function confirmLevel(){
-  if(mode!=="menu"||menuStage!=="levels")return;
-  selectedLevel=LEVELS[menuIndex];save("level",selectedLevel.id);
-  best=Number(load("best."+selectedLevel.id,selectedLevel.id==="3"?load("best","0"):"0"))||0;
-  start();
+  if(mode==="menu")start();
  }
  function controllerInput(which){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   const backward=which==="up"||which==="left";
   const forward=which==="down"||which==="right";
   if(mode==="menu"){
-   if(menuStage==="home"){
-    if(which==="pulse"||which==="pause")showLevelSelect();
-    return;
-   }
-   if(backward||forward){
-    menuIndex=(menuIndex+(forward?1:-1)+LEVELS.length)%LEVELS.length;
-    beep("switch");paintMenuSelection();return;
-   }
-   if(which==="pulse"){confirmLevel();return;}
-   if(which==="boost"||which==="pause"){renderMenuStage("home");return;}
+   // La manette peut valider Play, les flèches ne déclenchent rien.
+   if(which==="pulse"||which==="pause"||which==="boost")start();
    return;
   }
   if(mode==="paused"){
@@ -356,7 +339,7 @@ function mount(root){
  }
  function renderMenuStage(stage){
   menuStage=stage;
-  const choosing=stage==="levels";
+  const choosing=false;
   overlay.classList.toggle("er-stage-levels",choosing);
   overlay.classList.toggle("er-stage-home",!choosing);
   brandLogo.hidden=false;logo.hidden=true;crashIcon.hidden=true;crashSub.hidden=true;
@@ -371,14 +354,13 @@ function mount(root){
   }
   overlayButton.classList.remove("er-overlay-restart");
   overlayButton.textContent="▶ JOUER";
-  overlayButton.setAttribute("aria-label","Jouer — sélectionner un niveau");
+  overlayButton.setAttribute("aria-label","Jouer — commencer directement la course infinie");
   backButton.setAttribute("aria-label","Retour à l'accueil Echo Racer");
   paintMenuSelection();
  }
  function showLevelSelect(){
-  if(mode!=="menu"||menuStage==="levels")return;
-  menuIndex=Math.max(0,LEVELS.indexOf(selectedLevel));
-  renderMenuStage("levels");
+  // Alias conservé pour les anciens appelants, mais aucune sélection.
+  if(mode==="menu")start();
  }
  // SELECT opens these controls via the pause overlay, not a permanent bar.
  const pauseActions=node("div","er-pause-actions");
@@ -512,7 +494,7 @@ function mount(root){
  const footer=node("div","er-footer zg-buttons zt-buttons");
  function button(label,cls,callback){const b=node("button","er-hardware "+cls,label);b.type="button";b.onclick=()=>{beep("switch");callback();};return b;}
  const startButton=button("▶ JOUER","er-play",()=>{
-  if(mode==="menu")showLevelSelect();
+  if(mode==="menu")start();
   else if(mode==="over")start();
   else togglePause();
  });
@@ -819,7 +801,20 @@ function mount(root){
   if(!window.Audio)return null;
   try{
    music=new window.Audio(musicUrl);
-   music.loop=true;music.volume=.82;music.preload="none";
+   music.loop=false;music.volume=.82;music.preload="none";
+   // Le MP3 réel dure ~314 s, mais les 97 dernières secondes sont presque
+   // silencieuses. Boucler sur le passage intense évite une longue panne de jeu.
+   music.addEventListener("timeupdate",()=>{
+    if(!live||mode!=="running"||music.currentTime<MUSIC_TAIL_AT)return;
+    musicLoops++;
+    try{music.currentTime=MUSIC_LOOP_FROM;}catch(_){}
+   });
+   music.addEventListener("ended",()=>{
+    if(!live||mode!=="running"||!soundEnabled)return;
+    musicLoops++;
+    try{music.currentTime=MUSIC_LOOP_FROM;}catch(_){}
+    const resumed=music.play();if(resumed&&resumed.catch)resumed.catch(()=>{musicError=true;});
+   });
    music.onerror=function(){musicError=true;};
    const context=ensureAudioContext();
    if(context&&context.createMediaElementSource&&context.createAnalyser){
@@ -1179,6 +1174,7 @@ function mount(root){
   nextPadAt=selectedLevel.id==="free"?Infinity:PAD_START;
   nextShieldAt=selectedLevel.id==="free"?Infinity:SHIELD_START;
   lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;shieldCount=0;
+  directorStage=0;musicDropSurge=0;musicLoops=0;
   trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
   invuln=0;pulseCharge=2;pulseGlow=pulseFx=pulseHitFx=shieldFlash=padBoostTime=flash=shake=0;
   shieldCollect.classList.remove("er-shield-collected");
@@ -1235,7 +1231,7 @@ function mount(root){
   status.hidden=false;status.textContent="SCORE "+Math.floor(score)+"  ·  RECORD "+best;
   prompt.hidden=true;expl.hidden=true;hint.hidden=true;
   overlayButton.hidden=false;overlayButton.classList.add("er-overlay-restart");
-  overlayButton.textContent="↻ REJOUER";overlayButton.setAttribute("aria-label","Rejouer le niveau");
+  overlayButton.textContent="↻ REJOUER";overlayButton.setAttribute("aria-label","Recommencer une course infinie");
   crashCurtain.hidden=true;lockDeathControls(true);overIndex=0;paintMenuSelection();renderHud();
  }
  function togglePause(){
@@ -1332,37 +1328,65 @@ function mount(root){
   }
  }
  function createWave(){
-  const choices=selectedLevel.patterns||Array.from({length:PATTERN_COUNT},(_,i)=>i);
+  const tiers=[
+   [0,1,3,7,10,13],
+   [0,1,3,7,10,13,2,5,11,14,16],
+   [0,1,2,3,4,5,6,7,9,10,11,12,13,14,16,17,18],
+   Array.from({length:PATTERN_COUNT},(_,i)=>i)
+  ];
+  const choices=tiers[directorStage<2?0:directorStage<4?1:directorStage<6?2:3];
   let kind=choices[Math.floor(rand(0,choices.length))];
   if(kind===nextWave&&choices.length>1)
    kind=choices[(choices.indexOf(kind)+1+Math.floor(rand(0,choices.length-1)))%choices.length];
   nextWave=kind;
   const rotation=Math.floor(rand(0,SECTORS))*STEP;
-  // 1 in 4 waves slowly spins; spin affects both drawing and hit detection.
-  const spins=(gateCount>2&&Math.random()<selectedLevel.spin);
-  const spin=spins?(Math.random()<.5?-1:1)*rand(.26,.55):0;
+  const spinChance=directorStage<2?.035:directorStage<4?.13:.18+Math.min(.20,directorStage*.025);
+  const spins=gateCount>3&&Math.random()<spinChance;
+  const spin=spins?(Math.random()<.5?-1:1)*rand(.16,.42):0;
   const twist=rand(-.14,.14);
-  const sectors=pattern(kind);
-  return {
-   kind,sectors,z:SPAWN_Z,
+  return {kind,sectors:pattern(kind),z:SPAWN_Z,
    length:kind===2||kind===8?rand(.6,.9):rand(.85,1.5),
-   rotation,spin,twist,cleared:false,credited:false
-  };
+   rotation,spin,twist,cleared:false,credited:false};
  }
  function nextGateGap(){
-  const hard=nextWave===2||nextWave===8||nextWave===9;
-  // Variety of breathing room: double-gate sets, long open accelerations,
-  // normal gaps. The tightest shutters get EXTRA distance.
-  let gap;
-  if(gateCount%7===5)gap=rand(12.1,13.9);         // occasional fast double gate
-  else if(gateCount%7===6)gap=rand(21.0,24.5);  // relief after the double gate
-  else gap=rand(GAP_MIN,GAP_MAX);
-  if(hard)gap+=2.4;
-  return gap*selectedLevel.gap;
+  const hard=nextWave===2||nextWave===8||nextWave===9||nextWave===19;
+  // Endlessly increasing density, never a wall of impossible instant hits.
+  const cycle=gateCount%9;
+  let gap=cycle===5&&directorStage>=2?rand(12.8,15.2):
+    cycle===6?rand(22.0,26.0):rand(GAP_MIN,GAP_MAX);
+  if(hard)gap+=2.8;
+  const density=clamp(1-directorStage*.055,.62,1);
+  return Math.max(10.8,gap*density)*selectedLevel.gap;
+ }
+ function directMusicPressure(dt){
+  // Song analysed on CI: dominant rise at 68 s, a second at 162 s.
+  // Actual media clock is authoritative when playing, elapsed is fallback
+  // for muted/offline runs, so gameplay never stalls because audio is blocked.
+  const songTime=music&&!music.paused&&soundEnabled?
+   (musicLoops>0?MUSIC_SECOND_DROP_AT:music.currentTime):elapsed;
+  const musicalStage=songTime>=MUSIC_SECOND_DROP_AT?4:songTime>=MUSIC_DROP_AT?2:0;
+  const survivalStage=Math.min(8,Math.floor(elapsed/58));
+  const target=Math.max(musicalStage,survivalStage);
+  if(target>directorStage){
+   const old=directorStage;
+   directorStage=target;
+   const isDrop=(old<2&&target>=2)||(old<4&&target>=4);
+   musicDropSurge=isDrop?1.18:Math.max(musicDropSurge,.25);
+   if(isDrop){
+    message=target>=4?"SECOND DROP · HYPERDRIVE":"MUSIC DROP · ACCÉLÉRATION";
+    messageLife=2.6;flash=Math.max(flash,.16);
+    beep("collect");
+   }else{
+    message="PRESSION ×"+(directorStage+1);
+    messageLife=1.05;
+   }
+  }
+  musicDropSurge=Math.max(0,musicDropSurge-dt*.19);
  }
  function advance(dt){
   if(mode!=="running"||document.hidden)return;
   dt=clamp(dt,0,.05);elapsed+=dt;
+  directMusicPressure(dt);
   // Inverted orbital steering: pressing LEFT rotates the camera/ship toward
   // the opposite tunnel angle. Keep keyboard and touch D-pad consistent.
   const digitalSteer=(keys.has("left")?1:0)-(keys.has("right")?1:0);
@@ -1378,11 +1402,13 @@ function mount(root){
   // A boost pad is stronger than manual boost, but they do not multiply
   // together into an uncontrollable/untestable collision speed.
   updateNitro(dt);
-  // Score-driven cruise progression: uninterrupted growth in every mode.
-  const growthRate=selectedLevel.id==="1"?.50:selectedLevel.id==="2"?.61:
-   selectedLevel.id==="3"?.72:selectedLevel.id==="4"?.84:.58;
-  const growth=Math.min(2.25,Math.log1p(Math.max(0,score)/3500)*growthRate);
-  const base=(clamp(4.15+Math.min(1.55,distance/3000*.43)+throttle,3.5,5.7)+growth)*selectedLevel.speed;
+  // Endless runner: increasing challenge by survival, plus actual music
+  // energy and deliberate acceleration on the measured drop transitions.
+  const growth=Math.min(1.7,Math.log1p(Math.max(0,score)/3800)*.42);
+  const stageThrust=Math.min(3.0,directorStage*.36);
+  const musicThrust=audioFx.energy*.48+audioFx.kick*.12;
+  const base=clamp(4.15+stageThrust+growth+throttle+
+   musicThrust+musicDropSurge*.82,3.5,10.0)*selectedLevel.speed;
   // A held nitro continues to gain thrust, instead of jumping to a ceiling.
   const nitroThrust=1.38+1.1*(1-Math.exp(-nitroBurnTime*.72));
   const multiplier=padBoostTime>0?2.5:nitroActive?nitroThrust:1;
@@ -1985,17 +2011,10 @@ function mount(root){
   };
   const dir=control[k];
   if(mode==="menu"){
-   if(menuStage==="levels"&&/^[1-5]$/.test(k)){
-    e.preventDefault();if(e.repeat)return;
-    menuIndex=Number(k)-1;confirmLevel();return;
+   if(dir){e.preventDefault();return;}
+   if(k==="enter"||k===" "||k==="q"){
+    e.preventDefault();if(!e.repeat)start();return;
    }
-   if(dir){e.preventDefault();if(!e.repeat){
-    if(menuStage==="home")showLevelSelect();else controllerInput(dir);
-   }return;}
-   if(k==="enter"||k===" "||k==="q"){e.preventDefault();if(!e.repeat){
-    if(menuStage==="home")showLevelSelect();else confirmLevel();
-   }return;}
-   if(k==="escape"||k==="backspace"){e.preventDefault();if(!e.repeat)renderMenuStage("home");return;}
    return;
   }
   if(mode==="paused"||mode==="over"){
@@ -2026,7 +2045,7 @@ function mount(root){
   if(mode!=="running"){
    // Mobile screen is a display: menu navigation belongs to the controller.
    if(e.pointerType==="touch"||e.pointerType==="pen")return;
-   if(mode==="menu"&&menuStage==="home")showLevelSelect();
+   if(mode==="menu")start();
    return;
   }
   if(e.pointerType!=="touch"&&e.pointerType!=="pen")return;
@@ -2069,7 +2088,7 @@ function mount(root){
  window.addEventListener("blur",onBlur);
  overlayButton.onclick=function(){
   if(mode==="paused")togglePause();
-  else if(mode==="menu")showLevelSelect();
+  else if(mode==="menu")start();
   else start();
  };
  document.addEventListener("keydown",keyDown);
@@ -2107,7 +2126,7 @@ function mount(root){
   lcdEditor:()=>({open:!cfgPanel.hidden,mode:cfgMode,layout:JSON.parse(JSON.stringify(cfgLayout)),targets:Object.keys(cfgTargets)}),
   lcdSet:(id,x,y)=>{if(!cfgTargets[id])return false;cfgChosen=id;cfgSet(id,"x",x);cfgSet(id,"y",y);return true;},
   lcdOpen:cfgOpen,lcdClose:cfgHide,
-  snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
+  snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,directorStage,musicDropSurge,pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
   injectPickup:(kind,sectors,z=HIT_Z+PICKUP_FRONT+.2)=>{
    const o={z,sectors:[...sectors],length:kind==="pad"?1.1:0,credited:false,shimmer:0};

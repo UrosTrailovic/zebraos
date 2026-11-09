@@ -8,7 +8,7 @@ var modes=[
   ["fill","Remplir"],["fit","Ajuster"],["stretch","Étirer"],
   ["tile","Vignette"],["center","Centrer"],["span","Étendre"]
 ];
-var accounts=["visitor","zebra","admin"];
+var accounts=["zebra","admin"];
 var labelFonts={
  tahoma:"Tahoma, Arial, sans-serif", arial:"Arial, Helvetica, sans-serif",
  verdana:"Verdana, Geneva, sans-serif", trebuchet:"'Trebuchet MS', Arial, sans-serif",
