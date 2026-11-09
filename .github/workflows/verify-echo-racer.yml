@@ -330,14 +330,15 @@ jobs:
            try{
             window.ZebraEchoRacer.mount(root);
             const debug=root._echoDebug;
-            debug.openLevels();
+            // No level selector: direct confirmation must launch endless Play.
+            const menuBefore=debug.snapshot().mode==="menu";
+            const picker=root.querySelector(".er-level-picker");
+            const play=root.querySelector(".er-overlay-button");
+            const directPlayReady=menuBefore&&picker.hidden&&picker.children.length===0
+              &&play.textContent.includes("JOUER");
             const rect=sel=>root.querySelector(sel).getBoundingClientRect();
-            const levelBox=rect(".er-level-picker");
-            const screenMenu=rect(".er-screen");
-            const menuCentered=Math.abs((levelBox.left+levelBox.right)/2-
-              (screenMenu.left+screenMenu.right)/2)<18
-              &&levelBox.top>screenMenu.top&&levelBox.bottom<screenMenu.bottom+2;
             debug.controller("pulse");
+            const menuCentered=directPlayReady&&debug.snapshot().mode==="running";
             debug.advance(.05);
             setTimeout(()=>{
              const wrap=rect(".zg.er"),screen=rect(".er-screen"),dash=rect(".er-dashboard"),
