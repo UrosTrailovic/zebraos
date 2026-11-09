@@ -1,0 +1,48 @@
+name: Analyser le morceau Echo Racer
+on:
+  push:
+    paths:
+      - '.github/workflows/analyze-echo-music.yml'
+      - 'assets/games/echoraccaersong.mp3'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  music-map:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Mesurer l'enveloppe du morceau réel, sans modifier le son
+        run: |
+          python3 - <<'PY'
+          import array, json, math, shutil, subprocess, statistics
+          path="assets/games/echoraccaersong.mp3"
+          if not shutil.which("ffmpeg"):
+              raise SystemExit("ffmpeg unavailable on runner")
+          process=subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-i",path,
+             "-ac","1","-ar","8000","-f","s16le","-"],capture_output=True,check=True)
+          samples=array.array("h");samples.frombytes(process.stdout)
+          step=2000
+          quarter=[]
+          for i in range(0,len(samples)-step+1,step):
+              frame=samples[i:i+step]
+              rms=math.sqrt(sum(float(x)*float(x) for x in frame)/len(frame))/32768
+              quarter.append(round(rms,5))
+          per_sec=[round(statistics.mean(quarter[i:i+4]),5) for i in range(0,len(quarter),4)]
+          duration=round(len(samples)/8000,2)
+          # Energy transition: compare medians before/after each second. Pure
+          # amplitude analysis, not an invented BPM or precise musical beatmap.
+          candidates=[]
+          for s in range(5,len(per_sec)-6):
+              before=statistics.mean(per_sec[max(0,s-5):s-1])
+              after=statistics.mean(per_sec[s:s+4])
+              ratio=(after+.003)/(before+.003)
+              if after>.025:
+                  candidates.append([round(ratio,2),s,round(before,4),round(after,4)])
+          candidates.sort(reverse=True)
+          data={"duration_seconds":duration,
+                "rms_per_second":per_sec,
+                "largest_relative_energy_rises":candidates[:18],
+                "overall_median_rms":round(statistics.median(per_sec),5)}
+          print("ECHO_AUDIO_PROFILE_JSON="+json.dumps(data,separators=(",",":")),flush=True)
+          PY
