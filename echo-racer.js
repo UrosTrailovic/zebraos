@@ -150,7 +150,7 @@ function mount(root){
  const audioFx={bass:0,mid:0,high:0,kick:0,previousBass:0,slowBass:0,beatCooldown:0,energy:0};
  // Persistent TEST lab settings. Impact labels indicate likely rendering cost.
  const LAB_DEFAULTS={
-  baseSpeed:6.15,acceleration:1,phaseBonus:.62,visualSpeed:1.5,
+  baseSpeed:6.15,acceleration:1,phaseBonus:.62,boostPadSpeed:1.85,visualSpeed:1.5,
   displayScale:25,obstacleDensity:1,punch:1,light:1,
   lineCount:16,ringGap:.66,panelDetail:1,renderScale:.85,
   warp:false,shadows:false,particles:.75,invincible:true,
@@ -161,6 +161,7 @@ function mount(root){
   {id:"baseSpeed",label:"Vitesse initiale réelle",min:4,max:14,step:.25,unit:"u/s",cost:"JEU",help:"Déplacement sans turbo"},
   {id:"acceleration",label:"Montée avec le temps",min:.2,max:3,step:.1,unit:"×",cost:"JEU"},
   {id:"phaseBonus",label:"Bonus phase bleue",min:0,max:3,step:.05,unit:"u/s",cost:"JEU"},
+  {id:"boostPadSpeed",label:"Puissance des pads BOOST",min:1,max:3.5,step:.05,unit:"×",cost:"JEU",help:"Multiplie la vitesse réelle après avoir traversé un pad. Indépendant du boost manuel. Défaut : ×1,85."},
   {id:"visualSpeed",label:"Sensation de vitesse",min:.5,max:4,step:.1,unit:"×",cost:"VISUEL",help:"Vitesse de défilement décorative, indépendante des collisions"},
   {id:"displayScale",label:"KM/H affichés",min:10,max:55,step:1,unit:"×",cost:"AFFICHAGE",help:"Valeur arcade, pas une mesure physique réelle"},
   {id:"obstacleDensity",label:"Densité d'obstacles",min:.5,max:1.8,step:.05,unit:"×",cost:"JEU / MOYEN"},
@@ -203,7 +204,7 @@ function mount(root){
   {id:"p3",title:"PHASE 3",subtitle:"TUNNEL BLEU · APRÈS 217 s",seconds:MUSIC_TAIL_AT,stage:5}
  ];
  const PHASE_FIELDS=[
-  "baseSpeed","acceleration","phaseBonus","visualSpeed","obstacleDensity",
+  "baseSpeed","acceleration","phaseBonus","boostPadSpeed","visualSpeed","obstacleDensity",
   "punch","light","colorPink","colorCyan","colorBlue",
   "lineCount","ringGap","panelDetail"
  ];
@@ -1895,7 +1896,7 @@ function mount(root){
    5.4,12.5)*selectedLevel.speed;
   // Turbo is still rewarding, but the basic flight stays exciting.
   const nitroThrust=1.43+.30*(1-Math.exp(-nitroBurnTime*.72));
-  const multiplier=padBoostTime>0?1.85:nitroActive?nitroThrust:1;
+  const multiplier=padBoostTime>0?lab.boostPadSpeed:nitroActive?nitroThrust:1;
   const targetSpeed=base*multiplier;
   const response=targetSpeed>=currentSpeed?6.4:.75;
   currentSpeed+=(targetSpeed-currentSpeed)*(1-Math.exp(-dt*response));

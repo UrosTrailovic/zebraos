@@ -38,6 +38,9 @@ jobs:
               &&js.includes('const multiplier=padBoostTime>0?1.85'),
             hasTuning:js.includes('const LAB_DEFAULTS')&&js.includes('er-lab-window')&&
               js.includes('labVisualTravel')&&css.includes('er-lab-impact'),
+            boostPadTuning:js.includes('id:"boostPadSpeed"')
+              &&js.includes('padBoostTime>0?lab.boostPadSpeed')
+              &&js.includes('"phaseBonus","boostPadSpeed","visualSpeed"'),
             phaseProfiles:js.includes('const PHASES=')&&js.includes('phaseProfiles=loadPhaseProfiles()')
               &&app.includes('window.ZebraEchoLabWindow=')
               &&css.includes('.er-lab-window.er-lab-native'),
@@ -162,6 +165,14 @@ jobs:
                // the active run until the phase is explicitly previewed.
                lab.querySelector('[data-phase="p1"]').click();
                setSpeed(8);
+               const padSlider=lab.querySelector('[data-lab-id="boostPadSpeed"]');
+               const setPad=(n)=>{
+                 padSlider.value=String(n);
+                 padSlider.dispatchEvent(new Event('input',{bubbles:true}));
+               };
+               setPad(1.25);
+               result.padSpeedP1=debug.snapshot().phaseProfiles.p1.boostPadSpeed===1.25
+                 &&debug.snapshot().phaseProfiles.p3.boostPadSpeed!==1.25;
                result.phaseIndependent=debug.snapshot().phaseProfiles.p1.baseSpeed===8
                  &&debug.snapshot().phaseProfiles.p3.baseSpeed!==8;
                lab.querySelector('.er-lab-try-phase').click();
@@ -169,13 +180,19 @@ jobs:
                  &&debug.snapshot().testMode&&debug.snapshot().encore.mode==='normal';
                lab.querySelector('[data-phase="p2"]').click();
                setSpeed(9);
+               setPad(2.7);
                lab.querySelector('.er-lab-try-phase').click();
+               result.padSpeedP2Active=debug.snapshot().lab.boostPadSpeed===2.7
+                 &&debug.snapshot().phaseProfiles.p1.boostPadSpeed===1.25;
                result.previewP2=debug.snapshot().phaseActive==='p2'
                  &&debug.snapshot().testMode&&debug.snapshot().directorStage>=2
                  &&debug.snapshot().encore.mode==='normal';
                lab.querySelector('[data-phase="p3"]').click();
                setSpeed(8.5);
+               setPad(1.6);
                lab.querySelector('.er-lab-try-phase').click();
+               result.padSpeedP3Active=debug.snapshot().lab.boostPadSpeed===1.6
+                 &&debug.snapshot().phaseProfiles.p2.boostPadSpeed===2.7;
                result.previewP3=debug.snapshot().phaseActive==='p3'
                  &&debug.snapshot().testMode&&debug.snapshot().encore.mode==='blue'
                  &&debug.snapshot().lab.baseSpeed===8.5;
@@ -191,12 +208,16 @@ jobs:
                  exported.phases.p1.baseSpeed===8&&
                  exported.phases.p2.baseSpeed===9&&
                  exported.phases.p3.baseSpeed===6.15&&
+                 exported.phases.p1.boostPadSpeed===1.25&&
+                 exported.phases.p2.boostPadSpeed===2.7&&
+                 exported.phases.p3.boostPadSpeed===1.85&&
                  typeof exported.common.renderScale==='number';
                result.liveTuning=true;
                lab.querySelector('.er-lab-close').click();
                result.closeDetached=lab.hidden&&!lab.isConnected;
              }else{
-               for(const key of ['detachedWorkshop','nativeWorkshop','phaseIndependent','previewP1','previewP2',
+               for(const key of ['detachedWorkshop','nativeWorkshop','phaseIndependent','padSpeedP1',
+                 'padSpeedP2Active','padSpeedP3Active','previewP1','previewP2',
                  'previewP3','performancePreset','resetDefaults','phaseExport','closeDetached','liveTuning']){
                  result[key]=true;
                }
