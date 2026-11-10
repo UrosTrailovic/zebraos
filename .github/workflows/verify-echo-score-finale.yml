@@ -164,6 +164,35 @@ jobs:
                 d.snapshot().music.track==="p3"&&d.snapshot().music.loop===false;
               d.simulateSongEnd();d.tickFinale(4);
               out.normalRunFinishes=d.snapshot().mode==="finished";
+              // Isolate clean crossings from all automatic generators. Exactly
+              // five ordinary avoids should yield one single grouped reward.
+              d.testPhase("p3");
+              const beforeClean=d.snapshot();
+              let cleanCrosses=0;
+              for(let k=0;k<5;k++){
+                const cleanGate=d.injectWave([7],d.hitDepth+.12);
+                for(let t=0;t<8&&!cleanGate.credited;t++)d.advance(.05);
+                if(cleanGate.credited)cleanCrosses++;
+                if(k===3){
+                 const four=d.snapshot();
+                 out.noCleanSpamAtFour=four.arcade.cleanBonusCount===0&&
+                  four.arcade.cleanPassStreak===4&&
+                  !detail.textContent.includes("PASSAGE PROPRE");
+                }
+              }
+              const fifth=d.snapshot();
+              out.cleanBonusOnlyEveryFive=cleanCrosses===5&&
+               fifth.arcade.cleanBonusCount===1&&fifth.arcade.cleanPassStreak===0&&
+               detail.textContent.includes("PASSAGE PROPRE ×5 +")&&
+               fifth.score>=beforeClean.score+5*fifth.lab.scoreClean;
+              d.simulateHit();
+              out.cleanCounterResetsOnImpact=d.snapshot().arcade.cleanPassStreak===0;
+              const scoreColor=getComputedStyle(scoreDigits);
+              const comboColor=getComputedStyle(scorePanel.querySelector(".er-score-multiplier"));
+              out.crtHudColors=scoreColor.color==="rgb(234, 208, 241)"&&
+               comboColor.color==="rgb(155, 233, 240)"&&
+               scoreColor.fontFamily.includes("Share Tech Mono")&&
+               comboColor.fontFamily.includes("Share Tech Mono");
               out.noRenderError=!d.lastRenderError();
               out.cssPositioning=getComputedStyle(scorePanel).position==="absolute"&&
                 getComputedStyle(finale).position==="absolute";

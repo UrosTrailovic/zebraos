@@ -128,6 +128,7 @@ function mount(root){
  // Arcade risk/reward: event points stay pending until a safe cash-out.
  let skillBank=0,skillChain=0,skillMultiplier=1,skillTimer=0,skillAge=0;
  let bankedTotal=0,bankedCount=0,nearMisses=0;
+ let cleanPassStreak=0,cleanBonusCount=0;
  let rewardText="",rewardKind="",rewardLife=0,nitroFullLatched=false;
  const rewardCueCounts={nitroReady:0,pulseReady:0,bank:0,chainStep:0};
  let phase3Elapsed=0,finaleTime=0,finaleCause="",finaleSelection=0;
@@ -267,7 +268,7 @@ function mount(root){
   {"id":"comboCashout","label":"Durée maximale d'une chaîne","min":8,"max":40,"step":1,"unit":"s","cost":"JEU","help":"Encaissement automatique pour créer des pics de score"},
   {"id":"comboEvery","label":"Figures par multiplicateur","min":2,"max":7,"step":1,"unit":"fig.","cost":"JEU","help":"Plus petit = combo qui grimpe plus vite"},
   {"id":"comboMax","label":"Multiplicateur combo maximum","min":3,"max":20,"step":1,"unit":"×","cost":"JEU","help":"En plus du multiplicateur lié à la vitesse"},
-  {"id":"scoreClean","label":"Points passage propre","min":10,"max":400,"step":10,"unit":"pts","cost":"JEU","help":"Un obstacle évité normalement"},
+  {"id":"scoreClean","label":"Points passage propre","min":10,"max":400,"step":10,"unit":"pts","cost":"JEU","help":"Valeur par obstacle propre ; bonus versé par lot de 5 passages (×5) sans collision"},
   {"id":"scoreNear","label":"Points near miss","min":20,"max":700,"step":10,"unit":"pts","cost":"JEU","help":"Frôler un mur rapporte davantage"},
   {"id":"scorePulse","label":"Points mur détruit au pulse","min":20,"max":800,"step":10,"unit":"pts","cost":"JEU","help":"Un tir dans le vide ne rapporte rien"},
   {"id":"scorePad","label":"Points pad BOOST","min":10,"max":600,"step":10,"unit":"pts","cost":"JEU","help":"Récupérer un pad"},
@@ -1812,6 +1813,7 @@ function mount(root){
  function breakCombo(){
   // A collision cancels ONLY the multiplier, never the player's score.
   skillBank=0;skillChain=combo=0;skillMultiplier=0;skillTimer=skillAge=0;
+  cleanPassStreak=0;
   rewardLife=0;rewardText="";rewardKind="";scoreToast.hidden=true;
  }
  function awardSkill(kind,base,title){
@@ -1929,6 +1931,7 @@ function mount(root){
   resetSteering();mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
   hudTimer=bestSaveTimer=audioSampleTimer=0;
   skillBank=skillChain=skillTimer=skillAge=bankedTotal=bankedCount=nearMisses=0;
+  cleanPassStreak=cleanBonusCount=0;
   skillMultiplier=0;rewardLife=0;rewardText=rewardKind="";
   nitroFullLatched=false;
   for(const kind of Object.keys(rewardCueCounts))rewardCueCounts[kind]=0;
@@ -1988,6 +1991,7 @@ function mount(root){
   elapsed=0;encoreMode="normal";encoreTime=0;testMode=false;labToggle.hidden=true;labHide();padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
   skillBank=skillChain=skillAge=skillTimer=0;skillMultiplier=0;rewardLife=0;
+  cleanPassStreak=0;
   overlay.hidden=false;renderMenuStage("home");
   renderHud();
  }
@@ -2445,11 +2449,18 @@ function mount(root){
     }else{
      if(!w.cleared){
       const near=nearMiss(angle,w);
-      const bonus=awardSkill(near?"near":"clean",
-       near?lab.scoreNear:lab.scoreClean,near?"NEAR MISS":"PASSAGE PROPRE");
-      if(near){message="NEAR MISS · +"+bonus;messageLife=1.15;beep("pass");}
-      else if(skillChain>0&&skillChain%lab.comboEvery===0){
-       message="COMBO ×"+skillMultiplier;messageLife=.85;
+      if(near){
+       // A genuine near miss is rewarded right away.
+       const bonus=awardSkill("near",lab.scoreNear,"NEAR MISS");
+       message="NEAR MISS · +"+bonus;messageLife=1.15;beep("pass");
+      }else{
+       // Ordinary avoidance is not an event on every single gate.
+       // Only the fifth clean gate earns the grouped bonus/notice.
+       cleanPassStreak++;
+       if(cleanPassStreak>=5){
+        cleanPassStreak=0;cleanBonusCount++;
+        awardSkill("clean",lab.scoreClean*5,"PASSAGE PROPRE ×5");
+       }
       }
      }
      if(passed%4===0&&pulseCharge<3){
@@ -3086,7 +3097,7 @@ function mount(root){
    finale:{time:finaleTime,cause:finaleCause,visible:!finaleOverlay.hidden,
     scoreText:finaleScore.textContent,stats:finaleStats.textContent},
    arcade:{bank:skillBank,chain:skillChain,multiplier:skillMultiplier,
-    speedMultiplier:scoreMultiplier,bankedTotal,bankedCount,nearMisses,
+    speedMultiplier:scoreMultiplier,bankedTotal,bankedCount,nearMisses,cleanPassStreak,cleanBonusCount,
     nitroReady:nitroFullLatched,cues:{...rewardCueCounts},toast:rewardText},
    labDetached:!wrap.contains(labPanel)&&!!labPanel.parentElement,
    phaseActive:activePhase,phaseEditing:editorPhase,
