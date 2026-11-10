@@ -3387,7 +3387,7 @@
  background-repeat:no-repeat!important;
 }
 /* Floating PC tool window: not a new browser tab and not part of the game CRT. */
-.zebra-game-body .zg.er .er-lab-toggle{
+.er-lab-toggle{
  position:absolute!important;z-index:190!important;top:43px!important;right:13px!important;
  display:block!important;width:auto!important;min-width:115px!important;height:26px!important;
  padding:2px 11px!important;border:2px outset #a8a2ba!important;border-radius:2px!important;
@@ -3396,9 +3396,9 @@
  font:700 11px/1.2 "Courier New",monospace!important;letter-spacing:.3px!important;
  box-shadow:0 2px 4px #0008!important;cursor:pointer!important;
 }
-.zebra-game-body .zg.er .er-lab-toggle[hidden],
-.zebra-game-body .zg.er .er-lab-window[hidden]{display:none!important;}
-.zebra-game-body .zg.er .er-lab-window{
+.er-lab-toggle[hidden],
+.er-lab-window[hidden]{display:none!important;}
+.er-lab-window{
  position:absolute!important;z-index:210!important;
  top:75px;right:10px;
  box-sizing:border-box!important;
@@ -3412,88 +3412,88 @@
  text-shadow:none!important;
  font:12px/1.35 "Courier New",monospace!important;
 }
-.zebra-game-body .zg.er .er-lab-titlebar{
+.er-lab-titlebar{
  display:flex!important;align-items:center!important;justify-content:space-between!important;
  gap:12px!important;min-height:32px!important;flex:0 0 32px!important;padding:0 7px 0 12px!important;
  background:linear-gradient(90deg,#1e286d,#5664ac)!important;
  color:#fff!important;font:700 12px/1 "Courier New",monospace!important;
  cursor:move!important;user-select:none!important;touch-action:none!important;
 }
-.zebra-game-body .zg.er .er-lab-close{
+.er-lab-close{
  padding:0!important;width:24px!important;height:23px!important;flex:0 0 24px!important;
  border:2px outset #efeff6!important;background:#a6a5b5!important;
  color:#11111b!important;font:700 18px/1 "Courier New",monospace!important;cursor:pointer!important;
 }
-.zebra-game-body .zg.er .er-lab-body{
+.er-lab-body{
  overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;
  touch-action:pan-y!important;padding:10px 12px 14px!important;min-height:0!important;
  scrollbar-color:#5e6281 #181622!important;scrollbar-width:thin!important;
  display:flex!important;flex-direction:column!important;gap:8px!important;
 }
-.zebra-game-body .zg.er .er-lab-intro,
-.zebra-game-body .zg.er .er-lab-disclaimer{
+.er-lab-intro,
+.er-lab-disclaimer{
  margin:0!important;padding:7px 8px!important;
  background:#232332!important;border:1px solid #46465c!important;
  color:#c7c2d5!important;font:11px/1.45 "Courier New",monospace!important;
 }
-.zebra-game-body .zg.er .er-lab-fps{
+.er-lab-fps{
  background:#080b0c!important;color:#90f1c2!important;border:1px solid #526b67!important;
  padding:7px 8px!important;font:700 12px/1 "Courier New",monospace!important;
 }
-.zebra-game-body .zg.er .er-lab-presets,
-.zebra-game-body .zg.er .er-lab-actions{
+.er-lab-presets,
+.er-lab-actions{
  display:flex!important;gap:5px!important;justify-content:stretch!important;
 }
-.zebra-game-body .zg.er .er-lab-presets button,
-.zebra-game-body .zg.er .er-lab-actions button{
+.er-lab-presets button,
+.er-lab-actions button{
  flex:1!important;min-width:0!important;padding:7px 4px!important;
  background:linear-gradient(#4a4859,#252331)!important;
  border:2px outset #a1a0b3!important;color:#f3eaf7!important;
  font:700 10px/1.15 "Courier New",monospace!important;cursor:pointer!important;
 }
-.zebra-game-body .zg.er .er-lab-section{
+.er-lab-section{
  margin:9px 0 1px!important;padding:6px 7px!important;
  background:#30283e!important;color:#e9cfed!important;
  border-left:3px solid #a28abd!important;font:700 11px/1 "Courier New",monospace!important;
  letter-spacing:1px!important;
 }
-.zebra-game-body .zg.er .er-lab-row{
+.er-lab-row{
  display:flex!important;flex-direction:column!important;gap:5px!important;
  padding:7px 8px!important;margin:0!important;
  background:#1c1b29!important;border:1px solid #393749!important;color:#e8e3ee!important;
 }
-.zebra-game-body .zg.er .er-lab-row-head{
+.er-lab-row-head{
  display:flex!important;align-items:center!important;justify-content:space-between!important;
  gap:8px!important;min-height:16px!important;
 }
-.zebra-game-body .zg.er .er-lab-label{font:700 11px/1.2 "Courier New",monospace!important;}
-.zebra-game-body .zg.er .er-lab-impact{
+.er-lab-label{font:700 11px/1.2 "Courier New",monospace!important;}
+.er-lab-impact{
  flex:0 0 auto!important;white-space:nowrap!important;
  color:#acaabd!important;background:#242633!important;
  border:1px solid #50516a!important;padding:1px 4px!important;
  font:700 9px/1.1 "Courier New",monospace!important;
 }
-.zebra-game-body .zg.er .er-lab-impact[data-impact="TRÈS ÉLEVÉ"],
-.zebra-game-body .zg.er .er-lab-impact[data-impact="ÉLEVÉ"]{color:#f2c38d!important;border-color:#80644b!important;}
-.zebra-game-body .zg.er .er-lab-impact[data-impact="JEU"]{color:#9dc3ea!important;border-color:#52688b!important;}
-.zebra-game-body .zg.er .er-lab-row-controls{
+.er-lab-impact[data-impact="TRÈS ÉLEVÉ"],
+.er-lab-impact[data-impact="ÉLEVÉ"]{color:#f2c38d!important;border-color:#80644b!important;}
+.er-lab-impact[data-impact="JEU"]{color:#9dc3ea!important;border-color:#52688b!important;}
+.er-lab-row-controls{
  display:grid!important;grid-template-columns:minmax(0,1fr) 86px!important;
  align-items:center!important;gap:9px!important;min-height:24px!important;
 }
-.zebra-game-body .zg.er .er-lab-input{width:100%!important;min-width:0!important;accent-color:#b7acdc!important;}
+.er-lab-input{width:100%!important;min-width:0!important;accent-color:#b7acdc!important;}
 .zebra-game-body .zg.er input.er-lab-input[type="checkbox"],
 .zebra-game-body .zg.er input.er-lab-input[type="color"]{
  width:28px!important;height:22px!important;justify-self:start!important;cursor:pointer!important;
 }
-.zebra-game-body .zg.er .er-lab-row select{color:#e8e1f5!important;background:#29283d!important;}
-.zebra-game-body .zg.er .er-lab-output{
+.er-lab-row select{color:#e8e1f5!important;background:#29283d!important;}
+.er-lab-output{
  font:700 10px/1.2 "Courier New",monospace!important;
  text-align:right!important;color:#b4def9!important;
 }
-.zebra-game-body .zg.er .er-lab-help{font:10px/1.25 "Courier New",monospace!important;color:#a4a3ba!important;}
+.er-lab-help{font:10px/1.25 "Courier New",monospace!important;color:#a4a3ba!important;}
 @media(max-width:700px){
- .zebra-game-body .zg.er .er-lab-toggle,
- .zebra-game-body .zg.er .er-lab-window{display:none!important;}
+ .er-lab-toggle,
+ .er-lab-window{display:none!important;}
  .zebra-game-body .zg.er .er-stage-home .er-test-button{
   width:min(100%,170px)!important;height:34px!important;min-height:34px!important;
   flex-basis:34px!important;margin:-4px auto 0!important;
@@ -3511,4 +3511,94 @@
  .zebra-game-body .zg.er .er-overlay.er-stage-over{
   --er-over-w:168px;--er-over-h:42px;
  }
+}
+
+
+/* Echo Racer v17 - Detached configuration studio. The native ZebraOS
+   desktop window is a sibling of the game, not a child of its 2D canvas.
+   Fallback standalone browser tests use a fixed viewport window. */
+.window[data-app-id="racer-lab"] .window-body.er-lab-native-host{
+ box-sizing:border-box!important;
+ display:flex!important;
+ flex-direction:column!important;
+ padding:0!important;margin:0!important;
+ overflow:hidden!important;background:#161520!important;
+ height:calc(100% - 26px)!important;min-height:0!important;
+}
+.window[data-app-id="racer-lab"] .er-lab-window.er-lab-native{
+ box-sizing:border-box!important;
+ position:relative!important;inset:auto!important;
+ width:100%!important;max-width:100%!important;
+ height:100%!important;max-height:100%!important;
+ border:0!important;border-radius:0!important;
+ box-shadow:none!important;min-height:0!important;
+ padding:0!important;
+}
+body > .er-lab-window.er-lab-floating{
+ position:fixed!important;
+ z-index:2147483000!important;
+ top:66px;left:calc(100vw - 470px);right:auto!important;
+ width:min(448px,calc(100vw - 24px))!important;
+ max-height:min(82vh,720px)!important;
+ box-sizing:border-box!important;
+ pointer-events:auto!important;
+}
+.er-lab-window[hidden],
+.er-lab-export-text[hidden]{display:none!important}
+.er-lab-phases{
+ display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ gap:5px!important;margin:4px 0 0!important;
+}
+.er-lab-phase-tab{
+ box-sizing:border-box!important;
+ padding:9px 2px!important;min-width:0!important;
+ border:2px outset #727895!important;
+ background:linear-gradient(#494765,#252338)!important;
+ font:700 11px/1 "Courier New",monospace!important;
+ color:#d2c5de!important;cursor:pointer!important;
+ text-align:center!important;
+}
+.er-lab-phase-tab.selected{
+ border:2px inset #80c5f6!important;
+ background:#263b63!important;color:#b6edff!important;
+ box-shadow:inset 0 1px 6px #071026!important;
+}
+.er-lab-chapter-info{
+ background:#0c1326!important;border-left:3px solid #63c0e5!important;
+ padding:7px 9px!important;margin:0!important;
+ font:700 11px/1.3 "Courier New",monospace!important;
+ color:#aee2f2!important;
+}
+.er-lab-try-phase,.er-lab-export-button{
+ width:100%!important;min-height:33px!important;
+ padding:8px!important;
+ border:2px outset #9c9bad!important;
+ color:#edf2fb!important;background:linear-gradient(#3a5a74,#1b2a43)!important;
+ font:700 12px/1.2 "Courier New",monospace!important;
+ cursor:pointer!important;
+}
+.er-lab-export-button{
+ background:linear-gradient(#4c4a68,#2b283f)!important;
+}
+.er-lab-export-status{
+ font:11px/1.35 "Courier New",monospace!important;
+ color:#a9e1bd!important;margin:0!important;
+}
+.er-lab-export-text{
+ width:100%!important;max-width:100%!important;min-height:110px!important;
+ box-sizing:border-box!important;
+ font:10px/1.35 monospace!important;
+ color:#d3e8fc!important;background:#0c1220!important;
+ border:1px solid #696a91!important;
+ padding:8px!important;white-space:pre!important;
+ resize:vertical!important;
+}
+.er-lab-window input:focus-visible,
+.er-lab-window button:focus-visible,
+.er-lab-window select:focus-visible{
+ outline:2px solid #b0d8f8!important;outline-offset:1px!important;
+}
+@media (max-width:700px){
+ body > .er-lab-window,
+ .window[data-app-id="racer-lab"]{display:none!important;}
 }
