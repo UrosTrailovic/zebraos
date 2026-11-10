@@ -1408,7 +1408,7 @@ function mount(root){
   message=testMode?"MODE TEST · PHASE BLEUE":selectedLevel.id==="free"?
    "FREE ROAM · BOOST ILLIMITÉ":"TROUVE LE PASSAGE";
   messageLife=testMode?3:2;keys.clear();levelPicker.hidden=true;
-  testButton.hidden=true;backButton.hidden=true;overlay.hidden=true;
+  testButton.hidden=true;labToggle.hidden=!testMode;labHide();backButton.hidden=true;overlay.hidden=true;
   if(testMode){
    // Use the SAME blue world as a real 217-second run. No five-minute wait.
    encoreMode="transition";encoreTime=ENCORE_TRANSITION_SECONDS;
@@ -1428,14 +1428,14 @@ function mount(root){
   if(!testMode&&mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
   resetSteering();stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];trail=[];turnVelocity=0;
   shieldCollect.classList.remove("er-shield-collected");pulseFx=pulseHitFx=shieldFlash=0;
-  elapsed=0;encoreMode="normal";encoreTime=0;testMode=false;padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
+  elapsed=0;encoreMode="normal";encoreTime=0;testMode=false;labToggle.hidden=true;labHide();padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
   overlay.hidden=false;renderMenuStage("home");
   renderHud();
  }
  function gameOver(){
   if(mode!=="running")return;
-  stopMusic();nitroHeld=false;nitroActive=false;mode="crashing";
+  stopMusic();nitroHeld=false;nitroActive=false;mode="crashing";labToggle.hidden=true;labHide();
   keys.clear();dragPointer=null;deathFade=0;deathLock=0;
   warningLife=0;warningBeepDelay=0;
   flash=.55;shake=7;
@@ -1812,7 +1812,7 @@ function mount(root){
    // the fixed cyan HUD arc. Frame rate cannot skip the detection.
    if(oldZ>HIT_Z&&w.z<=HIT_Z&&!w.credited){
     w.credited=true;passed++;
-    if(!w.cleared&&collisionAt(angle,w)&&invuln<=0){
+    if(!w.cleared&&collisionAt(angle,w)&&invuln<=0&&!(testMode&&lab.invincible)){
      lives--;combo=0;invuln=1.35;flash=.47;shake=3;beep("hit");
      if(lives>0)nextShieldAt=Math.min(nextShieldAt,travel+rand(lives===1?5:12,lives===1?11:24));
      if(lives===1){
@@ -2281,6 +2281,15 @@ function mount(root){
   if(!live)return;
   raf=requestAnimationFrame(frameTick);
   const dt=last?clamp((now-last)/1000,0,.07):0;last=now;
+  if(!labFpsStart)labFpsStart=now;
+  labFpsFrames++;
+  if(now-labFpsStart>=850){
+   labFps=Math.round(labFpsFrames*1000/(now-labFpsStart));
+   labFpsFrames=0;labFpsStart=now;
+   if(!labPanel.hidden)labPerfReadout.textContent="FPS "+labFps+
+    " · RENDU "+canvas.width+"×"+canvas.height+
+    " · ÉCRAN "+Math.round(W)+"×"+Math.round(H);
+  }
   const parent=root.closest(".window");
   if(document.hidden||parent&&parent.classList.contains("minimized")){
    if(mode==="running")togglePause();
@@ -2437,10 +2446,11 @@ function mount(root){
   lcdEditor:()=>({open:!cfgPanel.hidden,mode:cfgMode,layout:JSON.parse(JSON.stringify(cfgLayout)),targets:Object.keys(cfgTargets)}),
   lcdSet:(id,x,y)=>{if(!cfgTargets[id])return false;cfgChosen=id;cfgSet(id,"x",x);cfgSet(id,"y",y);return true;},
   lcdOpen:cfgOpen,lcdClose:cfgHide,
-  snapshot:()=>({mode,testMode,homeIndex,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,directorStage,musicDropSurge,
+  snapshot:()=>({mode,testMode,homeIndex,lab:{...lab},labOpen:!labPanel.hidden,fps:labFps,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,directorStage,musicDropSurge,
    encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
   triggerEncore:beginEncore,draw:()=>paint(performance.now()),
+  test:()=>start(true),labOpen:labOpen,labClose:labHide,labPreset:(name)=>{const buttons=[...labPresetBox.querySelectorAll("button")];const b=buttons.find(x=>x.textContent===name);if(b){b.click();return true;}return false;},
   injectPickup:(kind,sectors,z=HIT_Z+PICKUP_FRONT+.2)=>{
    const o={z,sectors:[...sectors],length:kind==="pad"?1.1:0,credited:false,shimmer:0};
    if(kind==="pad")pads.push(o);else if(kind==="shield")shields.push(o);
