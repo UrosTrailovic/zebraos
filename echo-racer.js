@@ -771,17 +771,19 @@ function mount(root){
  const speedGauge=instrument("VITESSE","er-dashboard-speed","KM/H");
  const boostGauge=instrument("BOOST","er-dashboard-boost","%");
  const eventText=node("div","er-race-event","");
+ // Minimal arcade HUD: one streak multiplier on the left, actual score and
+ // the last scoring action on the right. The tunnel center remains empty.
  const scoreCombo=node("div","er-score-combo");
- scoreCombo.setAttribute("aria-label","Combo de figures et multiplicateurs");
- const speedComboEl=node("span","er-score-speed","VITESSE ×1");
- const skillComboEl=node("strong","er-score-multiplier","COMBO ×1");
- const skillBankEl=node("span","er-score-pending","+0 EN ATTENTE");
- const skillBar=node("div","er-score-chainbar");
- const skillBarFill=node("i","er-score-chainfill");skillBar.appendChild(skillBarFill);
- scoreCombo.append(speedComboEl,skillComboEl,skillBankEl,skillBar);
+ scoreCombo.setAttribute("aria-label","Multiplicateur de combo");
+ const skillComboEl=node("strong","er-score-multiplier","");
+ scoreCombo.appendChild(skillComboEl);
+ const scoreTop=node("div","er-score-top");
+ scoreTop.setAttribute("aria-label","Score de la course");
+ const scoreTotal=node("strong","er-score-total","0");
  const scoreToast=node("div","er-score-toast");
  scoreToast.setAttribute("aria-live","off");
  scoreToast.hidden=true;
+ scoreTop.append(scoreTotal,scoreToast);
  const warningLayer=node("div","er-shield-warning");
  const warningIcon=node("img","er-shield-warning-icon");
  warningIcon.src="/assets/games/warning.png";warningIcon.alt="";
@@ -813,7 +815,7 @@ function mount(root){
  const crashCurtain=node("div","er-crash-curtain");
  crashCurtain.hidden=true;crashCurtain.setAttribute("aria-hidden","true");
  // Instruments are part of frame: overlay on desktop, physical strip on mobile.
- screen.append(canvas,sheen,eventText,scoreCombo,scoreToast,warningLayer,shieldCollect,overlay,crashCurtain,finaleOverlay);
+ screen.append(canvas,sheen,eventText,scoreCombo,scoreTop,warningLayer,shieldCollect,overlay,crashCurtain,finaleOverlay);
  frame.append(screen,dashboard);
  wrap.append(hud,frame);
  const footer=node("div","er-footer zg-buttons zt-buttons");
@@ -1765,7 +1767,10 @@ function mount(root){
   }catch(_){}
  }
  function showReward(label,kind="skill",seconds=1.25){
-  rewardText=label;rewardKind=kind;rewardLife=Math.max(.2,seconds);
+  // Non-scoring cues have their own short SFX. Do not spam on-screen
+  // messages with "nitro ready", "pulse earned", "banked" or collisions.
+  if(kind!=="skill"&&kind!=="near")return;
+  rewardText=label;rewardKind=kind;rewardLife=Math.min(1.6,Math.max(.4,seconds));
  }
  function playRewardCue(kind){
   if(Object.prototype.hasOwnProperty.call(rewardCueCounts,kind))rewardCueCounts[kind]++;
@@ -1794,23 +1799,30 @@ function mount(root){
  }
  function bankSkill(reason="ENCAISSÉ"){
   if(skillBank<1)return 0;
+  // Points have already been added as each action happened. Closing the
+  // chain only resets its multiplier; it never awards them twice.
   const reward=Math.round(skillBank);
-  score+=reward;bankedTotal+=reward;bankedCount++;
-  showReward(reason+" +"+reward.toLocaleString("fr-CH")+" PTS","bank",2.2);
-  playRewardCue("bank");
-  skillBank=0;skillChain=combo=0;skillMultiplier=1;skillTimer=skillAge=0;
+  bankedCount++;
+  skillBank=0;skillChain=combo=0;skillMultiplier=0;skillTimer=skillAge=0;
   return reward;
+ }
+ function breakCombo(){
+  // A collision cancels ONLY the multiplier, never the player's score.
+  skillBank=0;skillChain=combo=0;skillMultiplier=0;skillTimer=skillAge=0;
+  rewardLife=0;rewardText="";rewardKind="";scoreToast.hidden=true;
  }
  function awardSkill(kind,base,title){
   if(mode!=="running"||encoreMode==="transition"||selectedLevel.id==="free")return 0;
   skillChain++;combo=skillChain;
   skillMultiplier=Math.min(lab.comboMax,1+Math.floor((skillChain-1)/lab.comboEvery));
   const gained=Math.round(base*skillMultiplier*scoreMultiplier);
+  // Immediately update the real score, as in arcade racing games.
+  score+=gained;bankedTotal+=gained;
   skillBank+=gained;skillTimer=lab.comboTimeout;
   if(kind==="near")nearMisses++;
   if(skillChain>1&&skillChain%lab.comboEvery===1)playRewardCue("chainStep");
-  showReward(title+" +"+gained+" · COMBO ×"+skillMultiplier,
-   kind==="near"?"near":"skill",1.25);
+  showReward(title+" +"+gained.toLocaleString("fr-CH"),
+   kind==="near"?"near":"skill",1.15);
   return gained;
  }
  function tickSkill(dt){
@@ -1849,16 +1861,15 @@ function mount(root){
   // Fixed phosphor label already uses the same segmented font as the digits.
   setDigital(scoreEl,String(Math.floor(score)).padStart(5,"0"));
   const playing=mode==="running"||mode==="paused";
-  const hasCombo=playing&&skillBank>0;
-  scoreCombo.classList.toggle("active",playing);
-  scoreCombo.classList.toggle("has-skill",hasCombo);
+  const showMultiplier=playing&&skillChain>0&&skillMultiplier>=2;
+  scoreCombo.classList.toggle("active",showMultiplier);
   scoreCombo.classList.toggle("hot",skillMultiplier>=5);
-  speedComboEl.textContent="VITESSE ×"+scoreMultiplier;
-  skillComboEl.textContent="COMBO ×"+skillMultiplier+" · "+skillChain+" FIG.";
-  skillBankEl.textContent="+"+Math.round(skillBank).toLocaleString("fr-CH")+" EN ATTENTE";
-  skillBarFill.style.width=(hasCombo?Math.round(100*clamp(skillTimer/lab.comboTimeout,0,1)):0)+"%";
-  scoreToast.hidden=rewardLife<=0||mode==="menu";
-  scoreToast.textContent=rewardLife>0?rewardText:"";
+  scoreCombo.setAttribute("aria-hidden",String(!showMultiplier));
+  skillComboEl.textContent=showMultiplier?"×"+skillMultiplier:"";
+  scoreTop.classList.toggle("active",playing);
+  scoreTotal.textContent=Math.floor(score).toLocaleString("fr-CH");
+  scoreToast.hidden=!playing||rewardLife<=0||!rewardText;
+  scoreToast.textContent=!scoreToast.hidden?rewardText:"";
   scoreToast.dataset.kind=rewardKind;
   setDigital(bestEl,String(Math.floor(best)).padStart(5,"0"));
   setDigital(shieldEl,String(lives).padStart(2,"0"));
@@ -1879,8 +1890,12 @@ function mount(root){
   boostGauge.row.classList.toggle("er-dashboard-active",active);
   dashboard.classList.toggle("er-boost-active",active);
   boostGauge.fill.setAttribute("width",String(Math.round(clamp(charge,0,1)*552*10)/10));
-  eventText.textContent=mode==="running"&&messageLife>0?message:"";
-  eventText.classList.toggle("visible",mode==="running"&&messageLife>0);
+  // No duplicate "near miss/combo/boost" notifications elsewhere on the
+  // canvas. Keep only actual game state notices in the small lower corner.
+  const gameNotice=mode==="running"&&messageLife>0&&
+   !/NEAR MISS|COMBO|TURBO PAD|BOUCLIER|MUR DÉTRUIT|PULSE \+1/.test(message);
+  eventText.textContent=gameNotice?message:"";
+  eventText.classList.toggle("visible",!!gameNotice);
   warningLayer.hidden=!(mode==="running"&&warningLife>0);
   startButton.textContent=mode==="running"?"Ⅱ PAUSE":mode==="paused"?"▶ REPRENDRE":"▶ JOUER";
   startButton.setAttribute("aria-label",startButton.textContent);
@@ -1911,7 +1926,7 @@ function mount(root){
   resetSteering();mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
   hudTimer=bestSaveTimer=audioSampleTimer=0;
   skillBank=skillChain=skillTimer=skillAge=bankedTotal=bankedCount=nearMisses=0;
-  skillMultiplier=1;rewardLife=0;rewardText=rewardKind="";
+  skillMultiplier=0;rewardLife=0;rewardText=rewardKind="";
   nitroFullLatched=false;
   for(const kind of Object.keys(rewardCueCounts))rewardCueCounts[kind]=0;
   scoreToast.hidden=true;scoreCombo.classList.remove("active");
@@ -1969,7 +1984,7 @@ function mount(root){
   shieldCollect.classList.remove("er-shield-collected");pulseFx=pulseHitFx=shieldFlash=0;
   elapsed=0;encoreMode="normal";encoreTime=0;testMode=false;labToggle.hidden=true;labHide();padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
-  skillBank=skillChain=skillAge=skillTimer=0;skillMultiplier=1;rewardLife=0;
+  skillBank=skillChain=skillAge=skillTimer=0;skillMultiplier=0;rewardLife=0;
   overlay.hidden=false;renderMenuStage("home");
   renderHud();
  }
@@ -1979,10 +1994,8 @@ function mount(root){
   keys.clear();dragPointer=null;deathFade=0;deathLock=0;
   warningLife=0;warningBeepDelay=0;
   flash=.55;shake=7;
-  if(skillBank>0){
-   showReward("CHAÎNE PERDUE · -"+Math.round(skillBank),"lost",1.7);
-   skillBank=0;skillChain=0;skillMultiplier=1;skillTimer=skillAge=0;
-  }
+  // Score already belongs to the player. Game Over only ends the streak.
+  breakCombo();
   if(!testMode&&score>best){best=Math.floor(score);save("best."+selectedLevel.id,best);}
   overlay.hidden=true;screen.classList.remove("er-death");
   screen.classList.add("er-crashing");
@@ -2418,9 +2431,8 @@ function mount(root){
    if(oldZ>HIT_Z&&w.z<=HIT_Z&&!w.credited){
     w.credited=true;passed++;
     if(!w.cleared&&collisionAt(angle,w)&&invuln<=0&&!(testMode&&lab.invincible)){
-     lives--;combo=0;invuln=1.35;flash=.47;shake=3;beep("hit");
-     if(skillBank>0)showReward("COMBO PERDU · -"+Math.round(skillBank),"lost",1.9);
-     skillBank=0;skillChain=0;skillMultiplier=1;skillTimer=skillAge=0;
+     lives--;invuln=1.35;flash=.47;shake=3;beep("hit");
+     breakCombo();
      if(lives>0)nextShieldAt=Math.min(nextShieldAt,travel+rand(lives===1?5:12,lives===1?11:24));
      if(lives===1){
       warningLife=2.25;warningBeepDelay=.15;warningChirp=0;
@@ -3122,6 +3134,7 @@ function mount(root){
   tickDeath:advanceDeathSequence,
   simulateHit:()=>{
    if(mode!=="running")return;
+   breakCombo();
    lives=Math.max(0,lives-1);invuln=1.35;flash=.47;shake=3;
    if(lives>0)nextShieldAt=Math.min(nextShieldAt,travel+rand(lives===1?5:12,lives===1?11:24));
    if(lives===1){warningLife=2.25;warningBeepDelay=.15;warningChirp=0;}

@@ -50,8 +50,18 @@ jobs:
               d.testPhase("p3");
               out.phase3Started=d.snapshot().mode==="running"&&
                 d.snapshot().encore.mode==="blue"&&d.snapshot().testMode;
-              out.scoreHud=!!scorePanel&&!!host.querySelector(".er-score-chainfill")&&
-                !!host.querySelector(".er-score-toast");
+              const topScore=host.querySelector(".er-score-top");
+              const scoreDigits=host.querySelector(".er-score-total");
+              const detail=topScore&&topScore.querySelector(".er-score-toast");
+              out.scoreHud=!!scorePanel&&!!topScore&&!!scoreDigits&&!!detail&&
+                scorePanel.children.length===1&&
+                !host.querySelector(".er-score-chainfill")&&
+                !host.querySelector(".er-score-pending");
+              out.noCenterPopup=!!detail&&detail.parentElement===topScore&&
+                getComputedStyle(detail).position==="static";
+              out.noScoreTitle=!topScore.textContent.includes("SCORE")&&
+                !topScore.textContent.includes("FIG.")&&
+                !topScore.textContent.includes("EN ATTENTE");
               out.secondSong=d.snapshot().music.track==="p3"&&
                 d.snapshot().music.source.includes("echoraccersongpt2.mp3");
               out.songDoesNotLoop=d.snapshot().music.loop===false;
@@ -66,7 +76,11 @@ jobs:
               // Multiple real waves may be in range. Pulse destroys the
               // closest one, not necessarily the specifically injected wave.
               out.pulseStreak=d.snapshot().arcade.bank>bankBeforePulse&&
-                d.snapshot().arcade.chain>=1&&d.snapshot().score>=scoreBeforePulse;
+                d.snapshot().arcade.chain>=1&&d.snapshot().score>scoreBeforePulse;
+              out.scoreEventAtTop=!!detail&&detail.textContent.includes("PULSE BREAK +")
+                &&!detail.textContent.includes("COMBO ×")&&
+                getComputedStyle(topScore).position==="absolute";
+              out.noMultiplierAtX1=!scorePanel.classList.contains("active");
               // Four clean crossings refill one pulse and fire the reward cue.
               const pulseAfterShoot=d.snapshot().pulseCharge;
               for(let i=0;i<4;i++)d.injectWave([7],d.hitDepth+.1);
@@ -81,6 +95,26 @@ jobs:
                 pulseEvidence.after>pulseEvidence.before;
               out.arcadeMultipliers=d.snapshot().arcade.speedMultiplier>=1&&
                 d.snapshot().arcade.multiplier>=1;
+              // Build an actual combo, then simulate the same impact-reset
+              // as collisionAt. Score must not fall and ×N must vanish.
+              for(let i=0;i<6;i++){
+                d.injectWave([0,1,2]);
+                d.pulse();
+              }
+              const beforeImpact=d.snapshot();
+              const earnedScore=beforeImpact.score;
+              out.simpleMultiplier=beforeImpact.arcade.multiplier>=2&&
+                scorePanel.classList.contains("active")&&
+                /^×[2-9][0-9]*$/.test(scorePanel.textContent.trim());
+              d.simulateHit();
+              const afterImpact=d.snapshot();
+              out.impactHidesMultiplier=afterImpact.arcade.multiplier===0&&
+                afterImpact.arcade.chain===0&&
+                afterImpact.score===earnedScore&&
+                !scorePanel.classList.contains("active")&&
+                !detail.textContent.includes("COMBO PERDU");
+              // Recreate a live score event before finale assertions.
+              d.injectWave([0,1,2]);d.pulse();
               // A separate screenshot mode captures the live score HUD,
               // not only the thank-you screen, for a real visual inspection.
               if(new URLSearchParams(location.search).has("comboView")){
@@ -91,7 +125,7 @@ jobs:
               out.simulatedNaturalEnd=d.simulateSongEnd();
               out.fadeStarted=d.snapshot().mode==="finale"&&
                 d.snapshot().finale.cause==="song-ended";
-              out.scoreBanked=d.snapshot().arcade.bankedTotal>bankBefore&&
+              out.scoreBanked=d.snapshot().arcade.bankedTotal>=bankBefore&&
                 d.snapshot().arcade.bank===0;
               d.tickFinale(1.35);d.draw();
               out.fadingMidway=d.snapshot().finale.time>1&&

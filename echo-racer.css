@@ -3849,3 +3849,80 @@ body > .er-lab-window.er-lab-floating{
   padding:5px 9px!important;font-size:11px!important;
  }
 }
+
+
+/* Echo Racer 18.2 — small NFS-style corner score overlay.
+   No boxed combo widget, no centered toasts, no "FIG." or "en attente". */
+.zebra-game-body .zg.er .er-score-combo{
+ position:absolute!important;z-index:5!important;
+ top:13px!important;left:18px!important;right:auto!important;
+ display:block!important;width:auto!important;max-width:none!important;
+ margin:0!important;padding:0!important;
+ border:0!important;border-radius:0!important;
+ background:none!important;box-shadow:none!important;
+ filter:none!important;pointer-events:none!important;
+ opacity:0!important;transform:none!important;
+ transition:opacity .1s ease!important;
+}
+.zebra-game-body .zg.er .er-score-combo.active{
+ opacity:1!important;transform:none!important;
+}
+.zebra-game-body .zg.er .er-score-multiplier{
+ display:block!important;padding:0!important;margin:0!important;
+ font:italic 900 clamp(29px,5vw,52px)/.95 "Oxanium","Arial Black",sans-serif!important;
+ letter-spacing:-1px!important;color:#ffef50!important;
+ text-shadow:0 2px 0 #43233e,0 0 11px #eaaa21a8!important;
+ white-space:nowrap!important;
+}
+.zebra-game-body .zg.er .er-score-combo.hot{
+ box-shadow:none!important;border:0!important;
+}
+.zebra-game-body .zg.er .er-score-top{
+ position:absolute!important;z-index:6!important;
+ top:12px!important;right:16px!important;left:auto!important;
+ display:flex!important;flex-direction:column!important;
+ align-items:flex-end!important;justify-content:flex-start!important;
+ gap:2px!important;width:auto!important;max-width:55%!important;
+ margin:0!important;padding:0!important;
+ background:none!important;border:0!important;
+ box-shadow:none!important;pointer-events:none!important;
+ opacity:0!important;transition:opacity .12s ease!important;
+ font-family:"Oxanium","Arial Black",sans-serif!important;
+}
+.zebra-game-body .zg.er .er-score-top.active{opacity:1!important;}
+.zebra-game-body .zg.er .er-score-total{
+ display:block!important;max-width:100%!important;
+ font:italic 900 clamp(25px,4vw,43px)/1 "Oxanium","Arial Black",sans-serif!important;
+ color:#ffef5e!important;letter-spacing:.1px!important;
+ font-variant-numeric:tabular-nums!important;
+ text-align:right!important;white-space:nowrap!important;
+ text-shadow:0 1px 0 #39303d,0 0 8px #d1a73083!important;
+}
+.zebra-game-body .zg.er .er-score-top .er-score-toast{
+ position:static!important;inset:auto!important;z-index:auto!important;
+ display:block!important;transform:none!important;
+ max-width:100%!important;width:auto!important;
+ margin:2px 0 0!important;padding:0!important;
+ border:0!important;border-radius:0!important;
+ background:none!important;box-shadow:none!important;
+ color:#dcf8ff!important;text-shadow:0 1px 4px #002534e0!important;
+ font:700 clamp(10px,1.4vw,13px)/1.25 "Oxanium","Courier New",monospace!important;
+ letter-spacing:.15px!important;text-align:right!important;
+ white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+ pointer-events:none!important;
+}
+.zebra-game-body .zg.er .er-score-top .er-score-toast[data-kind="near"]{
+ color:#a8f2ff!important;text-shadow:0 1px 5px #024f72!important;
+}
+.zebra-game-body .zg.er .er-score-top .er-score-toast[hidden]{
+ display:none!important;
+}
+@media(max-width:700px){
+ .zebra-game-body .zg.er .er-score-combo{top:8px!important;left:9px!important;}
+ .zebra-game-body .zg.er .er-score-multiplier{font-size:clamp(24px,7vw,32px)!important;}
+ .zebra-game-body .zg.er .er-score-top{top:8px!important;right:9px!important;max-width:64%!important;}
+ .zebra-game-body .zg.er .er-score-total{font-size:clamp(21px,6vw,30px)!important;}
+ .zebra-game-body .zg.er .er-score-top .er-score-toast{
+  margin-top:1px!important;font-size:10px!important;
+ }
+}
