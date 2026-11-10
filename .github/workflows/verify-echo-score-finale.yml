@@ -80,7 +80,11 @@ jobs:
               out.scoreEventAtTop=!!detail&&detail.textContent.includes("PULSE BREAK +")
                 &&!detail.textContent.includes("COMBO ×")&&
                 getComputedStyle(topScore).position==="absolute";
-              out.noMultiplierAtX1=!scorePanel.classList.contains("active");
+              // During the first 7 seconds, real obstacles may already
+              // have built ×2+, so don't assert an artificial ×1 here.
+              out.onlyOneMultiplierElement=scorePanel.querySelectorAll(".er-score-multiplier").length===1&&
+                !scorePanel.querySelector(".er-score-speed")&&
+                !scorePanel.querySelector(".er-score-pending");
               // Four clean crossings refill one pulse and fire the reward cue.
               const pulseAfterShoot=d.snapshot().pulseCharge;
               for(let i=0;i<4;i++)d.injectWave([7],d.hitDepth+.1);
