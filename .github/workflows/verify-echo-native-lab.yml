@@ -1,0 +1,104 @@
+name: Vérifier vraie fenêtre ZebraOS Echo Racer TEST
+on:
+  push:
+    paths:
+      - 'app.js'
+      - 'echo-racer.js'
+      - 'echo-racer.css'
+      - 'index.html'
+      - '.github/workflows/verify-echo-native-lab.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Contrôler la syntaxe du noyau et du jeu
+        run: |
+          node --check app.js
+          node --check echo-racer.js
+      - name: Ouvrir réellement deux fenêtres ZebraOS dans Chromium
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path('app.js').read_text()
+          anchor='window.ZebraLazyApps={load:loadGameModule};'
+          assert source.count(anchor)==1
+          # Test-only localhost probe: do not expose a privileged bypass on the real site.
+          probe='''window.__EchoNativeTest={admin:function(){
+            session="admin";show("desktop-screen");
+           },open:function(){openGame("racer");}};'''
+          Path('_verify_os_app.js').write_text(source.replace(anchor,probe+'\n'+anchor))
+          page=Path('index.html').read_text()
+          assert page.count('app.js?v=')==1
+          page=page.replace('app.js?v=','_verify_os_app.js?v=')
+          script=r'''<script>
+          window.addEventListener('load',async()=>{
+           const report={};const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+           try{
+            window.__EchoNativeTest.admin();
+            window.__EchoNativeTest.open();
+            let game=null;
+            for(let i=0;i<70;i++){
+             game=document.querySelector('.window[data-app-id="racer"] .window-body');
+             if(game&&game._echoDebug)break;
+             await sleep(125);
+            }
+            if(!game||!game._echoDebug)throw Error('Echo Racer never mounted');
+            report.gameMounted=true;
+            game._echoDebug.test();
+            const toggle=game.querySelector('.er-lab-toggle');
+            toggle.click();
+            const windowOS=document.querySelector('.window[data-app-id="racer-lab"]');
+            report.realWindow=!!windowOS&&windowOS.parentElement.id==='windows-area';
+            report.notClipped=!game.contains(windowOS);
+            report.nativeTitlebar=!!windowOS&&!!windowOS.querySelector('.titlebar [data-close]');
+            report.taskbar=document.querySelectorAll('#task-items .win-button').length>=2;
+            const lab=windowOS&&windowOS.querySelector('.er-lab-window');
+            report.workshop=!!lab&&!lab.hidden&&getComputedStyle(lab).position==='relative';
+            const phases=lab&&lab.querySelectorAll('.er-lab-phase-tab');
+            report.threePhases=!!phases&&phases.length===3;
+            lab.querySelector('[data-phase="p1"]').click();
+            lab.querySelector('.er-lab-try-phase').click();
+            report.phase1=game._echoDebug.snapshot().phaseActive==='p1';
+            lab.querySelector('[data-phase="p2"]').click();
+            lab.querySelector('.er-lab-try-phase').click();
+            report.phase2=game._echoDebug.snapshot().phaseActive==='p2';
+            lab.querySelector('[data-phase="p3"]').click();
+            lab.querySelector('.er-lab-try-phase').click();
+            report.phase3=game._echoDebug.snapshot().phaseActive==='p3';
+            lab.querySelector('.er-lab-export-button').click();
+            const exported=JSON.parse(lab.querySelector('.er-lab-export-text').value);
+            report.export=!!exported.phases.p1&&!!exported.phases.p2&&!!exported.phases.p3;
+            windowOS.querySelector('[data-close]').click();
+            report.closeChild=!document.querySelector('.window[data-app-id="racer-lab"]')
+              &&game._echoDebug.snapshot().mode==='running';
+            toggle.click();
+            report.reopened=!!document.querySelector('.window[data-app-id="racer-lab"]');
+            document.querySelector('.window[data-app-id="racer"] [data-close]').click();
+            report.noOrphan=!document.querySelector('.window[data-app-id="racer-lab"]')
+              &&!document.querySelector('.window[data-app-id="racer"]');
+           }catch(e){report.error=String(e&&e.stack||e)}
+           document.body.dataset.echoOsProof=JSON.stringify(report);
+           document.body.dataset.echoOsStatus=Object.values(report).every(v=>v===true)?'ok':'failed';
+          });
+          </script>'''
+          page=page.replace('</body>',script+'\n</body>')
+          Path('_verify_echo_native.html').write_text(page)
+          PY
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebra-echo-native-http.log 2>&1 &
+          SERVER=$!
+          trap 'kill $SERVER 2>/dev/null || true' EXIT
+          sleep 1
+          google-chrome --headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu \
+            --window-size=1440,950 --virtual-time-budget=12500 \
+            --dump-dom http://127.0.0.1:8765/_verify_echo_native.html \
+            >/tmp/zebra-echo-native.html 2>/tmp/zebra-echo-native-chrome.log
+          grep -o 'data-echo-os-proof="[^"]*"' /tmp/zebra-echo-native.html | tail -c 4500
+          grep -o 'data-echo-os-status="[^"]*"' /tmp/zebra-echo-native.html
+          grep -q 'data-echo-os-status="ok"' /tmp/zebra-echo-native.html
+      - name: Conserver les erreurs navigateur
+        if: failure()
+        run: tail -80 /tmp/zebra-echo-native-chrome.log || true
