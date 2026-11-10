@@ -696,6 +696,140 @@ function mount(root){
  pad.append(dpad,actionSide);
  wrap.append(pad);
  root.appendChild(wrap);
+ // A self-contained, movable desktop tuning window. No files to edit:
+ // adjustments are saved in localStorage and apply live to this game only.
+ const labToggle=node("button","er-lab-toggle","⚙ CONFIG TEST");
+ labToggle.type="button";labToggle.hidden=true;
+ labToggle.setAttribute("aria-label","Ouvrir la fenêtre des paramètres du mode test");
+ const labPanel=node("section","er-lab-window");
+ labPanel.setAttribute("role","dialog");
+ labPanel.setAttribute("aria-label","Atelier Echo Racer, réglages de jeu et performances");
+ labPanel.hidden=true;
+ const labBar=node("header","er-lab-titlebar");
+ const labHeading=node("strong","","ECHO RACER · ATELIER TEST");
+ const labClose=node("button","er-lab-close","×");
+ labClose.type="button";labClose.setAttribute("aria-label","Fermer la fenêtre de réglages");
+ labBar.append(labHeading,labClose);
+ const labBody=node("div","er-lab-body");
+ const labIntro=node("p","er-lab-intro",
+  "Règle la phase bleue en direct. Les valeurs sont gardées sur cet appareil et s'appliquent aussi à JOUER. Le record TEST reste séparé.");
+ const labPerfReadout=node("div","er-lab-fps","FPS — · chargement...");
+ const labPresetBox=node("div","er-lab-presets");
+ const labControls=new Map();
+ function labValueText(spec,val){
+  if(spec.kind==="check")return val?"OUI":"NON";
+  if(spec.kind==="select")return spec.options.find(o=>Number(o[0])===val)?.[1]||String(val);
+  if(spec.kind==="color")return String(val).toUpperCase();
+  return String(Number(val.toFixed(2)))+(spec.unit?" "+spec.unit:"");
+ }
+ function labRefresh(){
+  for(const spec of LAB_META){
+   if(!spec.id)continue;
+   const entry=labControls.get(spec.id);if(!entry)continue;
+   const val=lab[spec.id];
+   if(spec.kind==="check")entry.input.checked=!!val;
+   else entry.input.value=String(val);
+   entry.value.textContent=labValueText(spec,val);
+  }
+ }
+ function labChange(spec,raw){
+  if(spec.kind==="check")lab[spec.id]=!!raw;
+  else if(spec.kind==="color"){if(/^#[0-9a-f]{6}$/i.test(raw))lab[spec.id]=raw;}
+  else if(spec.kind==="select")lab[spec.id]=clamp(Number(raw)||0,0,2);
+  else if(Number.isFinite(Number(raw)))lab[spec.id]=clamp(Number(raw),spec.min,spec.max);
+  persistLab();labRefresh();
+  if(spec.id==="renderScale")fitCanvas();
+  renderHud();
+  if(mode!=="running")try{paint(performance.now());}catch(_){}
+ }
+ function labPreset(label,values){
+  const btn=node("button","er-lab-preset",label);btn.type="button";
+  btn.onclick=()=>{
+   Object.assign(lab,values);persistLab();labRefresh();fitCanvas();renderHud();
+   if(mode!=="running")try{paint(performance.now());}catch(_){}
+  };
+  labPresetBox.appendChild(btn);return btn;
+ }
+ labPreset("FLUIDITÉ",{renderScale:.65,lineCount:8,ringGap:.93,panelDetail:0,warp:false,shadows:false,particles:.3});
+ labPreset("ÉQUILIBRÉ",{renderScale:.85,lineCount:16,ringGap:.66,panelDetail:1,warp:false,shadows:false,particles:.75});
+ labPreset("QUALITÉ",{renderScale:1.15,lineCount:24,ringGap:.48,panelDetail:2,warp:true,shadows:true,particles:1});
+ labBody.append(labIntro,labPerfReadout,labPresetBox);
+ for(const spec of LAB_META){
+  if(spec.section){
+   labBody.appendChild(node("h3","er-lab-section",spec.section));continue;
+  }
+  const line=node("label","er-lab-row");
+  line.dataset.labKey=spec.id;
+  const top=node("div","er-lab-row-head");
+  const label=node("span","er-lab-label",spec.label);
+  const cost=node("span","er-lab-impact",spec.cost);
+  cost.dataset.impact=spec.cost;
+  cost.title="Coût approximatif / rôle du réglage, pas un benchmark";
+  top.append(label,cost);
+  const controls=node("div","er-lab-row-controls");
+  let input;
+  if(spec.kind==="select"){
+   input=node("select","er-lab-input");
+   for(const [value,caption] of spec.options){
+    const option=node("option","",caption);option.value=value;input.appendChild(option);
+   }
+  }else{
+   input=node("input","er-lab-input");
+   input.type=spec.kind==="check"?"checkbox":spec.kind==="color"?"color":"range";
+   if(spec.min!==undefined){input.min=String(spec.min);input.max=String(spec.max);input.step=String(spec.step);}
+  }
+  input.dataset.labId=spec.id;
+  input.setAttribute("aria-label",spec.label);
+  const output=node("output","er-lab-output");
+  controls.append(input,output);
+  line.append(top,controls);
+  if(spec.help)line.appendChild(node("small","er-lab-help",spec.help));
+  input.addEventListener("input",()=>labChange(spec,spec.kind==="check"?input.checked:input.value));
+  input.addEventListener("change",()=>labChange(spec,spec.kind==="check"?input.checked:input.value));
+  labControls.set(spec.id,{input,value:output});
+  labBody.appendChild(line);
+ }
+ const labActions=node("div","er-lab-actions");
+ const labReset=node("button","er-lab-reset","RÉINITIALISER");
+ labReset.type="button";
+ labReset.onclick=()=>{
+  Object.assign(lab,LAB_DEFAULTS);persistLab();labRefresh();fitCanvas();renderHud();
+ };
+ const labCloseBottom=node("button","er-lab-close-bottom","FERMER");
+ labCloseBottom.type="button";
+ labActions.append(labReset,labCloseBottom);
+ labBody.append(labActions,node("p","er-lab-disclaimer",
+  "Coût estimé : TRÈS ÉLEVÉ → ÉLEVÉ → MOYEN → FAIBLE. Pour éliminer les ralentissements : réduire d'abord la résolution, les panneaux et les anneaux. Les km/h sont une échelle arcade, tandis que 'sensation' accélère uniquement le défilement des décors."));
+ labPanel.append(labBar,labBody);
+ wrap.append(labToggle,labPanel);
+ function labOpen(){
+  if(!testMode||window.matchMedia("(max-width:700px)").matches)return;
+  labPanel.hidden=false;labRefresh();
+ }
+ function labHide(){labPanel.hidden=true;}
+ labToggle.onclick=()=>labPanel.hidden?labOpen():labHide();
+ labClose.onclick=labCloseBottom.onclick=labHide;
+ labRefresh();
+ // Drag the floating window by its title bar; controls remain operable.
+ let labDrag=null;
+ labBar.addEventListener("pointerdown",e=>{
+  if(e.target.closest("button")||e.button!==0)return;
+  const host=wrap.getBoundingClientRect(),box=labPanel.getBoundingClientRect();
+  labDrag={pointer:e.pointerId,x:e.clientX,y:e.clientY,
+   left:box.left-host.left,top:box.top-host.top};
+  try{labBar.setPointerCapture(e.pointerId);}catch(_){}
+ });
+ labBar.addEventListener("pointermove",e=>{
+  if(!labDrag||e.pointerId!==labDrag.pointer)return;
+  const left=clamp(labDrag.left+e.clientX-labDrag.x,0,Math.max(0,wrap.clientWidth-labPanel.offsetWidth));
+  const top=clamp(labDrag.top+e.clientY-labDrag.y,0,Math.max(0,wrap.clientHeight-labPanel.offsetHeight));
+  labPanel.style.left=left+"px";labPanel.style.top=top+"px";
+  labPanel.style.right="auto";
+ });
+ for(const name of ["pointerup","pointercancel","lostpointercapture"]){
+  labBar.addEventListener(name,e=>{if(labDrag&&e.pointerId===labDrag.pointer)labDrag=null;});
+ }
+ let labFps=0,labFpsFrames=0,labFpsStart=0;
  // TEMPORARY LCD POSITION EDITOR — live drag on PC or phone, persisted
  // separately at narrow and wide breakpoints. No code editing required.
  const cfgButton=node("button","er-config-toggle","⚙ CONFIG");
