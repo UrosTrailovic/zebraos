@@ -1,0 +1,143 @@
+name: Vérifier Echo Racer score, SFX et fin de jeu
+on:
+  push:
+    paths:
+      - 'echo-racer.js'
+      - 'echo-racer.css'
+      - 'app.js'
+      - 'index.html'
+      - '.github/workflows/verify-echo-score-finale.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier source et durée du deuxième morceau
+        run: |
+          node --check echo-racer.js
+          test -s assets/games/echoraccersongpt2.mp3
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 assets/games/echoraccersongpt2.mp3 | awk '{printf "SECOND_SONG_DURATION_SEC=%.2f\n",$1}'
+      - name: Préparer le test de vrai navigateur
+        run: |
+          cat > _verify_echo_score.html <<'HTML'
+          <!doctype html>
+          <html lang="fr"><head><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <link rel="stylesheet" href="/style.css">
+          <link rel="stylesheet" href="/echo-racer.css">
+          <style>html,body{margin:0;background:#17101e}
+          .window{width:100%;max-width:850px;height:800px}
+          .window-body{width:100%;height:100%;padding:0}</style>
+          </head><body><div class="window focused">
+          <div id="game" class="window-body zebra-game-body"></div></div>
+          <script src="/echo-racer.js"></script>
+          <script>
+          window.addEventListener("load",()=>{
+            const out={},fail=err=>{out.error=String(err&&err.stack||err)};
+            try{
+              const host=document.getElementById("game");
+              window.ZebraEchoRacer.mount(host);
+              const d=host._echoDebug;
+              if(!d)throw Error("debug gameplay API absent");
+              const scorePanel=host.querySelector(".er-score-combo");
+              const finale=host.querySelector(".er-finale-overlay");
+              const beforeBest=localStorage.getItem("zebra.echo-racer.best.run");
+              d.testPhase("p3");
+              out.phase3Started=d.snapshot().mode==="running"&&
+                d.snapshot().encore.mode==="blue"&&d.snapshot().testMode;
+              out.scoreHud=!!scorePanel&&!!host.querySelector(".er-score-chainfill")&&
+                !!host.querySelector(".er-score-toast");
+              out.secondSong=d.snapshot().music.track==="p3"&&
+                d.snapshot().music.source.includes("echoraccersongpt2.mp3");
+              out.songDoesNotLoop=d.snapshot().music.loop===false;
+              // In the playfield, full nitro recharges exactly once.
+              for(let i=0;i<145;i++)d.advance(.05);
+              out.nitroReadyOneShot=d.snapshot().arcade.cues.nitroReady===1&&
+                d.snapshot().arcade.nitroReady;
+              const scoreBeforePulse=d.snapshot().score;
+              const wave=d.injectWave([0,1,2]);
+              d.pulse();
+              out.pulseStreak=wave.cleared&&d.snapshot().arcade.bank>0&&
+                d.snapshot().arcade.chain>=1&&d.snapshot().score>=scoreBeforePulse;
+              // Four clean crossings refill one pulse and fire the reward cue.
+              const pulseAfterShoot=d.snapshot().pulseCharge;
+              for(let i=0;i<4;i++)d.injectWave([7],window.ZebraEchoRacer.hitDepth+.1);
+              for(let i=0;i<12;i++)d.advance(.05);
+              out.pulseReward=d.snapshot().arcade.cues.pulseReady>=1&&
+                d.snapshot().pulseCharge>pulseAfterShoot;
+              out.arcadeMultipliers=d.snapshot().arcade.speedMultiplier>=1&&
+                d.snapshot().arcade.multiplier>=1;
+              const bankBefore=d.snapshot().arcade.bankedTotal;
+              out.simulatedNaturalEnd=d.simulateSongEnd();
+              out.fadeStarted=d.snapshot().mode==="finale"&&
+                d.snapshot().finale.cause==="song-ended";
+              out.scoreBanked=d.snapshot().arcade.bankedTotal>bankBefore&&
+                d.snapshot().arcade.bank===0;
+              d.tickFinale(1.35);d.draw();
+              out.fadingMidway=d.snapshot().finale.time>1&&
+                d.snapshot().mode==="finale";
+              d.tickFinale(2.0);d.draw();
+              const snap=d.snapshot();
+              const canvas=host.querySelector("canvas");
+              const px=canvas.getContext("2d").getImageData(
+                Math.floor(canvas.width*.5),Math.floor(canvas.height*.5),1,1).data;
+              out.blackFinalFrame=px[0]===0&&px[1]===0&&px[2]===0;
+              out.thankYou=snap.mode==="finished"&&snap.finale.visible&&
+                finale.querySelector(".er-finale-title").textContent==="THANK YOU FOR PLAYING"&&
+                snap.finale.scoreText.includes("POINTS");
+              out.finalScoreInfo=!!finale.querySelector(".er-finale-stats").textContent.includes("COMBOS ENCAISSÉS");
+              out.bestUnchangedInTest=beforeBest===localStorage.getItem("zebra.echo-racer.best.run");
+              out.finalActions=!!finale.querySelectorAll(".er-finale-button").length===2;
+              d.controller("down");d.controller("pulse");
+              out.finalMenu=d.snapshot().mode==="menu";
+              // The normal P1 -> transition -> P3 flow is also finite.
+              d.start();
+              const phase1Started=d.snapshot().mode==="running"&&
+                d.snapshot().music.track==="p1";
+              d.triggerEncore();
+              for(let i=0;i<110;i++)d.advance(.05);
+              out.normalRunPhase3=phase1Started&&d.snapshot().encore.mode==="blue"&&
+                d.snapshot().music.track==="p3"&&d.snapshot().music.loop===false;
+              d.simulateSongEnd();d.tickFinale(4);
+              out.normalRunFinishes=d.snapshot().mode==="finished";
+              out.noRenderError=!d.lastRenderError();
+              out.cssPositioning=getComputedStyle(scorePanel).position==="absolute"&&
+                getComputedStyle(finale).position==="absolute";
+            }catch(e){fail(e)}
+            document.body.dataset.check=JSON.stringify(out);
+            document.body.dataset.pass=Object.values(out).every(v=>v===true)?"ok":"failed";
+          });
+          </script></body></html>
+          HTML
+      - name: Vérifier Chromium PC et mobile
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/echo-score-server.log 2>&1 &
+          SERVER=$!
+          trap 'kill $SERVER 2>/dev/null || true' EXIT
+          sleep 1
+          for v in desktop mobile; do
+            if [ "$v" = desktop ]; then SIZE="1366,900"; else SIZE="390,840"; fi
+            google-chrome --headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu \
+              --window-size="$SIZE" --virtual-time-budget=7500 \
+              --dump-dom http://127.0.0.1:8765/_verify_echo_score.html \
+              >/tmp/echo-score-${v}.html 2>/tmp/echo-score-${v}.err
+            echo "ECHO_SCORE_${v}=$(grep -o 'data-pass="[^"]*"' /tmp/echo-score-${v}.html | head -1)"
+            grep -o 'data-check="[^"]*"' /tmp/echo-score-${v}.html | tail -c 5500
+            grep -q 'data-pass="ok"' /tmp/echo-score-${v}.html
+            google-chrome --headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu \
+              --window-size="$SIZE" --virtual-time-budget=7500 \
+              --screenshot="/tmp/echo-score-${v}.png" \
+              http://127.0.0.1:8765/_verify_echo_score.html >/tmp/echo-score-shot-${v}.log 2>&1
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: echo-score-finale-browser
+          path: |
+            /tmp/echo-score-*.html
+            /tmp/echo-score-*.png
+            /tmp/echo-score-*.err
+          retention-days: 7
