@@ -333,7 +333,8 @@ function mount(root){
     let value=phaseDefaultValue(phase.id,key);
     if(spec&&prev!==undefined){
      if(spec.kind==="color"&&typeof prev==="string"&&/^#[0-9a-f]{6}$/i.test(prev))value=prev;
-     else if(spec.kind==="select"&&Number.isFinite(Number(prev)))value=clamp(Math.round(Number(prev)),0,2);
+     else if(spec.kind==="check"&&typeof prev==="boolean")value=prev;
+     else if(spec.kind==="select"&&spec.options.some(o=>Number(o[0])===Number(prev)))value=Number(prev);
      else if(!spec.kind&&Number.isFinite(Number(prev)))value=clamp(Number(prev),spec.min,spec.max);
     }
     output[phase.id][key]=value;
