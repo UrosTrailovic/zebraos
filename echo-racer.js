@@ -1828,6 +1828,9 @@ function mount(root){
   if(skillChain>1&&skillChain%lab.comboEvery===1)playRewardCue("chainStep");
   showReward(title+" +"+gained.toLocaleString("fr-CH"),
    kind==="near"?"near":"skill",1.15);
+  // Give visual feedback on the exact scoring frame; the ordinary
+  // 90ms HUD throttle would otherwise hide the fifth clean gate bonus.
+  renderHud();
   return gained;
  }
  function tickSkill(dt){
