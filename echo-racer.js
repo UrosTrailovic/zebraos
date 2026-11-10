@@ -896,17 +896,42 @@ function mount(root){
   labPhaseTabs.set(phase.id,tab);
   labPhases.appendChild(tab);
  }
+ // One category on screen at a time; the phase buttons remain accessible.
+ // All controls are generated from LAB_META so there are no decorative sliders.
  const labControls=new Map();
+ const labCategories=node("nav","er-lab-categories");
+ labCategories.setAttribute("aria-label","Catégorie des paramètres");
+ const labSections=node("div","er-lab-sections");
+ const labCategoryButtons=new Map(),labSectionNodes=new Map();
+ const LAB_DESCRIPTIONS={
+  "PILOTAGE & VITESSE":"Vitesse réelle, sensation visuelle et direction du vaisseau.",
+  "TURBOS & BONUS":"Pads automatiques et nitro manuel : deux accélérations indépendantes.",
+  "OBSTACLES & DIFFICULTÉ":"Quantité, variété et comportement des murs, fréquence des boucliers.",
+  "MUSIQUE & LUMIÈRES":"Le morceau déclenche la vitesse, les battements et la lumière.",
+  "TUNNEL & CAMÉRA":"Géométrie, courbes, plaques, anneaux et sensation de profondeur.",
+  "PALETTE DE LA PHASE":"Sept couleurs réellement actives dans cette phase. Aucune couleur réservée à une autre phase.",
+  "PERFORMANCES & TEST":"Options communes aux trois phases, réglages graphiques et diagnostic FPS."
+ };
+ let selectedLabCategory="PILOTAGE & VITESSE";
+ function labCategorySelect(id){
+  selectedLabCategory=id;
+  for(const [name,entry] of labCategoryButtons){
+   const on=name===id;
+   entry.classList.toggle("selected",on);
+   entry.setAttribute("aria-selected",String(on));
+  }
+  for(const [name,entry] of labSectionNodes)entry.hidden=name!==id;
+ }
  function labValueText(spec,val){
-  if(spec.kind==="check")return val?"OUI":"NON";
+  if(spec.kind==="check")return val?"ACTIF":"DÉSACTIVÉ";
   if(spec.kind==="select")return spec.options.find(o=>Number(o[0])===val)?.[1]||String(val);
   if(spec.kind==="color")return String(val).toUpperCase();
-  return String(Number(val.toFixed(2)))+(spec.unit?" "+spec.unit:"");
+  return String(Number(Number(val).toFixed(2)))+(spec.unit?" "+spec.unit:"");
  }
  function labRefresh(){
   const phase=PHASES.find(p=>p.id===editorPhase)||PHASES[2];
   labChapterInfo.textContent=phase.title+" · "+phase.subtitle+
-   (activePhase===editorPhase?" · EN JEU":" · PARAMÈTRES ENREGISTRÉS");
+   (activePhase===editorPhase?" · PHASE EN COURS":" · ÉDITION HORS JEU");
   for(const [id,tab] of labPhaseTabs){
    const current=id===editorPhase;
    tab.classList.toggle("selected",current);
@@ -919,19 +944,30 @@ function mount(root){
    if(spec.kind==="check")entry.input.checked=!!val;
    else entry.input.value=String(val);
    entry.value.textContent=labValueText(spec,val);
+   if(entry.exact&&document.activeElement!==entry.exact)entry.exact.value=
+    spec.kind==="color"?String(val):String(Number(Number(val).toFixed(3)));
+   if(spec.onlyPhase){
+    entry.row.hidden=editorPhase!==spec.onlyPhase;
+   }
   }
  }
  function labChange(spec,raw){
   const perPhase=PHASE_FIELD_SET.has(spec.id);
   const target=perPhase?phaseProfiles[editorPhase]:lab;
   if(spec.kind==="check")target[spec.id]=!!raw;
-  else if(spec.kind==="color"){if(/^#[0-9a-f]{6}$/i.test(raw))target[spec.id]=raw;}
-  else if(spec.kind==="select")target[spec.id]=clamp(Number(raw)||0,0,2);
+  else if(spec.kind==="color"){
+   if(typeof raw!=="string"||!/^#[0-9a-f]{6}$/i.test(raw))return;
+   target[spec.id]=raw.toLowerCase();
+  }else if(spec.kind==="select")target[spec.id]=clamp(Number(raw)||0,0,Math.max(...spec.options.map(o=>Number(o[0]))));
   else if(Number.isFinite(Number(raw)))target[spec.id]=clamp(Number(raw),spec.min,spec.max);
+  else return;
   if(perPhase){
    persistPhases();
    if(activePhase===editorPhase)lab[spec.id]=target[spec.id];
   }else persistLab();
+  if(spec.id==="bendFrequency")bendProfiles.clear();
+  if(spec.id==="bendFrequency"||spec.id==="bendIntensity"||spec.id==="verticalBend")bendCache.clear();
+  if(spec.id==="obstaclesEnabled"&&!target[spec.id]&&activePhase===editorPhase)waves=[];
   labRefresh();
   if(spec.id==="renderScale")fitCanvas();
   renderHud();
@@ -952,21 +988,39 @@ function mount(root){
   };
   labPresetBox.appendChild(btn);return btn;
  }
- labPreset("FLUIDITÉ",{renderScale:.65,lineCount:8,ringGap:.93,panelDetail:0,warp:false,shadows:false,particles:.3});
- labPreset("ÉQUILIBRÉ",{renderScale:.85,lineCount:16,ringGap:.66,panelDetail:1,warp:false,shadows:false,particles:.75});
- labPreset("QUALITÉ",{renderScale:1.15,lineCount:24,ringGap:.48,panelDetail:2,warp:true,shadows:true,particles:1});
- labBody.append(labIntro,labPhases,labChapterInfo,labTryPhase,labPerfReadout,labPresetBox);
+ labPreset("FLUIDITÉ",{renderScale:.65,lineCount:8,ringGap:.93,panelDetail:0,warp:false,shadows:false,particles:.3,frameLimit:45});
+ labPreset("ÉQUILIBRÉ",{renderScale:.85,lineCount:16,ringGap:.66,panelDetail:1,warp:false,shadows:false,particles:.75,frameLimit:60});
+ labPreset("QUALITÉ",{renderScale:1.15,lineCount:24,ringGap:.48,panelDetail:2,warp:true,shadows:true,particles:1,frameLimit:60});
+ labBody.append(labIntro,labPhases,labChapterInfo,labTryPhase,labPerfReadout,labPresetBox,labCategories,labSections);
+ let currentGroup=null;
  for(const spec of LAB_META){
   if(spec.section){
-   labBody.appendChild(node("h3","er-lab-section",spec.section));continue;
+   const tab=node("button","er-lab-category",spec.section);
+   tab.type="button";tab.dataset.category=spec.section;
+   tab.setAttribute("role","tab");
+   tab.onclick=()=>labCategorySelect(spec.section);
+   labCategoryButtons.set(spec.section,tab);
+   labCategories.appendChild(tab);
+   const group=node("section","er-lab-section-group");
+   group.dataset.section=spec.section;
+   group.setAttribute("role","tabpanel");
+   group.appendChild(node("h3","er-lab-section",spec.section));
+   group.appendChild(node("p","er-lab-section-desc",LAB_DESCRIPTIONS[spec.section]||""));
+   labSections.appendChild(group);
+   labSectionNodes.set(spec.section,group);
+   currentGroup=group;
+   continue;
   }
-  const line=node("label","er-lab-row");
+  if(!currentGroup)throw Error("LAB_META group missing for "+spec.id);
+  const line=node("div","er-lab-row");
   line.dataset.labKey=spec.id;
+  line.dataset.scope=spec.global?"global":"phase";
   const top=node("div","er-lab-row-head");
-  const label=node("span","er-lab-label",spec.label);
-  const cost=node("span","er-lab-impact",spec.cost);
+  const label=node("label","er-lab-label",spec.label);
+  label.htmlFor="er-lab-"+spec.id;
+  const cost=node("span","er-lab-impact",spec.global?"COMMUN · "+spec.cost:spec.cost);
   cost.dataset.impact=spec.cost;
-  cost.title="Coût approximatif / rôle du réglage, pas un benchmark";
+  cost.title=spec.global?"Commun aux trois phases":"Ajusté uniquement dans la phase sélectionnée";
   top.append(label,cost);
   const controls=node("div","er-lab-row-controls");
   let input;
@@ -980,17 +1034,32 @@ function mount(root){
    input.type=spec.kind==="check"?"checkbox":spec.kind==="color"?"color":"range";
    if(spec.min!==undefined){input.min=String(spec.min);input.max=String(spec.max);input.step=String(spec.step);}
   }
+  input.id="er-lab-"+spec.id;
   input.dataset.labId=spec.id;
   input.setAttribute("aria-label",spec.label);
   const output=node("output","er-lab-output");
+  let exact=null;
+  if(spec.kind==="color"||!spec.kind){
+   exact=node("input","er-lab-exact");
+   exact.type=spec.kind==="color"?"text":"number";
+   exact.setAttribute("aria-label","Valeur exacte : "+spec.label);
+   if(spec.kind==="color"){exact.maxLength=7;exact.spellcheck=false;}
+   else {exact.min=String(spec.min);exact.max=String(spec.max);exact.step=String(spec.step);}
+   exact.addEventListener("change",()=>{
+    labChange(spec,exact.value);
+    labRefresh();
+   });
+  }
   controls.append(input,output);
+  if(exact)controls.appendChild(exact);
   line.append(top,controls);
   if(spec.help)line.appendChild(node("small","er-lab-help",spec.help));
   input.addEventListener("input",()=>labChange(spec,spec.kind==="check"?input.checked:input.value));
   input.addEventListener("change",()=>labChange(spec,spec.kind==="check"?input.checked:input.value));
-  labControls.set(spec.id,{input,value:output});
-  labBody.appendChild(line);
+  labControls.set(spec.id,{row:line,input,value:output,exact});
+  currentGroup.appendChild(line);
  }
+ labCategorySelect(selectedLabCategory);
  const labActions=node("div","er-lab-actions");
  const labReset=node("button","er-lab-reset","RESET PHASE");
  labReset.type="button";
