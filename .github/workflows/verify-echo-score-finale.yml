@@ -81,6 +81,12 @@ jobs:
                 pulseEvidence.after>pulseEvidence.before;
               out.arcadeMultipliers=d.snapshot().arcade.speedMultiplier>=1&&
                 d.snapshot().arcade.multiplier>=1;
+              // A separate screenshot mode captures the live score HUD,
+              // not only the thank-you screen, for a real visual inspection.
+              if(new URLSearchParams(location.search).has("comboView")){
+                document.body.dataset.pass="ok";
+                return;
+              }
               const bankBefore=d.snapshot().arcade.bankedTotal;
               out.simulatedNaturalEnd=d.simulateSongEnd();
               out.fadeStarted=d.snapshot().mode==="finale"&&
@@ -143,6 +149,10 @@ jobs:
               --window-size="$SIZE" --virtual-time-budget=7500 \
               --screenshot="/tmp/echo-score-${v}.png" \
               http://127.0.0.1:8765/_verify_echo_score.html >/tmp/echo-score-shot-${v}.log 2>&1
+            google-chrome --headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu \
+              --window-size="$SIZE" --virtual-time-budget=2800 \
+              --screenshot="/tmp/echo-score-combo-${v}.png" \
+              "http://127.0.0.1:8765/_verify_echo_score.html?comboView=1" >/tmp/echo-score-combo-${v}.log 2>&1
           done
       - uses: actions/upload-artifact@v4
         if: always()
