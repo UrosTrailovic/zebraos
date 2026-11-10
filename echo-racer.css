@@ -3342,3 +3342,173 @@
   display:flex!important;align-items:center!important;justify-content:center!important;
   image-rendering:auto!important;
 }
+
+
+/* Echo Racer 16.2 · Real TEST workshop and consistent Game Over controls.
+   Flat PS2-era physical buttons, separate from the zebra/plastic controllers. */
+.zebra-game-body .zg.er .er-stage-home .er-test-button{
+ box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;
+ width:min(100%,186px)!important;height:39px!important;min-height:39px!important;flex:0 0 39px!important;
+ padding:0 14px!important;margin:-6px auto 0!important;border:2px solid #6d6272!important;
+ border-radius:3px!important;
+ background:repeating-linear-gradient(0deg,#ffffff06 0 1px,transparent 1px 3px),
+  linear-gradient(180deg,#55505c,#302936 45%,#1d1824 100%)!important;
+ box-shadow:inset 0 1px 0 #ffffff38,inset 0 -2px 3px #0009,0 2px 0 #100d16!important;
+ color:#e0cbe9!important;text-shadow:0 1px #08060d!important;
+ font:700 13px/1 "Courier New",monospace!important;letter-spacing:2px!important;
+ cursor:pointer!important;touch-action:manipulation;
+}
+.zebra-game-body .zg.er .er-stage-home .er-test-button:hover{
+ border-color:#a0cbd8!important;color:#e4f7ff!important;
+ filter:brightness(1.12);
+}
+.zebra-game-body .zg.er .er-stage-home .er-test-button.selected{
+ border-color:#84defb!important;outline:2px solid #82dbff66!important;outline-offset:0!important;
+ color:#d7faff!important;
+}
+.zebra-game-body .zg.er .er-test-button[hidden]{display:none!important;}
+/* Source PNGs originally carried different boxes; force matching physical
+   button envelopes at all breakpoints, including the compact mobile overlay. */
+.zebra-game-body .zg.er .er-overlay.er-stage-over{
+ --er-over-w:215px;--er-over-h:57px;
+}
+.zebra-game-body .zg.er .er-overlay.er-stage-over .er-overlay-button.er-overlay-restart,
+.zebra-game-body .zg.er .er-overlay.er-stage-over .er-menu-back{
+ box-sizing:border-box!important;
+ display:block!important;
+ flex:0 0 var(--er-over-h)!important;
+ width:min(100%,var(--er-over-w))!important;
+ height:var(--er-over-h)!important;
+ min-height:var(--er-over-h)!important;
+ max-width:var(--er-over-w)!important;
+ padding:0!important;
+ background-size:100% 100%!important;
+ background-position:center!important;
+ background-repeat:no-repeat!important;
+}
+/* Floating PC tool window: not a new browser tab and not part of the game CRT. */
+.zebra-game-body .zg.er .er-lab-toggle{
+ position:absolute!important;z-index:190!important;top:43px!important;right:13px!important;
+ display:block!important;width:auto!important;min-width:115px!important;height:26px!important;
+ padding:2px 11px!important;border:2px outset #a8a2ba!important;border-radius:2px!important;
+ background:linear-gradient(#514657,#211c2a)!important;
+ color:#fff0fc!important;
+ font:700 11px/1.2 "Courier New",monospace!important;letter-spacing:.3px!important;
+ box-shadow:0 2px 4px #0008!important;cursor:pointer!important;
+}
+.zebra-game-body .zg.er .er-lab-toggle[hidden],
+.zebra-game-body .zg.er .er-lab-window[hidden]{display:none!important;}
+.zebra-game-body .zg.er .er-lab-window{
+ position:absolute!important;z-index:210!important;
+ top:75px;right:10px;
+ box-sizing:border-box!important;
+ width:min(438px,calc(100% - 20px))!important;max-width:calc(100% - 20px)!important;
+ max-height:calc(100% - 88px)!important;
+ overflow:hidden!important;
+ display:flex!important;flex-direction:column!important;
+ background:#161520!important;color:#e4deee!important;
+ border:3px ridge #9699b6!important;border-radius:3px!important;
+ box-shadow:0 16px 38px #000e,0 0 0 1px #090914!important;
+ text-shadow:none!important;
+ font:12px/1.35 "Courier New",monospace!important;
+}
+.zebra-game-body .zg.er .er-lab-titlebar{
+ display:flex!important;align-items:center!important;justify-content:space-between!important;
+ gap:12px!important;min-height:32px!important;flex:0 0 32px!important;padding:0 7px 0 12px!important;
+ background:linear-gradient(90deg,#1e286d,#5664ac)!important;
+ color:#fff!important;font:700 12px/1 "Courier New",monospace!important;
+ cursor:move!important;user-select:none!important;touch-action:none!important;
+}
+.zebra-game-body .zg.er .er-lab-close{
+ padding:0!important;width:24px!important;height:23px!important;flex:0 0 24px!important;
+ border:2px outset #efeff6!important;background:#a6a5b5!important;
+ color:#11111b!important;font:700 18px/1 "Courier New",monospace!important;cursor:pointer!important;
+}
+.zebra-game-body .zg.er .er-lab-body{
+ overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;
+ touch-action:pan-y!important;padding:10px 12px 14px!important;min-height:0!important;
+ scrollbar-color:#5e6281 #181622!important;scrollbar-width:thin!important;
+ display:flex!important;flex-direction:column!important;gap:8px!important;
+}
+.zebra-game-body .zg.er .er-lab-intro,
+.zebra-game-body .zg.er .er-lab-disclaimer{
+ margin:0!important;padding:7px 8px!important;
+ background:#232332!important;border:1px solid #46465c!important;
+ color:#c7c2d5!important;font:11px/1.45 "Courier New",monospace!important;
+}
+.zebra-game-body .zg.er .er-lab-fps{
+ background:#080b0c!important;color:#90f1c2!important;border:1px solid #526b67!important;
+ padding:7px 8px!important;font:700 12px/1 "Courier New",monospace!important;
+}
+.zebra-game-body .zg.er .er-lab-presets,
+.zebra-game-body .zg.er .er-lab-actions{
+ display:flex!important;gap:5px!important;justify-content:stretch!important;
+}
+.zebra-game-body .zg.er .er-lab-presets button,
+.zebra-game-body .zg.er .er-lab-actions button{
+ flex:1!important;min-width:0!important;padding:7px 4px!important;
+ background:linear-gradient(#4a4859,#252331)!important;
+ border:2px outset #a1a0b3!important;color:#f3eaf7!important;
+ font:700 10px/1.15 "Courier New",monospace!important;cursor:pointer!important;
+}
+.zebra-game-body .zg.er .er-lab-section{
+ margin:9px 0 1px!important;padding:6px 7px!important;
+ background:#30283e!important;color:#e9cfed!important;
+ border-left:3px solid #a28abd!important;font:700 11px/1 "Courier New",monospace!important;
+ letter-spacing:1px!important;
+}
+.zebra-game-body .zg.er .er-lab-row{
+ display:flex!important;flex-direction:column!important;gap:5px!important;
+ padding:7px 8px!important;margin:0!important;
+ background:#1c1b29!important;border:1px solid #393749!important;color:#e8e3ee!important;
+}
+.zebra-game-body .zg.er .er-lab-row-head{
+ display:flex!important;align-items:center!important;justify-content:space-between!important;
+ gap:8px!important;min-height:16px!important;
+}
+.zebra-game-body .zg.er .er-lab-label{font:700 11px/1.2 "Courier New",monospace!important;}
+.zebra-game-body .zg.er .er-lab-impact{
+ flex:0 0 auto!important;white-space:nowrap!important;
+ color:#acaabd!important;background:#242633!important;
+ border:1px solid #50516a!important;padding:1px 4px!important;
+ font:700 9px/1.1 "Courier New",monospace!important;
+}
+.zebra-game-body .zg.er .er-lab-impact[data-impact="TRÈS ÉLEVÉ"],
+.zebra-game-body .zg.er .er-lab-impact[data-impact="ÉLEVÉ"]{color:#f2c38d!important;border-color:#80644b!important;}
+.zebra-game-body .zg.er .er-lab-impact[data-impact="JEU"]{color:#9dc3ea!important;border-color:#52688b!important;}
+.zebra-game-body .zg.er .er-lab-row-controls{
+ display:grid!important;grid-template-columns:minmax(0,1fr) 86px!important;
+ align-items:center!important;gap:9px!important;min-height:24px!important;
+}
+.zebra-game-body .zg.er .er-lab-input{width:100%!important;min-width:0!important;accent-color:#b7acdc!important;}
+.zebra-game-body .zg.er input.er-lab-input[type="checkbox"],
+.zebra-game-body .zg.er input.er-lab-input[type="color"]{
+ width:28px!important;height:22px!important;justify-self:start!important;cursor:pointer!important;
+}
+.zebra-game-body .zg.er .er-lab-row select{color:#e8e1f5!important;background:#29283d!important;}
+.zebra-game-body .zg.er .er-lab-output{
+ font:700 10px/1.2 "Courier New",monospace!important;
+ text-align:right!important;color:#b4def9!important;
+}
+.zebra-game-body .zg.er .er-lab-help{font:10px/1.25 "Courier New",monospace!important;color:#a4a3ba!important;}
+@media(max-width:700px){
+ .zebra-game-body .zg.er .er-lab-toggle,
+ .zebra-game-body .zg.er .er-lab-window{display:none!important;}
+ .zebra-game-body .zg.er .er-stage-home .er-test-button{
+  width:min(100%,170px)!important;height:34px!important;min-height:34px!important;
+  flex-basis:34px!important;margin:-4px auto 0!important;
+  pointer-events:none!important;
+ }
+ .zebra-game-body .zg.er .er-overlay.er-stage-over{
+  --er-over-w:190px;--er-over-h:49px;
+ }
+}
+@media(max-width:700px) and (max-height:700px){
+ .zebra-game-body .zg.er .er-stage-home .er-test-button{
+  width:min(100%,152px)!important;height:30px!important;min-height:30px!important;
+  flex-basis:30px!important;margin:-2px auto 0!important;
+ }
+ .zebra-game-body .zg.er .er-overlay.er-stage-over{
+  --er-over-w:168px;--er-over-h:42px;
+ }
+}
