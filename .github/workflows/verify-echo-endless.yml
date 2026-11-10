@@ -34,8 +34,10 @@ jobs:
             plasticTexture:css.includes('data:image/webp;base64,'),
             transitionAndSpeed:js.includes('ENCORE_TRANSITION_SECONDS=5')
               &&js.includes('function beginEncore()')
-              &&js.includes('const base=clamp(6.15')
+              &&js.includes('const base=clamp(lab.baseSpeed')
               &&js.includes('const multiplier=padBoostTime>0?1.85'),
+            hasTuning:js.includes('const LAB_DEFAULTS')&&js.includes('er-lab-window')&&
+              js.includes('labVisualTravel')&&css.includes('er-lab-impact'),
             noZebraControls:!css.includes('textile.png')&&!index.includes('href="echo-racer-mobile-zebra.css')
           };
           console.log('STATIC_CHECKS',JSON.stringify(checks));
@@ -97,6 +99,43 @@ jobs:
              const button=host.querySelector('.er-overlay-button');
              result.levelPickerHidden=levelBox.hidden&&getComputedStyle(levelBox).display==='none';
              result.playLabel=button.textContent.includes('JOUER');
+             const testBtn=host.querySelector('.er-test-button');
+             result.testEntry=!!testBtn&&testBtn.textContent.trim()==='TEST'&&
+               testBtn.getBoundingClientRect().top>=button.getBoundingClientRect().bottom-10;
+             const oldBest=debug.snapshot().best;
+             testBtn.click();
+             const testSnap=debug.snapshot();
+             result.testBlueNow=testSnap.mode==='running'&&testSnap.testMode&&
+               testSnap.encore.mode==='blue'&&testSnap.directorStage>=5;
+             const tuner=host.querySelector('.er-lab-toggle');
+             const tunerWindow=host.querySelector('.er-lab-window');
+             const mobileViewport=matchMedia('(max-width:700px)').matches;
+             result.configButton=!!tuner&&!!tunerWindow&&
+               (mobileViewport?getComputedStyle(tuner).display==='none':
+                getComputedStyle(tuner).display!=='none');
+             if(!mobileViewport){
+               tuner.click();
+               const speed=host.querySelector('[data-lab-id="baseSpeed"]');
+               speed.value='8';speed.dispatchEvent(new Event('input',{bubbles:true}));
+               result.liveTuning=!tunerWindow.hidden&&debug.snapshot().lab.baseSpeed===8;
+               const profile=host.querySelector('.er-lab-presets button');
+               profile.click();
+               result.performancePreset=debug.snapshot().lab.renderScale===.65&&
+                 debug.snapshot().lab.lineCount===8;
+               host.querySelector('.er-lab-reset').click();
+               result.resetDefaults=debug.snapshot().lab.baseSpeed===6.15&&
+                 debug.snapshot().lab.renderScale===.85;
+               host.querySelector('.er-lab-close').click();
+             }else{
+               result.liveTuning=true;result.performancePreset=true;result.resetDefaults=true;
+             }
+             for(let i=0;i<20;i++)debug.advance(.04);
+             debug.menu();
+             result.testBestSafe=debug.snapshot().best===oldBest&&!debug.snapshot().testMode;
+             // Keyboard/controller home navigation can select TEST without touching.
+             debug.controller('down');debug.controller('pulse');
+             result.controllerTest=debug.snapshot().testMode&&debug.snapshot().encore.mode==='blue';
+             debug.menu();
              result.plasticFooter=getComputedStyle(footer).backgroundImage.includes('data:image/webp');
              result.desktopButtonsReadable=Array.from(footer.querySelectorAll('.er-hardware')).every(el=>{
                const st=getComputedStyle(el);
@@ -136,6 +175,16 @@ jobs:
              result.noCrashInTransition=blue.lives===first.lives;
              debug.draw();
              result.blueTunnelRendered=!debug.lastRenderError();
+             // The two Game Over artwork buttons must occupy exactly one size.
+             debug.simulateHit();debug.simulateHit();debug.simulateHit();
+             debug.tickDeath(1.2);
+             const over=host.querySelector('.er-overlay-button');
+             const menu=host.querySelector('.er-menu-back');
+             const ar=over.getBoundingClientRect(),mr=menu.getBoundingClientRect();
+             const cs1=getComputedStyle(over),cs2=getComputedStyle(menu);
+             result.gameOverButtonsEqual=debug.snapshot().mode==='over'&&
+               Math.abs(parseFloat(cs1.width)-parseFloat(cs2.width))<2&&
+               Math.abs(parseFloat(cs1.height)-parseFloat(cs2.height))<2;
              result.errors=errors;
              document.body.dataset.check=JSON.stringify(result);
              document.body.dataset.pass=Object.entries(result).every(([k,v])=>k==='errors'?v.length===0:v===true)?'ok':'failed';
