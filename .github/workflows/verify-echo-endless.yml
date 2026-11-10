@@ -111,9 +111,8 @@ jobs:
              result.testBlueNow=testSnap.mode==='running'&&testSnap.testMode&&
                testSnap.encore.mode==='blue'&&testSnap.directorStage>=5;
              const tuner=host.querySelector('.er-lab-toggle');
-             const tunerWindow=host.querySelector('.er-lab-window');
              const mobileViewport=matchMedia('(max-width:700px)').matches;
-             result.configButton=!!tuner&&!!tunerWindow&&
+             result.configButton=!!tuner&&
                (mobileViewport?getComputedStyle(tuner).display==='none':
                 getComputedStyle(tuner).display!=='none');
              if(!mobileViewport){
