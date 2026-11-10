@@ -69,7 +69,7 @@ jobs:
                 d.snapshot().arcade.chain>=1&&d.snapshot().score>=scoreBeforePulse;
               // Four clean crossings refill one pulse and fire the reward cue.
               const pulseAfterShoot=d.snapshot().pulseCharge;
-              for(let i=0;i<4;i++)d.injectWave([7],window.ZebraEchoRacer.hitDepth+.1);
+              for(let i=0;i<4;i++)d.injectWave([7],d.hitDepth+.1);
               for(let i=0;i<12;i++)d.advance(.05);
               const pulseEvidence={
                 before:pulseAfterShoot,after:d.snapshot().pulseCharge,
