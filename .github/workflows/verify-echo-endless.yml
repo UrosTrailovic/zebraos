@@ -94,6 +94,36 @@ jobs:
             const result={};
             try{
              const host=document.getElementById('game');
+             const nativeTest=new URLSearchParams(location.search).has('nativeLab');
+             if(nativeTest){
+               window.ZebraEchoLabWindow={
+                 open:()=>{
+                   let win=document.querySelector('.window[data-app-id="racer-lab"]');
+                   if(!win){
+                     win=document.createElement('div');
+                     win.className='window';win.dataset.appId='racer-lab';
+                     Object.assign(win.style,{
+                       position:'fixed',left:'540px',top:'35px',width:'460px',height:'640px',
+                       zIndex:'2000',background:'#10101b'
+                     });
+                     const title=document.createElement('div');
+                     title.className='titlebar';title.textContent='ECHO RACER — CONFIG TEST';
+                     const body=document.createElement('div');body.className='window-body';
+                     win.append(title,body);document.body.appendChild(win);
+                   }
+                   return win.querySelector('.window-body');
+                 },
+                 isOpen:()=>!!document.querySelector('.window[data-app-id="racer-lab"]'),
+                 close:()=>{
+                   const win=document.querySelector('.window[data-app-id="racer-lab"]');
+                   if(win){
+                     const body=win.querySelector('.window-body');
+                     if(body&&body._zebraDispose)body._zebraDispose();
+                     win.remove();
+                   }
+                 }
+               };
+             }
              window.ZebraEchoRacer.mount(host);
              const debug=host._echoDebug;
              const levelBox=host.querySelector('.er-level-picker');
@@ -119,7 +149,10 @@ jobs:
                tuner.click();
                const lab=document.querySelector('.er-lab-window');
                result.detachedWorkshop=lab.isConnected&&!host.contains(lab)
-                 &&getComputedStyle(lab).position==='fixed';
+                 &&(nativeTest?lab.closest('.window[data-app-id="racer-lab"]')!==null
+                  &&getComputedStyle(lab).position==='relative':
+                    getComputedStyle(lab).position==='fixed');
+               result.nativeWorkshop=!nativeTest||lab.classList.contains('er-lab-native');
                const speed=lab.querySelector('[data-lab-id="baseSpeed"]');
                const setSpeed=(n)=>{
                  speed.value=String(n);
@@ -163,7 +196,7 @@ jobs:
                lab.querySelector('.er-lab-close').click();
                result.closeDetached=lab.hidden&&!lab.isConnected;
              }else{
-               for(const key of ['detachedWorkshop','phaseIndependent','previewP1','previewP2',
+               for(const key of ['detachedWorkshop','nativeWorkshop','phaseIndependent','previewP1','previewP2',
                  'previewP3','performancePreset','resetDefaults','phaseExport','closeDetached','liveTuning']){
                  result[key]=true;
                }
@@ -238,7 +271,7 @@ jobs:
           for v in desktop mobile; do
             if [ "$v" = mobile ]; then RES="--window-size=420,1000"; else RES="--window-size=1020,900"; fi
             google-chrome --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=2500 $RES \
-              --dump-dom "http://127.0.0.1:8765/_verify_echo_endless.html" >/tmp/echo-endless-${v}.html 2>/tmp/echo-endless-${v}.err
+              --dump-dom "http://127.0.0.1:8765/_verify_echo_endless.html$(if [ "$v" = desktop ]; then printf '?nativeLab=1'; fi)" >/tmp/echo-endless-${v}.html 2>/tmp/echo-endless-${v}.err
             echo "ENDLESS_BROWSER_${v}=$(grep -o 'data-pass="[^"]*"' /tmp/echo-endless-${v}.html | head -1)"
             grep -o 'data-check="[^"]*"' /tmp/echo-endless-${v}.html | head -1
             grep -q 'data-pass="ok"' /tmp/echo-endless-${v}.html
