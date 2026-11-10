@@ -60,9 +60,12 @@ jobs:
               out.nitroReadyOneShot=d.snapshot().arcade.cues.nitroReady===1&&
                 d.snapshot().arcade.nitroReady;
               const scoreBeforePulse=d.snapshot().score;
-              const wave=d.injectWave([0,1,2]);
+              const bankBeforePulse=d.snapshot().arcade.bank;
+              d.injectWave([0,1,2]);
               d.pulse();
-              out.pulseStreak=wave.cleared&&d.snapshot().arcade.bank>0&&
+              // Multiple real waves may be in range. Pulse destroys the
+              // closest one, not necessarily the specifically injected wave.
+              out.pulseStreak=d.snapshot().arcade.bank>bankBeforePulse&&
                 d.snapshot().arcade.chain>=1&&d.snapshot().score>=scoreBeforePulse;
               // Four clean crossings refill one pulse and fire the reward cue.
               const pulseAfterShoot=d.snapshot().pulseCharge;
