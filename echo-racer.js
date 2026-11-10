@@ -200,7 +200,7 @@ function mount(root){
  const PHASES=[
   {id:"p1",title:"PHASE 1",subtitle:"INTRO · 0–68 s",seconds:0,stage:0},
   {id:"p2",title:"PHASE 2",subtitle:"DROP · 68–217 s",seconds:MUSIC_DROP_AT+2,stage:2},
-  {id:"p3",title:"PHASE 3",subtitle:"TUNNEL BLEU · FIN",seconds:MUSIC_LOOP_FROM,stage:5}
+  {id:"p3",title:"PHASE 3",subtitle:"TUNNEL BLEU · APRÈS 217 s",seconds:MUSIC_TAIL_AT,stage:5}
  ];
  const PHASE_FIELDS=[
   "baseSpeed","acceleration","phaseBonus","visualSpeed","obstacleDensity",
@@ -234,7 +234,7 @@ function mount(root){
  let activePhase="p1",editorPhase="p3",testLaunchPhase="p3";
  function persistPhases(){save(PHASE_KEY,JSON.stringify(phaseProfiles));}
  function applyPhase(id){
-  if(!phaseProfiles[id]||activePhase===id)return;
+  if(!phaseProfiles[id])return;
   activePhase=id;
   Object.assign(lab,phaseProfiles[id]);
   // During a run, the settings of the actual musical phase take priority
@@ -833,7 +833,14 @@ function mount(root){
  function labPreset(label,values){
   const btn=node("button","er-lab-preset",label);btn.type="button";
   btn.onclick=()=>{
-   Object.assign(lab,values);persistLab();labRefresh();fitCanvas();renderHud();
+   for(const [key,value] of Object.entries(values)){
+    if(PHASE_FIELD_SET.has(key)){
+     phaseProfiles[editorPhase][key]=value;
+     if(activePhase===editorPhase)lab[key]=value;
+    }else lab[key]=value;
+   }
+   persistPhases();persistLab();
+   labRefresh();fitCanvas();renderHud();
    if(mode!=="running")try{paint(performance.now());}catch(_){}
   };
   labPresetBox.appendChild(btn);return btn;
@@ -2597,6 +2604,10 @@ function mount(root){
  document.addEventListener("keydown",keyDown);
  document.addEventListener("keyup",keyUp);
  function dispose(){
+  if(!live)return;
+  // The editor lives in a sibling desktop window: close it when the game
+  // closes or when the user signs out. Never leave a zombie settings window.
+  labHide();
   live=false;cancelAnimationFrame(raf);resetSteering();keys.clear();
   stopMusic();
   document.removeEventListener("visibilitychange",onVisibility);
@@ -2629,11 +2640,16 @@ function mount(root){
   lcdEditor:()=>({open:!cfgPanel.hidden,mode:cfgMode,layout:JSON.parse(JSON.stringify(cfgLayout)),targets:Object.keys(cfgTargets)}),
   lcdSet:(id,x,y)=>{if(!cfgTargets[id])return false;cfgChosen=id;cfgSet(id,"x",x);cfgSet(id,"y",y);return true;},
   lcdOpen:cfgOpen,lcdClose:cfgHide,
-  snapshot:()=>({mode,testMode,homeIndex,lab:{...lab},labOpen:!labPanel.hidden,fps:labFps,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,directorStage,musicDropSurge,
+  snapshot:()=>({mode,testMode,homeIndex,lab:{...lab},labOpen:!labPanel.hidden,
+   labDetached:!wrap.contains(labPanel)&&!!labPanel.parentElement,
+   phaseActive:activePhase,phaseEditing:editorPhase,
+   phaseProfiles:JSON.parse(JSON.stringify(phaseProfiles)),fps:labFps,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,directorStage,musicDropSurge,
    encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
   triggerEncore:beginEncore,draw:()=>paint(performance.now()),
-  test:()=>start(true),labOpen:labOpen,labClose:labHide,labPreset:(name)=>{const buttons=[...labPresetBox.querySelectorAll("button")];const b=buttons.find(x=>x.textContent===name);if(b){b.click();return true;}return false;},
+  test:()=>start(true),testPhase:(id)=>{if(!phaseProfiles[id])return false;start(true,id);return true;},
+  editPhase:(id)=>{if(!phaseProfiles[id])return false;editorPhase=id;labRefresh();return true;},
+  exportPhases:exportTuningJSON,labOpen:labOpen,labClose:labHide,labPreset:(name)=>{const buttons=[...labPresetBox.querySelectorAll("button")];const b=buttons.find(x=>x.textContent===name);if(b){b.click();return true;}return false;},
   injectPickup:(kind,sectors,z=HIT_Z+PICKUP_FRONT+.2)=>{
    const o={z,sectors:[...sectors],length:kind==="pad"?1.1:0,credited:false,shimmer:0};
    if(kind==="pad")pads.push(o);else if(kind==="shield")shields.push(o);
