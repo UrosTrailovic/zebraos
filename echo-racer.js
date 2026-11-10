@@ -125,6 +125,13 @@ function mount(root){
   lastGateAt=-100,trail=[],sparks=[],currentSpeed=0,gateCount=0,padCount=0,shieldCount=0,scoreMultiplier=1;
  let invuln=0,pulseCharge=2,pulseGlow=0,padBoostTime=0,pulseFx=0,pulseHitFx=0,shieldFlash=0;
  let nitroHeld=false,nitroActive=false,nitroFuel=0,nitroRegenWait=0,nitroBurnTime=0,freeChargeVisual=0;
+ // Arcade risk/reward: event points stay pending until a safe cash-out.
+ let skillBank=0,skillChain=0,skillMultiplier=1,skillTimer=0,skillAge=0;
+ let bankedTotal=0,bankedCount=0,nearMisses=0;
+ let rewardText="",rewardKind="",rewardLife=0,nitroFullLatched=false;
+ const rewardCueCounts={nitroReady:0,pulseReady:0,bank:0,chainStep:0};
+ let phase3Elapsed=0,finaleTime=0,finaleCause="",finaleSelection=0;
+ const FINALE_FADE_SECONDS=3.2,PHASE3_SILENT_FALLBACK=180;
  let flash=0,shake=0,elapsed=0,nextWave=0,message="",messageLife=0;
  let menuStage="home",menuIndex=0,pauseIndex=0,overIndex=0,warningLife=0,warningBeepDelay=0,warningChirp=0;
  let directorStage=0,musicDropSurge=0,musicLoops=0;
@@ -210,7 +217,17 @@ function mount(root){
    "shadows": false,
    "particles": 0.75,
    "invincible": true,
-   "frameLimit": 60
+   "frameLimit": 60,
+   "comboTimeout": 7.5,
+   "comboCashout": 18,
+   "comboEvery": 3,
+   "comboMax": 12,
+   "scoreClean": 65,
+   "scoreNear": 150,
+   "scorePulse": 225,
+   "scorePad": 180,
+   "scoreShield": 140,
+   "rewardSfxVolume": 0.75
  };
  const LAB_META=[
   {section:"PILOTAGE & VITESSE"},
@@ -245,7 +262,18 @@ function mount(root){
   {"id":"gateSize","label":"Longueur des obstacles","min":0.5,"max":2,"step":0.05,"unit":"×","cost":"JEU","help":"Épaisseur des murs dans le sens de la piste"},
   {"id":"obstacleFade","label":"Distance d'apparition","min":3,"max":16,"step":0.5,"unit":"u","cost":"VISUEL","help":"Détermine combien de temps les obstacles émergent du fond"},
   {"id":"shieldFrequency","label":"Fréquence des boucliers","min":0.25,"max":3,"step":0.05,"unit":"×","cost":"JEU","help":"Plus haut = plus de chances de récupérer une vie"},
+  {section:"SCORE & COMBOS"},
+  {"id":"comboTimeout","label":"Temps avant encaissement","min":3,"max":14,"step":0.5,"unit":"s","cost":"JEU","help":"Sans nouvelle figure, la chaîne est encaissée"},
+  {"id":"comboCashout","label":"Durée maximale d'une chaîne","min":8,"max":40,"step":1,"unit":"s","cost":"JEU","help":"Encaissement automatique pour créer des pics de score"},
+  {"id":"comboEvery","label":"Figures par multiplicateur","min":2,"max":7,"step":1,"unit":"fig.","cost":"JEU","help":"Plus petit = combo qui grimpe plus vite"},
+  {"id":"comboMax","label":"Multiplicateur combo maximum","min":3,"max":20,"step":1,"unit":"×","cost":"JEU","help":"En plus du multiplicateur lié à la vitesse"},
+  {"id":"scoreClean","label":"Points passage propre","min":10,"max":400,"step":10,"unit":"pts","cost":"JEU","help":"Un obstacle évité normalement"},
+  {"id":"scoreNear","label":"Points near miss","min":20,"max":700,"step":10,"unit":"pts","cost":"JEU","help":"Frôler un mur rapporte davantage"},
+  {"id":"scorePulse","label":"Points mur détruit au pulse","min":20,"max":800,"step":10,"unit":"pts","cost":"JEU","help":"Un tir dans le vide ne rapporte rien"},
+  {"id":"scorePad","label":"Points pad BOOST","min":10,"max":600,"step":10,"unit":"pts","cost":"JEU","help":"Récupérer un pad"},
+  {"id":"scoreShield","label":"Points bouclier","min":10,"max":600,"step":10,"unit":"pts","cost":"JEU","help":"Récupérer une vie"},
   {section:"MUSIQUE & LUMIÈRES"},
+  {"id":"rewardSfxVolume","label":"Sons des récompenses","min":0,"max":1,"step":0.05,"unit":"×","cost":"AUDIO","help":"Nitro prêt, pulse gagné, combo et encaissement"},
   {"id":"punch","label":"Réactivité générale au son","min":0,"max":3,"step":0.1,"unit":"×","cost":"VISUEL","help":"Amplifie les pulsations déclenchées par la musique"},
   {"id":"light","label":"Intensité générale des néons","min":0.2,"max":2.5,"step":0.05,"unit":"×","cost":"VISUEL","help":"Luminosité des rails et anneaux"},
   {"id":"musicSpeedInfluence","label":"Influence musicale sur la vitesse","min":0,"max":3,"step":0.1,"unit":"×","cost":"JEU","help":"La musique accélère réellement le vaisseau"},
@@ -561,6 +589,8 @@ function mount(root){
   overlayButton.setAttribute("aria-current",atHome&&homeIndex===0?"true":"false");
   testButton.setAttribute("aria-current",atHome&&homeIndex===1?"true":"false");
   backButton.classList.toggle("selected",mode==="over"&&overIndex===1);
+  finaleRestart.classList.toggle("selected",mode==="finished"&&finaleSelection===0);
+  finaleMenu.classList.toggle("selected",mode==="finished"&&finaleSelection===1);
   [pauseRestart,pauseSound,pauseMenu].forEach((btn,i)=>btn.classList.toggle("selected",mode==="paused"&&pauseIndex===i+1));
  }
  function confirmLevel(){
@@ -596,6 +626,12 @@ function mount(root){
   if(mode==="over"){
    if(backward||forward){overIndex=1-overIndex;beep("switch");paintMenuSelection();return;}
    if(which==="pulse"){if(overIndex===0)restartRun();else toMenu();}
+   else if(which==="boost"||which==="pause")toMenu();
+   return;
+  }
+  if(mode==="finished"){
+   if(backward||forward){finaleSelection=1-finaleSelection;beep("switch");paintMenuSelection();return;}
+   if(which==="pulse"){if(finaleSelection===0)restartRun();else toMenu();}
    else if(which==="boost"||which==="pause")toMenu();
    return;
   }
@@ -735,6 +771,17 @@ function mount(root){
  const speedGauge=instrument("VITESSE","er-dashboard-speed","KM/H");
  const boostGauge=instrument("BOOST","er-dashboard-boost","%");
  const eventText=node("div","er-race-event","");
+ const scoreCombo=node("div","er-score-combo");
+ scoreCombo.setAttribute("aria-label","Combo de figures et multiplicateurs");
+ const speedComboEl=node("span","er-score-speed","VITESSE ×1");
+ const skillComboEl=node("strong","er-score-multiplier","COMBO ×1");
+ const skillBankEl=node("span","er-score-pending","+0 EN ATTENTE");
+ const skillBar=node("div","er-score-chainbar");
+ const skillBarFill=node("i","er-score-chainfill");skillBar.appendChild(skillBarFill);
+ scoreCombo.append(speedComboEl,skillComboEl,skillBankEl,skillBar);
+ const scoreToast=node("div","er-score-toast");
+ scoreToast.setAttribute("aria-live","off");
+ scoreToast.hidden=true;
  const warningLayer=node("div","er-shield-warning");
  const warningIcon=node("img","er-shield-warning-icon");
  warningIcon.src="/assets/games/warning.png";warningIcon.alt="";
@@ -750,10 +797,23 @@ function mount(root){
   void shieldCollect.offsetWidth;
   shieldCollect.classList.add("er-shield-collected");
  }
+ const finaleOverlay=node("div","er-finale-overlay");
+ finaleOverlay.hidden=true;
+ const finaleTitle=node("h2","er-finale-title","THANK YOU FOR PLAYING");
+ const finaleSubtitle=node("p","er-finale-subtitle","ECHO RACER · COURSE TERMINÉE");
+ const finaleScore=node("strong","er-finale-score","");
+ const finaleStats=node("p","er-finale-stats","");
+ const finaleActions=node("div","er-finale-actions");
+ const finaleRestart=node("button","er-finale-button","↻ REJOUER");finaleRestart.type="button";
+ finaleRestart.onclick=()=>restartRun();
+ const finaleMenu=node("button","er-finale-button","⌂ MENU");finaleMenu.type="button";
+ finaleMenu.onclick=()=>toMenu();
+ finaleActions.append(finaleRestart,finaleMenu);
+ finaleOverlay.append(finaleTitle,finaleSubtitle,finaleScore,finaleStats,finaleActions);
  const crashCurtain=node("div","er-crash-curtain");
  crashCurtain.hidden=true;crashCurtain.setAttribute("aria-hidden","true");
  // Instruments are part of frame: overlay on desktop, physical strip on mobile.
- screen.append(canvas,sheen,eventText,warningLayer,shieldCollect,overlay,crashCurtain);
+ screen.append(canvas,sheen,eventText,scoreCombo,scoreToast,warningLayer,shieldCollect,overlay,crashCurtain,finaleOverlay);
  frame.append(screen,dashboard);
  wrap.append(hud,frame);
  const footer=node("div","er-footer zg-buttons zt-buttons");
@@ -930,6 +990,7 @@ function mount(root){
   "TURBOS & BONUS":"Pads automatiques et nitro manuel : deux accélérations indépendantes.",
   "OBSTACLES & DIFFICULTÉ":"Quantité, variété et comportement des murs, fréquence des boucliers.",
   "MUSIQUE & LUMIÈRES":"Le morceau déclenche la vitesse, les battements et la lumière.",
+  "SCORE & COMBOS":"Passages propres, near misses, murs détruits : construis la chaîne puis encaisse. Un impact efface les points en attente.",
   "TUNNEL & CAMÉRA":"Géométrie, courbes, plaques, anneaux et sensation de profondeur.",
   "PALETTE DE LA PHASE":"Sept couleurs réellement actives dans cette phase. Aucune couleur réservée à une autre phase.",
   "PERFORMANCES & TEST":"Options communes aux trois phases, réglages graphiques et diagnostic FPS."
@@ -1780,10 +1841,16 @@ function mount(root){
  function start(testPhase=false,requestedPhase=testLaunchPhase){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
+  finaleOverlay.hidden=true;finaleTime=0;finaleCause="";phase3Elapsed=0;finaleSelection=0;
   lockDeathControls(false);
   musicRequest++;pauseMusic();
   resetSteering();mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
   hudTimer=bestSaveTimer=audioSampleTimer=0;
+  skillBank=skillChain=skillTimer=skillAge=bankedTotal=bankedCount=nearMisses=0;
+  skillMultiplier=1;rewardLife=0;rewardText=rewardKind="";
+  nitroFullLatched=false;
+  for(const kind of Object.keys(rewardCueCounts))rewardCueCounts[kind]=0;
+  scoreToast.hidden=true;scoreCombo.classList.remove("active");
   waves=[];pads=[];shields=[];
   nextGateAt=selectedLevel.id==="free"?Infinity:START_GATE_AT;
   nextPadAt=selectedLevel.id==="free"?Infinity:PAD_START;
@@ -1832,11 +1899,13 @@ function mount(root){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
   screen.classList.remove("er-crashing");lockDeathControls(false);
+  finaleOverlay.hidden=true;finaleTime=0;
   if(!testMode&&mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
   musicRequest++;resetSteering();stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];trail=[];turnVelocity=0;
   shieldCollect.classList.remove("er-shield-collected");pulseFx=pulseHitFx=shieldFlash=0;
   elapsed=0;encoreMode="normal";encoreTime=0;testMode=false;labToggle.hidden=true;labHide();padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
+  skillBank=skillChain=skillAge=skillTimer=0;skillMultiplier=1;rewardLife=0;
   overlay.hidden=false;renderMenuStage("home");
   renderHud();
  }
@@ -1846,6 +1915,10 @@ function mount(root){
   keys.clear();dragPointer=null;deathFade=0;deathLock=0;
   warningLife=0;warningBeepDelay=0;
   flash=.55;shake=7;
+  if(skillBank>0){
+   showReward("CHAÎNE PERDUE · -"+Math.round(skillBank),"lost",1.7);
+   skillBank=0;skillChain=0;skillMultiplier=1;skillTimer=skillAge=0;
+  }
   if(!testMode&&score>best){best=Math.floor(score);save("best."+selectedLevel.id,best);}
   overlay.hidden=true;screen.classList.remove("er-death");
   screen.classList.add("er-crashing");
@@ -2752,7 +2825,7 @@ function mount(root){
    }
    return;
   }
-  if(mode==="paused"||mode==="over"){
+  if(mode==="paused"||mode==="over"||mode==="finished"){
    if(dir){e.preventDefault();if(!e.repeat)controllerInput(dir);return;}
    if(k==="enter"||k==="q"||k===" "){e.preventDefault();if(!e.repeat)controllerInput("pulse");return;}
    if(k==="escape"||k==="backspace"){e.preventDefault();if(!e.repeat)controllerInput("boost");return;}
