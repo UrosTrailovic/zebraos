@@ -135,10 +135,12 @@ function mount(root){
  let soundEnabled=load("sfx","on")!=="off",audioCtx=null;
  // Dedicated Echo Racer audio system: never touch ZebraAMP or other games.
  let music=null,musicSource=null,musicAnalyser=null,musicBins=null,musicError=false;
+ let musicTrackId="p1",musicRequest=0;
  // Dedicated song boost; do not alter engine SFX or ZebraAMP's audio graph.
  let musicGain=null,musicLimiter=null;
  const MUSIC_GAIN=1.9;
  const musicUrl="/assets/games/echoraccaersong.mp3?v=1";
+ const musicUrlPhase3="/assets/games/echoraccersongpt2.mp3?v=1";
  // Two lightweight players independent of the music analyser.
  const flyUrl="/assets/spaceship-fly-sfx.mp3";
  const boostUrl="/assets/boostsfx.mp3?v=2";
@@ -1345,25 +1347,23 @@ function mount(root){
   try{
    music=new window.Audio(musicUrl);
    music.loop=false;music.volume=.82;music.preload="none";
-   // The actual song has an audible end around 217 s; its last ~97 s
-   // are virtually silent. The first ending starts the visual intermission.
-   // Later repeats loop from the musical passage without resetting the blue world.
+   // Song 1 has a silent encoded tail. Its audible finish at ~217 s
+   // triggers the five-second blackout. Song 2 plays ONLY in blue phase.
    music.addEventListener("timeupdate",()=>{
-    if(!live||mode!=="running"||music.currentTime<MUSIC_TAIL_AT)return;
-    if(encoreMode==="normal")beginEncore();
-    else if(encoreMode==="blue"){
-     musicLoops++;
-     try{music.currentTime=MUSIC_LOOP_FROM;}catch(_){}
-    }
+    if(!live||mode!=="running"||encoreMode!=="normal"
+     ||musicTrackId!=="p1"||music.currentTime<MUSIC_TAIL_AT)return;
+    beginEncore();
    });
    music.addEventListener("ended",()=>{
     if(!live||mode!=="running"||!soundEnabled)return;
-    if(encoreMode==="normal"){beginEncore();return;}
-    if(encoreMode!=="blue")return;
-    musicLoops++;
-    try{music.currentTime=MUSIC_LOOP_FROM;}catch(_){}
-    const resumed=music.play();
-    if(resumed&&resumed.catch)resumed.catch(()=>{musicError=true;});
+    if(musicTrackId==="p1"&&encoreMode==="normal"){beginEncore();return;}
+    if(musicTrackId==="p3"&&encoreMode==="blue"){
+     // Browser native loop is primary; retain fallback if loop is denied.
+     musicLoops++;
+     try{music.currentTime=0;}catch(_){}
+     const resumed=music.play();
+     if(resumed&&resumed.catch)resumed.catch(()=>{musicError=true;});
+    }
    });
    music.onerror=function(){musicError=true;};
    const context=ensureAudioContext();
@@ -1557,6 +1557,36 @@ function mount(root){
   if(!wanted&&boostGain===0&&!boostSource&&boostSound&&!boostSound.paused)
    try{boostSound.pause();}catch(_){}
  }
+ function selectMusicTrack(phase){
+  const track=ensureMusic();if(!track)return null;
+  const wanted=phase==="p3"?"p3":"p1";
+  if(musicTrackId!==wanted){
+   musicRequest++;
+   try{track.pause();}catch(_){}
+   musicTrackId=wanted;
+   track.src=wanted==="p3"?musicUrlPhase3:musicUrl;
+   track.loop=wanted==="p3";
+   track.preload="auto";
+   try{track.load();}catch(_){}
+  }else track.loop=wanted==="p3";
+  return track;
+ }
+ function startMusicAtPhase(phase,seconds){
+  if(!soundEnabled||globalMuted()||document.hidden)return;
+  const track=selectMusicTrack(phase);if(!track)return;
+  const request=++musicRequest,expected=phase==="p3"?"p3":"p1";
+  const play=()=>{
+   if(!live||mode!=="running"||encoreMode==="transition"||
+      musicRequest!==request||musicTrackId!==expected)return;
+   try{track.currentTime=Math.max(0,seconds);}catch(_){}
+   startMusic(false);
+  };
+  if(track.readyState>=1)play();
+  else{
+   track.addEventListener("loadedmetadata",play,{once:true});
+   try{track.load();}catch(_){}
+  }
+ }
  function startMusic(rewind){
   if(!live||!soundEnabled||globalMuted()||document.hidden||encoreMode==="transition")return;
   startEngine(rewind);
@@ -1574,19 +1604,8 @@ function mount(root){
   }catch(_){musicError=true;}
  }
  function startMusicAt(seconds){
-  if(!soundEnabled||globalMuted()||document.hidden)return;
-  const track=ensureMusic();if(!track)return;
-  const target=Math.max(0,seconds);
-  const seekAndPlay=()=>{
-   if(!live||mode!=="running"||!testMode)return;
-   try{track.currentTime=target;}catch(_){}
-   startMusic(false);
-  };
-  if(track.readyState>=1)seekAndPlay();
-  else{
-   track.addEventListener("loadedmetadata",seekAndPlay,{once:true});
-   try{track.load();}catch(_){}
-  }
+  // Song 1 belongs to the first two chapters, song 2 to the blue chapter.
+  startMusicAtPhase(encoreMode==="blue"?"p3":"p1",seconds);
  }
  function pauseMusic(){
   if(music)try{music.pause();}catch(_){}
@@ -1733,6 +1752,7 @@ function mount(root){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
   lockDeathControls(false);
+  musicRequest++;pauseMusic();
   resetSteering();mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
   hudTimer=bestSaveTimer=audioSampleTimer=0;
   waves=[];pads=[];shields=[];
@@ -1775,8 +1795,8 @@ function mount(root){
   fitCanvas();
   try{paint(performance.now());}catch(error){console.error("Echo Racer initial frame",error);}
   beep("collect");
-  if(!testMode||testLaunchPhase==="p1")startMusic(true);
-  else if(testLaunchPhase==="p2")startMusicAt(MUSIC_DROP_AT+2);
+  if(!testMode||testLaunchPhase==="p1")startMusicAtPhase("p1",0);
+  else if(testLaunchPhase==="p2")startMusicAtPhase("p1",MUSIC_DROP_AT+2);
   renderHud();
  }
  function toMenu(){
@@ -1784,7 +1804,7 @@ function mount(root){
   deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
   screen.classList.remove("er-crashing");lockDeathControls(false);
   if(!testMode&&mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
-  resetSteering();stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];trail=[];turnVelocity=0;
+  musicRequest++;resetSteering();stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];trail=[];turnVelocity=0;
   shieldCollect.classList.remove("er-shield-collected");pulseFx=pulseHitFx=shieldFlash=0;
   elapsed=0;encoreMode="normal";encoreTime=0;testMode=false;labToggle.hidden=true;labHide();padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
@@ -1793,7 +1813,7 @@ function mount(root){
  }
  function gameOver(){
   if(mode!=="running")return;
-  stopMusic();nitroHeld=false;nitroActive=false;mode="crashing";labToggle.hidden=true;labHide();
+  musicRequest++;stopMusic();nitroHeld=false;nitroActive=false;mode="crashing";labToggle.hidden=true;labHide();
   keys.clear();dragPointer=null;deathFade=0;deathLock=0;
   warningLife=0;warningBeepDelay=0;
   flash=.55;shake=7;
@@ -1988,21 +2008,17 @@ function mount(root){
   invuln=Math.max(invuln,2);
   message="PHASE BLEUE · NOUVELLE PRESSION";messageLife=2.4;
   applyPhase("p3");
-  if(testMode){
-   musicLoops++;
-   startMusicAt(MUSIC_LOOP_FROM);
-  }else if(music){
-   musicLoops++;
-   try{music.currentTime=MUSIC_LOOP_FROM;}catch(_){}
-   startMusic(false);
-  }
+  // The user's new second song starts at 0 in Phase 3, in normal and TEST.
+  // It is an independent audio file, not a loop of the first song.
+  musicLoops++;
+  startMusicAtPhase("p3",0);
  }
  function updateEncore(dt){
   if(encoreMode==="normal"&&selectedLevel.id!=="free"){
    // If playback is muted, the same progression uses running elapsed time.
    const songClock=music&&!music.paused&&soundEnabled&&!globalMuted()?
     music.currentTime:elapsed;
-   if(songClock>=MUSIC_TAIL_AT)beginEncore();
+   if(songClock>=MUSIC_TAIL_AT&&musicTrackId==="p1")beginEncore();
   }
   if(encoreMode==="transition"){
    encoreTime=Math.min(ENCORE_TRANSITION_SECONDS,encoreTime+dt);
@@ -2014,7 +2030,7 @@ function mount(root){
   // Actual media clock is authoritative when playing, elapsed is fallback
   // for muted/offline runs, so gameplay never stalls because audio is blocked.
   const songTime=music&&!music.paused&&soundEnabled?
-   (musicLoops>0?MUSIC_SECOND_DROP_AT:music.currentTime):elapsed;
+   (musicTrackId==="p3"?MUSIC_SECOND_DROP_AT:music.currentTime):elapsed;
   const musicalStage=songTime>=MUSIC_SECOND_DROP_AT?4:songTime>=MUSIC_DROP_AT?2:0;
   const survivalStage=Math.min(8,Math.floor(elapsed/58));
   const target=Math.max(musicalStage,survivalStage);
@@ -2815,7 +2831,7 @@ function mount(root){
    labDetached:!wrap.contains(labPanel)&&!!labPanel.parentElement,
    phaseActive:activePhase,phaseEditing:editorPhase,
    phaseProfiles:JSON.parse(JSON.stringify(phaseProfiles)),fps:labFps,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,directorStage,musicDropSurge,
-   encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
+   encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,track:musicTrackId,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
   triggerEncore:beginEncore,draw:()=>paint(performance.now()),
   test:()=>start(true),testPhase:(id)=>{if(!phaseProfiles[id])return false;start(true,id);return true;},
