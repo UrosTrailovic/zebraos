@@ -769,9 +769,26 @@ function mount(root){
  labBar.append(labHeading,labClose);
  const labBody=node("div","er-lab-body");
  const labIntro=node("p","er-lab-intro",
-  "Règle la phase bleue en direct. Les valeurs sont gardées sur cet appareil et s'appliquent aussi à JOUER. Le record TEST reste séparé.");
+  "Trois phases, trois profils indépendants. Choisis celle à régler, puis ESSAYER LA PHASE pour y entrer immédiatement. Les performances sont communes aux trois phases.");
  const labPerfReadout=node("div","er-lab-fps","FPS — · chargement...");
  const labPresetBox=node("div","er-lab-presets");
+ const labPhases=node("nav","er-lab-phases");
+ labPhases.setAttribute("aria-label","Phases musicales à configurer");
+ const labChapterInfo=node("p","er-lab-chapter-info","");
+ const labPhaseTabs=new Map();
+ const labTryPhase=node("button","er-lab-try-phase","▶ ESSAYER CETTE PHASE");
+ labTryPhase.type="button";
+ labTryPhase.title="Recommencer TEST à cette phase, sans changer le record";
+ labTryPhase.onclick=()=>start(true,editorPhase);
+ for(const phase of PHASES){
+  const tab=node("button","er-lab-phase-tab",phase.title);
+  tab.type="button";tab.dataset.phase=phase.id;
+  tab.title=phase.subtitle;
+  tab.setAttribute("aria-label",phase.title+" · "+phase.subtitle);
+  tab.onclick=()=>{editorPhase=phase.id;labRefresh();};
+  labPhaseTabs.set(phase.id,tab);
+  labPhases.appendChild(tab);
+ }
  const labControls=new Map();
  function labValueText(spec,val){
   if(spec.kind==="check")return val?"OUI":"NON";
@@ -780,21 +797,35 @@ function mount(root){
   return String(Number(val.toFixed(2)))+(spec.unit?" "+spec.unit:"");
  }
  function labRefresh(){
+  const phase=PHASES.find(p=>p.id===editorPhase)||PHASES[2];
+  labChapterInfo.textContent=phase.title+" · "+phase.subtitle+
+   (activePhase===editorPhase?" · EN JEU":" · PARAMÈTRES ENREGISTRÉS");
+  for(const [id,tab] of labPhaseTabs){
+   const current=id===editorPhase;
+   tab.classList.toggle("selected",current);
+   tab.setAttribute("aria-pressed",String(current));
+  }
   for(const spec of LAB_META){
    if(!spec.id)continue;
    const entry=labControls.get(spec.id);if(!entry)continue;
-   const val=lab[spec.id];
+   const val=PHASE_FIELD_SET.has(spec.id)?phaseProfiles[editorPhase][spec.id]:lab[spec.id];
    if(spec.kind==="check")entry.input.checked=!!val;
    else entry.input.value=String(val);
    entry.value.textContent=labValueText(spec,val);
   }
  }
  function labChange(spec,raw){
-  if(spec.kind==="check")lab[spec.id]=!!raw;
-  else if(spec.kind==="color"){if(/^#[0-9a-f]{6}$/i.test(raw))lab[spec.id]=raw;}
-  else if(spec.kind==="select")lab[spec.id]=clamp(Number(raw)||0,0,2);
-  else if(Number.isFinite(Number(raw)))lab[spec.id]=clamp(Number(raw),spec.min,spec.max);
-  persistLab();labRefresh();
+  const perPhase=PHASE_FIELD_SET.has(spec.id);
+  const target=perPhase?phaseProfiles[editorPhase]:lab;
+  if(spec.kind==="check")target[spec.id]=!!raw;
+  else if(spec.kind==="color"){if(/^#[0-9a-f]{6}$/i.test(raw))target[spec.id]=raw;}
+  else if(spec.kind==="select")target[spec.id]=clamp(Number(raw)||0,0,2);
+  else if(Number.isFinite(Number(raw)))target[spec.id]=clamp(Number(raw),spec.min,spec.max);
+  if(perPhase){
+   persistPhases();
+   if(activePhase===editorPhase)lab[spec.id]=target[spec.id];
+  }else persistLab();
+  labRefresh();
   if(spec.id==="renderScale")fitCanvas();
   renderHud();
   if(mode!=="running")try{paint(performance.now());}catch(_){}
@@ -810,7 +841,7 @@ function mount(root){
  labPreset("FLUIDITÉ",{renderScale:.65,lineCount:8,ringGap:.93,panelDetail:0,warp:false,shadows:false,particles:.3});
  labPreset("ÉQUILIBRÉ",{renderScale:.85,lineCount:16,ringGap:.66,panelDetail:1,warp:false,shadows:false,particles:.75});
  labPreset("QUALITÉ",{renderScale:1.15,lineCount:24,ringGap:.48,panelDetail:2,warp:true,shadows:true,particles:1});
- labBody.append(labIntro,labPerfReadout,labPresetBox);
+ labBody.append(labIntro,labPhases,labChapterInfo,labTryPhase,labPerfReadout,labPresetBox);
  for(const spec of LAB_META){
   if(spec.section){
    labBody.appendChild(node("h3","er-lab-section",spec.section));continue;
@@ -847,16 +878,39 @@ function mount(root){
   labBody.appendChild(line);
  }
  const labActions=node("div","er-lab-actions");
- const labReset=node("button","er-lab-reset","RÉINITIALISER");
+ const labReset=node("button","er-lab-reset","RESET PHASE");
  labReset.type="button";
+ labReset.title="Réinitialiser uniquement les paramètres de la phase sélectionnée";
  labReset.onclick=()=>{
-  Object.assign(lab,LAB_DEFAULTS);persistLab();labRefresh();fitCanvas();renderHud();
+  for(const key of PHASE_FIELDS)phaseProfiles[editorPhase][key]=LAB_DEFAULTS[key];
+  persistPhases();
+  if(activePhase===editorPhase)applyPhase(editorPhase);
+  labRefresh();renderHud();
+ };
+ const labExport=node("button","er-lab-export-button","COPIER TOUTES LES PHASES");
+ labExport.type="button";
+ const labExportStatus=node("div","er-lab-export-status","");
+ const labExportText=node("textarea","er-lab-export-text");
+ labExportText.readOnly=true;labExportText.hidden=true;labExportText.rows=6;
+ labExportText.setAttribute("aria-label","Paramètres complets à transmettre pour finaliser Echo Racer");
+ labExport.onclick=()=>{
+  const all=exportTuningJSON();
+  labExportText.value=all;labExportText.hidden=false;
+  labExportText.focus();labExportText.select();
+  labExportStatus.textContent="Réglages des 3 phases prêts à envoyer.";
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+   navigator.clipboard.writeText(all).then(()=>{
+    labExportStatus.textContent="Copié. Colle le texte dans notre conversation pour valider tes réglages.";
+   }).catch(()=>{
+    labExportStatus.textContent="Sélectionne et copie le texte ci-dessous pour me l'envoyer.";
+   });
+  }else labExportStatus.textContent="Sélectionne et copie le texte ci-dessous pour me l'envoyer.";
  };
  const labCloseBottom=node("button","er-lab-close-bottom","FERMER");
  labCloseBottom.type="button";
  labActions.append(labReset,labCloseBottom);
- labBody.append(labActions,node("p","er-lab-disclaimer",
-  "Coût estimé : TRÈS ÉLEVÉ → ÉLEVÉ → MOYEN → FAIBLE. Pour éliminer les ralentissements : réduire d'abord la résolution, les panneaux et les anneaux. Les km/h sont une échelle arcade, tandis que 'sensation' accélère uniquement le défilement des décors."));
+ labBody.append(labActions,labExport,labExportStatus,labExportText,node("p","er-lab-disclaimer",
+  "Envoie le JSON copié quand les 3 phases sont prêtes : je pourrai les intégrer comme réglages finaux du jeu. Coût estimé : TRÈS ÉLEVÉ → ÉLEVÉ → MOYEN → FAIBLE. Les FPS sont mesurés en direct ; KM/H est une échelle arcade."));
  labPanel.append(labBar,labBody);
  wrap.append(labToggle,labPanel);
  function labOpen(){
