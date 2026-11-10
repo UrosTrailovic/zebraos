@@ -915,26 +915,62 @@ function mount(root){
  wrap.append(labToggle,labPanel);
  function labOpen(){
   if(!testMode||window.matchMedia("(max-width:700px)").matches)return;
-  labPanel.hidden=false;labRefresh();
+  const api=window.ZebraEchoLabWindow;
+  const nativeHost=api&&typeof api.open==="function"?api.open():null;
+  if(nativeHost){
+   // Genuine sibling ZebraOS desktop window: independently movable,
+   // resizable/minimizable and present in the taskbar, outside the game.
+   nativeHost.replaceChildren(labPanel);
+   nativeHost.classList.add("er-lab-native-host");
+   nativeHost._zebraDispose=()=>{
+    labPanel.hidden=true;
+    labPanel.remove();
+    labPanel.classList.remove("er-lab-native");
+   };
+   labPanel.classList.remove("er-lab-floating");
+   labPanel.classList.add("er-lab-native");
+  }else{
+   // The standalone game harness has no desktop window manager.
+   // Keep the editor genuinely outside the game canvas and clipping.
+   document.body.appendChild(labPanel);
+   labPanel.classList.remove("er-lab-native");
+   labPanel.classList.add("er-lab-floating");
+   labPanel.style.setProperty("left",Math.max(10,window.innerWidth-465)+"px","important");
+   labPanel.style.setProperty("top","66px","important");
+  }
+  labPanel.hidden=false;
+  labRefresh();
  }
- function labHide(){labPanel.hidden=true;}
+ function labHide(){
+  labPanel.hidden=true;
+  if(labPanel.classList.contains("er-lab-native")&&
+    window.ZebraEchoLabWindow&&window.ZebraEchoLabWindow.isOpen()){
+   window.ZebraEchoLabWindow.close();
+  }else{
+   labPanel.remove();
+  }
+  labPanel.classList.remove("er-lab-native","er-lab-floating");
+ }
  labToggle.onclick=()=>labPanel.hidden?labOpen():labHide();
  labClose.onclick=labCloseBottom.onclick=labHide;
  labRefresh();
  // Drag the floating window by its title bar; controls remain operable.
  let labDrag=null;
  labBar.addEventListener("pointerdown",e=>{
-  if(e.target.closest("button")||e.button!==0)return;
-  const host=wrap.getBoundingClientRect(),box=labPanel.getBoundingClientRect();
+  // Native ZebraOS windows move via the OS titlebar, not this sub-header.
+  if(!labPanel.classList.contains("er-lab-floating")||
+    e.target.closest("button")||e.button!==0)return;
+  const box=labPanel.getBoundingClientRect();
   labDrag={pointer:e.pointerId,x:e.clientX,y:e.clientY,
-   left:box.left-host.left,top:box.top-host.top};
+   left:box.left,top:box.top};
   try{labBar.setPointerCapture(e.pointerId);}catch(_){}
  });
  labBar.addEventListener("pointermove",e=>{
   if(!labDrag||e.pointerId!==labDrag.pointer)return;
-  const left=clamp(labDrag.left+e.clientX-labDrag.x,0,Math.max(0,wrap.clientWidth-labPanel.offsetWidth));
-  const top=clamp(labDrag.top+e.clientY-labDrag.y,0,Math.max(0,wrap.clientHeight-labPanel.offsetHeight));
-  labPanel.style.left=left+"px";labPanel.style.top=top+"px";
+  const left=clamp(labDrag.left+e.clientX-labDrag.x,0,Math.max(0,window.innerWidth-labPanel.offsetWidth));
+  const top=clamp(labDrag.top+e.clientY-labDrag.y,0,Math.max(0,window.innerHeight-labPanel.offsetHeight));
+  labPanel.style.setProperty("left",left+"px","important");
+  labPanel.style.setProperty("top",top+"px","important");
   labPanel.style.right="auto";
  });
  for(const name of ["pointerup","pointercancel","lostpointercapture"]){
@@ -1354,6 +1390,21 @@ function mount(root){
    if(started&&started.catch)started.catch(()=>{musicError=true;});
   }catch(_){musicError=true;}
  }
+ function startMusicAt(seconds){
+  if(!soundEnabled||globalMuted()||document.hidden)return;
+  const track=ensureMusic();if(!track)return;
+  const target=Math.max(0,seconds);
+  const seekAndPlay=()=>{
+   if(!live||mode!=="running"||!testMode)return;
+   try{track.currentTime=target;}catch(_){}
+   startMusic(false);
+  };
+  if(track.readyState>=1)seekAndPlay();
+  else{
+   track.addEventListener("loadedmetadata",seekAndPlay,{once:true});
+   try{track.load();}catch(_){}
+  }
+ }
  function pauseMusic(){
   if(music)try{music.pause();}catch(_){}
   pauseEngine();
@@ -1494,8 +1545,8 @@ function mount(root){
    if(deathLock===0)lockDeathControls(false);
   }
  }
- function restartRun(){start(testMode);}
- function start(testPhase=false){
+ function restartRun(){start(testMode,testLaunchPhase);}
+ function start(testPhase=false,requestedPhase=testLaunchPhase){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
   lockDeathControls(false);
@@ -1508,6 +1559,8 @@ function mount(root){
   lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;shieldCount=0;
   directorStage=0;musicDropSurge=0;musicLoops=0;
   encoreMode="normal";encoreTime=0;testMode=testPhase===true;
+  if(testMode&&PHASES.some(p=>p.id===requestedPhase))testLaunchPhase=requestedPhase;
+  applyPhase("p1");
   trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
   invuln=0;pulseCharge=2;pulseGlow=pulseFx=pulseHitFx=shieldFlash=padBoostTime=flash=shake=0;
   shieldCollect.classList.remove("er-shield-collected");
@@ -1516,21 +1569,32 @@ function mount(root){
   screen.classList.remove("er-death","er-crashing");
   overlay.classList.remove("er-stage-over","er-stage-pause");pauseActions.hidden=true;
   crashIcon.hidden=true;crashSub.hidden=true;
-  message=testMode?"MODE TEST · PHASE BLEUE":selectedLevel.id==="free"?
-   "FREE ROAM · BOOST ILLIMITÉ":"TROUVE LE PASSAGE";
+  message=testMode?"MODE TEST · "+(PHASES.find(p=>p.id===testLaunchPhase)||PHASES[2]).title:
+   selectedLevel.id==="free"?"FREE ROAM · BOOST ILLIMITÉ":"TROUVE LE PASSAGE";
   messageLife=testMode?3:2;keys.clear();levelPicker.hidden=true;
-  testButton.hidden=true;labToggle.hidden=!testMode;labHide();backButton.hidden=true;overlay.hidden=true;
+  testButton.hidden=true;labToggle.hidden=!testMode;
+  if(!testMode)labHide();
+  backButton.hidden=true;overlay.hidden=true;
   if(testMode){
-   // Use the SAME blue world as a real 217-second run. No five-minute wait.
-   encoreMode="transition";encoreTime=ENCORE_TRANSITION_SECONDS;
-   completeEncore();
-   message="MODE TEST · PHASE BLEUE";messageLife=3;
+   if(testLaunchPhase==="p3"){
+    // Same final blue environment as the real song outro, instantly.
+    encoreMode="transition";encoreTime=ENCORE_TRANSITION_SECONDS;
+    completeEncore();
+   }else if(testLaunchPhase==="p2"){
+    elapsed=MUSIC_DROP_AT+2;directorStage=2;
+    musicDropSurge=.55;applyPhase("p2");
+   }
+   message="MODE TEST · "+(PHASES.find(p=>p.id===testLaunchPhase)||PHASES[2]).title;
+   messageLife=3;
   }
   // Draw the first tunnel frame immediately: avoid a blank panel when
   // Android throttles its first animation frame after a touch gesture.
   fitCanvas();
   try{paint(performance.now());}catch(error){console.error("Echo Racer initial frame",error);}
-  beep("collect");if(!testMode)startMusic(true);renderHud();
+  beep("collect");
+  if(!testMode||testLaunchPhase==="p1")startMusic(true);
+  else if(testLaunchPhase==="p2")startMusicAt(MUSIC_DROP_AT+2);
+  renderHud();
  }
  function toMenu(){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
@@ -1739,8 +1803,11 @@ function mount(root){
   nextShieldAt=travel+(lives===1?38:54);
   invuln=Math.max(invuln,2);
   message="PHASE BLEUE · NOUVELLE PRESSION";messageLife=2.4;
-  if(testMode&&soundEnabled&&!globalMuted())ensureMusic();
-  if(music){
+  applyPhase("p3");
+  if(testMode){
+   musicLoops++;
+   startMusicAt(MUSIC_LOOP_FROM);
+  }else if(music){
    musicLoops++;
    try{music.currentTime=MUSIC_LOOP_FROM;}catch(_){}
    startMusic(false);
@@ -1787,6 +1854,12 @@ function mount(root){
   if(mode!=="running"||document.hidden)return;
   dt=clamp(dt,0,.05);elapsed+=dt;
   updateEncore(dt);
+  // Apply the tuned profile at the real musical boundary. The editor may
+  // meanwhile display a different phase without changing the active run.
+  const songClock=music&&!music.paused&&soundEnabled&&!globalMuted()?
+   music.currentTime:elapsed;
+  const actualPhase=encoreMode==="blue"?"p3":songClock>=MUSIC_DROP_AT?"p2":"p1";
+  if(activePhase!==actualPhase)applyPhase(actualPhase);
   directMusicPressure(dt);
   // Inverted orbital steering: pressing LEFT rotates the camera/ship toward
   // the opposite tunnel angle. Keep keyboard and touch D-pad consistent.
