@@ -820,7 +820,7 @@ function mount(root){
  function button(label,cls,callback){const b=node("button","er-hardware "+cls,label);b.type="button";b.onclick=()=>{beep("switch");callback();};return b;}
  const startButton=button("▶ JOUER","er-play",()=>{
   if(mode==="menu")start();
-  else if(mode==="over")restartRun();
+  else if(mode==="over"||mode==="finished")restartRun();
   else togglePause();
  });
  const restartButton=button("↻ RESTART","er-restart",restartRun);
@@ -1447,13 +1447,8 @@ function mount(root){
    music.addEventListener("ended",()=>{
     if(!live||mode!=="running"||!soundEnabled)return;
     if(musicTrackId==="p1"&&encoreMode==="normal"){beginEncore();return;}
-    if(musicTrackId==="p3"&&encoreMode==="blue"){
-     // Browser native loop is primary; retain fallback if loop is denied.
-     musicLoops++;
-     try{music.currentTime=0;}catch(_){}
-     const resumed=music.play();
-     if(resumed&&resumed.catch)resumed.catch(()=>{musicError=true;});
-    }
+    if(musicTrackId==="p3"&&encoreMode==="blue")
+     beginFinale("song-ended");
    });
    music.onerror=function(){musicError=true;};
    const context=ensureAudioContext();
@@ -1655,10 +1650,10 @@ function mount(root){
    try{track.pause();}catch(_){}
    musicTrackId=wanted;
    track.src=wanted==="p3"?musicUrlPhase3:musicUrl;
-   track.loop=wanted==="p3";
+   track.loop=false;
    track.preload="auto";
    try{track.load();}catch(_){}
-  }else track.loop=wanted==="p3";
+  }else track.loop=false;
   return track;
  }
  function startMusicAtPhase(phase,seconds){
@@ -2176,7 +2171,7 @@ function mount(root){
  }
  function completeEncore(){
   if(encoreMode!=="transition")return;
-  encoreMode="blue";encoreTime=ENCORE_TRANSITION_SECONDS;
+  encoreMode="blue";encoreTime=ENCORE_TRANSITION_SECONDS;phase3Elapsed=0;
   directorStage=Math.max(directorStage,5);
   // A modest new base-speed step. Ordinary cruise is already engaging;
   // nitro remains optional, not essential.
@@ -2192,6 +2187,35 @@ function mount(root){
   musicLoops++;
   startMusicAtPhase("p3",0);
  }
+ function beginFinale(reason="song-ended"){
+  if(mode!=="running"||encoreMode!=="blue")return false;
+  bankSkill("DERNIER COMBO");
+  finaleCause=reason;finaleTime=0;mode="finale";
+  musicRequest++;stopMusic();
+  resetSteering();endNitro();keys.clear();
+  waves=[];pads=[];shields=[];sparks=[];
+  padBoostTime=0;nitroActive=false;nitroHeld=false;
+  labToggle.hidden=true;labHide();
+  message="FIN DE COURSE";messageLife=2.5;
+  if(!testMode&&score>best){
+   best=Math.floor(score);save("best."+selectedLevel.id,best);
+  }
+  renderHud();
+  return true;
+ }
+ function updateFinale(dt){
+  if(mode!=="finale")return;
+  finaleTime=Math.min(FINALE_FADE_SECONDS,finaleTime+Math.max(0,dt));
+  if(finaleTime<FINALE_FADE_SECONDS)return;
+  mode="finished";finaleSelection=0;
+  finaleOverlay.hidden=false;
+  finaleScore.textContent=Math.floor(score).toLocaleString("fr-CH")+" POINTS";
+  finaleStats.textContent="RECORD "+Math.floor(best).toLocaleString("fr-CH")+
+   " · COMBOS ENCAISSÉS "+bankedCount+
+   " · POINTS DE FIGURES "+Math.round(bankedTotal).toLocaleString("fr-CH")+
+   " · NEAR MISSES "+nearMisses;
+  paintMenuSelection();renderHud();
+ }
  function updateEncore(dt){
   if(encoreMode==="normal"&&selectedLevel.id!=="free"){
    // If playback is muted, the same progression uses running elapsed time.
@@ -2202,6 +2226,15 @@ function mount(root){
   if(encoreMode==="transition"){
    encoreTime=Math.min(ENCORE_TRANSITION_SECONDS,encoreTime+dt);
    if(encoreTime>=ENCORE_TRANSITION_SECONDS)completeEncore();
+  }
+  if(encoreMode==="blue"){
+   phase3Elapsed+=dt;
+   // The media 'ended' event is authoritative. Muted or failed audio
+   // still finishes via a game-clock fallback, never an endless loop.
+   const fallback=musicTrackId==="p3"&&music&&Number.isFinite(music.duration)&&music.duration>1?
+    music.duration:PHASE3_SILENT_FALLBACK;
+   if((!soundEnabled||globalMuted()||musicError||!music)&&phase3Elapsed>=fallback)
+    beginFinale("no-audio-fallback");
   }
  }
  function directMusicPressure(dt){
@@ -2847,6 +2880,10 @@ function mount(root){
   if(flash>0){
    c.fillStyle="rgba(255,70,143,"+(flash*.23)+")";c.fillRect(0,0,W,H);
   }
+  if(mode==="finale"||mode==="finished"){
+   const fade=mode==="finished"?1:smoothEncore(finaleTime/FINALE_FADE_SECONDS);
+   c.fillStyle="rgba(0,0,0,"+fade+")";c.fillRect(0,0,W,H);
+  }
  }
  function frameTick(now){
   if(!live)return;
@@ -2869,6 +2906,7 @@ function mount(root){
    updateSteering(steerValue,now);
   if(mode==="running")advance(dt);
   advanceDeathSequence(dt);
+  updateFinale(dt);
   tickEngine(dt);
   tickBoostLoop(dt);
   const turbo=mode==="running"&&(nitroActive||padBoostTime>0)?1:0;
@@ -2898,7 +2936,7 @@ function mount(root){
   if(parent&&(!parent.classList.contains("focused")||parent.classList.contains("minimized")))return;
   if(!cfgPanel.hidden){if(e.key==="Escape"){e.preventDefault();cfgHide();}return;}
   if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||e.target.isContentEditable)return;
-  if(mode==="crashing"||(mode==="over"&&deathLock>0)){e.preventDefault();return;}
+  if(mode==="crashing"||mode==="finale"||(mode==="over"&&deathLock>0)){e.preventDefault();return;}
   // Native buttons handle their own Enter/Space; no double activation.
   if((e.key==="Enter"||e.key===" ")&&e.target.closest&&e.target.closest(".er-pad button, .er-overlay button"))return;
   const k=e.key.toLowerCase(),control={
@@ -2935,7 +2973,7 @@ function mount(root){
   if(map[k])keys.delete(map[k]);
  }
  function boardDown(e){
-  if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
+  if(mode==="crashing"||mode==="finale"||(mode==="over"&&deathLock>0))return;
   if(e.button!==undefined&&e.button!==0)return;
   if(e.target.closest&&e.target.closest("button"))return;
   if(mode!=="running"){
@@ -3027,12 +3065,18 @@ function mount(root){
   lcdSet:(id,x,y)=>{if(!cfgTargets[id])return false;cfgChosen=id;cfgSet(id,"x",x);cfgSet(id,"y",y);return true;},
   lcdOpen:cfgOpen,lcdClose:cfgHide,
   snapshot:()=>({mode,testMode,homeIndex,lab:{...lab},labOpen:!labPanel.hidden,
+   finale:{time:finaleTime,cause:finaleCause,visible:!finaleOverlay.hidden,
+    scoreText:finaleScore.textContent,stats:finaleStats.textContent},
+   arcade:{bank:skillBank,chain:skillChain,multiplier:skillMultiplier,
+    speedMultiplier:scoreMultiplier,bankedTotal,bankedCount,nearMisses,
+    nitroReady:nitroFullLatched,cues:{...rewardCueCounts},toast:rewardText},
    labDetached:!wrap.contains(labPanel)&&!!labPanel.parentElement,
    phaseActive:activePhase,phaseEditing:editorPhase,
    phaseProfiles:JSON.parse(JSON.stringify(phaseProfiles)),fps:labFps,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,directorStage,musicDropSurge,
    encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,track:musicTrackId,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
-  triggerEncore:beginEncore,draw:()=>paint(performance.now()),
+  triggerEncore:beginEncore,triggerFinale:()=>beginFinale("debug"),tickFinale:updateFinale,
+  draw:()=>paint(performance.now()),
   test:()=>start(true),testPhase:(id)=>{if(!phaseProfiles[id])return false;start(true,id);return true;},
   editPhase:(id)=>{if(!phaseProfiles[id])return false;editorPhase=id;labRefresh();return true;},
   exportPhases:exportTuningJSON,labOpen:labOpen,labClose:labHide,labPreset:(name)=>{const buttons=[...labPresetBox.querySelectorAll("button")];const b=buttons.find(x=>x.textContent===name);if(b){b.click();return true;}return false;},
