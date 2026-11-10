@@ -3705,3 +3705,147 @@ body > .er-lab-window.er-lab-floating{
   grid-template-columns:minmax(0,1fr) 55px 68px!important;
  }
 }
+
+
+/* Echo Racer 18.1 — underground-inspired arcade score feedback.
+   Score-chain panel is attached to the game viewport, not the desktop,
+   and must never obscure controls or consume pointer/touch input. */
+.zebra-game-body .zg.er .er-score-combo{
+ position:absolute!important;z-index:4!important;
+ top:12px!important;left:12px!important;right:auto!important;
+ display:flex!important;flex-direction:column!important;align-items:flex-start!important;
+ gap:2px!important;width:min(230px,calc(100% - 24px))!important;
+ padding:9px 11px!important;box-sizing:border-box!important;
+ border:1px solid #697a8d!important;border-left:3px solid #78dff5!important;
+ background:linear-gradient(115deg,rgba(3,14,30,.88),rgba(18,9,35,.79))!important;
+ box-shadow:inset 0 0 1px #b8efff77,0 2px 9px #000a!important;
+ font-family:"Oxanium","Courier New",monospace!important;
+ color:#d0f6ff!important;text-shadow:0 0 6px #4ecbef77!important;
+ opacity:0!important;transform:translateY(-8px)!important;
+ transition:opacity .16s ease,transform .16s ease!important;
+ pointer-events:none!important;
+}
+.zebra-game-body .zg.er .er-score-combo.active{
+ opacity:1!important;transform:translateY(0)!important;
+}
+.zebra-game-body .zg.er .er-score-combo.hot{
+ border-left-color:#ffd46f!important;
+ box-shadow:inset 0 0 1px #ffe5ae88,0 0 13px #f5ba3c43!important;
+}
+.zebra-game-body .zg.er .er-score-speed{
+ font:700 10px/1.1 "Oxanium","Courier New",monospace!important;
+ letter-spacing:1.1px!important;color:#88dcec!important;
+}
+.zebra-game-body .zg.er .er-score-multiplier{
+ display:block!important;
+ font:800 clamp(19px,2.3vw,27px)/1.05 "Oxanium","Courier New",monospace!important;
+ color:#ffeb9d!important;white-space:nowrap!important;
+ text-shadow:0 0 6px #ffca6e99!important;
+}
+.zebra-game-body .zg.er .er-score-pending{
+ font:700 12px/1.1 "Oxanium","Courier New",monospace!important;
+ color:#f9e4f9!important;letter-spacing:.4px!important;
+}
+.zebra-game-body .zg.er .er-score-chainbar{
+ display:block!important;width:100%!important;height:4px!important;
+ margin-top:6px!important;background:#18263a!important;
+ border:1px solid #53677a!important;overflow:hidden!important;
+}
+.zebra-game-body .zg.er .er-score-chainfill{
+ display:block!important;height:100%!important;width:0;
+ background:linear-gradient(90deg,#57b4ee,#f4e6a2)!important;
+ box-shadow:0 0 6px #a7e5ff!important;
+ transition:width .12s linear!important;
+}
+.zebra-game-body .zg.er .er-score-toast{
+ position:absolute!important;z-index:5!important;
+ left:50%!important;top:28%!important;
+ transform:translateX(-50%)!important;
+ max-width:calc(100% - 18px)!important;
+ padding:8px 14px!important;box-sizing:border-box!important;
+ background:linear-gradient(90deg,#030810dd,#1e1427dd,#030810dd)!important;
+ border-top:1px solid #78daffff!important;
+ border-bottom:1px solid #78daffff!important;
+ color:#c9f5ff!important;text-align:center!important;
+ font:800 clamp(12px,1.7vw,18px)/1.23 "Oxanium","Courier New",monospace!important;
+ letter-spacing:.3px!important;text-shadow:0 0 8px #5cdcfb!important;
+ box-shadow:0 4px 19px #0008!important;pointer-events:none!important;
+}
+.zebra-game-body .zg.er .er-score-toast[data-kind="near"]{
+ border-color:#f9cb6d!important;color:#ffe8a3!important;text-shadow:0 0 9px #ffb95d!important;
+}
+.zebra-game-body .zg.er .er-score-toast[data-kind="bank"]{
+ border-color:#93ffb8!important;color:#c7ffdc!important;text-shadow:0 0 10px #75ed9e!important;
+}
+.zebra-game-body .zg.er .er-score-toast[data-kind="lost"]{
+ border-color:#ff6196!important;color:#ffc7d8!important;text-shadow:0 0 10px #e95183!important;
+}
+.zebra-game-body .zg.er .er-score-toast[data-kind="nitro"]{
+ border-color:#8decff!important;color:#f5ee9d!important;
+}
+.zebra-game-body .zg.er .er-finale-overlay{
+ position:absolute!important;inset:0!important;z-index:11!important;
+ background:#000!important;color:#f8fbff!important;
+ display:flex!important;flex-direction:column!important;
+ align-items:center!important;justify-content:center!important;
+ gap:18px!important;padding:24px!important;box-sizing:border-box!important;
+ text-align:center!important;pointer-events:auto!important;
+ font-family:"Oxanium","Courier New",monospace!important;
+}
+.zebra-game-body .zg.er .er-finale-overlay[hidden]{display:none!important;}
+.zebra-game-body .zg.er .er-finale-title{
+ max-width:100%!important;margin:0!important;
+ color:#f6f7fe!important;letter-spacing:clamp(1px,.5vw,5px)!important;
+ font:800 clamp(27px,4.5vw,58px)/1.03 "Oxanium","Courier New",monospace!important;
+ text-shadow:0 0 15px #80c8fb6e!important;
+}
+.zebra-game-body .zg.er .er-finale-subtitle{
+ margin:0!important;color:#92bed4!important;
+ font:700 11px/1.4 "Oxanium","Courier New",monospace!important;
+ letter-spacing:2.2px!important;
+}
+.zebra-game-body .zg.er .er-finale-score{
+ font:800 clamp(24px,4vw,46px)/1.12 "Oxanium","Courier New",monospace!important;
+ color:#ffe8a4!important;text-shadow:0 0 12px #dba63c77!important;
+}
+.zebra-game-body .zg.er .er-finale-stats{
+ margin:0!important;max-width:90%!important;
+ font:600 12px/1.65 "Oxanium","Courier New",monospace!important;
+ color:#b6c8dc!important;overflow-wrap:anywhere!important;
+}
+.zebra-game-body .zg.er .er-finale-actions{
+ display:flex!important;flex-wrap:wrap!important;justify-content:center!important;
+ gap:10px!important;width:100%!important;
+}
+.zebra-game-body .zg.er .er-finale-button{
+ box-sizing:border-box!important;
+ min-width:160px!important;min-height:42px!important;
+ padding:9px 16px!important;
+ border:2px outset #afb8ce!important;border-radius:3px!important;
+ background:linear-gradient(#3a4359,#1b2237)!important;color:#fff6e8!important;
+ font:700 13px/1.2 "Oxanium","Courier New",monospace!important;
+ cursor:pointer!important;
+}
+.zebra-game-body .zg.er .er-finale-button.selected,
+.zebra-game-body .zg.er .er-finale-button:focus-visible{
+ border-color:#90e4ff!important;box-shadow:0 0 12px #77cfff77!important;
+}
+@media(max-width:700px){
+ .zebra-game-body .zg.er .er-score-combo{
+  top:5px!important;left:5px!important;
+  width:min(168px,calc(100% - 10px))!important;
+  padding:5px 7px!important;gap:1px!important;
+ }
+ .zebra-game-body .zg.er .er-score-speed{font-size:8px!important;}
+ .zebra-game-body .zg.er .er-score-multiplier{font-size:16px!important;}
+ .zebra-game-body .zg.er .er-score-pending{font-size:9px!important;}
+ .zebra-game-body .zg.er .er-score-chainbar{height:3px!important;margin-top:3px!important;}
+ .zebra-game-body .zg.er .er-score-toast{top:32%!important;font-size:12px!important;padding:5px 7px!important;}
+ .zebra-game-body .zg.er .er-finale-overlay{padding:10px!important;gap:11px!important;}
+ .zebra-game-body .zg.er .er-finale-title{font-size:clamp(23px,7vw,36px)!important;}
+ .zebra-game-body .zg.er .er-finale-stats{font-size:9px!important;line-height:1.6!important;}
+ .zebra-game-body .zg.er .er-finale-button{
+  min-width:118px!important;min-height:35px!important;
+  padding:5px 9px!important;font-size:11px!important;
+ }
+}
