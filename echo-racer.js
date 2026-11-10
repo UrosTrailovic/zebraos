@@ -159,6 +159,7 @@ function mount(root){
    "speedRiseResponse": 6.4,
    "speedFallResponse": 0.75,
    "visualSpeed": 1.5,
+   "boostPadsEnabled": true,
    "boostPadSpeed": 1.85,
    "boostPadDuration": 2.8,
    "boostPadFrequency": 1,
@@ -225,6 +226,7 @@ function mount(root){
   {"id":"steerInertia","label":"Glisse après relâchement","min":0.4,"max":10,"step":0.2,"unit":"×","cost":"JEU","help":"Bas = plus d'inertie ; haut = arrêt plus net"},
   {"id":"steerReverse","label":"Contre-braquage","min":1,"max":18,"step":0.25,"unit":"×","cost":"JEU","help":"Réponse lorsque tu inverses le sens"},
   {section:"TURBOS & BONUS"},
+  {"id":"boostPadsEnabled","label":"Afficher les pads BOOST","cost":"JEU","help":"Désactivé : retire tous les pads de cette phase et annule leur accélération, sans toucher au nitro manuel","kind":"check"},
   {"id":"boostPadSpeed","label":"Puissance des pads BOOST","min":1,"max":3.5,"step":0.05,"unit":"×","cost":"JEU","help":"Multiplicateur après avoir pris un pad, pas la vitesse normale"},
   {"id":"boostPadDuration","label":"Durée d'un pad BOOST","min":0.4,"max":7,"step":0.1,"unit":"s","cost":"JEU","help":"Temps pendant lequel le pad accélère"},
   {"id":"boostPadFrequency","label":"Fréquence des pads","min":0.25,"max":3,"step":0.05,"unit":"×","cost":"JEU","help":"Plus haut = davantage de pads sur la piste"},
@@ -345,8 +347,14 @@ function mount(root){
  function applyPhase(id){
   if(!phaseProfiles[id])return;
   const oldBendFrequency=lab.bendFrequency;
+  const oldPadsEnabled=lab.boostPadsEnabled;
   activePhase=id;
   Object.assign(lab,phaseProfiles[id]);
+  // A phase without pads must not inherit pickups/boost from the last one.
+  if(!lab.boostPadsEnabled){
+   pads=[];padBoostTime=0;shipBoostFade=0;turboLight=0;
+  }
+  if(oldPadsEnabled!==lab.boostPadsEnabled)nextPadAt=travel+PAD_START;
   if(oldBendFrequency!==lab.bendFrequency)bendProfiles.clear();
   bendCache.clear();
   // During a run, the settings of the actual musical phase take priority
@@ -983,6 +991,12 @@ function mount(root){
   if(spec.id==="frameLimit")labLastPaint=0;
   if(spec.id==="bendFrequency"||spec.id==="bendIntensity"||spec.id==="verticalBend")bendCache.clear();
   if(spec.id==="obstaclesEnabled"&&!target[spec.id]&&activePhase===editorPhase)waves=[];
+  if(spec.id==="boostPadsEnabled"&&activePhase===editorPhase){
+   if(!target[spec.id]){
+    pads=[];padBoostTime=0;shipBoostFade=0;turboLight=0;
+   }
+   nextPadAt=travel+PAD_START;
+  }
   labRefresh();
   if(spec.id==="renderScale")fitCanvas();
   renderHud();
@@ -2102,7 +2116,7 @@ function mount(root){
    5.4,lab.speedCap)*selectedLevel.speed;
   // Turbo is still rewarding, but the basic flight stays exciting.
   const nitroThrust=lab.nitroStart+lab.nitroGrowth*(1-Math.exp(-nitroBurnTime*.72));
-  const multiplier=padBoostTime>0?lab.boostPadSpeed:nitroActive?nitroThrust:1;
+  const multiplier=lab.boostPadsEnabled&&padBoostTime>0?lab.boostPadSpeed:nitroActive?nitroThrust:1;
   const targetSpeed=base*multiplier;
   const response=targetSpeed>=currentSpeed?lab.speedRiseResponse:lab.speedFallResponse;
   currentSpeed+=(targetSpeed-currentSpeed)*(1-Math.exp(-dt*response));
@@ -2142,6 +2156,10 @@ function mount(root){
   }
   // Pads have their OWN calendar and cannot appear on top of a hazard.
   while(travel>=nextPadAt){
+   if(!lab.boostPadsEnabled){
+    nextPadAt=travel+PAD_START;
+    break;
+   }
    const gapPrevious=nextPadAt-lastGateAt;
    const gapNext=nextGateAt-nextPadAt;
    if(gapPrevious<5.3||gapNext<5.3){nextPadAt+=5.4;continue;}
