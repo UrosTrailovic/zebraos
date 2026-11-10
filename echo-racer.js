@@ -1189,7 +1189,10 @@ function mount(root){
  labBody.append(labActions,labExport,labExportStatus,labExportText,node("p","er-lab-disclaimer",
   "Envoie le JSON copié quand les 3 phases sont prêtes : je pourrai les intégrer comme réglages finaux du jeu. Coût estimé : TRÈS ÉLEVÉ → ÉLEVÉ → MOYEN → FAIBLE. Les FPS sont mesurés en direct ; KM/H est une échelle arcade."));
  labPanel.append(labBar,labBody);
- wrap.append(labToggle,labPanel);
+ // Keep TEST configuration on the physical instrument housing, never over
+ // the upper-right score or over the flight display.
+ dashboard.appendChild(labToggle);
+ wrap.appendChild(labPanel);
  function labOpen(){
   if(!testMode||window.matchMedia("(max-width:700px)").matches)return;
   const api=window.ZebraEchoLabWindow;

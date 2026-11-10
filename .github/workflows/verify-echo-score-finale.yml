@@ -62,6 +62,12 @@ jobs:
               out.noScoreTitle=!topScore.textContent.includes("SCORE")&&
                 !topScore.textContent.includes("FIG.")&&
                 !topScore.textContent.includes("EN ATTENTE");
+              const config=host.querySelector(".er-lab-toggle");
+              const rectA=config.getBoundingClientRect();
+              const rectB=topScore.getBoundingClientRect();
+              out.configNotOverScore=host.querySelector(".er-dashboard").contains(config)&&
+                (rectA.right<=rectB.left||rectA.left>=rectB.right||
+                 rectA.bottom<=rectB.top||rectA.top>=rectB.bottom);
               out.secondSong=d.snapshot().music.track==="p3"&&
                 d.snapshot().music.source.includes("echoraccersongpt2.mp3");
               out.songDoesNotLoop=d.snapshot().music.loop===false;
