@@ -1957,12 +1957,11 @@ function mount(root){
   const beat=clamp((audioFx.kick*.65+audioFx.bass*.35)*lab.punch,0,1);
   const high=clamp(audioFx.high*lab.punch,0,1);
   c.beginPath();c.arc(g.cx+shift.x,g.cy+shift.y-g.offset*r,r,0,TAU);
-  c.strokeStyle=cyan?
-   "rgba(111,239,255,"+clamp(.32+.54*near+high*.12,0,.97)+")":
-   (cold?"rgba(101,149,255,":"rgba(255,62,209,")+clamp(.25+.53*near+beat*.18,0,.97)+")";
+  c.strokeStyle=cyan?labHex(lab.colorCyan,clamp((.32+.54*near+high*.12)*lab.light,0,.97)):
+   labHex(cold?lab.colorBlue:lab.colorPink,clamp((.25+.53*near+beat*.18)*lab.light,0,.97));
   c.lineWidth=(cyan?1.7:1.2)+near*(cyan?1.6:1.1)+beat*1.1;
-  c.shadowColor=cyan?"#50f6ff":cold?"#478bff":"#ff35d5";
-  c.shadowBlur=cyan?2:0;c.stroke();c.shadowBlur=0;
+  c.shadowColor=cyan?lab.colorCyan:cold?lab.colorBlue:lab.colorPink;
+  c.shadowBlur=lab.shadows?(cyan?2:1):0;c.stroke();c.shadowBlur=0;
  }
  function drawTunnel(now){
   const g=wallGeom(),cold=blueTunnel();
@@ -1984,8 +1983,8 @@ function mount(root){
    const z=row*panelLength-panelOffset;
    if(z<0||z>RENDER_FAR_Z)continue;
    const fade=clamp(1-z/RENDER_FAR_Z,0,1);
-   const bassLight=clamp(audioFx.bass*.13+audioFx.kick*.1,0,.23);
-   const highLight=clamp(audioFx.high*.48,0,.48);
+   const bassLight=clamp((audioFx.bass*.13+audioFx.kick*.1)*lab.punch*lab.light,0,.35);
+   const highLight=clamp(audioFx.high*.48*lab.punch*lab.light,0,.75);
    // LOD: distant plates span two sectors. Keep close-up seams at full
    // resolution while cutting geometry cost in the extended distance.
    const sectorStep=lab.panelDetail===0?4:lab.panelDetail===1?(z>15?4:2):(z>15?2:1);
@@ -2024,13 +2023,13 @@ function mount(root){
     const z=(RENDER_FAR_Z+.35)*step/24,pt=wallPoint(a,z);
     c.lineTo(pt.x,pt.y);
    }
-   c.strokeStyle=cyan?"rgba(65,218,246,.13)":cold?"rgba(73,122,255,.11)":"rgba(253,75,210,.1)";
+   c.strokeStyle=labHex(cyan?lab.colorCyan:cold?lab.colorBlue:lab.colorPink,.12*lab.light);
    c.lineWidth=cyan?9:5;c.shadowBlur=0;c.stroke();
-   c.strokeStyle=cyan?"rgba(109,240,255,"+clamp(.72+audioFx.high*.28,0,1)+")":
-                           (cold?"rgba(92,150,255,":"rgba(210,76,237,")+clamp(.43+audioFx.mid*.36,0,1)+")";
+   c.strokeStyle=labHex(cyan?lab.colorCyan:cold?lab.colorBlue:lab.colorPink,
+    clamp((cyan?.72+audioFx.high*.28*lab.punch:.43+audioFx.mid*.36*lab.punch)*lab.light,0,1));
    c.lineWidth=(cyan?2.4:1.4)+audioFx.high*(cyan?.8:.5)+audioFx.kick*.35;
-   c.shadowColor=cyan?"#48eefe":cold?"#4f92fa":"#ff48c6";
-   c.shadowBlur=cyan?2:0;
+   c.shadowColor=cyan?lab.colorCyan:cold?lab.colorBlue:lab.colorPink;
+   c.shadowBlur=lab.shadows?(cyan?2:1):0;
    c.stroke();c.shadowBlur=0;
   }
   const spacing=lab.ringGap;
