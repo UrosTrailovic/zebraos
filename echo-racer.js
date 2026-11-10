@@ -344,8 +344,11 @@ function mount(root){
  function persistPhases(){save(PHASE_KEY,JSON.stringify(phaseProfiles));}
  function applyPhase(id){
   if(!phaseProfiles[id])return;
+  const oldBendFrequency=lab.bendFrequency;
   activePhase=id;
   Object.assign(lab,phaseProfiles[id]);
+  if(oldBendFrequency!==lab.bendFrequency)bendProfiles.clear();
+  bendCache.clear();
   // During a run, the settings of the actual musical phase take priority
   // over the phase currently being edited in the detached workshop.
   if(typeof labRefresh==="function"&&labPanel&&!labPanel.hidden)labRefresh();
@@ -886,7 +889,7 @@ function mount(root){
  labBar.append(labHeading,labClose);
  const labBody=node("div","er-lab-body");
  const labIntro=node("p","er-lab-intro",
-  "Trois phases, trois profils indépendants. Choisis celle à régler, puis ESSAYER LA PHASE pour y entrer immédiatement. Les performances sont communes aux trois phases.");
+  "ÉDITEUR COMPLET · Trois phases indépendantes. Choisis la phase et la catégorie. Chaque couleur règle un élément précis du niveau.");
  const labPerfReadout=node("div","er-lab-fps","FPS — · chargement...");
  const labPresetBox=node("div","er-lab-presets");
  const labPhases=node("nav","er-lab-phases");
@@ -895,7 +898,7 @@ function mount(root){
  const labPhaseTabs=new Map();
  const labTryPhase=node("button","er-lab-try-phase","▶ ESSAYER CETTE PHASE");
  labTryPhase.type="button";
- labTryPhase.title="Recommencer TEST à cette phase, sans changer le record";
+ labTryPhase.title="Tester cette phase avec sa musique et son profil complet, sans changer le record";
  labTryPhase.onclick=()=>start(true,editorPhase);
  for(const phase of PHASES){
   const tab=node("button","er-lab-phase-tab",phase.title);
@@ -931,6 +934,7 @@ function mount(root){
    entry.setAttribute("aria-selected",String(on));
   }
   for(const [name,entry] of labSectionNodes)entry.hidden=name!==id;
+  if(labBody.scrollTop>90)labBody.scrollTop=0;
  }
  function labValueText(spec,val){
   if(spec.kind==="check")return val?"ACTIF":"DÉSACTIVÉ";
@@ -1002,7 +1006,7 @@ function mount(root){
  labPreset("FLUIDITÉ",{renderScale:.65,lineCount:8,ringGap:.93,panelDetail:0,warp:false,shadows:false,particles:.3,frameLimit:45});
  labPreset("ÉQUILIBRÉ",{renderScale:.85,lineCount:16,ringGap:.66,panelDetail:1,warp:false,shadows:false,particles:.75,frameLimit:60});
  labPreset("QUALITÉ",{renderScale:1.15,lineCount:24,ringGap:.48,panelDetail:2,warp:true,shadows:true,particles:1,frameLimit:60});
- labBody.append(labIntro,labPhases,labChapterInfo,labTryPhase,labPerfReadout,labPresetBox,labCategories,labSections);
+ labBody.append(labIntro,labPhases,labChapterInfo,labTryPhase,labCategories,labSections);
  let currentGroup=null;
  for(const spec of LAB_META){
   if(spec.section){
@@ -1017,6 +1021,7 @@ function mount(root){
    group.setAttribute("role","tabpanel");
    group.appendChild(node("h3","er-lab-section",spec.section));
    group.appendChild(node("p","er-lab-section-desc",LAB_DESCRIPTIONS[spec.section]||""));
+   if(spec.section==="PERFORMANCES & TEST")group.append(labPerfReadout,labPresetBox);
    labSections.appendChild(group);
    labSectionNodes.set(spec.section,group);
    currentGroup=group;
@@ -1029,7 +1034,7 @@ function mount(root){
   const top=node("div","er-lab-row-head");
   const label=node("label","er-lab-label",spec.label);
   label.htmlFor="er-lab-"+spec.id;
-  const cost=node("span","er-lab-impact",spec.global?"COMMUN · "+spec.cost:spec.cost);
+  const cost=node("span","er-lab-impact",spec.global?"GLOBAL · "+spec.cost:"PHASE · "+spec.cost);
   cost.dataset.impact=spec.cost;
   cost.title=spec.global?"Commun aux trois phases":"Ajusté uniquement dans la phase sélectionnée";
   top.append(label,cost);
@@ -1072,7 +1077,7 @@ function mount(root){
  }
  labCategorySelect(selectedLabCategory);
  const labActions=node("div","er-lab-actions");
- const labReset=node("button","er-lab-reset","RESET PHASE");
+ const labReset=node("button","er-lab-reset","RESET CETTE PHASE");
  labReset.type="button";
  labReset.title="Réinitialiser uniquement les paramètres de la phase sélectionnée";
  labReset.onclick=()=>{
