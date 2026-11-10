@@ -195,6 +195,63 @@ function mount(root){
   return next;
  }
  const lab=loadLab();
+ // Three musical chapters are distinct editable profiles. The performance
+ // controls are common to every chapter and remain separate.
+ const PHASES=[
+  {id:"p1",title:"PHASE 1",subtitle:"INTRO · 0–68 s",seconds:0,stage:0},
+  {id:"p2",title:"PHASE 2",subtitle:"DROP · 68–217 s",seconds:MUSIC_DROP_AT+2,stage:2},
+  {id:"p3",title:"PHASE 3",subtitle:"TUNNEL BLEU · FIN",seconds:MUSIC_LOOP_FROM,stage:5}
+ ];
+ const PHASE_FIELDS=[
+  "baseSpeed","acceleration","phaseBonus","visualSpeed","obstacleDensity",
+  "punch","light","colorPink","colorCyan","colorBlue",
+  "lineCount","ringGap","panelDetail"
+ ];
+ const PHASE_FIELD_SET=new Set(PHASE_FIELDS);
+ const PHASE_KEY="lab.phases.v1";
+ function loadPhaseProfiles(){
+  let stored={};
+  try{stored=JSON.parse(load(PHASE_KEY,"{}"))||{};}catch(_){}
+  const output={};
+  for(const phase of PHASES){
+   const raw=stored[phase.id]||{};
+   output[phase.id]={};
+   for(const key of PHASE_FIELDS){
+    const spec=LAB_META.find(s=>s.id===key);
+    const prev=raw[key];
+    let value=lab[key];
+    if(spec&&prev!==undefined){
+     if(spec.kind==="color"&&typeof prev==="string"&&/^#[0-9a-f]{6}$/i.test(prev))value=prev;
+     else if(spec.kind==="select"&&Number.isFinite(Number(prev)))value=clamp(Math.round(Number(prev)),0,2);
+     else if(!spec.kind&&Number.isFinite(Number(prev)))value=clamp(Number(prev),spec.min,spec.max);
+    }
+    output[phase.id][key]=value;
+   }
+  }
+  return output;
+ }
+ const phaseProfiles=loadPhaseProfiles();
+ let activePhase="p1",editorPhase="p3",testLaunchPhase="p3";
+ function persistPhases(){save(PHASE_KEY,JSON.stringify(phaseProfiles));}
+ function applyPhase(id){
+  if(!phaseProfiles[id]||activePhase===id)return;
+  activePhase=id;
+  Object.assign(lab,phaseProfiles[id]);
+  // During a run, the settings of the actual musical phase take priority
+  // over the phase currently being edited in the detached workshop.
+  if(typeof labRefresh==="function"&&labPanel&&!labPanel.hidden)labRefresh();
+ }
+ function exportTuningJSON(){
+  const common={};
+  for(const k of Object.keys(LAB_DEFAULTS)){
+   if(!PHASE_FIELD_SET.has(k))common[k]=lab[k];
+  }
+  return JSON.stringify({
+   project:"ZebraOS / Echo Racer",version:2,
+   chapters:PHASES.map(p=>({id:p.id,title:p.title,subtitle:p.subtitle,startSeconds:p.seconds})),
+   phases:phaseProfiles,common
+  },null,2);
+ }
  function persistLab(){save("lab.v1",JSON.stringify(lab));}
  function labHex(hex,alpha=1){
   return "rgba("+parseInt(hex.slice(1,3),16)+","+parseInt(hex.slice(3,5),16)+","+parseInt(hex.slice(5,7),16)+","+clamp(alpha,0,1)+")";
