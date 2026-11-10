@@ -1848,8 +1848,10 @@ function mount(root){
  function renderHud(){
   // Fixed phosphor label already uses the same segmented font as the digits.
   setDigital(scoreEl,String(Math.floor(score)).padStart(5,"0"));
-  const hasCombo=(mode==="running"||mode==="paused"||mode==="finale")&&skillBank>0;
-  scoreCombo.classList.toggle("active",hasCombo);
+  const playing=mode==="running"||mode==="paused";
+  const hasCombo=playing&&skillBank>0;
+  scoreCombo.classList.toggle("active",playing);
+  scoreCombo.classList.toggle("has-skill",hasCombo);
   scoreCombo.classList.toggle("hot",skillMultiplier>=5);
   speedComboEl.textContent="VITESSE ×"+scoreMultiplier;
   skillComboEl.textContent="COMBO ×"+skillMultiplier+" · "+skillChain+" FIG.";
@@ -2266,6 +2268,7 @@ function mount(root){
   if(mode!=="running"||document.hidden)return;
   dt=clamp(dt,0,.05);elapsed+=dt;
   updateEncore(dt);
+  if(mode!=="running")return;
   // Apply the tuned profile at the real musical boundary. The editor may
   // meanwhile display a different phase without changing the active run.
   const songClock=music&&!music.paused&&soundEnabled&&!globalMuted()?
@@ -3073,9 +3076,10 @@ function mount(root){
    labDetached:!wrap.contains(labPanel)&&!!labPanel.parentElement,
    phaseActive:activePhase,phaseEditing:editorPhase,
    phaseProfiles:JSON.parse(JSON.stringify(phaseProfiles)),fps:labFps,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,directorStage,musicDropSurge,
-   encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,track:musicTrackId,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
+   encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,loop:music?music.loop:false,track:musicTrackId,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
   triggerEncore:beginEncore,triggerFinale:()=>beginFinale("debug"),tickFinale:updateFinale,
+  simulateSongEnd:()=>{if(!music)return false;music.dispatchEvent(new Event("ended"));return true;},
   draw:()=>paint(performance.now()),
   test:()=>start(true),testPhase:(id)=>{if(!phaseProfiles[id])return false;start(true,id);return true;},
   editPhase:(id)=>{if(!phaseProfiles[id])return false;editorPhase=id;labRefresh();return true;},
