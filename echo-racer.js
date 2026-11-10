@@ -169,8 +169,8 @@ function mount(root){
   {id:"punch",label:"Punch musical",min:0,max:3,step:.1,unit:"×",cost:"FAIBLE"},
   {id:"light",label:"Intensité des lumières",min:.2,max:2,step:.1,unit:"×",cost:"FAIBLE"},
   {id:"colorPink",label:"Phosphore rose",kind:"color",cost:"FAIBLE"},
-  {id:"colorCyan",label:"Phosphore cyan",kind:"color",cost:"FAIBLE"},
-  {id:"colorBlue",label:"Phosphore bleu",kind:"color",cost:"FAIBLE"},
+  {id:"colorCyan",label:"Lignes secondaires / cyan",kind:"color",cost:"FAIBLE",help:"La couleur des rails alternés et des accents dans toutes les phases"},
+  {id:"colorBlue",label:"Couleur principale · PHASE 3",kind:"color",cost:"FAIBLE",help:"Modifie aussi le FOND, les panneaux, les anneaux, les reflets et les obstacles du tunnel bleu"},
   {section:"GÉOMÉTRIE DU TUNNEL"},
   {id:"lineCount",label:"Lignes longitudinales",min:8,max:32,step:2,unit:"",cost:"ÉLEVÉ"},
   {id:"ringGap",label:"Espacement des anneaux",min:.38,max:1.15,step:.01,unit:"u",cost:"ÉLEVÉ",help:"Plus grand = moins d'anneaux"},
@@ -256,6 +256,14 @@ function mount(root){
  function persistLab(){save("lab.v1",JSON.stringify(lab));}
  function labHex(hex,alpha=1){
   return "rgba("+parseInt(hex.slice(1,3),16)+","+parseInt(hex.slice(3,5),16)+","+parseInt(hex.slice(5,7),16)+","+clamp(alpha,0,1)+")";
+ }
+ // Tint that follows the phase's configurable main color even in the dark
+ // backdrop. Hardcoded blue backgrounds previously ignored colorBlue.
+ function labTint(hex,intensity,alpha=1){
+  const k=clamp(intensity,0,1);
+  return "rgba("+Math.round(parseInt(hex.slice(1,3),16)*k)+","+
+   Math.round(parseInt(hex.slice(3,5),16)*k)+","+
+   Math.round(parseInt(hex.slice(5,7),16)*k)+","+clamp(alpha,0,1)+")";
  }
  const labVisualTravel=()=>travel*lab.visualSpeed;
  let dragPointer=null,dragX=0,dragLastTs=0,dragVelocity=0;
@@ -2158,13 +2166,13 @@ function mount(root){
  function drawTunnel(now){
   const g=wallGeom(),cold=blueTunnel();
   bendCache.clear();
-  c.fillStyle=cold?"#020912":"#05020a";c.fillRect(0,0,W,H);
+  c.fillStyle=cold?labTint(lab.colorBlue,.07):"#05020a";c.fillRect(0,0,W,H);
   const vanishing=tunnelBend(RENDER_FAR_Z);
   const gradient=c.createRadialGradient(g.cx+vanishing.x,g.cy+vanishing.y,3,g.cx,g.cy,g.R*1.35);
-  gradient.addColorStop(0,cold?"#030e23":"#0b0619");
-  gradient.addColorStop(.4,cold?"#07192d":"#0e071b");
-  gradient.addColorStop(.81,cold?"#102a43":"#1b0a24");
-  gradient.addColorStop(1,cold?"#030a18":"#05020b");
+  gradient.addColorStop(0,cold?labTint(lab.colorBlue,.10):"#0b0619");
+  gradient.addColorStop(.4,cold?labTint(lab.colorBlue,.16):"#0e071b");
+  gradient.addColorStop(.81,cold?labTint(lab.colorBlue,.27):"#1b0a24");
+  gradient.addColorStop(1,cold?labTint(lab.colorBlue,.08):"#05020b");
   c.fillStyle=gradient;c.fillRect(0,0,W,H);
   c.save();c.lineCap="round";c.lineJoin="round";
   // An indigo panel skin follows the camera's angular roll. The panels move
@@ -2183,23 +2191,23 @@ function mount(root){
    for(let sector=0;sector<SECTORS;sector+=sectorStep){
     const a=screenAngle(sector*STEP),b=a+sectorStep*STEP;
     const fill=cold?
-      (sector+row)%4===0?"rgba(29,89,140,"+(.37+bassLight)+")":
-       (sector+row)%2?"rgba(15,51,91,"+(.48+bassLight*.55)+")":
-       "rgba(22,67,115,"+(.43+bassLight*.8)+")":
+      (sector+row)%4===0?labTint(lab.colorBlue,.63,.37+bassLight):
+       (sector+row)%2?labTint(lab.colorBlue,.39,.48+bassLight*.55):
+       labTint(lab.colorBlue,.53,.43+bassLight*.8):
       (sector+row)%4===0?"rgba(107,30,113,"+(.37+bassLight)+")":
        (sector+row)%2?"rgba(44,16,62,"+(.48+bassLight*.55)+")":
        "rgba(67,18,79,"+(.43+bassLight*.8)+")";
     wallPatch(a+.006,b-.006,z,z+panelLength,fill,
-      row<5&&sector%4===0?(cold?"rgba(77,155,218,.13)":"rgba(180,76,195,.12)"):null,row<5?2:1);
+      row<5&&sector%4===0?(cold?labHex(lab.colorBlue,.13):"rgba(180,76,195,.12)"):null,row<5?2:1);
     // Treble-driven cyan bands are painted onto the tunnel itself.
     if(row%3===1&&sector%4===2&&z<RENDER_FAR_Z*.75){
      wallPatch(a+.09,b-.09,z+.19,z+.25,
-      "rgba(107,241,255,"+(.12+highLight)+")",null,1);
+      labHex(lab.colorCyan,clamp(.12+highLight,0,1)),null,1);
     }
     // Tiny luminous rivets flash toward the camera along with the wall.
     if(row%3===0&&sector%4===1&&z<RENDER_FAR_Z*.75){
      const p=wallPoint((a+b)*.5,z+.28);
-     c.fillStyle=(cold?"rgba(95,164,255,":"rgba(248,73,226,")+clamp(.24+.5*fade+highLight*.65,0,.9)+")";
+     c.fillStyle=labHex(cold?lab.colorBlue:lab.colorPink,clamp(.24+.5*fade+highLight*.65,0,.9));
      c.beginPath();c.arc(p.x,p.y,Math.max(.8,2.5*fade),0,TAU);c.fill();
     }
    }
@@ -2230,14 +2238,14 @@ function mount(root){
   for(let i=ringCount;i>=0;i--)drawRing(i*spacing-phase,i);
   c.restore();
   if(turboLight>.005){
-   c.fillStyle=(cold?"rgba(91,178,255,":"rgba(187,117,238,")+(turboLight*.092)+")";
+   c.fillStyle=cold?labHex(lab.colorBlue,turboLight*.092):"rgba(187,117,238,"+(turboLight*.092)+")";
    c.fillRect(0,0,W,H);
   }
   // Deep indigo pupil, feathered rather than a flat black pasted circle.
   const core=c.createRadialGradient(g.cx+vanishing.x,g.cy+vanishing.y,0,
    g.cx+vanishing.x,g.cy+vanishing.y,g.R*.17);
-  core.addColorStop(0,cold?"rgba(1,7,20,.9)":"rgba(8,1,17,.9)");
-  core.addColorStop(1,cold?"rgba(1,7,20,0)":"rgba(8,1,17,0)");
+  core.addColorStop(0,cold?labTint(lab.colorBlue,.035,.9):"rgba(8,1,17,.9)");
+  core.addColorStop(1,cold?labTint(lab.colorBlue,.035,0):"rgba(8,1,17,0)");
   c.fillStyle=core;
   c.fillRect(g.cx+vanishing.x-g.R*.2,g.cy+vanishing.y-g.R*.2,g.R*.4,g.R*.4);
   // Physically small, music-driven phosphor strips instead of a blurred
@@ -2251,8 +2259,8 @@ function mount(root){
     if(amount<.13)continue;
     wallPatch(a,a+STEP*.67,z,z+.10+amount*.30,
      i%2===0?
-      (cold?"rgba(86,153,255,":"rgba(255,112,225,")+(.17+amount*.58)+")":
-      "rgba(110,246,255,"+(.17+amount*.55)+")",null,1);
+      labHex(cold?lab.colorBlue:lab.colorPink,.17+amount*.58):
+      labHex(lab.colorCyan,.17+amount*.55),null,1);
    }
   }
  }
@@ -2270,17 +2278,17 @@ function mount(root){
    // Distinct material families help players identify gate silhouettes.
    const skin=w.kind%4;
    const newLaser=w.kind>=20;
-   const skinFill=newLaser?"#145e87":skin===0?"#ef3a5c":skin===1?"#d9267b":
+   const skinFill=newLaser?labTint(lab.colorBlue,.67):skin===0?"#ef3a5c":skin===1?"#d9267b":
      skin===2?"#eb493d":"#a52ed2";
-   const skinEdge=newLaser?"#85ecff":skin===0?"#ffb19c":skin===1?"#ffc1de":
+   const skinEdge=newLaser?lab.colorCyan:skin===0?"#ffb19c":skin===1?"#ffc1de":
      skin===2?"#ffe4aa":"#eb96ff";
-   c.shadowColor=newLaser?"#43baff":skin===3?"#db4aff":"#ff4e82";c.shadowBlur=lab.shadows?(newLaser?5:2):0;
+   c.shadowColor=newLaser?lab.colorBlue:skin===3?"#db4aff":"#ff4e82";c.shadowBlur=lab.shadows?(newLaser?5:2):0;
    wallPatch(a,b,z,far,skinFill,skinEdge,newLaser?3:6);
    if(newLaser){
     // Light cross-braces mark the late-game barriers without altering hitboxes.
     const aa=wallPoint(a+.03,z+.10),bb=wallPoint(b-.03,far-.10);
     c.beginPath();c.moveTo(aa.x,aa.y);c.lineTo(bb.x,bb.y);
-    c.strokeStyle="#b6f7ff";c.lineWidth=1.5;c.stroke();
+    c.strokeStyle=lab.colorCyan;c.lineWidth=1.5;c.stroke();
    }
    c.shadowBlur=0;
    // Pale amber warning edge separates dangerous gates from pink wall trim.
@@ -2415,7 +2423,7 @@ function mount(root){
   bendCtx.setTransform(1,0,0,1,0,0);
   bendCtx.drawImage(canvas,0,0);
   c.save();c.setTransform(1,0,0,1,0,0);
-  c.fillStyle="#05020a";c.fillRect(0,0,width,height);
+  c.fillStyle=blueTunnel()?labTint(lab.colorBlue,.07):"#05020a";c.fillRect(0,0,width,height);
   const bands=32,phase=labVisualTravel()*.075;
   for(let i=0;i<bands;i++){
    const y0=Math.floor(i*height/bands);
