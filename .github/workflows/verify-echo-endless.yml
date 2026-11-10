@@ -38,6 +38,9 @@ jobs:
               &&js.includes('const multiplier=padBoostTime>0?1.85'),
             hasTuning:js.includes('const LAB_DEFAULTS')&&js.includes('er-lab-window')&&
               js.includes('labVisualTravel')&&css.includes('er-lab-impact'),
+            phaseProfiles:js.includes('const PHASES=')&&js.includes('phaseProfiles=loadPhaseProfiles()')
+              &&app.includes('window.ZebraEchoLabWindow=')
+              &&css.includes('.er-lab-window.er-lab-native'),
             noZebraControls:!css.includes('textile.png')&&!index.includes('href="echo-racer-mobile-zebra.css')
           };
           console.log('STATIC_CHECKS',JSON.stringify(checks));
@@ -115,19 +118,56 @@ jobs:
                 getComputedStyle(tuner).display!=='none');
              if(!mobileViewport){
                tuner.click();
-               const speed=host.querySelector('[data-lab-id="baseSpeed"]');
-               speed.value='8';speed.dispatchEvent(new Event('input',{bubbles:true}));
-               result.liveTuning=!tunerWindow.hidden&&debug.snapshot().lab.baseSpeed===8;
-               const profile=host.querySelector('.er-lab-presets button');
+               const lab=document.querySelector('.er-lab-window');
+               result.detachedWorkshop=lab.isConnected&&!host.contains(lab)
+                 &&getComputedStyle(lab).position==='fixed';
+               const speed=lab.querySelector('[data-lab-id="baseSpeed"]');
+               const setSpeed=(n)=>{
+                 speed.value=String(n);
+                 speed.dispatchEvent(new Event('input',{bubbles:true}));
+               };
+               // Edit P1 while P3 runs. Different profiles must not overwrite
+               // the active run until the phase is explicitly previewed.
+               lab.querySelector('[data-phase="p1"]').click();
+               setSpeed(8);
+               result.phaseIndependent=debug.snapshot().phaseProfiles.p1.baseSpeed===8
+                 &&debug.snapshot().phaseProfiles.p3.baseSpeed!==8;
+               lab.querySelector('.er-lab-try-phase').click();
+               result.previewP1=debug.snapshot().phaseActive==='p1'
+                 &&debug.snapshot().testMode&&debug.snapshot().encore.mode==='normal';
+               lab.querySelector('[data-phase="p2"]').click();
+               setSpeed(9);
+               lab.querySelector('.er-lab-try-phase').click();
+               result.previewP2=debug.snapshot().phaseActive==='p2'
+                 &&debug.snapshot().testMode&&debug.snapshot().directorStage>=2
+                 &&debug.snapshot().encore.mode==='normal';
+               lab.querySelector('[data-phase="p3"]').click();
+               setSpeed(8.5);
+               lab.querySelector('.er-lab-try-phase').click();
+               result.previewP3=debug.snapshot().phaseActive==='p3'
+                 &&debug.snapshot().testMode&&debug.snapshot().encore.mode==='blue'
+                 &&debug.snapshot().lab.baseSpeed===8.5;
+               const profile=lab.querySelector('.er-lab-presets button');
                profile.click();
                result.performancePreset=debug.snapshot().lab.renderScale===.65&&
-                 debug.snapshot().lab.lineCount===8;
-               host.querySelector('.er-lab-reset').click();
-               result.resetDefaults=debug.snapshot().lab.baseSpeed===6.15&&
-                 debug.snapshot().lab.renderScale===.85;
-               host.querySelector('.er-lab-close').click();
+                 debug.snapshot().phaseProfiles.p3.lineCount===8;
+               lab.querySelector('.er-lab-reset').click();
+               result.resetDefaults=debug.snapshot().phaseProfiles.p3.baseSpeed===6.15;
+               lab.querySelector('.er-lab-export-button').click();
+               const exported=JSON.parse(lab.querySelector('.er-lab-export-text').value);
+               result.phaseExport=exported.version===2&&
+                 exported.phases.p1.baseSpeed===8&&
+                 exported.phases.p2.baseSpeed===9&&
+                 exported.phases.p3.baseSpeed===6.15&&
+                 typeof exported.common.renderScale==='number';
+               result.liveTuning=true;
+               lab.querySelector('.er-lab-close').click();
+               result.closeDetached=lab.hidden&&!lab.isConnected;
              }else{
-               result.liveTuning=true;result.performancePreset=true;result.resetDefaults=true;
+               for(const key of ['detachedWorkshop','phaseIndependent','previewP1','previewP2',
+                 'previewP3','performancePreset','resetDefaults','phaseExport','closeDetached','liveTuning']){
+                 result[key]=true;
+               }
              }
              for(let i=0;i<20;i++)debug.advance(.04);
              debug.menu();
