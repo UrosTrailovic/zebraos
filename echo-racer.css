@@ -3602,3 +3602,106 @@ body > .er-lab-window.er-lab-floating{
  body > .er-lab-window,
  .window[data-app-id="racer-lab"]{display:none!important;}
 }
+
+
+/* Echo Racer v18 · Editorially organised TEST studio: seven focused
+   categories, per-phase colour palette, precise values and impact labels. */
+.er-lab-window .er-lab-categories{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ gap:5px!important;padding:7px!important;margin:0!important;
+ background:#191928!important;border:1px solid #49495e!important;
+}
+.er-lab-window .er-lab-category{
+ box-sizing:border-box!important;min-width:0!important;
+ min-height:33px!important;padding:7px 6px!important;
+ color:#c9c7d8!important;background:linear-gradient(#343545,#1d1d2b)!important;
+ border:1px solid #66677b!important;border-radius:2px!important;
+ font:700 10px/1.2 "Courier New",monospace!important;
+ letter-spacing:.15px!important;text-align:left!important;
+ cursor:pointer!important;word-break:normal!important;
+}
+.er-lab-window .er-lab-category.selected{
+ background:linear-gradient(#364e70,#263450)!important;
+ border-color:#a6d7f3!important;color:#e5f5ff!important;
+ box-shadow:inset 3px 0 #94ddff!important;
+}
+.er-lab-window .er-lab-sections{
+ display:block!important;min-width:0!important;
+}
+.er-lab-window .er-lab-section-group{
+ display:flex!important;flex-direction:column!important;gap:8px!important;
+ padding:0 0 8px!important;
+}
+.er-lab-window .er-lab-section-group[hidden],
+.er-lab-window .er-lab-row[hidden]{display:none!important;}
+.er-lab-window .er-lab-section-desc{
+ margin:0!important;padding:7px 8px!important;
+ color:#bdc3d7!important;background:#252537!important;
+ border-left:2px solid #7085b5!important;
+ font:11px/1.4 "Courier New",monospace!important;
+}
+.er-lab-window .er-lab-row{
+ padding:8px 9px!important;
+}
+.er-lab-window .er-lab-row-controls{
+ grid-template-columns:minmax(0,1fr) 62px 73px!important;
+ gap:6px!important;
+}
+.er-lab-window .er-lab-row-controls:has(input[type="checkbox"]),
+.er-lab-window .er-lab-row-controls:has(select){
+ grid-template-columns:minmax(0,1fr) 90px!important;
+}
+.er-lab-window .er-lab-exact{
+ box-sizing:border-box!important;width:100%!important;min-width:0!important;
+ height:26px!important;padding:3px 4px!important;
+ border:1px inset #8c91a8!important;border-radius:0!important;
+ color:#dcf4ff!important;background:#0e1322!important;
+ font:700 10px/1.15 "Courier New",monospace!important;
+ text-align:center!important;
+}
+.er-lab-window input.er-lab-input[type="color"]{
+ box-sizing:border-box!important;width:100%!important;height:27px!important;
+ padding:1px!important;border:1px solid #73788d!important;
+ background:#1a1b27!important;cursor:pointer!important;
+}
+.er-lab-window input.er-lab-input[type="checkbox"]{
+ width:21px!important;height:21px!important;
+ accent-color:#9ad6eb!important;cursor:pointer!important;
+}
+.er-lab-window .er-lab-output{
+ min-width:0!important;font:700 10px/1.15 "Courier New",monospace!important;
+ color:#afdaed!important;text-align:right!important;
+}
+.er-lab-window .er-lab-row-head{
+ align-items:flex-start!important;
+}
+.er-lab-window .er-lab-label{
+ max-width:66%!important;font:700 11px/1.35 "Courier New",monospace!important;
+}
+.er-lab-window .er-lab-impact{
+ flex-shrink:0!important;padding:2px 4px!important;
+ border-radius:0!important;white-space:nowrap!important;
+ font:700 9px/1.15 "Courier New",monospace!important;
+}
+.er-lab-window .er-lab-impact[data-impact="JEU"]{
+ color:#b6cef2!important;border-color:#516b9c!important;
+}
+.er-lab-window .er-lab-impact[data-impact="TRÈS ÉLEVÉ"],
+.er-lab-window .er-lab-impact[data-impact="ÉLEVÉ"]{
+ color:#ffca91!important;border-color:#94724c!important;
+}
+.er-lab-window .er-lab-phases{
+ position:sticky!important;top:-10px!important;z-index:8!important;
+ background:#161520!important;
+ padding:5px 1px 6px!important;
+}
+.er-lab-window .er-lab-category:hover,
+.er-lab-window .er-lab-phase-tab:hover{
+ filter:brightness(1.13)!important;
+}
+@media(max-width:900px){
+ .er-lab-window .er-lab-category{font-size:9px!important;}
+ .er-lab-window .er-lab-row-controls{
+  grid-template-columns:minmax(0,1fr) 55px 68px!important;
+ }
+}
