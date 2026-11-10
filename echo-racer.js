@@ -286,7 +286,10 @@ function mount(root){
    const val=obj[spec.id];
    if(spec.kind==="color"){if(typeof val==="string"&&/^#[0-9a-f]{6}$/i.test(val))next[spec.id]=val;}
    else if(spec.kind==="check")next[spec.id]=val===true;
-   else if(spec.kind==="select")next[spec.id]=clamp(Math.round(Number(val)||0),0,2);
+   else if(spec.kind==="select"){
+    const number=Number(val);
+    if(spec.options.some(option=>Number(option[0])===number))next[spec.id]=number;
+   }
    else if(Number.isFinite(Number(val)))next[spec.id]=clamp(Number(val),spec.min,spec.max);
   }
   return next;
@@ -302,6 +305,14 @@ function mount(root){
  const PHASE_FIELDS=LAB_META.filter(s=>s.id&&!s.global).map(s=>s.id);
  const PHASE_FIELD_SET=new Set(PHASE_FIELDS);
  const PHASE_KEY="lab.phases.v1";
+ function phaseDefaultValue(id,key){
+  const palette=id==="p3"?
+   {colorMain:"#6099ff",colorAccent:"#74efff",colorPanels:"#1d598c",
+    colorBackdrop:"#030e23",colorHazard:"#145e87",colorPads:"#3af6ff",colorShields:"#66ffe2"}:
+   {colorMain:"#ff3ed1",colorAccent:"#74efff",colorPanels:"#6b1e71",
+    colorBackdrop:"#0b0619",colorHazard:"#ef3a5c",colorPads:"#3af6ff",colorShields:"#66ffe2"};
+  return Object.prototype.hasOwnProperty.call(palette,key)?palette[key]:LAB_DEFAULTS[key];
+ }
  function loadPhaseProfiles(){
   let stored={};
   try{stored=JSON.parse(load(PHASE_KEY,"{}"))||{};}catch(_){}
@@ -317,10 +328,7 @@ function mount(root){
     if(prev===undefined&&key==="colorMain")
      prev=phase.id==="p3"?raw.colorBlue:raw.colorPink;
     if(prev===undefined&&key==="colorAccent")prev=raw.colorCyan;
-    const phaseColors=phase.id==="p3"?
-     {colorMain:"#6099ff",colorPanels:"#1d598c",colorBackdrop:"#030e23",colorHazard:"#145e87"}:
-     {colorMain:"#ff3ed1",colorPanels:"#6b1e71",colorBackdrop:"#0b0619",colorHazard:"#ef3a5c"};
-    let value=Object.prototype.hasOwnProperty.call(phaseColors,key)?phaseColors[key]:lab[key];
+    let value=phaseDefaultValue(phase.id,key);
     if(spec&&prev!==undefined){
      if(spec.kind==="color"&&typeof prev==="string"&&/^#[0-9a-f]{6}$/i.test(prev))value=prev;
      else if(spec.kind==="select"&&Number.isFinite(Number(prev)))value=clamp(Math.round(Number(prev)),0,2);
@@ -968,6 +976,7 @@ function mount(root){
    if(activePhase===editorPhase)lab[spec.id]=target[spec.id];
   }else persistLab();
   if(spec.id==="bendFrequency")bendProfiles.clear();
+  if(spec.id==="frameLimit")labLastPaint=0;
   if(spec.id==="bendFrequency"||spec.id==="bendIntensity"||spec.id==="verticalBend")bendCache.clear();
   if(spec.id==="obstaclesEnabled"&&!target[spec.id]&&activePhase===editorPhase)waves=[];
   labRefresh();
@@ -1067,7 +1076,7 @@ function mount(root){
  labReset.type="button";
  labReset.title="Réinitialiser uniquement les paramètres de la phase sélectionnée";
  labReset.onclick=()=>{
-  for(const key of PHASE_FIELDS)phaseProfiles[editorPhase][key]=LAB_DEFAULTS[key];
+  for(const key of PHASE_FIELDS)phaseProfiles[editorPhase][key]=phaseDefaultValue(editorPhase,key);
   persistPhases();
   if(activePhase===editorPhase)applyPhase(editorPhase);
   labRefresh();renderHud();
@@ -1161,7 +1170,7 @@ function mount(root){
  for(const name of ["pointerup","pointercancel","lostpointercapture"]){
   labBar.addEventListener(name,e=>{if(labDrag&&e.pointerId===labDrag.pointer)labDrag=null;});
  }
- let labFps=0,labFpsFrames=0,labFpsStart=0;
+ let labFps=0,labFpsFrames=0,labFpsStart=0,labLastPaint=0;
  // TEMPORARY LCD POSITION EDITOR — live drag on PC or phone, persisted
  // separately at narrow and wide breakpoints. No code editing required.
  const cfgButton=node("button","er-config-toggle","⚙ CONFIG");
@@ -2659,12 +2668,11 @@ function mount(root){
   raf=requestAnimationFrame(frameTick);
   const dt=last?clamp((now-last)/1000,0,.07):0;last=now;
   if(!labFpsStart)labFpsStart=now;
-  labFpsFrames++;
   if(now-labFpsStart>=850){
    labFps=Math.round(labFpsFrames*1000/(now-labFpsStart));
    labFpsFrames=0;labFpsStart=now;
-   if(!labPanel.hidden)labPerfReadout.textContent="FPS "+labFps+
-    " · RENDU "+canvas.width+"×"+canvas.height+
+   if(!labPanel.hidden)labPerfReadout.textContent="FPS RENDUS "+labFps+
+    " · RÉSOLUTION "+canvas.width+"×"+canvas.height+
     " · ÉCRAN "+Math.round(W)+"×"+Math.round(H);
   }
   const parent=root.closest(".window");
@@ -2687,10 +2695,16 @@ function mount(root){
    if(turboLight<.002)turboLight=0;
   }
   sampleMusic(dt);
-  try{paint(now);}catch(error){
-   if(!root._erLastRenderError||root._erLastRenderError!==String(error))
-    console.error("Echo Racer render:",error);
-   root._erLastRenderError=String(error);
+  // Simulation updates every RAF, drawing can be capped independently.
+  // The FPS meter counts the actual rendered frames, not animation callbacks.
+  if(!lab.frameLimit||!labLastPaint||
+    now-labLastPaint>=1000/lab.frameLimit-1.2){
+   labLastPaint=now;labFpsFrames++;
+   try{paint(now);}catch(error){
+    if(!root._erLastRenderError||root._erLastRenderError!==String(error))
+     console.error("Echo Racer render:",error);
+    root._erLastRenderError=String(error);
+   }
   }
  }
  function keyDown(e){
