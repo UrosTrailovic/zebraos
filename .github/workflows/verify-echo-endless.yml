@@ -67,7 +67,7 @@ jobs:
           const body=js.slice(start,end);
           const run=(seconds,elapsed,initialStage,muted=false)=>{
             const fn=new Function('clock','time','initial','muted',`
-              let directorStage=initial,musicDropSurge=0,musicLoops=0,
+              let directorStage=initial,musicDropSurge=0,musicLoops=0,musicTrackId="p1",
                   message='',messageLife=0,flash=0,soundEnabled=!muted;
               const MUSIC_SECOND_DROP_AT=162,MUSIC_DROP_AT=68;
               const music=muted?null:{paused:false,currentTime:clock};
