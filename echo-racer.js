@@ -1769,6 +1769,63 @@ function mount(root){
    o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+.20);
   }catch(_){}
  }
+ function showReward(label,kind="skill",seconds=1.25){
+  rewardText=label;rewardKind=kind;rewardLife=Math.max(.2,seconds);
+ }
+ function playRewardCue(kind){
+  if(Object.prototype.hasOwnProperty.call(rewardCueCounts,kind))rewardCueCounts[kind]++;
+  if(!live||!soundEnabled||globalMuted()||!lab.rewardSfxVolume)return;
+  try{
+   const ctx=ensureAudioContext();if(!ctx)return;
+   if(ctx.state==="suspended")ctx.resume().catch(()=>{});
+   const t=ctx.currentTime;
+   const notes=kind==="nitroReady"?[[0,520,.09],[.09,780,.105],[.19,1040,.19]]:
+    kind==="pulseReady"?[[0,760,.075],[.075,1020,.14]]:
+    kind==="chainStep"?[[0,400,.045],[.065,580,.10]]:
+    [[0,490,.08],[.09,690,.085],[.18,920,.095],[.29,1170,.23]];
+   for(const [delay,freq,duration] of notes){
+    const o=ctx.createOscillator(),g=ctx.createGain();
+    o.type=kind==="bank"?"triangle":"sine";
+    const start=t+delay,volume=Math.max(.0001,.034*lab.rewardSfxVolume);
+    o.frequency.setValueAtTime(freq,start);
+    o.frequency.exponentialRampToValueAtTime(freq*1.075,start+duration);
+    g.gain.setValueAtTime(.0001,start);
+    g.gain.exponentialRampToValueAtTime(volume,start+.012);
+    g.gain.exponentialRampToValueAtTime(.0001,start+duration);
+    o.connect(g);g.connect(ctx.destination);
+    o.start(start);o.stop(start+duration+.012);
+   }
+  }catch(_){}
+ }
+ function bankSkill(reason="ENCAISSÉ"){
+  if(skillBank<1)return 0;
+  const reward=Math.round(skillBank);
+  score+=reward;bankedTotal+=reward;bankedCount++;
+  showReward(reason+" +"+reward.toLocaleString("fr-CH")+" PTS","bank",2.2);
+  playRewardCue("bank");
+  skillBank=0;skillChain=combo=0;skillMultiplier=1;skillTimer=skillAge=0;
+  return reward;
+ }
+ function awardSkill(kind,base,title){
+  if(mode!=="running"||encoreMode==="transition"||selectedLevel.id==="free")return 0;
+  skillChain++;combo=skillChain;
+  skillMultiplier=Math.min(lab.comboMax,1+Math.floor((skillChain-1)/lab.comboEvery));
+  const gained=Math.round(base*skillMultiplier*scoreMultiplier);
+  skillBank+=gained;skillTimer=lab.comboTimeout;
+  if(kind==="near")nearMisses++;
+  if(skillChain>1&&skillChain%lab.comboEvery===1)playRewardCue("chainStep");
+  showReward(title+" +"+gained+" · COMBO ×"+skillMultiplier,
+   kind==="near"?"near":"skill",1.25);
+  return gained;
+ }
+ function tickSkill(dt){
+  if(mode!=="running")return;
+  rewardLife=Math.max(0,rewardLife-dt);
+  if(skillBank<=0)return;
+  skillTimer=Math.max(0,skillTimer-dt);
+  skillAge+=dt;
+  if(skillTimer===0||skillAge>=lab.comboCashout)bankSkill("COMBO ENCAISSÉ");
+ }
  function playDeathSound(){
   if(!live||!soundEnabled||globalMuted())return;
   try{
@@ -1796,6 +1853,16 @@ function mount(root){
  function renderHud(){
   // Fixed phosphor label already uses the same segmented font as the digits.
   setDigital(scoreEl,String(Math.floor(score)).padStart(5,"0"));
+  const hasCombo=(mode==="running"||mode==="paused"||mode==="finale")&&skillBank>0;
+  scoreCombo.classList.toggle("active",hasCombo);
+  scoreCombo.classList.toggle("hot",skillMultiplier>=5);
+  speedComboEl.textContent="VITESSE ×"+scoreMultiplier;
+  skillComboEl.textContent="COMBO ×"+skillMultiplier+" · "+skillChain+" FIG.";
+  skillBankEl.textContent="+"+Math.round(skillBank).toLocaleString("fr-CH")+" EN ATTENTE";
+  skillBarFill.style.width=(hasCombo?Math.round(100*clamp(skillTimer/lab.comboTimeout,0,1)):0)+"%";
+  scoreToast.hidden=rewardLife<=0||mode==="menu";
+  scoreToast.textContent=rewardLife>0?rewardText:"";
+  scoreToast.dataset.kind=rewardKind;
   setDigital(bestEl,String(Math.floor(best)).padStart(5,"0"));
   setDigital(shieldEl,String(lives).padStart(2,"0"));
   setDigital(energyEl,String(pulseCharge).padStart(2,"0"));
@@ -2002,7 +2069,9 @@ function mount(root){
   const target=waves.filter(w=>!w.cleared&&w.z>=HIT_Z-.6&&w.z<=HIT_Z+PULSE_REACH)
    .sort((a,b)=>a.z-b.z)[0];
   if(target){
-   target.cleared=true;score+=120;combo++;message="MUR DÉTRUIT · PULSE +120";messageLife=1.45;
+   target.cleared=true;
+   const gained=awardSkill("pulse",lab.scorePulse,"PULSE BREAK");
+   message="MUR DÉTRUIT · +"+gained+" EN COMBO";messageLife=1.45;
    shatterWave(target);
   }else{message="ONDE LIBÉRÉE";messageLife=1.05;burst(angle,"#a6faff",30,2.1,true);}
   renderHud();
@@ -2036,6 +2105,13 @@ function mount(root){
   }else if(!nitroHeld&&selectedLevel.id!=="free"&&nitroFuel<1){
    nitroRegenWait=Math.max(0,nitroRegenWait-dt);
    if(nitroRegenWait<=0)nitroFuel=clamp(nitroFuel+dt/lab.nitroRefillSeconds,0,1);
+  }
+  if(selectedLevel.id!=="free"){
+   if(nitroFuel>=.999&&!nitroFullLatched){
+    nitroFullLatched=true;
+    playRewardCue("nitroReady");
+    showReward("NITRO PRÊT · 100%","nitro",1.5);
+   }else if(nitroFuel<.96)nitroFullLatched=false;
   }
  }
  function createWave(){
@@ -2086,6 +2162,7 @@ function mount(root){
  }
  function beginEncore(){
   if(mode!=="running"||encoreMode!=="normal"||selectedLevel.id==="free")return false;
+  bankSkill("PHASE TERMINÉE");
   encoreMode="transition";encoreTime=0;
   waves=[];pads=[];shields=[];sparks=[];
   nextGateAt=nextPadAt=nextShieldAt=Infinity;
@@ -2202,6 +2279,7 @@ function mount(root){
   travel+=dz;
   distance+=dz*125;
   score+=dt*(15+Math.min(35,distance/210))*scoreMultiplier;
+  tickSkill(dt);
   invuln=Math.max(0,invuln-dt);
   padBoostTime=Math.max(0,padBoostTime-dt);
   pulseGlow=Math.max(0,pulseGlow-dt);
@@ -2274,6 +2352,7 @@ function mount(root){
     message="BOUCLIER +1";messageLife=1.6;
     shieldFlash=1;showShieldCollect();
     burst(angle,"#c6ffe8",44,1.7,true);
+    awardSkill("shield",lab.scoreShield,"BOUCLIER +1");
     beep("collect");renderHud();
     // Full health never shows unneeded shield pickups.
     if(lives===MAX_LIVES){shields=[];nextShieldAt=Math.max(nextShieldAt,travel+SHIELD_RARE_MIN);}
@@ -2287,8 +2366,8 @@ function mount(root){
     pad.credited=true;
     padBoostTime=Math.max(padBoostTime,lab.boostPadDuration);
     shipBoostFade=1;turboLight=1;
-    score+=275*scoreMultiplier;
-    pulseGlow=.68;message="TURBO PAD +275";messageLife=1.2;
+    const gained=awardSkill("pad",lab.scorePad,"BOOST PAD");
+    pulseGlow=.68;message="TURBO PAD · +"+gained+" EN COMBO";messageLife=1.2;
     burst(angle,"#72f7ff",34);
     startBoostLoop();beep("collect");
    }
@@ -2304,6 +2383,8 @@ function mount(root){
     w.credited=true;passed++;
     if(!w.cleared&&collisionAt(angle,w)&&invuln<=0&&!(testMode&&lab.invincible)){
      lives--;combo=0;invuln=1.35;flash=.47;shake=3;beep("hit");
+     if(skillBank>0)showReward("COMBO PERDU · -"+Math.round(skillBank),"lost",1.9);
+     skillBank=0;skillChain=0;skillMultiplier=1;skillTimer=skillAge=0;
      if(lives>0)nextShieldAt=Math.min(nextShieldAt,travel+rand(lives===1?5:12,lives===1?11:24));
      if(lives===1){
       warningLife=2.25;warningBeepDelay=.15;warningChirp=0;
@@ -2311,13 +2392,20 @@ function mount(root){
      message="IMPACT !";messageLife=1.05;burst(angle,"#ff5caa",23);
      if(lives<=0){gameOver();break;}
     }else{
-     const near=!w.cleared&&nearMiss(angle,w);
-     combo++;const multiplier=Math.min(4,1+Math.floor(combo/5));
-     const bonus=(near?90:50)*multiplier;
-     score+=bonus*scoreMultiplier;
-     if(near){message="NEAR MISS +"+bonus;messageLife=.8;beep("pass");}
-     else if(combo%5===0){message="COMBO ×"+multiplier;messageLife=.75;}
-     if(passed%4===0){pulseCharge=Math.min(3,pulseCharge+1);beep("collect");}
+     if(!w.cleared){
+      const near=nearMiss(angle,w);
+      const bonus=awardSkill(near?"near":"clean",
+       near?lab.scoreNear:lab.scoreClean,near?"NEAR MISS":"PASSAGE PROPRE");
+      if(near){message="NEAR MISS · +"+bonus;messageLife=1.15;beep("pass");}
+      else if(skillChain>0&&skillChain%lab.comboEvery===0){
+       message="COMBO ×"+skillMultiplier;messageLife=.85;
+      }
+     }
+     if(passed%4===0&&pulseCharge<3){
+      pulseCharge++;
+      playRewardCue("pulseReady");
+      showReward("PULSE +1 · RECHARGÉ","pulse",1.55);
+     }
     }
    }
   }
