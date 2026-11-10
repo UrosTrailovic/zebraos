@@ -859,7 +859,7 @@ function mount(root){
   const bounds=screen.getBoundingClientRect();
   if(!bounds.width||!bounds.height)return;
   W=Math.max(150,Math.round(bounds.width));H=Math.max(180,Math.round(bounds.height));
-  renderDpr=Math.min(W<520?1.25:1.5,window.devicePixelRatio||1);
+  renderDpr=clamp(Math.min(W<520?1.25:1.5,window.devicePixelRatio||1)*lab.renderScale,.55,1.5);
   geometryCache={cx:W*.5,cy:H*.39,R:Math.max(W,H)*1.23,offset:5/9};
   const bw=Math.round(W*renderDpr),bh=Math.round(H*renderDpr);
   if(canvas.width!==bw||canvas.height!==bh){canvas.width=bw;canvas.height=bh;}
@@ -1213,7 +1213,7 @@ function mount(root){
   setDigital(energyEl,String(pulseCharge).padStart(2,"0"));
   shieldEl._erSlots.forEach((el,i)=>el.classList.toggle("lit",i<lives));
   energyEl._erSlots.forEach((el,i)=>el.classList.toggle("lit",i<pulseCharge));
-  const speed=Math.round((mode==="menu"?0:currentSpeed)*25);
+  const speed=Math.round((mode==="menu"?0:currentSpeed)*lab.displayScale);
   setDigital(speedGauge.value,String(speed).padStart(3,"0"));
   lightSegments(speedGauge.segments,clamp(speed/310,0,1));
   const free=selectedLevel.id==="free";
@@ -1453,7 +1453,7 @@ function mount(root){
     cycle===6?rand(22.0,26.0):rand(GAP_MIN,GAP_MAX);
   if(hard)gap+=2.8;
   const density=clamp(1-directorStage*.055,.62,1);
-  return Math.max(13.2,gap*density)*selectedLevel.gap;
+  return Math.max(11.5,gap*density/lab.obstacleDensity)*selectedLevel.gap;
  }
  function smoothEncore(x){
   x=clamp(x,0,1);
@@ -1560,12 +1560,12 @@ function mount(root){
   updateNitro(dt);
   // The normal cruise is the core game, not a slow waiting room for pads.
   // Starts ~6.15 units/s (was 4.15) and ramps naturally with survival.
-  const growth=Math.min(1.45,Math.log1p(Math.max(0,score)/3800)*.36);
-  const stageThrust=Math.min(2.6,directorStage*.44);
-  const survivalThrust=Math.min(2.05,elapsed/105);
-  const musicThrust=audioFx.energy*.35+audioFx.kick*.09;
-  const encoreThrust=encoreMode==="blue"?.62:0;
-  const base=clamp(6.15+stageThrust+survivalThrust+growth+
+  const growth=Math.min(1.45,Math.log1p(Math.max(0,score)/3800)*.36)*lab.acceleration;
+  const stageThrust=Math.min(2.6,directorStage*.44)*lab.acceleration;
+  const survivalThrust=Math.min(2.05,elapsed/105)*lab.acceleration;
+  const musicThrust=(audioFx.energy*.35+audioFx.kick*.09)*lab.punch;
+  const encoreThrust=encoreMode==="blue"?lab.phaseBonus:0;
+  const base=clamp(lab.baseSpeed+stageThrust+survivalThrust+growth+
    throttle*.65+musicThrust+musicDropSurge*.44+encoreThrust,
    5.4,12.5)*selectedLevel.speed;
   // Turbo is still rewarding, but the basic flight stays exciting.
@@ -1820,8 +1820,8 @@ function mount(root){
   const g=geometryCache,r=wallPoint(0,z).r,shift=tunnelBend(z);
   const near=clamp(1-z/RENDER_FAR_Z,0,1),cyan=index%5===0,cold=blueTunnel();
   // Controlled changes of the line itself, not a fat bloom filter.
-  const beat=clamp(audioFx.kick*.65+audioFx.bass*.35,0,1);
-  const high=clamp(audioFx.high,0,1);
+  const beat=clamp((audioFx.kick*.65+audioFx.bass*.35)*lab.punch,0,1);
+  const high=clamp(audioFx.high*lab.punch,0,1);
   c.beginPath();c.arc(g.cx+shift.x,g.cy+shift.y-g.offset*r,r,0,TAU);
   c.strokeStyle=cyan?
    "rgba(111,239,255,"+clamp(.32+.54*near+high*.12,0,.97)+")":
@@ -1844,7 +1844,7 @@ function mount(root){
   c.save();c.lineCap="round";c.lineJoin="round";
   // An indigo panel skin follows the camera's angular roll. The panels move
   // at exactly the same world speed as the neon hoops and the obstacle walls.
-  const panelLength=.81,panelOffset=(mode==="menu"?(now*.0016):travel)%panelLength;
+  const panelLength=lab.panelDetail===0?1.30:lab.panelDetail===1?1.02:.81,panelOffset=(mode==="menu"?(now*.0016):labVisualTravel())%panelLength;
   const panelRows=Math.ceil(RENDER_FAR_Z/panelLength)+1;
   for(let row=panelRows;row>=0;row--){
    const z=row*panelLength-panelOffset;
@@ -1854,7 +1854,7 @@ function mount(root){
    const highLight=clamp(audioFx.high*.48,0,.48);
    // LOD: distant plates span two sectors. Keep close-up seams at full
    // resolution while cutting geometry cost in the extended distance.
-   const sectorStep=z>15?2:1;
+   const sectorStep=lab.panelDetail===0?4:lab.panelDetail===1?(z>15?4:2):(z>15?2:1);
    for(let sector=0;sector<SECTORS;sector+=sectorStep){
     const a=screenAngle(sector*STEP),b=a+sectorStep*STEP;
     const fill=cold?
@@ -1880,8 +1880,8 @@ function mount(root){
    }
   }
   // Industrial radial rails: structural shadow first, phosphor trace on top.
-  for(let i=0;i<24;i++){
-   const a=screenAngle(i*TAU/24);
+  for(let i=0;i<lab.lineCount;i++){
+   const a=screenAngle(i*TAU/lab.lineCount);
    const near=wallPoint(a,.04);
    const cyan=i%4===0;
    c.beginPath();c.moveTo(near.x,near.y);
@@ -1899,8 +1899,8 @@ function mount(root){
    c.shadowBlur=cyan?2:0;
    c.stroke();c.shadowBlur=0;
   }
-  const spacing=.48;
-  const phase=(mode==="menu"?(now*.0016):travel)%spacing;
+  const spacing=lab.ringGap;
+  const phase=(mode==="menu"?(now*.0016):labVisualTravel())%spacing;
   const ringCount=Math.ceil(RENDER_FAR_Z/spacing)+1;
   for(let i=ringCount;i>=0;i--)drawRing(i*spacing-phase,i);
   c.restore();
@@ -1917,8 +1917,8 @@ function mount(root){
   c.fillRect(g.cx+vanishing.x-g.R*.2,g.cy+vanishing.y-g.R*.2,g.R*.4,g.R*.4);
   // Physically small, music-driven phosphor strips instead of a blurred
   // full-screen radial gradient. Kicks pulse pink, treble cyan.
-  const kick=clamp(audioFx.kick*.65+audioFx.bass*.3,0,1);
-  const treble=clamp(audioFx.high*.8,0,.8);
+  const kick=clamp((audioFx.kick*.65+audioFx.bass*.3)*lab.punch,0,1);
+  const treble=clamp(audioFx.high*.8*lab.punch,0,.8);
   if(kick>.12||treble>.12){
    for(let i=0;i<8;i++){
     const a=screenAngle(i*TAU/8+.11),z=1.7+(i%3)*1.12;
@@ -1949,7 +1949,7 @@ function mount(root){
      skin===2?"#eb493d":"#a52ed2";
    const skinEdge=newLaser?"#85ecff":skin===0?"#ffb19c":skin===1?"#ffc1de":
      skin===2?"#ffe4aa":"#eb96ff";
-   c.shadowColor=newLaser?"#43baff":skin===3?"#db4aff":"#ff4e82";c.shadowBlur=newLaser?5:2;
+   c.shadowColor=newLaser?"#43baff":skin===3?"#db4aff":"#ff4e82";c.shadowBlur=lab.shadows?(newLaser?5:2):0;
    wallPatch(a,b,z,far,skinFill,skinEdge,newLaser?3:6);
    if(newLaser){
     // Light cross-braces mark the late-game barriers without altering hitboxes.
@@ -2076,7 +2076,7 @@ function mount(root){
  const bendBuffer=document.createElement("canvas");
  const bendCtx=bendBuffer.getContext("2d",{alpha:false});
  function warpTrack(){
-  if(!bendCtx||mode!=="running")return;
+  if(!lab.warp||!bendCtx||mode!=="running")return;
   const near=trackCenter(travel+4),far=trackCenter(travel+19);
   const dx=far.x-near.x,dy=far.y-near.y;
   const strength=clamp(Math.hypot(dx,dy)/Math.max(110,Math.min(W,H)*.36),0,1);
@@ -2091,7 +2091,7 @@ function mount(root){
   bendCtx.drawImage(canvas,0,0);
   c.save();c.setTransform(1,0,0,1,0,0);
   c.fillStyle="#05020a";c.fillRect(0,0,width,height);
-  const bands=32,phase=travel*.075;
+  const bands=32,phase=labVisualTravel()*.075;
   for(let i=0;i<bands;i++){
    const y0=Math.floor(i*height/bands);
    const y1=Math.min(height,Math.ceil((i+1)*height/bands)+1);
@@ -2120,16 +2120,16 @@ function mount(root){
   for(let i=shields.length-1;i>=0;i--)drawShieldPickup(shields[i]);
   for(let i=waves.length-1;i>=0;i--)drawWave(waves[i]);
   c.restore();
-  for(const p of sparks){
+  for(const p of (lab.particles<=0?[]:sparks)){
    const t=wallPoint(screenAngle(p.a),p.z);
-   c.globalAlpha=clamp(p.life/p.max,0,1);
+   c.globalAlpha=clamp(p.life/p.max*lab.particles,0,1);
    c.fillStyle=p.color;
    const size=p.size||4;c.shadowColor=p.color;c.shadowBlur=size*1.7;
    c.fillRect(t.x-size*.5,t.y-size*.5,size,size);
    c.shadowBlur=0;
   }
   c.globalAlpha=1;
-  warpTrack();
+  if(lab.warp)warpTrack();
   // Only the world fades: controls and score stay present. The ship remains
   // visible in the five-second void while the tunnel disappears completely.
   if(encoreMode==="transition"){
