@@ -129,7 +129,7 @@ function mount(root){
  let menuStage="home",menuIndex=0,pauseIndex=0,overIndex=0,warningLife=0,warningBeepDelay=0,warningChirp=0;
  let directorStage=0,musicDropSurge=0,musicLoops=0;
  // Five seconds without hazards: pink tunnel fades away, then reappears blue.
- let encoreMode="normal",encoreTime=0;
+ let encoreMode="normal",encoreTime=0,homeIndex=0,testMode=false;
  const DEATH_FADE_SECONDS=1.15,DEATH_ANIMATION_SECONDS=1.15;
  let deathFade=0,deathLock=0;
  let soundEnabled=load("sfx","on")!=="off",audioCtx=null;
@@ -299,6 +299,11 @@ function mount(root){
  const hint=node("p","er-hint","← → TOURNE · ↑ ↓ VITESSE · ESPACE NITRO (MAINTENIR) · Q PULSE · P PAUSE");
  const overlayButton=node("button","er-overlay-button","▶ DÉMARRER");
  overlayButton.type="button";
+ const testButton=node("button","er-test-button","TEST");
+ testButton.type="button";
+ testButton.title="Accès direct à la phase bleue, sans modifier le record";
+ testButton.setAttribute("aria-label","Tester immédiatement la deuxième phase");
+ testButton.onclick=()=>start(true);
  const levelPicker=node("div","er-level-picker");
  levelPicker.hidden=true;
  const levelButtons=[];
@@ -311,8 +316,12 @@ function mount(root){
    btn.classList.toggle("selected",active);
    btn.setAttribute("aria-current",active?"true":"false");
   });
-  overlayButton.classList.toggle("selected",mode==="menu"&&menuStage==="home"||
+  const atHome=mode==="menu"&&menuStage==="home";
+  overlayButton.classList.toggle("selected",atHome&&homeIndex===0||
    mode==="paused"&&pauseIndex===0||mode==="over"&&overIndex===0);
+  testButton.classList.toggle("selected",atHome&&homeIndex===1);
+  overlayButton.setAttribute("aria-current",atHome&&homeIndex===0?"true":"false");
+  testButton.setAttribute("aria-current",atHome&&homeIndex===1?"true":"false");
   backButton.classList.toggle("selected",mode==="over"&&overIndex===1);
   [pauseRestart,pauseSound,pauseMenu].forEach((btn,i)=>btn.classList.toggle("selected",mode==="paused"&&pauseIndex===i+1));
  }
@@ -324,8 +333,14 @@ function mount(root){
   const backward=which==="up"||which==="left";
   const forward=which==="down"||which==="right";
   if(mode==="menu"){
-   // La manette peut valider Play, les flèches ne déclenchent rien.
-   if(which==="pulse"||which==="pause"||which==="boost")start();
+   // Mobile remains controller-driven: direction selects JOUER or TEST, A validates.
+   if(backward||forward){
+    homeIndex=(homeIndex+(forward?1:-1)+2)%2;
+    beep("switch");paintMenuSelection();return;
+   }
+   if(which==="pulse"||which==="pause"||which==="boost"){
+    if(homeIndex===1)start(true);else start();
+   }
    return;
   }
   if(mode==="paused"){
@@ -334,7 +349,7 @@ function mount(root){
    }
    if(which==="pulse"){
     if(pauseIndex===0)togglePause();
-    else if(pauseIndex===1)start();
+    else if(pauseIndex===1)restartRun();
     else if(pauseIndex===2)soundButton.click();
     else toMenu();
    }else if(which==="boost"||which==="pause")togglePause();
@@ -342,7 +357,7 @@ function mount(root){
   }
   if(mode==="over"){
    if(backward||forward){overIndex=1-overIndex;beep("switch");paintMenuSelection();return;}
-   if(which==="pulse"){if(overIndex===0)start();else toMenu();}
+   if(which==="pulse"){if(overIndex===0)restartRun();else toMenu();}
    else if(which==="boost"||which==="pause")toMenu();
    return;
   }
@@ -350,13 +365,14 @@ function mount(root){
  }
  function renderMenuStage(stage){
   menuStage=stage;
+  if(stage==="home")homeIndex=0;
   const choosing=false;
   overlay.classList.toggle("er-stage-levels",choosing);
   overlay.classList.toggle("er-stage-home",!choosing);
   brandLogo.hidden=false;logo.hidden=true;crashIcon.hidden=true;crashSub.hidden=true;
   overlay.classList.remove("er-stage-over","er-stage-pause");screen.classList.remove("er-death");
   pauseActions.hidden=true;
-  levelPicker.hidden=!choosing;overlayButton.hidden=choosing;
+  levelPicker.hidden=!choosing;overlayButton.hidden=choosing;testButton.hidden=choosing;
   backButton.hidden=!choosing;status.hidden=!choosing;
   prompt.hidden=choosing;introDiagnostic.hidden=choosing;introTrack.hidden=choosing;
   expl.hidden=true;hint.hidden=!choosing;
@@ -381,11 +397,11 @@ function mount(root){
   const btn=node("button","er-pause-action "+cls,label);
   btn.type="button";btn.onclick=fn;return btn;
  }
- const pauseRestart=pauseAction("↻ RESTART","er-pause-restart",()=>start());
+ const pauseRestart=pauseAction("↻ RESTART","er-pause-restart",()=>restartRun());
  const pauseSound=pauseAction("♫ SON ON","er-pause-sound",()=>soundButton.click());
  const pauseMenu=pauseAction("☷ MENU","er-pause-menu",()=>toMenu());
  pauseActions.append(pauseRestart,pauseSound,pauseMenu);pauseActions.hidden=true;
- overlay.append(introDiagnostic,brandLogo,introTrack,crashIcon,logo,crashSub,status,prompt,levelPicker,expl,hint,overlayButton,backButton,pauseActions);
+ overlay.append(introDiagnostic,brandLogo,introTrack,crashIcon,logo,crashSub,status,prompt,levelPicker,expl,hint,overlayButton,testButton,backButton,pauseActions);
  const dashboard=node("div","er-dashboard");
  dashboard.setAttribute("role","group");dashboard.setAttribute("aria-label","Tableau de bord vitesse et boost");
  const dashHeader=node("div","er-dashboard-header");
@@ -506,10 +522,10 @@ function mount(root){
  function button(label,cls,callback){const b=node("button","er-hardware "+cls,label);b.type="button";b.onclick=()=>{beep("switch");callback();};return b;}
  const startButton=button("▶ JOUER","er-play",()=>{
   if(mode==="menu")start();
-  else if(mode==="over")start();
+  else if(mode==="over")restartRun();
   else togglePause();
  });
- const restartButton=button("↻ RESTART","er-restart",start);
+ const restartButton=button("↻ RESTART","er-restart",restartRun);
  const soundButton=button("♫ SON ON","er-sound",()=>{
   soundEnabled=!soundEnabled;save("sfx",soundEnabled?"on":"off");
    if(!soundEnabled)pauseMusic();
@@ -1181,7 +1197,8 @@ function mount(root){
    if(deathLock===0)lockDeathControls(false);
   }
  }
- function start(){
+ function restartRun(){start(testMode);}
+ function start(testPhase=false){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
   lockDeathControls(false);
@@ -1193,7 +1210,7 @@ function mount(root){
   nextShieldAt=selectedLevel.id==="free"?Infinity:SHIELD_START;
   lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;shieldCount=0;
   directorStage=0;musicDropSurge=0;musicLoops=0;
-  encoreMode="normal";encoreTime=0;
+  encoreMode="normal";encoreTime=0;testMode=testPhase===true;
   trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
   invuln=0;pulseCharge=2;pulseGlow=pulseFx=pulseHitFx=shieldFlash=padBoostTime=flash=shake=0;
   shieldCollect.classList.remove("er-shield-collected");
@@ -1202,21 +1219,30 @@ function mount(root){
   screen.classList.remove("er-death","er-crashing");
   overlay.classList.remove("er-stage-over","er-stage-pause");pauseActions.hidden=true;
   crashIcon.hidden=true;crashSub.hidden=true;
-  message=selectedLevel.id==="free"?"FREE ROAM · BOOST ILLIMITÉ":"TROUVE LE PASSAGE";messageLife=2;keys.clear();levelPicker.hidden=true;backButton.hidden=true;overlay.hidden=true;
+  message=testMode?"MODE TEST · PHASE BLEUE":selectedLevel.id==="free"?
+   "FREE ROAM · BOOST ILLIMITÉ":"TROUVE LE PASSAGE";
+  messageLife=testMode?3:2;keys.clear();levelPicker.hidden=true;
+  testButton.hidden=true;backButton.hidden=true;overlay.hidden=true;
+  if(testMode){
+   // Use the SAME blue world as a real 217-second run. No five-minute wait.
+   encoreMode="transition";encoreTime=ENCORE_TRANSITION_SECONDS;
+   completeEncore();
+   message="MODE TEST · PHASE BLEUE";messageLife=3;
+  }
   // Draw the first tunnel frame immediately: avoid a blank panel when
   // Android throttles its first animation frame after a touch gesture.
   fitCanvas();
   try{paint(performance.now());}catch(error){console.error("Echo Racer initial frame",error);}
-  beep("collect");startMusic(true);renderHud();
+  beep("collect");if(!testMode)startMusic(true);renderHud();
  }
  function toMenu(){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
   screen.classList.remove("er-crashing");lockDeathControls(false);
-  if(mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
+  if(!testMode&&mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
   resetSteering();stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];trail=[];turnVelocity=0;
   shieldCollect.classList.remove("er-shield-collected");pulseFx=pulseHitFx=shieldFlash=0;
-  elapsed=0;encoreMode="normal";encoreTime=0;padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
+  elapsed=0;encoreMode="normal";encoreTime=0;testMode=false;padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
   overlay.hidden=false;renderMenuStage("home");
   renderHud();
@@ -1227,7 +1253,7 @@ function mount(root){
   keys.clear();dragPointer=null;deathFade=0;deathLock=0;
   warningLife=0;warningBeepDelay=0;
   flash=.55;shake=7;
-  if(score>best){best=Math.floor(score);save("best."+selectedLevel.id,best);}
+  if(!testMode&&score>best){best=Math.floor(score);save("best."+selectedLevel.id,best);}
   overlay.hidden=true;screen.classList.remove("er-death");
   screen.classList.add("er-crashing");
   crashCurtain.style.opacity="0";crashCurtain.hidden=false;
@@ -1246,7 +1272,7 @@ function mount(root){
   overlay.classList.remove("er-stage-home","er-stage-levels","er-stage-pause");
   pauseActions.hidden=true;
   overlay.classList.add("er-stage-over");
-  levelPicker.hidden=true;backButton.hidden=false;
+  levelPicker.hidden=true;testButton.hidden=true;backButton.hidden=false;
   status.hidden=false;status.textContent="SCORE "+Math.floor(score)+"  ·  RECORD "+best;
   prompt.hidden=true;expl.hidden=true;hint.hidden=true;
   overlayButton.hidden=false;overlayButton.classList.add("er-overlay-restart");
@@ -1256,7 +1282,7 @@ function mount(root){
  function togglePause(){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   if(mode==="running"){resetSteering();endNitro();mode="paused";pauseIndex=0;
-   introDiagnostic.hidden=true;introTrack.hidden=true;pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;backButton.hidden=true;overlay.hidden=false;
+   testButton.hidden=true;introDiagnostic.hidden=true;introTrack.hidden=true;pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;backButton.hidden=true;overlay.hidden=false;
    overlay.classList.add("er-stage-pause");pauseActions.hidden=false;
    brandLogo.hidden=true;logo.hidden=false;logo.textContent="PAUSE";
    prompt.hidden=false;prompt.textContent="SIGNAL SUSPENDU";
@@ -1416,6 +1442,7 @@ function mount(root){
   nextShieldAt=travel+(lives===1?38:54);
   invuln=Math.max(invuln,2);
   message="PHASE BLEUE · NOUVELLE PRESSION";messageLife=2.4;
+  if(testMode&&soundEnabled&&!globalMuted())ensureMusic();
   if(music){
    musicLoops++;
    try{music.currentTime=MUSIC_LOOP_FROM;}catch(_){}
@@ -1621,7 +1648,7 @@ function mount(root){
   waves=waves.filter(w=>w.z>-.8);
   sparks.forEach(p=>{p.a+=p.va*dt;p.z+=p.vz*dt;p.life-=dt;});
   sparks=sparks.filter(p=>p.life>0);
-  if(score>best){
+  if(!testMode&&score>best){
    best=Math.floor(score);
    bestSaveTimer+=dt;
    // Do not synchronously write localStorage on every animation frame.
@@ -2109,9 +2136,9 @@ function mount(root){
   };
   const dir=control[k];
   if(mode==="menu"){
-   if(dir){e.preventDefault();return;}
+   if(dir){e.preventDefault();if(!e.repeat)controllerInput(dir);return;}
    if(k==="enter"||k===" "||k==="q"){
-    e.preventDefault();if(!e.repeat)start();return;
+    e.preventDefault();if(!e.repeat)controllerInput("pulse");return;
    }
    return;
   }
@@ -2187,7 +2214,7 @@ function mount(root){
  overlayButton.onclick=function(){
   if(mode==="paused")togglePause();
   else if(mode==="menu")start();
-  else start();
+  else restartRun();
  };
  document.addEventListener("keydown",keyDown);
  document.addEventListener("keyup",keyUp);
@@ -2224,7 +2251,7 @@ function mount(root){
   lcdEditor:()=>({open:!cfgPanel.hidden,mode:cfgMode,layout:JSON.parse(JSON.stringify(cfgLayout)),targets:Object.keys(cfgTargets)}),
   lcdSet:(id,x,y)=>{if(!cfgTargets[id])return false;cfgChosen=id;cfgSet(id,"x",x);cfgSet(id,"y",y);return true;},
   lcdOpen:cfgOpen,lcdClose:cfgHide,
-  snapshot:()=>({mode,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,directorStage,musicDropSurge,
+  snapshot:()=>({mode,testMode,homeIndex,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,directorStage,musicDropSurge,
    encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
   triggerEncore:beginEncore,draw:()=>paint(performance.now()),
