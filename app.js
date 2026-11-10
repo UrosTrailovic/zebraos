@@ -858,6 +858,26 @@ function openGame(name){
   root.append(warning,retry);
  });
 }
+// Genuine sibling desktop window for the Echo Racer TEST workshop.
+// Only the existing Admin Echo Racer window may open it. Native titlebar,
+// drag, taskbar, minimize/close and focus come from windowBox itself.
+window.ZebraEchoLabWindow={
+ open:function(){
+  if(session!=="admin"||!opened.racer||!opened.racer.w.isConnected)return null;
+  var body=windowBox("racer-lab","ECHO RACER — CONFIG TEST",470,600);
+  body.classList.add("er-lab-native-host");
+  return body;
+ },
+ close:function(){
+  var child=opened["racer-lab"];
+  if(!child)return;
+  var closeButton=child.w.querySelector("[data-close]");
+  if(closeButton)closeButton.click();
+  else{child.w.remove();delete opened["racer-lab"];task();}
+  if(opened.racer&&opened.racer.w.isConnected)focus("racer");
+ },
+ isOpen:function(){return !!opened["racer-lab"];}
+};
 window.ZebraLazyApps={load:loadGameModule};
 function open(code){$("start-menu").classList.add("hidden");if(code==="tetris"||code==="snake"||code==="racer"||code==="paint")openGame(code);else if(code==="folder:games"||code==="folder:tools"||code==="folder:atelier")appFolder(code.split(":")[1]);else if(code==="calc"||code==="sticky"||code==="planner")openUtility(code);else if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="datetime")dateTime();else if(code==="welcome")welcome();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
 decorateSystemMenus();
