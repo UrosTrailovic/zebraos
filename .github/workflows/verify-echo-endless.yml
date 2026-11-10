@@ -35,12 +35,16 @@ jobs:
             transitionAndSpeed:js.includes('ENCORE_TRANSITION_SECONDS=5')
               &&js.includes('function beginEncore()')
               &&js.includes('const base=clamp(lab.baseSpeed')
-              &&js.includes('const multiplier=padBoostTime>0?1.85'),
+              &&js.includes('const multiplier=padBoostTime>0?lab.boostPadSpeed'),
             hasTuning:js.includes('const LAB_DEFAULTS')&&js.includes('er-lab-window')&&
               js.includes('labVisualTravel')&&css.includes('er-lab-impact'),
             boostPadTuning:js.includes('id:"boostPadSpeed"')
               &&js.includes('padBoostTime>0?lab.boostPadSpeed')
               &&js.includes('"phaseBonus","boostPadSpeed","visualSpeed"'),
+            adjustableBlue:js.includes('function labTint(hex,intensity')
+              &&js.includes('gradient.addColorStop(0,cold?labTint(lab.colorBlue')
+              &&js.includes('const fill=cold?')
+              &&js.includes('labTint(lab.colorBlue,.63'),
             phaseProfiles:js.includes('const PHASES=')&&js.includes('phaseProfiles=loadPhaseProfiles()')
               &&app.includes('window.ZebraEchoLabWindow=')
               &&css.includes('.er-lab-window.er-lab-native'),
@@ -196,6 +200,31 @@ jobs:
                result.previewP3=debug.snapshot().phaseActive==='p3'
                  &&debug.snapshot().testMode&&debug.snapshot().encore.mode==='blue'
                  &&debug.snapshot().lab.baseSpeed===8.5;
+               // Prove the user-selected phase 3 colour changes actual tunnel
+               // pixels, including the background (not only the rails).
+               const canvas=host.querySelector('canvas');
+               const sampleTunnel=()=>{
+                 debug.draw();
+                 const ctx=canvas.getContext('2d');
+                 const samples=[];
+                 for(let y=1;y<=5;y++)for(let x=1;x<=7;x++){
+                   const p=ctx.getImageData(Math.floor(canvas.width*x/8),
+                     Math.floor(canvas.height*y/6),1,1).data;
+                   samples.push(p[0],p[1],p[2]);
+                 }
+                 return samples;
+               };
+               const originalTunnel=sampleTunnel();
+               const bluePicker=lab.querySelector('[data-lab-id="colorBlue"]');
+               bluePicker.value='#ffc020';
+               bluePicker.dispatchEvent(new Event('input',{bubbles:true}));
+               const changedTunnel=sampleTunnel();
+               const pixelDelta=changedTunnel.reduce((sum,n,i)=>
+                 sum+Math.abs(n-originalTunnel[i]),0);
+               result.phase3ThemeEditable=debug.snapshot().phaseProfiles.p3.colorBlue==='#ffc020'
+                 &&pixelDelta>100;
+               result.otherPhasesKeepColors=debug.snapshot().phaseProfiles.p1.colorBlue!=='#ffc020'
+                 &&debug.snapshot().phaseProfiles.p2.colorBlue!=='#ffc020';
                const profile=lab.querySelector('.er-lab-presets button');
                profile.click();
                result.performancePreset=debug.snapshot().lab.renderScale===.65&&
