@@ -148,6 +148,58 @@ function mount(root){
  let flySound=null,boostSound=null,flyFade=0,boostGain=0;
  let boostBuffer=null,boostSource=null,boostOutput=null,boostLoad=null,boostAudioFailed=false;
  const audioFx={bass:0,mid:0,high:0,kick:0,previousBass:0,slowBass:0,beatCooldown:0,energy:0};
+ // Persistent TEST lab settings. Impact labels indicate likely rendering cost.
+ const LAB_DEFAULTS={
+  baseSpeed:6.15,acceleration:1,phaseBonus:.62,visualSpeed:1.5,
+  displayScale:25,obstacleDensity:1,punch:1,light:1,
+  lineCount:16,ringGap:.66,panelDetail:1,renderScale:.85,
+  warp:false,shadows:false,particles:.75,invincible:true,
+  colorPink:"#ff3ed1",colorCyan:"#74efff",colorBlue:"#6099ff"
+ };
+ const LAB_META=[
+  {section:"VITESSE & SENSATION"},
+  {id:"baseSpeed",label:"Vitesse initiale réelle",min:4,max:14,step:.25,unit:"u/s",cost:"JEU",help:"Déplacement sans turbo"},
+  {id:"acceleration",label:"Montée avec le temps",min:.2,max:3,step:.1,unit:"×",cost:"JEU"},
+  {id:"phaseBonus",label:"Bonus phase bleue",min:0,max:3,step:.05,unit:"u/s",cost:"JEU"},
+  {id:"visualSpeed",label:"Sensation de vitesse",min:.5,max:4,step:.1,unit:"×",cost:"VISUEL",help:"Vitesse de défilement décorative, indépendante des collisions"},
+  {id:"displayScale",label:"KM/H affichés",min:10,max:55,step:1,unit:"×",cost:"AFFICHAGE",help:"Valeur arcade, pas une mesure physique réelle"},
+  {id:"obstacleDensity",label:"Densité d'obstacles",min:.5,max:1.8,step:.05,unit:"×",cost:"JEU / MOYEN"},
+  {section:"MUSIQUE & COULEURS"},
+  {id:"punch",label:"Punch musical",min:0,max:3,step:.1,unit:"×",cost:"FAIBLE"},
+  {id:"light",label:"Intensité des lumières",min:.2,max:2,step:.1,unit:"×",cost:"FAIBLE"},
+  {id:"colorPink",label:"Phosphore rose",kind:"color",cost:"FAIBLE"},
+  {id:"colorCyan",label:"Phosphore cyan",kind:"color",cost:"FAIBLE"},
+  {id:"colorBlue",label:"Phosphore bleu",kind:"color",cost:"FAIBLE"},
+  {section:"GÉOMÉTRIE DU TUNNEL"},
+  {id:"lineCount",label:"Lignes longitudinales",min:8,max:32,step:2,unit:"",cost:"ÉLEVÉ"},
+  {id:"ringGap",label:"Espacement des anneaux",min:.38,max:1.15,step:.01,unit:"u",cost:"ÉLEVÉ",help:"Plus grand = moins d'anneaux"},
+  {id:"panelDetail",label:"Détail des panneaux",kind:"select",options:[["0","Léger"],["1","Équilibré"],["2","Détaillé"]],cost:"TRÈS ÉLEVÉ"},
+  {section:"PERFORMANCES"},
+  {id:"renderScale",label:"Résolution interne",min:.55,max:1.25,step:.05,unit:"×",cost:"TRÈS ÉLEVÉ",help:"Le plus influent sur le nombre de pixels rendus"},
+  {id:"warp",label:"Déformation CRT",kind:"check",cost:"TRÈS ÉLEVÉ",help:"Post-traitement en 32 bandes, désactivé par défaut"},
+  {id:"shadows",label:"Halos des obstacles",kind:"check",cost:"ÉLEVÉ"},
+  {id:"particles",label:"Densité des particules",min:0,max:1,step:.1,unit:"×",cost:"MOYEN"},
+  {id:"invincible",label:"Invincible en TEST",kind:"check",cost:"TEST"}
+ ];
+ function loadLab(){
+  let obj={};try{obj=JSON.parse(load("lab.v1","{}"))||{};}catch(_){}
+  const next={...LAB_DEFAULTS};
+  for(const spec of LAB_META){
+   if(!spec.id||!Object.prototype.hasOwnProperty.call(obj,spec.id))continue;
+   const val=obj[spec.id];
+   if(spec.kind==="color"){if(typeof val==="string"&&/^#[0-9a-f]{6}$/i.test(val))next[spec.id]=val;}
+   else if(spec.kind==="check")next[spec.id]=val===true;
+   else if(spec.kind==="select")next[spec.id]=clamp(Math.round(Number(val)||0),0,2);
+   else if(Number.isFinite(Number(val)))next[spec.id]=clamp(Number(val),spec.min,spec.max);
+  }
+  return next;
+ }
+ const lab=loadLab();
+ function persistLab(){save("lab.v1",JSON.stringify(lab));}
+ function labHex(hex,alpha=1){
+  return "rgba("+parseInt(hex.slice(1,3),16)+","+parseInt(hex.slice(3,5),16)+","+parseInt(hex.slice(5,7),16)+","+clamp(alpha,0,1)+")";
+ }
+ const labVisualTravel=()=>travel*lab.visualSpeed;
  let dragPointer=null,dragX=0,dragLastTs=0,dragVelocity=0;
  let sliderPointer=null,steerValue=0,menuSliderDir=0,menuSliderNext=0;
  const wrap=node("section","er zg zg-retro");
