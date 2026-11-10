@@ -150,37 +150,131 @@ function mount(root){
  const audioFx={bass:0,mid:0,high:0,kick:0,previousBass:0,slowBass:0,beatCooldown:0,energy:0};
  // Persistent TEST lab settings. Impact labels indicate likely rendering cost.
  const LAB_DEFAULTS={
-  baseSpeed:6.15,acceleration:1,phaseBonus:.62,boostPadSpeed:1.85,visualSpeed:1.5,
-  displayScale:25,obstacleDensity:1,punch:1,light:1,
-  lineCount:16,ringGap:.66,panelDetail:1,renderScale:.85,
-  warp:false,shadows:false,particles:.75,invincible:true,
-  colorPink:"#ff3ed1",colorCyan:"#74efff",colorBlue:"#6099ff"
+   "baseSpeed": 6.15,
+   "acceleration": 1,
+   "phaseBonus": 0.62,
+   "speedCap": 12.5,
+   "speedRiseResponse": 6.4,
+   "speedFallResponse": 0.75,
+   "visualSpeed": 1.5,
+   "boostPadSpeed": 1.85,
+   "boostPadDuration": 2.8,
+   "boostPadFrequency": 1,
+   "nitroStart": 1.43,
+   "nitroGrowth": 0.3,
+   "nitroBurnSeconds": 3.2,
+   "nitroRefillSeconds": 5,
+   "nitroRegenDelay": 0.45,
+   "steerSpeed": 3.5,
+   "steerResponse": 7.1,
+   "steerReverse": 10.2,
+   "steerInertia": 3.5,
+   "obstacleDensity": 1,
+   "obstaclesEnabled": true,
+   "obstacleComplexity": 0,
+   "spinRate": 1,
+   "spinSpeed": 1,
+   "gapMinimum": 11.5,
+   "gateSize": 1,
+   "obstacleFade": 7.2,
+   "shieldFrequency": 1,
+   "punch": 1,
+   "light": 1,
+   "musicSpeedInfluence": 1,
+   "beatSensitivity": 1,
+   "bassLight": 1,
+   "trebleLight": 1,
+   "lineCount": 16,
+   "ringGap": 0.66,
+   "panelDetail": 1,
+   "railThickness": 1,
+   "ringThickness": 1,
+   "panelBrightness": 1,
+   "backgroundBrightness": 1,
+   "bendIntensity": 1,
+   "verticalBend": 1,
+   "bendFrequency": 1,
+   "colorMain": "#ff3ed1",
+   "colorAccent": "#74efff",
+   "colorPanels": "#6b1e71",
+   "colorBackdrop": "#0b0619",
+   "colorHazard": "#ef3a5c",
+   "colorPads": "#3af6ff",
+   "colorShields": "#66ffe2",
+   "displayScale": 25,
+   "renderScale": 0.85,
+   "warp": false,
+   "shadows": false,
+   "particles": 0.75,
+   "invincible": true,
+   "frameLimit": 60
  };
  const LAB_META=[
-  {section:"VITESSE & SENSATION"},
-  {id:"baseSpeed",label:"Vitesse initiale réelle",min:4,max:14,step:.25,unit:"u/s",cost:"JEU",help:"Déplacement sans turbo"},
-  {id:"acceleration",label:"Montée avec le temps",min:.2,max:3,step:.1,unit:"×",cost:"JEU"},
-  {id:"phaseBonus",label:"Bonus phase bleue",min:0,max:3,step:.05,unit:"u/s",cost:"JEU"},
-  {id:"boostPadSpeed",label:"Puissance des pads BOOST",min:1,max:3.5,step:.05,unit:"×",cost:"JEU",help:"Multiplie la vitesse réelle après avoir traversé un pad. Indépendant du boost manuel. Défaut : ×1,85."},
-  {id:"visualSpeed",label:"Sensation de vitesse",min:.5,max:4,step:.1,unit:"×",cost:"VISUEL",help:"Vitesse de défilement décorative, indépendante des collisions"},
-  {id:"displayScale",label:"KM/H affichés",min:10,max:55,step:1,unit:"×",cost:"AFFICHAGE",help:"Valeur arcade, pas une mesure physique réelle"},
-  {id:"obstacleDensity",label:"Densité d'obstacles",min:.5,max:1.8,step:.05,unit:"×",cost:"JEU / MOYEN"},
-  {section:"MUSIQUE & COULEURS"},
-  {id:"punch",label:"Punch musical",min:0,max:3,step:.1,unit:"×",cost:"FAIBLE"},
-  {id:"light",label:"Intensité des lumières",min:.2,max:2,step:.1,unit:"×",cost:"FAIBLE"},
-  {id:"colorPink",label:"Phosphore rose",kind:"color",cost:"FAIBLE"},
-  {id:"colorCyan",label:"Lignes secondaires / cyan",kind:"color",cost:"FAIBLE",help:"La couleur des rails alternés et des accents dans toutes les phases"},
-  {id:"colorBlue",label:"Couleur principale · PHASE 3",kind:"color",cost:"FAIBLE",help:"Modifie aussi le FOND, les panneaux, les anneaux, les reflets et les obstacles du tunnel bleu"},
-  {section:"GÉOMÉTRIE DU TUNNEL"},
-  {id:"lineCount",label:"Lignes longitudinales",min:8,max:32,step:2,unit:"",cost:"ÉLEVÉ"},
-  {id:"ringGap",label:"Espacement des anneaux",min:.38,max:1.15,step:.01,unit:"u",cost:"ÉLEVÉ",help:"Plus grand = moins d'anneaux"},
-  {id:"panelDetail",label:"Détail des panneaux",kind:"select",options:[["0","Léger"],["1","Équilibré"],["2","Détaillé"]],cost:"TRÈS ÉLEVÉ"},
-  {section:"PERFORMANCES"},
-  {id:"renderScale",label:"Résolution interne",min:.55,max:1.25,step:.05,unit:"×",cost:"TRÈS ÉLEVÉ",help:"Le plus influent sur le nombre de pixels rendus"},
-  {id:"warp",label:"Déformation CRT",kind:"check",cost:"TRÈS ÉLEVÉ",help:"Post-traitement en 32 bandes, désactivé par défaut"},
-  {id:"shadows",label:"Halos des obstacles",kind:"check",cost:"ÉLEVÉ"},
-  {id:"particles",label:"Densité des particules",min:0,max:1,step:.1,unit:"×",cost:"MOYEN"},
-  {id:"invincible",label:"Invincible en TEST",kind:"check",cost:"TEST"}
+  {section:"PILOTAGE & VITESSE"},
+  {"id":"baseSpeed","label":"Vitesse de croisière","min":4,"max":14,"step":0.25,"unit":"u/s","cost":"JEU","help":"La vraie vitesse, même sans turbo"},
+  {"id":"acceleration","label":"Progression de vitesse","min":0.2,"max":3,"step":0.1,"unit":"×","cost":"JEU","help":"Croissance avec le temps et les paliers musicaux"},
+  {"id":"phaseBonus","label":"Bonus après la transition","min":0,"max":3,"step":0.05,"unit":"u/s","cost":"JEU","help":"Uniquement en phase 3","onlyPhase":"p3"},
+  {"id":"speedCap","label":"Plafond de vitesse normale","min":7,"max":20,"step":0.25,"unit":"u/s","cost":"JEU","help":"Avant pads et nitro"},
+  {"id":"speedRiseResponse","label":"Réactivité à l'accélération","min":1,"max":15,"step":0.25,"unit":"×","cost":"JEU","help":"Plus grand = accélération plus immédiate"},
+  {"id":"speedFallResponse","label":"Freinage / retour normal","min":0.2,"max":5,"step":0.1,"unit":"×","cost":"JEU","help":"Plus grand = redescend plus vite après boost"},
+  {"id":"visualSpeed","label":"Défilement du tunnel","min":0.5,"max":4,"step":0.1,"unit":"×","cost":"VISUEL","help":"Sensation de vitesse sans fausser les collisions"},
+  {"id":"steerSpeed","label":"Vitesse de rotation","min":1,"max":6,"step":0.1,"unit":"rad/s","cost":"JEU","help":"Sensibilité de direction clavier/manette"},
+  {"id":"steerResponse","label":"Réponse de la direction","min":1,"max":15,"step":0.25,"unit":"×","cost":"JEU","help":"Rapidité avec laquelle le vaisseau commence à tourner"},
+  {"id":"steerInertia","label":"Glisse après relâchement","min":0.4,"max":10,"step":0.2,"unit":"×","cost":"JEU","help":"Bas = plus d'inertie ; haut = arrêt plus net"},
+  {"id":"steerReverse","label":"Contre-braquage","min":1,"max":18,"step":0.25,"unit":"×","cost":"JEU","help":"Réponse lorsque tu inverses le sens"},
+  {section:"TURBOS & BONUS"},
+  {"id":"boostPadSpeed","label":"Puissance des pads BOOST","min":1,"max":3.5,"step":0.05,"unit":"×","cost":"JEU","help":"Multiplicateur après avoir pris un pad, pas la vitesse normale"},
+  {"id":"boostPadDuration","label":"Durée d'un pad BOOST","min":0.4,"max":7,"step":0.1,"unit":"s","cost":"JEU","help":"Temps pendant lequel le pad accélère"},
+  {"id":"boostPadFrequency","label":"Fréquence des pads","min":0.25,"max":3,"step":0.05,"unit":"×","cost":"JEU","help":"Plus haut = davantage de pads sur la piste"},
+  {"id":"nitroStart","label":"Puissance du nitro manuel","min":1,"max":2.5,"step":0.05,"unit":"×","cost":"JEU","help":"Multiplicateur dès l'appui sur Boost"},
+  {"id":"nitroGrowth","label":"Montée du nitro maintenu","min":0,"max":1.5,"step":0.05,"unit":"×","cost":"JEU","help":"Puissance gagnée en maintenant Boost"},
+  {"id":"nitroBurnSeconds","label":"Autonomie du nitro","min":1,"max":10,"step":0.25,"unit":"s","cost":"JEU","help":"Temps de maintien avant jauge vide"},
+  {"id":"nitroRefillSeconds","label":"Recharge du nitro","min":1,"max":14,"step":0.25,"unit":"s","cost":"JEU","help":"Temps pour recharger la jauge"},
+  {"id":"nitroRegenDelay","label":"Délai avant recharge","min":0,"max":3,"step":0.05,"unit":"s","cost":"JEU","help":"Pause après avoir relâché Boost"},
+  {section:"OBSTACLES & DIFFICULTÉ"},
+  {"id":"obstacleDensity","label":"Densité d'obstacles","min":0.4,"max":2.5,"step":0.05,"unit":"×","cost":"JEU","help":"Plus haut = murs plus rapprochés"},
+  {"id":"obstaclesEnabled","label":"Activer les obstacles","cost":"JEU","help":"Désactive la génération de murs","kind":"check"},
+  {"id":"obstacleComplexity","label":"Variété des patterns","min":0,"max":3,"step":1,"unit":"niveau","cost":"JEU","help":"Débloque plus tôt les obstacles techniques"},
+  {"id":"spinRate","label":"Probabilité de murs tournants","min":0,"max":3,"step":0.1,"unit":"×","cost":"JEU","help":"0 = aucun mur tournant"},
+  {"id":"spinSpeed","label":"Vitesse de rotation des murs","min":0,"max":3,"step":0.1,"unit":"×","cost":"JEU","help":"0 = murs tournants immobiles"},
+  {"id":"gapMinimum","label":"Espace minimum entre murs","min":8,"max":28,"step":0.5,"unit":"u","cost":"JEU","help":"Garde une distance minimale de réaction"},
+  {"id":"gateSize","label":"Longueur des obstacles","min":0.5,"max":2,"step":0.05,"unit":"×","cost":"JEU","help":"Épaisseur des murs dans le sens de la piste"},
+  {"id":"obstacleFade","label":"Distance d'apparition","min":3,"max":16,"step":0.5,"unit":"u","cost":"VISUEL","help":"Détermine combien de temps les obstacles émergent du fond"},
+  {"id":"shieldFrequency","label":"Fréquence des boucliers","min":0.25,"max":3,"step":0.05,"unit":"×","cost":"JEU","help":"Plus haut = plus de chances de récupérer une vie"},
+  {section:"MUSIQUE & LUMIÈRES"},
+  {"id":"punch","label":"Réactivité générale au son","min":0,"max":3,"step":0.1,"unit":"×","cost":"VISUEL","help":"Amplifie les pulsations déclenchées par la musique"},
+  {"id":"light","label":"Intensité générale des néons","min":0.2,"max":2.5,"step":0.05,"unit":"×","cost":"VISUEL","help":"Luminosité des rails et anneaux"},
+  {"id":"musicSpeedInfluence","label":"Influence musicale sur la vitesse","min":0,"max":3,"step":0.1,"unit":"×","cost":"JEU","help":"La musique accélère réellement le vaisseau"},
+  {"id":"beatSensitivity","label":"Sensibilité aux kicks","min":0.4,"max":2.5,"step":0.05,"unit":"×","cost":"VISUEL","help":"Plus haut = plus de kicks détectés"},
+  {"id":"bassLight","label":"Réaction aux basses","min":0,"max":3,"step":0.1,"unit":"×","cost":"VISUEL","help":"Éclaire les panneaux dans les graves"},
+  {"id":"trebleLight","label":"Réaction aux aigus","min":0,"max":3,"step":0.1,"unit":"×","cost":"VISUEL","help":"Éclats et rivets sur les fréquences aiguës"},
+  {section:"TUNNEL & CAMÉRA"},
+  {"id":"lineCount","label":"Nombre de lignes du tunnel","min":8,"max":40,"step":2,"unit":"","cost":"ÉLEVÉ","help":"Longitudinales, sans modifier les collisions"},
+  {"id":"ringGap","label":"Distance entre les anneaux","min":0.3,"max":1.4,"step":0.02,"unit":"u","cost":"ÉLEVÉ","help":"Plus grand = moins d'anneaux, meilleur FPS"},
+  {"id":"panelDetail","label":"Détail des panneaux","cost":"TRÈS ÉLEVÉ","help":"Géométrie des plaques et leurs subdivisions","kind":"select","options":[["0","Léger"],["1","Équilibré"],["2","Détaillé"]]},
+  {"id":"railThickness","label":"Épaisseur des lignes","min":0.4,"max":2.5,"step":0.1,"unit":"×","cost":"VISUEL","help":"Largeur des rails lumineux"},
+  {"id":"ringThickness","label":"Épaisseur des anneaux","min":0.4,"max":2.5,"step":0.1,"unit":"×","cost":"VISUEL","help":"Largeur du phosphore circulaire"},
+  {"id":"panelBrightness","label":"Luminosité des panneaux","min":0.1,"max":2,"step":0.05,"unit":"×","cost":"VISUEL","help":"Sans changer les couleurs choisies"},
+  {"id":"backgroundBrightness","label":"Luminosité du fond","min":0.2,"max":2,"step":0.05,"unit":"×","cost":"VISUEL","help":"N'affecte pas les obstacles"},
+  {"id":"bendIntensity","label":"Force des courbes","min":0,"max":2.5,"step":0.1,"unit":"×","cost":"VISUEL","help":"Courbes horizontales du tunnel"},
+  {"id":"verticalBend","label":"Force des montées / descentes","min":0,"max":2.5,"step":0.1,"unit":"×","cost":"VISUEL","help":"Dénivelés, indépendants des virages"},
+  {"id":"bendFrequency","label":"Fréquence des courbes","min":0.5,"max":2,"step":0.1,"unit":"×","cost":"VISUEL","help":"Plus haut = plus de virages dans les segments"},
+  {section:"PALETTE DE LA PHASE"},
+  {"id":"colorMain","label":"Néon principal","cost":"VISUEL","help":"Anneaux et rails dominants","kind":"color"},
+  {"id":"colorAccent","label":"Néon secondaire","cost":"VISUEL","help":"Rail alterné, éclats et détails","kind":"color"},
+  {"id":"colorPanels","label":"Couleur des panneaux","cost":"VISUEL","help":"Plaques du tunnel, différente des rails","kind":"color"},
+  {"id":"colorBackdrop","label":"Couleur du fond","cost":"VISUEL","help":"Fond et point de fuite, pas la couleur du décor","kind":"color"},
+  {"id":"colorHazard","label":"Couleur des obstacles","cost":"VISUEL","help":"Murs dangereux, toutes les familles","kind":"color"},
+  {"id":"colorPads","label":"Couleur des pads BOOST","cost":"VISUEL","help":"Plateformes d'accélération","kind":"color"},
+  {"id":"colorShields","label":"Couleur des boucliers","cost":"VISUEL","help":"Bonus qui redonnent une vie","kind":"color"},
+  {section:"PERFORMANCES & TEST"},
+  {"id":"displayScale","label":"Échelle des KM/H affichés","min":10,"max":55,"step":1,"unit":"×","cost":"AFFICHAGE","help":"Les KM/H sont une mesure fictive de style arcade","global":true},
+  {"id":"renderScale","label":"Résolution interne","min":0.5,"max":1.3,"step":0.05,"unit":"×","cost":"TRÈS ÉLEVÉ","help":"Plus basse = moins de pixels à calculer","global":true},
+  {"id":"warp","label":"Déformation CRT","cost":"TRÈS ÉLEVÉ","help":"Post-traitement en 32 bandes","kind":"check","global":true},
+  {"id":"shadows","label":"Halos des obstacles","cost":"ÉLEVÉ","help":"Désactiver pour réduire le travail de Canvas","kind":"check","global":true},
+  {"id":"particles","label":"Quantité de particules","min":0,"max":1,"step":0.1,"unit":"×","cost":"MOYEN","help":"Réduire les effets secondaires","global":true},
+  {"id":"frameLimit","label":"Limiteur d'affichage","cost":"MOYEN","help":"Limite les images dessinées, sans ralentir la simulation","kind":"select","options":[["0","Libre / 60 Hz"],["30","30 FPS"],["45","45 FPS"],["60","60 FPS"]],"global":true},
+  {"id":"invincible","label":"Invincible en TEST","cost":"TEST","help":"Collisions non fatales en mode TEST","kind":"check","global":true},
  ];
  function loadLab(){
   let obj={};try{obj=JSON.parse(load("lab.v1","{}"))||{};}catch(_){}
@@ -203,11 +297,7 @@ function mount(root){
   {id:"p2",title:"PHASE 2",subtitle:"DROP · 68–217 s",seconds:MUSIC_DROP_AT+2,stage:2},
   {id:"p3",title:"PHASE 3",subtitle:"TUNNEL BLEU · APRÈS 217 s",seconds:MUSIC_TAIL_AT,stage:5}
  ];
- const PHASE_FIELDS=[
-  "baseSpeed","acceleration","phaseBonus","boostPadSpeed","visualSpeed","obstacleDensity",
-  "punch","light","colorPink","colorCyan","colorBlue",
-  "lineCount","ringGap","panelDetail"
- ];
+ const PHASE_FIELDS=LAB_META.filter(s=>s.id&&!s.global).map(s=>s.id);
  const PHASE_FIELD_SET=new Set(PHASE_FIELDS);
  const PHASE_KEY="lab.phases.v1";
  function loadPhaseProfiles(){
@@ -219,8 +309,16 @@ function mount(root){
    output[phase.id]={};
    for(const key of PHASE_FIELDS){
     const spec=LAB_META.find(s=>s.id===key);
-    const prev=raw[key];
-    let value=lab[key];
+    let prev=raw[key];
+    // Migrate older colorPink/colorCyan/colorBlue settings without dropping
+    // any previously saved P1, P2 or P3 palette.
+    if(prev===undefined&&key==="colorMain")
+     prev=phase.id==="p3"?raw.colorBlue:raw.colorPink;
+    if(prev===undefined&&key==="colorAccent")prev=raw.colorCyan;
+    const phaseColors=phase.id==="p3"?
+     {colorMain:"#6099ff",colorPanels:"#1d598c",colorBackdrop:"#030e23",colorHazard:"#145e87"}:
+     {colorMain:"#ff3ed1",colorPanels:"#6b1e71",colorBackdrop:"#0b0619",colorHazard:"#ef3a5c"};
+    let value=Object.prototype.hasOwnProperty.call(phaseColors,key)?phaseColors[key]:lab[key];
     if(spec&&prev!==undefined){
      if(spec.kind==="color"&&typeof prev==="string"&&/^#[0-9a-f]{6}$/i.test(prev))value=prev;
      else if(spec.kind==="select"&&Number.isFinite(Number(prev)))value=clamp(Math.round(Number(prev)),0,2);
@@ -248,7 +346,7 @@ function mount(root){
    if(!PHASE_FIELD_SET.has(k))common[k]=lab[k];
   }
   return JSON.stringify({
-   project:"ZebraOS / Echo Racer",version:2,
+   project:"ZebraOS / Echo Racer",version:3,
    chapters:PHASES.map(p=>({id:p.id,title:p.title,subtitle:p.subtitle,startSeconds:p.seconds})),
    phases:phaseProfiles,common
   },null,2);
