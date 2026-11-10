@@ -35,16 +35,24 @@ jobs:
             transitionAndSpeed:js.includes('ENCORE_TRANSITION_SECONDS=5')
               &&js.includes('function beginEncore()')
               &&js.includes('const base=clamp(lab.baseSpeed')
-              &&js.includes('const multiplier=padBoostTime>0?lab.boostPadSpeed'),
+              &&js.includes('lab.boostPadsEnabled&&padBoostTime>0?lab.boostPadSpeed'),
             hasTuning:js.includes('const LAB_DEFAULTS')&&js.includes('er-lab-window')&&
               js.includes('labVisualTravel')&&css.includes('er-lab-impact'),
-            boostPadTuning:js.includes('id:"boostPadSpeed"')
-              &&js.includes('padBoostTime>0?lab.boostPadSpeed')
-              &&js.includes('"phaseBonus","boostPadSpeed","visualSpeed"'),
-            adjustableBlue:js.includes('function labTint(hex,intensity')
-              &&js.includes('gradient.addColorStop(0,cold?labTint(lab.colorBlue')
-              &&js.includes('const fill=cold?')
-              &&js.includes('labTint(lab.colorBlue,.63'),
+            boostPadTuning:js.includes('"id":"boostPadSpeed"')
+              &&js.includes('lab.boostPadsEnabled&&padBoostTime>0?lab.boostPadSpeed')
+              &&js.includes('"id":"boostPadsEnabled"')
+              &&js.includes('if(!lab.boostPadsEnabled)'),
+            themeArchitecture:js.includes('function labTint(hex,intensity')
+              &&js.includes('lab.colorBackdrop')&&js.includes('lab.colorPanels')
+              &&js.includes('lab.colorMain')&&js.includes('lab.colorHazard'),
+            editorCategories:js.includes('LAB_DESCRIPTIONS')
+              &&js.includes('er-lab-categories')
+              &&js.includes('er-lab-section-group')
+              &&css.includes('.er-lab-category.selected'),
+            secondSong:fs.existsSync('assets/games/echoraccersongpt2.mp3')
+              &&fs.statSync('assets/games/echoraccersongpt2.mp3').size>100000
+              &&js.includes('musicUrlPhase3="/assets/games/echoraccersongpt2.mp3')
+              &&js.includes('startMusicAtPhase("p3",0)'),
             phaseProfiles:js.includes('const PHASES=')&&js.includes('phaseProfiles=loadPhaseProfiles()')
               &&app.includes('window.ZebraEchoLabWindow=')
               &&css.includes('.er-lab-window.er-lab-native'),
@@ -215,16 +223,30 @@ jobs:
                  return samples;
                };
                const originalTunnel=sampleTunnel();
-               const bluePicker=lab.querySelector('[data-lab-id="colorBlue"]');
-               bluePicker.value='#ffc020';
-               bluePicker.dispatchEvent(new Event('input',{bubbles:true}));
+               const mainPicker=lab.querySelector('[data-lab-id="colorMain"]');
+               lab.querySelector('[data-category="PALETTE DE LA PHASE"]').click();
+               mainPicker.value='#ffc020';
+               mainPicker.dispatchEvent(new Event('input',{bubbles:true}));
                const changedTunnel=sampleTunnel();
                const pixelDelta=changedTunnel.reduce((sum,n,i)=>
                  sum+Math.abs(n-originalTunnel[i]),0);
-               result.phase3ThemeEditable=debug.snapshot().phaseProfiles.p3.colorBlue==='#ffc020'
+               result.phase3ThemeEditable=debug.snapshot().phaseProfiles.p3.colorMain==='#ffc020'
                  &&pixelDelta>100;
-               result.otherPhasesKeepColors=debug.snapshot().phaseProfiles.p1.colorBlue!=='#ffc020'
-                 &&debug.snapshot().phaseProfiles.p2.colorBlue!=='#ffc020';
+               result.otherPhasesKeepColors=debug.snapshot().phaseProfiles.p1.colorMain!=='#ffc020'
+                 &&debug.snapshot().phaseProfiles.p2.colorMain!=='#ffc020';
+               // A pad can be removed while flying without affecting manual nitro.
+               lab.querySelector('[data-category="TURBOS & BONUS"]').click();
+               debug.injectPickup('pad',[0,1,2]);
+               const padToggle=lab.querySelector('[data-lab-id="boostPadsEnabled"]');
+               padToggle.checked=false;
+               padToggle.dispatchEvent(new Event('change',{bubbles:true}));
+               result.padToggleImmediate=debug.snapshot().phaseProfiles.p3.boostPadsEnabled===false
+                 &&debug.snapshot().lab.boostPadsEnabled===false
+                 &&debug.snapshot().pads.length===0
+                 &&debug.snapshot().padBoostTime===0;
+               for(let i=0;i<15;i++)debug.advance(.04);
+               result.noPadsWhileDisabled=debug.snapshot().pads.length===0
+                 &&debug.snapshot().phaseProfiles.p2.boostPadsEnabled===true;
                const profile=lab.querySelector('.er-lab-presets button');
                profile.click();
                result.performancePreset=debug.snapshot().lab.renderScale===.65&&
@@ -233,13 +255,15 @@ jobs:
                result.resetDefaults=debug.snapshot().phaseProfiles.p3.baseSpeed===6.15;
                lab.querySelector('.er-lab-export-button').click();
                const exported=JSON.parse(lab.querySelector('.er-lab-export-text').value);
-               result.phaseExport=exported.version===2&&
+               result.phaseExport=exported.version===3&&
                  exported.phases.p1.baseSpeed===8&&
                  exported.phases.p2.baseSpeed===9&&
                  exported.phases.p3.baseSpeed===6.15&&
                  exported.phases.p1.boostPadSpeed===1.25&&
                  exported.phases.p2.boostPadSpeed===2.7&&
                  exported.phases.p3.boostPadSpeed===1.85&&
+                 exported.phases.p3.boostPadsEnabled===true&&
+                 exported.phases.p1.boostPadsEnabled===true&&
                  typeof exported.common.renderScale==='number';
                result.liveTuning=true;
                lab.querySelector('.er-lab-close').click();
@@ -247,7 +271,9 @@ jobs:
              }else{
                for(const key of ['detachedWorkshop','nativeWorkshop','phaseIndependent','padSpeedP1',
                  'padSpeedP2Active','padSpeedP3Active','previewP1','previewP2',
-                 'previewP3','performancePreset','resetDefaults','phaseExport','closeDetached','liveTuning']){
+                 'previewP3','phase3ThemeEditable','otherPhasesKeepColors',
+                 'padToggleImmediate','noPadsWhileDisabled','performancePreset',
+                 'resetDefaults','phaseExport','closeDetached','liveTuning']){
                  result[key]=true;
                }
              }
