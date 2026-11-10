@@ -1560,7 +1560,7 @@ function mount(root){
   const baseline=audioFx.slowBass;
   audioFx.slowBass+=(bass-audioFx.slowBass)*(1-Math.exp(-dt*1.6));
   audioFx.beatCooldown=Math.max(0,audioFx.beatCooldown-dt);
-  if(bass>.25&&bass-baseline>.085&&audioFx.beatCooldown<=0){
+  if(bass>.25/lab.beatSensitivity&&bass-baseline>.085/lab.beatSensitivity&&audioFx.beatCooldown<=0){
    audioFx.kick=1;audioFx.beatCooldown=.17;
   }else audioFx.kick=Math.max(0,audioFx.kick-dt*3.2);
   audioFx.energy=clamp(audioFx.bass*.55+audioFx.mid*.33+
@@ -1829,22 +1829,22 @@ function mount(root){
   nitroHeld=false;
   if(!nitroActive)return;
   nitroActive=false;nitroBurnTime=0;
-  if(selectedLevel.id!=="free"&&nitroFuel<1)nitroRegenWait=NITRO_REGEN_WAIT;
+  if(selectedLevel.id!=="free"&&nitroFuel<1)nitroRegenWait=lab.nitroRegenDelay;
   // The fade-out is finished on animation frames, not at key release.
   renderHud();
  }
  function updateNitro(dt){
   if(mode!=="running")return;
-  if(selectedLevel.id==="free")freeChargeVisual=clamp(freeChargeVisual+dt/NITRO_REFILL_SECONDS,0,1);
+  if(selectedLevel.id==="free")freeChargeVisual=clamp(freeChargeVisual+dt/lab.nitroRefillSeconds,0,1);
   if(nitroActive)nitroBurnTime+=dt;
   if(nitroActive&&selectedLevel.id!=="free"){
-   nitroFuel=clamp(nitroFuel-dt/NITRO_BURN_SECONDS,0,1);
+   nitroFuel=clamp(nitroFuel-dt/lab.nitroBurnSeconds,0,1);
    if(nitroFuel<=0){
-    nitroActive=false;nitroBurnTime=0;nitroRegenWait=NITRO_REGEN_WAIT;
+    nitroActive=false;nitroBurnTime=0;nitroRegenWait=lab.nitroRegenDelay;
    }
   }else if(!nitroHeld&&selectedLevel.id!=="free"&&nitroFuel<1){
    nitroRegenWait=Math.max(0,nitroRegenWait-dt);
-   if(nitroRegenWait<=0)nitroFuel=clamp(nitroFuel+dt/NITRO_REFILL_SECONDS,0,1);
+   if(nitroRegenWait<=0)nitroFuel=clamp(nitroFuel+dt/lab.nitroRefillSeconds,0,1);
   }
  }
  function createWave(){
@@ -1854,18 +1854,19 @@ function mount(root){
    [0,1,2,3,4,5,6,7,9,10,11,12,13,14,16,17,18],
    Array.from({length:PATTERN_COUNT},(_,i)=>i)
   ];
-  const choices=tiers[encoreMode==="blue"?3:directorStage<2?0:directorStage<4?1:directorStage<6?2:3];
+  const level=encoreMode==="blue"?3:directorStage<2?0:directorStage<4?1:directorStage<6?2:3;
+  const choices=tiers[clamp(level+lab.obstacleComplexity,0,3)];
   let kind=choices[Math.floor(rand(0,choices.length))];
   if(kind===nextWave&&choices.length>1)
    kind=choices[(choices.indexOf(kind)+1+Math.floor(rand(0,choices.length-1)))%choices.length];
   nextWave=kind;
   const rotation=Math.floor(rand(0,SECTORS))*STEP;
-  const spinChance=directorStage<2?.035:directorStage<4?.13:encoreMode==="blue"?.32:.18+Math.min(.20,directorStage*.025);
+  const spinChance=(directorStage<2?.035:directorStage<4?.13:encoreMode==="blue"?.32:.18+Math.min(.20,directorStage*.025))*lab.spinRate;
   const spins=gateCount>3&&Math.random()<spinChance;
-  const spin=spins?(Math.random()<.5?-1:1)*rand(.16,.42):0;
+  const spin=spins?(Math.random()<.5?-1:1)*rand(.16,.42)*lab.spinSpeed:0;
   const twist=rand(-.14,.14);
   return {kind,sectors:pattern(kind),z:SPAWN_Z,
-   length:kind===2||kind===8?rand(.6,.9):rand(.85,1.5),
+   length:(kind===2||kind===8?rand(.6,.9):rand(.85,1.5))*lab.gateSize,
    rotation,spin,twist,cleared:false,credited:false};
  }
  function nextGateGap(){
@@ -1876,7 +1877,7 @@ function mount(root){
     cycle===6?rand(22.0,26.0):rand(GAP_MIN,GAP_MAX);
   if(hard)gap+=2.8;
   const density=clamp(1-directorStage*.055,.62,1);
-  return Math.max(11.5,gap*density/lab.obstacleDensity)*selectedLevel.gap;
+  return Math.max(lab.gapMinimum,gap*density/lab.obstacleDensity)*selectedLevel.gap;
  }
  function smoothEncore(x){
   x=clamp(x,0,1);
@@ -1980,9 +1981,9 @@ function mount(root){
   const digitalSteer=(keys.has("left")?1:0)-(keys.has("right")?1:0);
   const analogSteer=Math.abs(steerValue)<.065?0:-Math.sign(steerValue)*Math.pow(Math.abs(steerValue),1.2);
   const steer=digitalSteer||analogSteer;
-  const targetTurn=steer*3.50;
+  const targetTurn=steer*lab.steerSpeed;
   // Accelerate decisively, coast when released, brake quickly by counter-steer.
-  const turnRate=steer?(turnVelocity*steer<0?10.2:7.1):3.5;
+  const turnRate=steer?(turnVelocity*steer<0?lab.steerReverse:lab.steerResponse):lab.steerInertia;
   turnVelocity+=(targetTurn-turnVelocity)*(1-Math.exp(-dt*turnRate));
   if(!steer&&Math.abs(turnVelocity)<.01)turnVelocity=0;
   if(dragPointer===null)angle=(angle+turnVelocity*dt+TAU)%TAU;
@@ -1995,16 +1996,16 @@ function mount(root){
   const growth=Math.min(1.45,Math.log1p(Math.max(0,score)/3800)*.36)*lab.acceleration;
   const stageThrust=Math.min(2.6,directorStage*.44)*lab.acceleration;
   const survivalThrust=Math.min(2.05,elapsed/105)*lab.acceleration;
-  const musicThrust=(audioFx.energy*.35+audioFx.kick*.09)*lab.punch;
+  const musicThrust=(audioFx.energy*.35+audioFx.kick*.09)*lab.punch*lab.musicSpeedInfluence;
   const encoreThrust=encoreMode==="blue"?lab.phaseBonus:0;
   const base=clamp(lab.baseSpeed+stageThrust+survivalThrust+growth+
    throttle*.65+musicThrust+musicDropSurge*.44+encoreThrust,
-   5.4,12.5)*selectedLevel.speed;
+   5.4,lab.speedCap)*selectedLevel.speed;
   // Turbo is still rewarding, but the basic flight stays exciting.
-  const nitroThrust=1.43+.30*(1-Math.exp(-nitroBurnTime*.72));
+  const nitroThrust=lab.nitroStart+lab.nitroGrowth*(1-Math.exp(-nitroBurnTime*.72));
   const multiplier=padBoostTime>0?lab.boostPadSpeed:nitroActive?nitroThrust:1;
   const targetSpeed=base*multiplier;
-  const response=targetSpeed>=currentSpeed?6.4:.75;
+  const response=targetSpeed>=currentSpeed?lab.speedRiseResponse:lab.speedFallResponse;
   currentSpeed+=(targetSpeed-currentSpeed)*(1-Math.exp(-dt*response));
   const speed=currentSpeed;
   // Score multiplier follows ACTUAL travel speed (including pad/manual boost).
@@ -2036,7 +2037,7 @@ function mount(root){
    const spawnAt=nextGateAt;
    const wave=createWave();
    wave.z=SPAWN_Z-(travel-spawnAt);
-   waves.push(wave);
+   if(lab.obstaclesEnabled)waves.push(wave);
    lastGateAt=spawnAt;
    nextGateAt+=nextGateGap();
   }
@@ -2050,13 +2051,13 @@ function mount(root){
    const pad={z:SPAWN_Z-(travel-nextPadAt),sectors:[center,(center+1)%SECTORS,(center+2)%SECTORS],
      length:1.1,cleared:false,credited:false};
    pads.push(pad);padCount++;
-   nextPadAt+=rand(PAD_GAP_MIN,PAD_GAP_MAX);
+   nextPadAt+=rand(PAD_GAP_MIN,PAD_GAP_MAX)/lab.boostPadFrequency;
   }
   // Shield frequency depends on remaining lives: 3 = none; 2 = scarce;
   // 1 = existing frequency. The schedule never builds a spawn backlog.
   while(travel>=nextShieldAt){
    if(lives===MAX_LIVES){
-    nextShieldAt+=rand(SHIELD_RARE_MIN,SHIELD_RARE_MAX);continue;
+    nextShieldAt+=rand(SHIELD_RARE_MIN,SHIELD_RARE_MAX)/lab.shieldFrequency;continue;
    }
    if(nextShieldAt-lastGateAt<7||nextGateAt-nextShieldAt<7){
     nextShieldAt+=7.5;continue;
@@ -2067,8 +2068,8 @@ function mount(root){
    shields.push({z:SPAWN_Z-(travel-nextShieldAt),
     sectors:[center,(center+1)%SECTORS],credited:false,shimmer:rand(0,TAU)});
    shieldCount++;
-   nextShieldAt+=lives===1?rand(SHIELD_GAP_MIN,SHIELD_GAP_MAX):
-    rand(SHIELD_RARE_MIN,SHIELD_RARE_MAX);
+   nextShieldAt+=(lives===1?rand(SHIELD_GAP_MIN,SHIELD_GAP_MAX):
+    rand(SHIELD_RARE_MIN,SHIELD_RARE_MAX))/lab.shieldFrequency;
   }
   // A pickup can be collected across a short depth window, including
   // just after passing its visible edge. Angular forgiveness is pickup-only.
@@ -2093,7 +2094,7 @@ function mount(root){
    if(!pad.credited&&pickupDepth(oldZ,pad.z,pad.length)
      &&pickupContact(angle,pad,PAD_SIDE)){
     pad.credited=true;
-    padBoostTime=Math.max(padBoostTime,2.8);
+    padBoostTime=Math.max(padBoostTime,lab.boostPadDuration);
     shipBoostFade=1;turboLight=1;
     score+=275*scoreMultiplier;
     pulseGlow=.68;message="TURBO PAD +275";messageLife=1.2;
@@ -2167,7 +2168,7 @@ function mount(root){
  function trackProfile(cell){
   if(bendProfiles.has(cell))return bendProfiles.get(cell);
   const difficulty=trackDifficulty(cell),events=[];
-  const count=difficulty.count;
+  const count=clamp(Math.round(difficulty.count*lab.bendFrequency),1,6);
   for(let i=0;i<count;i++){
    // One smooth pulse per slot: wide gaps early, tightly packed curves late.
    const slot=TRACK_STRETCH/count;
@@ -2203,7 +2204,7 @@ function mount(root){
    // Quintic ease on both ends: camera has no kink entering or leaving.
    const u=t<.5?t*2:(1-t)*2;
    const smooth=u*u*u*(u*(u*6-15)+10);
-   x+=e.ax*smooth;y+=e.ay*smooth;
+   x+=e.ax*smooth*lab.bendIntensity;y+=e.ay*smooth*lab.verticalBend;
   }
   return{x,y};
  }
@@ -2225,7 +2226,7 @@ function mount(root){
     y:g.cy+bend.y+(Math.sin(theta)-g.offset)*r,r};
  }
  function revealOpacity(z){
-  const t=clamp((SPAWN_Z-z)/APPEAR_FADE_DEPTH,0,1);
+  const t=clamp((SPAWN_Z-z)/lab.obstacleFade,0,1);
   return t*t*(3-2*t);
  }
  function screenAngle(worldAngle){return worldAngle-angle+PI/2;}
@@ -2255,22 +2256,22 @@ function mount(root){
   const beat=clamp((audioFx.kick*.65+audioFx.bass*.35)*lab.punch,0,1);
   const high=clamp(audioFx.high*lab.punch,0,1);
   c.beginPath();c.arc(g.cx+shift.x,g.cy+shift.y-g.offset*r,r,0,TAU);
-  c.strokeStyle=cyan?labHex(lab.colorCyan,clamp((.32+.54*near+high*.12)*lab.light,0,.97)):
-   labHex(cold?lab.colorBlue:lab.colorPink,clamp((.25+.53*near+beat*.18)*lab.light,0,.97));
-  c.lineWidth=(cyan?1.7:1.2)+near*(cyan?1.6:1.1)+beat*1.1;
-  c.shadowColor=cyan?lab.colorCyan:cold?lab.colorBlue:lab.colorPink;
+  c.strokeStyle=cyan?labHex(lab.colorAccent,clamp((.32+.54*near+high*.12)*lab.light,0,.97)):
+   labHex(cold?lab.colorMain:lab.colorMain,clamp((.25+.53*near+beat*.18)*lab.light,0,.97));
+  c.lineWidth=((cyan?1.7:1.2)+near*(cyan?1.6:1.1)+beat*1.1)*lab.ringThickness;
+  c.shadowColor=cyan?lab.colorAccent:cold?lab.colorMain:lab.colorMain;
   c.shadowBlur=lab.shadows?(cyan?2:1):0;c.stroke();c.shadowBlur=0;
  }
  function drawTunnel(now){
   const g=wallGeom(),cold=blueTunnel();
   bendCache.clear();
-  c.fillStyle=cold?labTint(lab.colorBlue,.07):"#05020a";c.fillRect(0,0,W,H);
+  c.fillStyle=labTint(lab.colorBackdrop,.37*lab.backgroundBrightness);c.fillRect(0,0,W,H);
   const vanishing=tunnelBend(RENDER_FAR_Z);
   const gradient=c.createRadialGradient(g.cx+vanishing.x,g.cy+vanishing.y,3,g.cx,g.cy,g.R*1.35);
-  gradient.addColorStop(0,cold?labTint(lab.colorBlue,.10):"#0b0619");
-  gradient.addColorStop(.4,cold?labTint(lab.colorBlue,.16):"#0e071b");
-  gradient.addColorStop(.81,cold?labTint(lab.colorBlue,.27):"#1b0a24");
-  gradient.addColorStop(1,cold?labTint(lab.colorBlue,.08):"#05020b");
+  gradient.addColorStop(0,labTint(lab.colorBackdrop,.55*lab.backgroundBrightness));
+  gradient.addColorStop(.4,labTint(lab.colorBackdrop,.76*lab.backgroundBrightness));
+  gradient.addColorStop(.81,labTint(lab.colorBackdrop,1.35*lab.backgroundBrightness));
+  gradient.addColorStop(1,labTint(lab.colorBackdrop,.48*lab.backgroundBrightness));
   c.fillStyle=gradient;c.fillRect(0,0,W,H);
   c.save();c.lineCap="round";c.lineJoin="round";
   // An indigo panel skin follows the camera's angular roll. The panels move
@@ -2281,31 +2282,27 @@ function mount(root){
    const z=row*panelLength-panelOffset;
    if(z<0||z>RENDER_FAR_Z)continue;
    const fade=clamp(1-z/RENDER_FAR_Z,0,1);
-   const bassLight=clamp((audioFx.bass*.13+audioFx.kick*.1)*lab.punch*lab.light,0,.35);
-   const highLight=clamp(audioFx.high*.48*lab.punch*lab.light,0,.75);
+   const bassLight=clamp((audioFx.bass*.13+audioFx.kick*.1)*lab.punch*lab.light*lab.bassLight,0,.35);
+   const highLight=clamp(audioFx.high*.48*lab.punch*lab.light*lab.trebleLight,0,.75);
    // LOD: distant plates span two sectors. Keep close-up seams at full
    // resolution while cutting geometry cost in the extended distance.
    const sectorStep=lab.panelDetail===0?4:lab.panelDetail===1?(z>15?4:2):(z>15?2:1);
    for(let sector=0;sector<SECTORS;sector+=sectorStep){
     const a=screenAngle(sector*STEP),b=a+sectorStep*STEP;
-    const fill=cold?
-      (sector+row)%4===0?labTint(lab.colorBlue,.63,.37+bassLight):
-       (sector+row)%2?labTint(lab.colorBlue,.39,.48+bassLight*.55):
-       labTint(lab.colorBlue,.53,.43+bassLight*.8):
-      (sector+row)%4===0?"rgba(107,30,113,"+(.37+bassLight)+")":
-       (sector+row)%2?"rgba(44,16,62,"+(.48+bassLight*.55)+")":
-       "rgba(67,18,79,"+(.43+bassLight*.8)+")";
+    const shade=(sector+row)%4===0?.85:(sector+row)%2?.47:.65;
+    const alpha=(sector+row)%4===0?.37+bassLight:(sector+row)%2?.48+bassLight*.55:.43+bassLight*.8;
+    const fill=labTint(lab.colorPanels,shade*lab.panelBrightness,clamp(alpha,0,1));
     wallPatch(a+.006,b-.006,z,z+panelLength,fill,
-      row<5&&sector%4===0?(cold?labHex(lab.colorBlue,.13):"rgba(180,76,195,.12)"):null,row<5?2:1);
+      row<5&&sector%4===0?labHex(lab.colorPanels,.13*lab.panelBrightness):null,row<5?2:1);
     // Treble-driven cyan bands are painted onto the tunnel itself.
     if(row%3===1&&sector%4===2&&z<RENDER_FAR_Z*.75){
      wallPatch(a+.09,b-.09,z+.19,z+.25,
-      labHex(lab.colorCyan,clamp(.12+highLight,0,1)),null,1);
+      labHex(lab.colorAccent,clamp(.12+highLight,0,1)),null,1);
     }
     // Tiny luminous rivets flash toward the camera along with the wall.
     if(row%3===0&&sector%4===1&&z<RENDER_FAR_Z*.75){
      const p=wallPoint((a+b)*.5,z+.28);
-     c.fillStyle=labHex(cold?lab.colorBlue:lab.colorPink,clamp(.24+.5*fade+highLight*.65,0,.9));
+     c.fillStyle=labHex(cold?lab.colorMain:lab.colorMain,clamp(.24+.5*fade+highLight*.65,0,.9));
      c.beginPath();c.arc(p.x,p.y,Math.max(.8,2.5*fade),0,TAU);c.fill();
     }
    }
@@ -2321,12 +2318,12 @@ function mount(root){
     const z=(RENDER_FAR_Z+.35)*step/24,pt=wallPoint(a,z);
     c.lineTo(pt.x,pt.y);
    }
-   c.strokeStyle=labHex(cyan?lab.colorCyan:cold?lab.colorBlue:lab.colorPink,.12*lab.light);
-   c.lineWidth=cyan?9:5;c.shadowBlur=0;c.stroke();
-   c.strokeStyle=labHex(cyan?lab.colorCyan:cold?lab.colorBlue:lab.colorPink,
+   c.strokeStyle=labHex(cyan?lab.colorAccent:cold?lab.colorMain:lab.colorMain,.12*lab.light);
+   c.lineWidth=(cyan?9:5)*lab.railThickness;c.shadowBlur=0;c.stroke();
+   c.strokeStyle=labHex(cyan?lab.colorAccent:cold?lab.colorMain:lab.colorMain,
     clamp((cyan?.72+audioFx.high*.28*lab.punch:.43+audioFx.mid*.36*lab.punch)*lab.light,0,1));
-   c.lineWidth=(cyan?2.4:1.4)+audioFx.high*(cyan?.8:.5)+audioFx.kick*.35;
-   c.shadowColor=cyan?lab.colorCyan:cold?lab.colorBlue:lab.colorPink;
+   c.lineWidth=((cyan?2.4:1.4)+audioFx.high*(cyan?.8:.5)+audioFx.kick*.35)*lab.railThickness;
+   c.shadowColor=cyan?lab.colorAccent:cold?lab.colorMain:lab.colorMain;
    c.shadowBlur=lab.shadows?(cyan?2:1):0;
    c.stroke();c.shadowBlur=0;
   }
@@ -2336,14 +2333,14 @@ function mount(root){
   for(let i=ringCount;i>=0;i--)drawRing(i*spacing-phase,i);
   c.restore();
   if(turboLight>.005){
-   c.fillStyle=cold?labHex(lab.colorBlue,turboLight*.092):"rgba(187,117,238,"+(turboLight*.092)+")";
+   c.fillStyle=cold?labHex(lab.colorMain,turboLight*.092):"rgba(187,117,238,"+(turboLight*.092)+")";
    c.fillRect(0,0,W,H);
   }
   // Deep indigo pupil, feathered rather than a flat black pasted circle.
   const core=c.createRadialGradient(g.cx+vanishing.x,g.cy+vanishing.y,0,
    g.cx+vanishing.x,g.cy+vanishing.y,g.R*.17);
-  core.addColorStop(0,cold?labTint(lab.colorBlue,.035,.9):"rgba(8,1,17,.9)");
-  core.addColorStop(1,cold?labTint(lab.colorBlue,.035,0):"rgba(8,1,17,0)");
+  core.addColorStop(0,labTint(lab.colorBackdrop,.12,.9));
+  core.addColorStop(1,labTint(lab.colorBackdrop,.12,0));
   c.fillStyle=core;
   c.fillRect(g.cx+vanishing.x-g.R*.2,g.cy+vanishing.y-g.R*.2,g.R*.4,g.R*.4);
   // Physically small, music-driven phosphor strips instead of a blurred
@@ -2357,8 +2354,8 @@ function mount(root){
     if(amount<.13)continue;
     wallPatch(a,a+STEP*.67,z,z+.10+amount*.30,
      i%2===0?
-      labHex(cold?lab.colorBlue:lab.colorPink,.17+amount*.58):
-      labHex(lab.colorCyan,.17+amount*.55),null,1);
+      labHex(cold?lab.colorMain:lab.colorMain,.17+amount*.58):
+      labHex(lab.colorAccent,.17+amount*.55),null,1);
    }
   }
  }
@@ -2376,17 +2373,15 @@ function mount(root){
    // Distinct material families help players identify gate silhouettes.
    const skin=w.kind%4;
    const newLaser=w.kind>=20;
-   const skinFill=newLaser?labTint(lab.colorBlue,.67):skin===0?"#ef3a5c":skin===1?"#d9267b":
-     skin===2?"#eb493d":"#a52ed2";
-   const skinEdge=newLaser?lab.colorCyan:skin===0?"#ffb19c":skin===1?"#ffc1de":
-     skin===2?"#ffe4aa":"#eb96ff";
-   c.shadowColor=newLaser?lab.colorBlue:skin===3?"#db4aff":"#ff4e82";c.shadowBlur=lab.shadows?(newLaser?5:2):0;
+   const skinFill=labTint(lab.colorHazard,newLaser?.65:skin===3?.74:skin===1?.85:1);
+   const skinEdge=newLaser?lab.colorAccent:lab.colorHazard;
+   c.shadowColor=lab.colorHazard;c.shadowBlur=lab.shadows?(newLaser?5:2):0;
    wallPatch(a,b,z,far,skinFill,skinEdge,newLaser?3:6);
    if(newLaser){
     // Light cross-braces mark the late-game barriers without altering hitboxes.
     const aa=wallPoint(a+.03,z+.10),bb=wallPoint(b-.03,far-.10);
     c.beginPath();c.moveTo(aa.x,aa.y);c.lineTo(bb.x,bb.y);
-    c.strokeStyle=lab.colorCyan;c.lineWidth=1.5;c.stroke();
+    c.strokeStyle=lab.colorAccent;c.lineWidth=1.5;c.stroke();
    }
    c.shadowBlur=0;
    // Pale amber warning edge separates dangerous gates from pink wall trim.
@@ -2405,8 +2400,8 @@ function mount(root){
   const pos=wallPoint(a,Math.max(0,pickup.z));
   const size=clamp(pos.r*.22,3.6,47),glow=.78+.22*Math.sin(elapsed*7+pickup.shimmer);
   c.save();c.globalAlpha*=alpha;c.translate(pos.x,pos.y);
-  c.shadowColor="#66ffe2";c.shadowBlur=9*glow;
-  c.fillStyle="rgba(6,51,58,.74)";c.strokeStyle="#9fffe4";
+  c.shadowColor=lab.colorShields;c.shadowBlur=(lab.shadows?9:3)*glow;
+  c.fillStyle=labTint(lab.colorShields,.24,.74);c.strokeStyle=lab.colorShields;
   c.lineWidth=Math.max(.9,size*.095);
   c.beginPath();c.moveTo(0,-size);
   c.lineTo(size*.77,-size*.66);c.lineTo(size*.65,size*.34);
@@ -2428,17 +2423,17 @@ function mount(root){
   const pulse=.74+.26*Math.sin(elapsed*13+near);
   for(const id of pad.sectors){
    const a=screenAngle(id*STEP)+.016,b=screenAngle((id+1)*STEP)-.016;
-   c.shadowColor="#3af6ff";c.shadowBlur=3;
+   c.shadowColor=lab.colorPads;c.shadowBlur=lab.shadows?3:0;
    wallPatch(a,b,near,far,
-     "rgba(20,184,221,"+clamp(.66+pulse*.28,0,1)+")",
-     "#dbfcff",5);
+     labHex(lab.colorPads,clamp(.66+pulse*.28,0,1)),
+     lab.colorPads,5);
    const mid=(a+b)*.5,span=(b-a)*.25;
    for(let k=0;k<2;k++){
     const z=near+.18+k*.39;
     const p0=wallPoint(mid-span,z),pc=wallPoint(mid,z+.24),
           p1=wallPoint(mid+span,z);
     c.beginPath();c.moveTo(p0.x,p0.y);c.lineTo(pc.x,pc.y);c.lineTo(p1.x,p1.y);
-    c.lineWidth=2.8;c.strokeStyle="#fff9a9";
+    c.lineWidth=2.8;c.strokeStyle=lab.colorPads;
     c.shadowBlur=0;c.stroke();
    }
   }
@@ -2521,7 +2516,7 @@ function mount(root){
   bendCtx.setTransform(1,0,0,1,0,0);
   bendCtx.drawImage(canvas,0,0);
   c.save();c.setTransform(1,0,0,1,0,0);
-  c.fillStyle=blueTunnel()?labTint(lab.colorBlue,.07):"#05020a";c.fillRect(0,0,width,height);
+  c.fillStyle=blueTunnel()?labTint(lab.colorMain,.07):"#05020a";c.fillRect(0,0,width,height);
   const bands=32,phase=labVisualTravel()*.075;
   for(let i=0;i<bands;i++){
    const y0=Math.floor(i*height/bands);
