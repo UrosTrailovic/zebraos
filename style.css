@@ -66,11 +66,11 @@
   72%{opacity:1;transform:scale(1);filter:blur(0)}
   89%,100%{opacity:0;transform:scale(1.015);filter:blur(1px)}
 }
-.zboot-skip{position:absolute;bottom:28px;right:30px;padding:10px 12px;border:0;color:#787878;background:transparent;font:10px "Courier New",monospace;letter-spacing:1.8px}
+.zboot-skip{position:absolute;bottom:28px;right:30px;padding:10px 12px;border:0;color:#787878;background:transparent;font:700 12px/1.25 Tahoma,Verdana,Arial,sans-serif;letter-spacing:.2px}
 .zboot-skip:hover,.zboot-skip:focus-visible{color:white;text-decoration:underline}
 .zboot-session-content{display:flex;flex-direction:column;align-items:center;gap:25px;animation:zboot-session-reveal 3.6s ease-in-out forwards}
 .zboot-session-logo{width:min(40vw,340px);max-width:calc(100% - 40px);height:auto;display:block;opacity:.86}
-#zboot-session-label{font:11px "Courier New",monospace;letter-spacing:3px;color:#a3a3a3}
+#zboot-session-label{font:700 12px/1.3 Tahoma,Verdana,Arial,sans-serif;letter-spacing:.6px;color:#a9a9a9}
 @keyframes zboot-session-reveal{
   0%,8%{opacity:0;transform:translateY(7px)}
   30%,74%{opacity:1;transform:none}
@@ -208,20 +208,31 @@
  .local-drop-zone{display:none}
 }
 
-/* ZebraOS v1.1 — Studio Admin. This visual login is not server-side security. */
-.admin-login-mask{position:absolute;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;background:rgba(2,8,13,.84);backdrop-filter:blur(7px);padding:20px}
-.admin-login-dialog{width:min(380px,100%);background:#1a2b34;border:1px solid #79919b;box-shadow:0 12px 0 #050c11,0 20px 70px #0009;padding:0 24px 24px;display:flex;flex-direction:column;align-items:center;color:#e1f1ef}
-.admin-login-banner{align-self:stretch;margin:0 -24px 22px;padding:11px 16px;background:#263d4a;border-bottom:1px solid #7e9da4;font:11px "Courier New",monospace;letter-spacing:.7px;color:#d6e6e7}
-.admin-login-symbol{width:54px;height:54px;display:grid;place-items:center;border:2px ridge #bed6d8;background:#d9e3df;color:#123540;font:bold 34px Georgia,serif;margin-bottom:10px}
-.admin-login-text{font:13px "Courier New",monospace;letter-spacing:2px;color:#d5e9e9;margin:6px 0}
-.admin-login-intro{text-align:center;color:#96b0b6;font:11px/1.5 "Courier New",monospace;margin:2px 0 19px}
-.admin-login-input{width:100%;min-height:38px;border:2px inset #9aadae;background:#f9f9f5;color:#142328;outline-offset:3px;padding:7px 10px;font:15px "Courier New",monospace}
-.admin-login-error{width:100%;height:35px;padding-top:9px;color:#ed8e92;font:11px "Courier New",monospace}
-.admin-login-actions{display:flex;justify-content:flex-end;gap:9px;width:100%}
-.admin-login-actions button{min-width:100px;border:2px outset #c8d4d6;background:#b6c3c6;color:#12212b;padding:8px;font:bold 11px "Courier New",monospace}
-.admin-login-actions button:hover{background:#e3eceb}
-.admin-login-actions button:active{border-style:inset}
-.admin-login-submit{background:#a9dfce!important}
+/* Fenêtre de connexion inspirée de Windows XP / Luna. */
+.admin-login-mask{position:absolute;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;background:#020a1e94}
+.admin-login-dialog{width:min(452px,100%);margin:0;padding:0;overflow:hidden;display:flex;flex-direction:column;background:#ece9d8;color:#222;border:3px solid #1b56c4;border-radius:9px 9px 5px 5px;box-shadow:0 0 0 1px #86a8eb,0 18px 48px #0009;font:13px Tahoma,Verdana,Arial,sans-serif}
+.admin-login-banner{min-height:33px;display:flex;align-items:center;gap:8px;padding:3px 5px 3px 9px;color:#fff;background:linear-gradient(180deg,#6ca5fb,#3a7be8 26%,#0c54ce 62%,#0842a6);border-bottom:1px solid #083c96;font:700 13px Tahoma,Verdana,Arial,sans-serif;text-shadow:0 1px #1f3e83;user-select:none}
+.admin-login-window-icon{display:grid;place-items:center;width:17px;height:17px;flex:0 0 17px}
+.admin-login-title{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-login-close{width:24px;height:23px;flex:0 0 24px;min-width:0;display:grid;place-items:center;padding:0 0 2px;border:1px solid #ffcab2;border-radius:4px;color:#fff;background:linear-gradient(135deg,#fea280,#dc472e 48%,#aa2011);box-shadow:inset 1px 1px #fff8,inset -1px -1px #802113;font:bold 19px Arial,sans-serif;line-height:1;text-shadow:0 1px #7c231a}
+.admin-login-close:hover{background:linear-gradient(#ffb99a,#e84b30,#b12715)}
+.admin-login-close:active{border-style:inset}
+.admin-login-content{padding:24px 24px 7px;background:#ece9d8}
+.admin-login-heading{display:flex;align-items:center;gap:16px;margin-bottom:23px}
+.admin-login-symbol{flex:0 0 58px;width:58px;height:58px;display:grid;place-items:center;border:1px solid #b6b4a5;border-radius:4px;background:linear-gradient(145deg,#fff,#d6dcd7);box-shadow:inset 1px 1px #fff,1px 1px #fff}
+.admin-login-text{margin:0 0 6px;font:700 15px/1.3 Tahoma,Verdana,Arial,sans-serif;color:#1e3357}
+.admin-login-intro{margin:0;font:12px/1.45 Tahoma,Verdana,Arial,sans-serif;color:#414141}
+.admin-login-field-label{display:block;margin:0 0 6px;font:12px Tahoma,Verdana,Arial,sans-serif}
+.admin-login-input{display:block;width:100%;height:34px;min-height:34px;padding:6px 8px;border:1px solid #7f9db9;border-radius:0;outline:none;background:#fff;color:#111;box-shadow:inset 1px 1px 1px #ddd;font:13px Tahoma,Verdana,Arial,sans-serif}
+.admin-login-input:focus{border-color:#3169bb;box-shadow:inset 1px 1px 1px #ddd,0 0 0 1px #aac9f2}
+.admin-login-error{min-height:32px;padding-top:8px;color:#ac231e;font:12px/1.35 Tahoma,Verdana,Arial,sans-serif}
+.admin-login-actions{display:flex;justify-content:flex-end;gap:9px;width:100%;padding:12px 20px 15px;border-top:1px solid #d7d2c2;background:#f3f0e6}
+.admin-login-actions button{min-width:111px;min-height:30px;padding:4px 12px;border:1px solid #6b7989;border-radius:3px;color:#222;background:linear-gradient(#fff,#f2f0e7 55%,#e1ded3);box-shadow:inset 0 0 0 1px #fff,0 1px #fff;font:12px Tahoma,Verdana,Arial,sans-serif}
+.admin-login-actions button:hover{border-color:#4072b0;background:linear-gradient(#fff,#e4efff)}
+.admin-login-actions button:active{background:#dedbd0;box-shadow:inset 1px 1px 2px #b7b2a5}
+.admin-login-actions button:disabled{opacity:.6;cursor:progress}
+.admin-login-submit{border-color:#3b6da9!important;box-shadow:inset 0 0 0 1px #fff,0 0 0 1px #b0c9ed!important}
+.admin-login-close:focus-visible,.admin-login-actions button:focus-visible{outline:2px solid #6092e2;outline-offset:1px}
 .manager-intro{padding:11px;margin-bottom:12px;background:#0e2731;border:2px inset #bed3d1;color:#e4f3f0}
 .manager-title{font:bold 14px "Courier New",monospace;letter-spacing:1.2px}
 .manager-intro p{font:11px/1.5 Tahoma,Arial,sans-serif;color:#aecac8;margin:8px 0 0}
@@ -231,10 +242,12 @@
 .manager-card button{font:11px "Courier New",monospace;max-width:100%;padding:8px 10px}
 .manager-disclaimer{font:10px/1.4 "Courier New",monospace;color:#7e473e;border-top:1px solid #a4b0b1;padding-top:8px}
 @media(max-width:700px){
- .admin-login-mask{padding:13px}
- .admin-login-dialog{padding:0 18px 18px}
- .admin-login-banner{margin:0 -18px 18px}
- .admin-login-actions button{min-width:90px}
+ .admin-login-mask{padding:12px}
+ .admin-login-content{padding:20px 17px 6px}
+ .admin-login-heading{gap:12px;margin-bottom:18px}
+ .admin-login-symbol{width:50px;height:50px;flex-basis:50px}
+ .admin-login-actions{padding:11px 14px 13px}
+ .admin-login-actions button{min-width:96px}
  .manager-card{flex-direction:column;align-items:flex-start}
  .manager-card p{width:100%}
 }
