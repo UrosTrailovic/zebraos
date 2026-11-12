@@ -95,7 +95,7 @@
  });
 })();
 </script>
-<link rel="stylesheet" href="style.css?v=10.9">
+<link rel="stylesheet" href="style.css?v=10.10">
 <link rel="stylesheet" href="zebra-hardware.css?v=1.0">
 <link rel="stylesheet" href="zebra-notes.css?v=1.0">
 <link rel="stylesheet" href="zebra-tools.css?v=1.0">
@@ -133,16 +133,14 @@
     </button>
   </div>
 </div>
-<div id="boot-screen" class="screen" aria-label="Démarrage de ZebraOS">
+<div id="boot-screen" class="screen" role="button" tabindex="0" aria-label="Passer l’introduction de ZebraOS">
   <div class="zboot-logo-frame"><img class="zboot-logo"  alt="ZebraOS" /></div>
-  <button id="skip-boot" class="zboot-skip" aria-label="Passer l'animation de démarrage">PASSER L’INTRO &gt;</button>
 </div>
-<div id="session-boot-screen" class="screen" aria-label="Ouverture de session">
+<div id="session-boot-screen" class="screen" role="button" tabindex="0" aria-label="Passer l’ouverture de session">
   <div class="zboot-session-content">
     <img class="zboot-session-logo"  alt="ZebraOS" />
     <span id="zboot-session-label">OUVERTURE DE SESSION</span>
   </div>
-  <button id="skip-session-boot" class="zboot-skip" aria-label="Passer l'ouverture de session" >PASSER &gt;</button>
 </div>
 <div id="login-screen" class="screen">
   <div class="login-top-band" aria-hidden="true"></div>
@@ -186,7 +184,7 @@
 <script>
 /* Charge le noyau de ZebraOS frais à chaque ouverture de page.
    Conserve l'ordre des scripts classiques en restant synchrone. */
-document.write('<scr'+'ipt src="app.js?v=11.66&load='+Date.now()+'"></scr'+'ipt>');
+document.write('<scr'+'ipt src="app.js?v=11.67&load='+Date.now()+'"></scr'+'ipt>');
 </script>
 <script src="power-panel-v3.js?v=2.1"></script>
 

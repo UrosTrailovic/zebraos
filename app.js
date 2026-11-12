@@ -295,19 +295,18 @@ function requestAdminPassword(){
   panel.setAttribute("role","dialog");
   panel.setAttribute("aria-modal","true");
   panel.setAttribute("aria-labelledby","zebra-admin-title");
-  var banner=el("div","admin-login-banner");
-  var icon=el("span","admin-login-window-icon");
-  icon.setAttribute("aria-hidden","true");
-  icon.appendChild(osIcon("zebraos",16));
-  banner.appendChild(icon);
-  banner.appendChild(el("span","admin-login-title","ZebraOS — Connexion"));
-  var close=el("button","admin-login-close","×");
+  var banner=el("div","titlebar");
+  banner.appendChild(osIcon("zebraos",16));
+  banner.appendChild(el("span","windowtitle","ZebraOS — Connexion"));
+  var titleButtons=el("div","titlebuttons");
+  var close=el("button","","×");
   close.type="button";
   close.setAttribute("aria-label","Fermer");
   close.onclick=function(){mask.remove();};
-  banner.appendChild(close);
+  titleButtons.appendChild(close);
+  banner.appendChild(titleButtons);
   panel.appendChild(banner);
-  var content=el("div","admin-login-content");
+  var content=el("div","window-body admin-login-content");
   var heading=el("div","admin-login-heading");
   var symbol=el("div","admin-login-symbol");
   symbol.setAttribute("aria-hidden","true");
@@ -335,13 +334,13 @@ function requestAdminPassword(){
   content.appendChild(error);
   panel.appendChild(content);
   var actions=el("div","admin-login-actions");
-  var cancel=el("button","admin-login-cancel","Annuler");
+  var cancel=el("button","classic-button admin-login-cancel","Annuler");
   cancel.type="button";
   cancel.onclick=function(){mask.remove();};
-  var submit=el("button","admin-login-submit","Se connecter");
+  var submit=el("button","classic-button admin-login-submit","Se connecter");
   submit.type="submit";
   actions.appendChild(cancel);actions.appendChild(submit);
-  panel.appendChild(actions);
+  content.appendChild(actions);
   panel.onsubmit=function(event){
     event.preventDefault();
     var pass=input.value;
@@ -911,7 +910,16 @@ window.ZebraEchoLabWindow={
 window.ZebraLazyApps={load:loadGameModule};
 function open(code){$("start-menu").classList.add("hidden");if(code==="tetris"||code==="snake"||code==="racer"||code==="paint")openGame(code);else if(code==="folder:games"||code==="folder:tools"||code==="folder:atelier")appFolder(code.split(":")[1]);else if(code==="calc"||code==="sticky"||code==="planner")openUtility(code);else if(code==="amp")player();else if(code==="studio-manager")studioManager();else if(code==="settings")settings();else if(code==="about")about();else if(code==="datetime")dateTime();else if(code==="welcome")welcome();else if(code==="notepad")notepad("notes");else if(code==="viewer")explorer("screens");else if(code.indexOf("explorer:")===0)explorer(code.slice("explorer:".length));else if(code==="explorer")explorer("root");else if(code.indexOf("txt:")===0)notepad(code.split(":")[1])}
 decorateSystemMenus();
-$("power-btn").onclick=powerOn;$("skip-boot").onclick=finishBoot;$("skip-session-boot").onclick=finishSessionBoot;$("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
+$("power-btn").onclick=powerOn;
+ /* Clic ou toucher dans les écrans noirs pour passer la séquence active. */
+ [["boot-screen",finishBoot],["session-boot-screen",finishSessionBoot]].forEach(function(pair){
+   var screen=$(pair[0]),skip=pair[1];
+   screen.addEventListener("click",skip);
+   screen.addEventListener("keydown",function(event){
+     if(event.key==="Enter"&&!event.repeat){event.preventDefault();skip();}
+   });
+ });
+ $("shutdown-login").onclick=end;$("shutdown-desktop").onclick=end;$("logout").onclick=signout;
 $("start-button").onclick=function(e){e.stopPropagation();$("start-menu").classList.toggle("hidden")};document.querySelectorAll("[data-start]").forEach(function(b){b.onclick=function(){open(b.dataset.start)}});document.addEventListener("pointerdown",function(e){if(!e.target.closest("#start-menu")&&!e.target.closest("#start-button"))$("start-menu").classList.add("hidden")});
 /* A physical mouse click exists independently of what the computer does afterwards.
    Play the main click on touch pointerup (mobile user activation), and on mouse pointerdown.
