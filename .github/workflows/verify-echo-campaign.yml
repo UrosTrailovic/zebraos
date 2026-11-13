@@ -94,6 +94,8 @@ jobs:
               body=page.locator(game+" .window-body")
               assert body.evaluate("(n)=>n._echoDebug.snapshot().mode")=="running","Level one did not launch"
               assert body.evaluate("(n)=>n._echoDebug.level().id")=="run"
+              body.evaluate("(n)=>n._echoDebug.draw()")
+              page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-stage1.png")
               # In the dedicated test environment only, hazards were disabled
               # through saved editor parameters to make the 105s simulation deterministic.
               body.evaluate("""(n)=>{
@@ -119,6 +121,8 @@ jobs:
               assert state["level"]["id"]=="l2", "Level 2 did not launch"
               assert state["snap"]["lab"]["colorMain"]=="#24f0da","Level 2 palette missing"
               assert state["level"]["available"][1]["motion"]==1
+              body.evaluate("(n)=>n._echoDebug.draw()")
+              page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-stage2.png")
               for finished_index in (2,3,4):
                   body.evaluate("""(n)=>{
                     for(let i=0;i<2300&&n._echoDebug.snapshot().mode==='running';i++)
@@ -149,6 +153,8 @@ jobs:
                       assert selected["level"]["id"]==["run","l2","l3","l4"][next_index]
                       assert selected["level"]["available"][next_index]["motion"]==next_index
                       assert selected["snap"]["lab"]["colorMain"]==["#ff3ed1","#24f0da","#86a1ff","#ffc46c"][next_index]
+                      body.evaluate("(n)=>n._echoDebug.draw()")
+                      page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-stage{next_index+1}.png")
               all_four_done=body.evaluate("(n)=>n._echoDebug.level().completedLevels")==4
               assert all_four_done,"Four-level progression incomplete"
               page.locator(game+" [data-close]").click()
