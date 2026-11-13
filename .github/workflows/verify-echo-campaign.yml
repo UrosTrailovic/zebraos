@@ -1,0 +1,133 @@
+name: Vérifier Echo Racer campagne quatre niveaux
+on:
+  push:
+    paths:
+      - 'echo-racer.js'
+      - 'echo-racer.css'
+      - 'app.js'
+      - 'index.html'
+      - '.github/workflows/verify-echo-campaign.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  campaign:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier les scripts et les vraies images
+        run: |
+          node --check echo-racer.js
+          node --check app.js
+          for image in 1 2 3 4; do test -s "assets/games/lvl${image}.png"; done
+          test -s "assets/games/echo-racer-logo-2026.webp"
+          test -s assets/games/echoraccaersong.mp3
+          test -s assets/games/echoraccersongpt2.mp3
+      - name: Installer le navigateur de test
+        run: python3 -m pip install --quiet playwright
+      - name: Tester les parcours PC et Android simulé
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path("app.js").read_text()
+          anchor="window.ZebraLazyApps={load:loadGameModule};"
+          assert src.count(anchor)==1
+          probe='window.__EchoCampaignTest={admin:function(){session="admin";show("desktop-screen");},open:function(){openGame("racer");}};'
+          Path("_campaign_app.js").write_text(src.replace(anchor,probe+anchor))
+          html=Path("index.html").read_text().replace('app.js?v=','_campaign_app.js?v=')
+          Path("_campaign_test.html").write_text(html)
+          PY
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/echo-campaign-server.log 2>&1 &
+          SERVER=$!
+          trap 'kill $SERVER 2>/dev/null || true' EXIT
+          sleep 1
+          cat >/tmp/echo_campaign_test.py <<'PY'
+          import json
+          from playwright.sync_api import sync_playwright
+          URL="http://127.0.0.1:8765/_campaign_test.html"
+          def execute(browser,width,height,mobile):
+              ctx=browser.new_context(viewport={"width":width,"height":height},is_mobile=mobile,has_touch=mobile)
+              page=ctx.new_page()
+              errors=[]
+              page.on("pageerror",lambda error:errors.append(str(error)))
+              page.goto(URL,wait_until="domcontentloaded")
+              page.evaluate('''() => {
+                localStorage.setItem('zebra.echo-racer.sfx','off');
+                const profiles={p1:{obstaclesEnabled:false},p2:{obstaclesEnabled:false},p3:{obstaclesEnabled:false}};
+                localStorage.setItem('zebra.echo-racer.lab.phases.v1',JSON.stringify(profiles));
+                localStorage.removeItem('zebra.echo-racer.campaign.unlocked.v1');
+                localStorage.removeItem('zebra.echo-racer.campaign.completed.v1');
+              }''')
+              page.reload(wait_until="domcontentloaded")
+              page.wait_for_function("!!window.__EchoCampaignTest")
+              page.evaluate("window.__EchoCampaignTest.admin();window.__EchoCampaignTest.open()")
+              page.wait_for_function("""!!document.querySelector('.window[data-app-id="racer"] .window-body')?._echoDebug""",timeout=25000)
+              page.wait_for_function("""!document.querySelector('.window[data-app-id="racer"]').classList.contains('window-pending')""",timeout=15000)
+              game='.window[data-app-id="racer"]'
+              menu=page.locator(game+" .er-overlay.er-stage-home")
+              assert menu.is_visible(),"Main menu hidden"
+              logo=menu.locator(".er-brand-logo")
+              assert logo.evaluate("(n)=>n.naturalWidth>0"),"Logo missing"
+              logo_h=logo.evaluate("(n)=>n.getBoundingClientRect().height")
+              assert logo_h>=100, f"Logo too small {logo_h}"
+              assert menu.locator(".er-overlay-button").inner_text().strip()=="JOUER"
+              assert menu.locator(".er-test-button").is_visible()
+              assert menu.locator(".er-quit-button").is_visible()
+              page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-menu.png")
+              menu.locator(".er-overlay-button").click()
+              levels=page.locator(game+" .er-stage-levels .er-level-button")
+              assert levels.count()==4,"There must be four actual cards"
+              assert all(levels.nth(i).locator("img").evaluate("(n)=>n.complete&&n.naturalWidth>0") for i in range(4)),"One of four level textures missing"
+              locked=[levels.nth(i).get_attribute("aria-disabled") for i in range(4)]
+              assert locked==["false","true","true","true"],f"Unexpected locks: {locked}"
+              page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-levels.png")
+              levels.nth(1).click()
+              assert "menu"==page.locator(game+" .window-body").evaluate("(n)=>n._echoDebug.snapshot().mode"),"Locked level started"
+              levels.nth(0).click()
+              body=page.locator(game+" .window-body")
+              assert body.evaluate("(n)=>n._echoDebug.snapshot().mode")=="running","Level one did not launch"
+              assert body.evaluate("(n)=>n._echoDebug.level().id")=="run"
+              # In the dedicated test environment only, hazards were disabled
+              # through saved editor parameters to make the 105s simulation deterministic.
+              body.evaluate("""(n)=>{
+                for(let i=0;i<2120&&n._echoDebug.snapshot().mode==='running';i++)
+                  n._echoDebug.advance(.05);
+                n._echoDebug.tickFinale(4);
+              }""")
+              state=body.evaluate("(n)=>({snap:n._echoDebug.snapshot(),level:n._echoDebug.level()})")
+              assert state["snap"]["mode"]=="finished",f"Level did not finish: {state['snap']['mode']}"
+              assert state["level"]["unlockedLevel"]==2 and state["level"]["completedLevels"]==1
+              page.locator(game+" .er-finale-actions button").last.click()
+              levels=page.locator(game+" .er-stage-levels .er-level-button")
+              assert levels.nth(1).get_attribute("aria-disabled")=="false","Level 2 still locked"
+              assert levels.nth(2).get_attribute("aria-disabled")=="true","Level 3 unlocked too early"
+              levels.nth(1).click()
+              state=body.evaluate("(n)=>({level:n._echoDebug.level(),snap:n._echoDebug.snapshot()})")
+              assert state["level"]["id"]=="l2", "Level 2 did not launch"
+              assert state["snap"]["lab"]["colorMain"]=="#24f0da","Level 2 palette missing"
+              assert state["level"]["available"][1]["motion"]==1
+              page.locator(game+" [data-close]").click()
+              page.evaluate("window.__EchoCampaignTest.open()")
+              page.wait_for_function("""!!document.querySelector('.window[data-app-id="racer"] .window-body')?._echoDebug""",timeout=20000)
+              saved=page.locator(game+" .window-body").evaluate("(n)=>n._echoDebug.level().unlockedLevel")
+              assert saved==2,"Progress not persisted in localStorage"
+              assert not errors, "Uncaught JS errors: "+repr(errors)
+              result={"viewport":f"{width}x{height}","logoHeight":logo_h,"fourCards":True,"level1Finished":True,"unlocked2":True,"locked3":True,"movement2":True,"saved":True,"pageErrors":errors}
+              print("CAMPAIGN_TEST "+json.dumps(result,ensure_ascii=False),flush=True)
+              ctx.close()
+          with sync_playwright() as p:
+              browser=p.chromium.launch(channel="chrome",headless=True,args=["--no-sandbox","--disable-dev-shm-usage"])
+              execute(browser,1366,900,False)
+              execute(browser,390,844,True)
+              browser.close()
+          PY
+          python3 /tmp/echo_campaign_test.py
+      - name: Captures PC/mobile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: echo-campaign-screens
+          path: /tmp/campaign-*.png
+          if-no-files-found: ignore
+          retention-days: 7
