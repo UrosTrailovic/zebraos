@@ -49,6 +49,13 @@ jobs:
             if(!game||!game._echoDebug)throw Error('Echo Racer never mounted');
             report.gameMounted=true;
             game._echoDebug.test();
+            // OS opening uses a 700ms wireframe transition; wait until the
+            // genuine visible window is no longer .window-pending before hit test.
+            for(let i=0;i<16;i++){
+              if(!game.closest('.window').classList.contains('window-pending'))break;
+              await sleep(90);
+            }
+            report.gameWindowVisible=!game.closest('.window').classList.contains('window-pending');
             const toggle=game.querySelector('.er-lab-toggle');
             // This must be reachable by mouse, not only via toggle.click().
             const rect=toggle.getBoundingClientRect();
