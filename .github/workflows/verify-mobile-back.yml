@@ -68,18 +68,47 @@ jobs:
                   page.wait_for_timeout(1000)
                   folders=explorer.locator(".github-file-entry").filter(
                       has=page.locator(".github-file-size",has_text="Dossier"))
-                  if folders.count()>0:
-                      folders.first.click()
-                      page.wait_for_timeout(100)
-                      results["folder_opened"]="BUREAU\\" in explorer.locator(".folder-path").inner_text()
-                      page.go_back(wait_until="domcontentloaded",timeout=10000)
-                      results["folder_back"]=explorer.locator(".folder-path").inner_text().strip()=="C:\\BUREAU"
-                      results["folder_window_kept"]=explorer.count()==1
-                  else:
-                      print("INFO: Aucun dossier d'explorateur dans l'index de test")
+                  assert folders.count()>0,"No folders in explorer"
+                  folders.first.click()
+                  page.wait_for_timeout(150)
+                  results["folder_opened"]="BUREAU\\" in explorer.locator(".folder-path").inner_text()
+                  nav=explorer.locator(".github-nav-back")
+                  results["square_buttons"]=nav.evaluate(
+                      "(b)=>getComputedStyle(b).borderRadius==='0px'") and explorer.locator(
+                      ".github-nav-home").evaluate("(b)=>getComputedStyle(b).borderRadius==='0px'")
+                  results["bent_back_arrow"]=nav.locator("svg path").count()==1
+                  nav.click()
+                  results["onscreen_back_to_root"]=explorer.locator(".folder-path").inner_text().strip().endswith("BUREAU")
+                  # From a nested folder, the hardware key must directly return to the desktop.
+                  folders=explorer.locator(".github-file-entry").filter(
+                      has=page.locator(".github-file-size",has_text="Dossier"))
+                  folders.first.click()
                   page.go_back(wait_until="domcontentloaded",timeout=10000)
                   page.wait_for_selector(".window[data-app-id='explorer']",state="detached",timeout=5000)
-                  results["window_back"]=page.locator("#desktop-screen.active").count()==1
+                  results["nested_folder_to_desktop"]=page.locator("#desktop-screen.active").count()==1
+                  # Open root explorer again: Back also closes that window.
+                  page.locator("#start-button").click()
+                  page.locator("#start-menu [data-start='explorer']").click()
+                  page.wait_for_selector(".window[data-app-id='explorer']",timeout=6000)
+                  page.go_back(wait_until="domcontentloaded",timeout=10000)
+                  page.wait_for_selector(".window[data-app-id='explorer']",state="detached",timeout=5000)
+                  results["root_folder_to_desktop"]=page.locator("#desktop-screen.active").count()==1
+                  # Reproduce Samsung: game -> folder -> desktop, with two consecutive Backs.
+                  desktop_folder=page.locator("#desktop-icons .desk-icon").filter(has_text="Jeux")
+                  assert desktop_folder.count()>0,"No Jeux shortcut on desktop"
+                  desktop_folder.first.click()
+                  page.wait_for_selector(".window[data-app-id='explorer']",timeout=6000)
+                  game=page.locator(".window[data-app-id='explorer'] .github-file-entry").filter(has_text="Tetris.exe")
+                  assert game.count()>0,"Tetris missing from Jeux"
+                  game.first.click()
+                  page.wait_for_selector(".window[data-app-id='tetris']",timeout=10000)
+                  results["game_opened"]=True
+                  page.go_back(wait_until="domcontentloaded",timeout=10000)
+                  page.wait_for_selector(".window[data-app-id='tetris']",state="detached",timeout=6000)
+                  results["game_back_to_folder"]=page.locator(".window[data-app-id='explorer']").count()==1
+                  page.go_back(wait_until="domcontentloaded",timeout=10000)
+                  page.wait_for_selector(".window[data-app-id='explorer']",state="detached",timeout=6000)
+                  results["second_back_to_desktop"]=page.locator("#desktop-screen.active").count()==1
                   page.go_back(wait_until="domcontentloaded",timeout=10000)
                   page.wait_for_selector("#login-screen.active",timeout=5000)
                   results["desktop_back"]=True
