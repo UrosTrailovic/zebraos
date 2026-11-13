@@ -237,7 +237,7 @@ function beginSessionBoot(id){
   if(sessionBooting)return;
   pendingSession=id;sessionBooting=true;
   var name=users.filter(function(u){return u[0]===id})[0];
-  $("zboot-session-label").textContent="BIENVENUE "+(name?name[1].toUpperCase():"UTILISATEUR");
+  $("zboot-session-label").textContent="Bienvenue "+(name?name[1]:"Utilisateur");
   show("session-boot-screen");
   playBootTrack(sessionAudio);
   sessionTimer=setTimeout(finishSessionBoot,3600);
