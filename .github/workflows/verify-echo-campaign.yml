@@ -82,7 +82,7 @@ jobs:
               locked=[levels.nth(i).get_attribute("aria-disabled") for i in range(4)]
               assert locked==["false","true","true","true"],f"Unexpected locks: {locked}"
               page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-levels.png")
-              levels.nth(1).click()
+              levels.nth(1).evaluate("(b)=>b.click()")
               assert "menu"==page.locator(game+" .window-body").evaluate("(n)=>n._echoDebug.snapshot().mode"),"Locked level started"
               levels.nth(0).click()
               body=page.locator(game+" .window-body")
