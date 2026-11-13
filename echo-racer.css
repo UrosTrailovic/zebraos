@@ -4070,3 +4070,11 @@ body > .er-lab-window.er-lab-floating{
  .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-state{font-size:8px!important}
  .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-hint{font-size:8px!important}
 }
+
+/* Arcade home: clear the legacy mobile focus box; only « » indicate selection. */
+.zebra-game-body .zg.er .er-overlay.er-stage-home .er-overlay-button.selected,
+.zebra-game-body .zg.er .er-overlay.er-stage-home .er-test-button.selected,
+.zebra-game-body .zg.er .er-overlay.er-stage-home .er-quit-button.selected{
+ outline:0!important;outline-offset:0!important;box-shadow:none!important;
+ filter:none!important
+}

@@ -119,13 +119,45 @@ jobs:
               assert state["level"]["id"]=="l2", "Level 2 did not launch"
               assert state["snap"]["lab"]["colorMain"]=="#24f0da","Level 2 palette missing"
               assert state["level"]["available"][1]["motion"]==1
+              for finished_index in (2,3,4):
+                  body.evaluate("""(n)=>{
+                    for(let i=0;i<2300&&n._echoDebug.snapshot().mode==='running';i++)
+                      n._echoDebug.advance(.05);
+                    n._echoDebug.tickFinale(4);
+                  }""")
+                  stage=body.evaluate("(n)=>({snap:n._echoDebug.snapshot(),level:n._echoDebug.level()})")
+                  assert stage["snap"]["mode"]=="finished",f"Stage {finished_index} did not finish"
+                  assert stage["level"]["completedLevels"]==finished_index
+                  assert stage["level"]["unlockedLevel"]==min(4,finished_index+1)
+                  if finished_index<4:
+                      if mobile:
+                          body.evaluate("(n)=>{n._echoDebug.controller('down');n._echoDebug.controller('pulse');}")
+                      else:
+                          page.locator(game+" .er-finale-actions button").last.click()
+                      next_index=finished_index
+                      cards=page.locator(game+" .er-stage-levels .er-level-button")
+                      assert cards.nth(next_index).get_attribute("aria-disabled")=="false",f"Next stage {next_index+1} locked"
+                      if next_index+1<4:
+                          assert cards.nth(next_index+1).get_attribute("aria-disabled")=="true","Stage unlocked too early"
+                      if mobile:
+                          for _ in range(next_index):
+                              body.evaluate("(n)=>n._echoDebug.controller('down')")
+                          body.evaluate("(n)=>n._echoDebug.controller('pulse')")
+                      else:
+                          cards.nth(next_index).click()
+                      selected=body.evaluate("(n)=>({level:n._echoDebug.level(),snap:n._echoDebug.snapshot()})")
+                      assert selected["level"]["id"]==["run","l2","l3","l4"][next_index]
+                      assert selected["level"]["available"][next_index]["motion"]==next_index
+                      assert selected["snap"]["lab"]["colorMain"]==["#ff3ed1","#24f0da","#86a1ff","#ffc46c"][next_index]
+              all_four_done=body.evaluate("(n)=>n._echoDebug.level().completedLevels")==4
+              assert all_four_done,"Four-level progression incomplete"
               page.locator(game+" [data-close]").click()
               page.evaluate("window.__EchoCampaignTest.open()")
               page.wait_for_function("""!!document.querySelector('.window[data-app-id="racer"] .window-body')?._echoDebug""",timeout=20000)
               saved=page.locator(game+" .window-body").evaluate("(n)=>n._echoDebug.level().unlockedLevel")
-              assert saved==2,"Progress not persisted in localStorage"
+              assert saved==4,"All four completed stages not persisted in localStorage"
               assert not errors, "Uncaught JS errors: "+repr(errors)
-              result={"viewport":f"{width}x{height}","logoHeight":logo_h,"fourCards":True,"level1Finished":True,"unlocked2":True,"locked3":True,"movement2":True,"saved":True,"pageErrors":errors}
+              result={"viewport":f"{width}x{height}","logoHeight":logo_h,"fourCards":True,"level1Finished":True,"unlocked2":True,"locked3":True,"movement2":True,"allFourFinished":all_four_done,"saved":True,"pageErrors":errors}
               print("CAMPAIGN_TEST "+json.dumps(result,ensure_ascii=False),flush=True)
               ctx.close()
           with sync_playwright() as p:
