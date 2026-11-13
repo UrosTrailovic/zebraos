@@ -1,0 +1,105 @@
+name: Tester le bouton Retour sur mobile
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app.js'
+      - 'index.html'
+      - '.github/workflows/verify-mobile-back.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mobile-back:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier la syntaxe JavaScript
+        run: node --check app.js
+      - name: Installer Playwright pour Chrome Android simulé
+        run: python3 -m pip install --quiet playwright
+      - name: Tester vrai historique navigateur, écrans et fenêtres
+        run: |
+          cat > /tmp/test_mobile_back.py <<'PY'
+          import json
+          from playwright.sync_api import sync_playwright
+          from pathlib import Path
+
+          ROOT="http://127.0.0.1:8765/"
+          Path("_verify_before_back.html").write_text("<!doctype html><title>Page précédente</title>")
+          results={}
+          with sync_playwright() as p:
+              browser=p.chromium.launch(channel="chrome",headless=True,
+                  args=["--no-sandbox","--disable-dev-shm-usage"])
+              page=browser.new_page(viewport={"width":390,"height":844},
+                  is_mobile=True,has_touch=True,reduced_motion="reduce")
+              errors=[]
+              page.on("pageerror",lambda error:errors.append(str(error)))
+              try:
+                  page.goto(ROOT+"_verify_before_back.html")
+                  page.goto(ROOT,wait_until="domcontentloaded")
+                  page.locator("#power-screen").click(position={"x":15,"y":15})
+                  page.locator("#power-btn").click(timeout=10000)
+                  page.wait_for_selector("#boot-screen.active",timeout=10000)
+                  results["boot_started"]=True
+                  page.locator("#boot-screen").click(position={"x":25,"y":25})
+                  page.wait_for_selector("#login-screen.active",timeout=5000)
+                  results["login_opened"]=True
+                  page.locator(".user-admin").click()
+                  page.wait_for_selector(".admin-login-mask",timeout=4000)
+                  results["admin_modal"]=True
+                  page.go_back(wait_until="domcontentloaded",timeout=10000)
+                  page.wait_for_selector(".admin-login-mask",state="detached",timeout=5000)
+                  results["admin_back"]=page.locator("#login-screen.active").count()==1
+                  page.locator(".user-zebra").click()
+                  page.locator("#session-boot-screen").click(position={"x":25,"y":25})
+                  page.wait_for_selector("#desktop-screen.active",timeout=5000)
+                  results["desktop"]=True
+                  page.locator("#start-button").click()
+                  results["menu_open"]=page.locator("#start-menu:not(.hidden)").count()==1
+                  page.go_back(wait_until="domcontentloaded",timeout=10000)
+                  results["menu_back"]=page.locator("#start-menu.hidden").count()==1
+                  page.locator("#start-button").click()
+                  page.locator("#start-menu [data-start='explorer']").click()
+                  page.wait_for_selector(".window[data-app-id='explorer']",timeout=6000)
+                  results["explorer_open"]=True
+                  explorer=page.locator(".window[data-app-id='explorer']")
+                  page.wait_for_timeout(1000)
+                  folders=explorer.locator(".github-file-entry").filter(
+                      has=page.locator(".github-file-size",has_text="Dossier"))
+                  if folders.count()>0:
+                      folders.first.click()
+                      page.wait_for_timeout(100)
+                      results["folder_opened"]="BUREAU\\" in explorer.locator(".folder-path").inner_text()
+                      page.go_back(wait_until="domcontentloaded",timeout=10000)
+                      results["folder_back"]=explorer.locator(".folder-path").inner_text().strip()=="C:\\BUREAU"
+                      results["folder_window_kept"]=explorer.count()==1
+                  else:
+                      print("INFO: Aucun dossier d'explorateur dans l'index de test")
+                  page.go_back(wait_until="domcontentloaded",timeout=10000)
+                  page.wait_for_selector(".window[data-app-id='explorer']",state="detached",timeout=5000)
+                  results["window_back"]=page.locator("#desktop-screen.active").count()==1
+                  page.go_back(wait_until="domcontentloaded",timeout=10000)
+                  page.wait_for_selector("#login-screen.active",timeout=5000)
+                  results["desktop_back"]=True
+                  page.go_back(wait_until="domcontentloaded",timeout=10000)
+                  page.wait_for_url(ROOT+"_verify_before_back.html",timeout=6000)
+                  results["browser_exit_allowed"]=True
+              except Exception as e:
+                  results["error"]=str(e)
+                  try:
+                      page.screenshot(path="/tmp/zebra-mobile-back-failed.png")
+                  except Exception:
+                      pass
+              finally:
+                  results["unexpected_page_errors"]=not errors
+                  print("BACK_TEST",json.dumps(results,ensure_ascii=False),flush=True)
+                  if errors:
+                      print("PAGE_ERRORS",json.dumps(errors[:8],ensure_ascii=False),flush=True)
+                  browser.close()
+          assert all(v is True for v in results.values()),results
+          PY
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebra-mobile-back-server.log 2>&1 &
+          sleep 1
+          python3 /tmp/test_mobile_back.py
