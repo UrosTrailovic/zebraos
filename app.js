@@ -211,6 +211,7 @@ function finishBoot(){
   bootAudio.pause();login();
 }
 function startLogoBoot(){
+ armZebraMobileBack();
  stopBootSequences();
  booting=true;
  var logoFrame=document.querySelector("#boot-screen .zboot-logo-frame");
@@ -263,6 +264,7 @@ function stopBootSequences(){
   bootAudio.pause();sessionAudio.pause();
 }
 function login(){
+ armZebraMobileBack();
  var r=$("login-users");r.innerHTML="";
  users.forEach(function(u){
   var b=el("button","user-card user-"+u[0]);
@@ -417,6 +419,97 @@ function restartLogin(){
  startLogoBoot();
 }
 function signout(){sfx("switch");stopBootSequences();if(window.ZebraAMP)window.ZebraAMP.stop();adminLoginUnlocked=false;closeAll();session=null;login()}
+/* Android / mobile: physical browser Back acts as a ZebraOS Back button.
+ * One same-URL history entry intercepts Back without reloading the document.
+ * When no OS action remains, the browser may leave the site normally. */
+var zebraMobileBackToken=(history.state&&history.state.zebraMobileBackToken)||
+  ("zebraos-"+Math.random().toString(36).slice(2));
+var zebraMobileBackArmed=false,zebraMobileBackLeaving=false;
+function zebraIsMobileBack(){
+ return !!(window.history&&typeof history.pushState==="function"&&
+   ((window.matchMedia&&window.matchMedia("(pointer: coarse)").matches)||innerWidth<=700));
+}
+function armZebraMobileBack(){
+ if(!zebraIsMobileBack()||zebraMobileBackArmed||zebraMobileBackLeaving)return;
+ try{
+  if(!history.state||history.state.zebraMobileBackToken!==zebraMobileBackToken)
+   history.pushState({zebraMobileBackToken:zebraMobileBackToken},"",location.href);
+  zebraMobileBackArmed=true;
+ }catch(e){zebraMobileBackArmed=false;}
+}
+function zebraGoBackInsideOS(){
+ var adminDialog=document.querySelector(".admin-login-mask");
+ if(adminDialog){
+  var adminClose=adminDialog.querySelector(".titlebuttons button");
+  if(adminClose)adminClose.click();else adminDialog.remove();
+  return true;
+ }
+ if($("desktop-screen").classList.contains("active")){
+  var startMenu=$("start-menu");
+  if(startMenu&&!startMenu.classList.contains("hidden")){
+   startMenu.classList.add("hidden");
+   return true;
+  }
+  var windows=Array.from(document.querySelectorAll("#windows-area > .window"))
+   .filter(function(w){return w.isConnected&&!w.classList.contains("minimized");});
+  windows.sort(function(a,b){
+   return (parseInt(b.style.zIndex,10)||0)-(parseInt(a.style.zIndex,10)||0);
+  });
+  var w=windows[0];
+  if(w){
+   // Keep the actual current explorer and its native Up action.
+   var folderPath=w.querySelector(".folder-path");
+   var toolbar=w.querySelector(".github-drive-toolbar");
+   if(folderPath&&toolbar&&folderPath.textContent.indexOf("C:\\BUREAU\\")===0){
+    var up=Array.from(toolbar.querySelectorAll("button")).find(function(b){
+     return b.textContent.trim()==="↑";
+    });
+    if(up){up.click();return true;}
+   }
+   var windowClose=w.querySelector(".titlebuttons [data-close]");
+   if(windowClose){windowClose.click();return true;}
+  }
+  // Back from an empty desktop returns to the user selector, not the browser.
+  signout();
+  return true;
+ }
+ if($("session-boot-screen").classList.contains("active")&&sessionBooting){
+  stopBootSequences();
+  adminLoginUnlocked=false;
+  login();
+  return true;
+ }
+ if($("boot-screen").classList.contains("active")&&booting){
+  stopBootSequences();
+  show("power-screen");
+  return true;
+ }
+ return false;
+}
+window.addEventListener("popstate",function(event){
+ if(!zebraIsMobileBack()||zebraMobileBackLeaving)return;
+ // Browser Forward to the same in-page guard does not undo OS actions.
+ if(event.state&&event.state.zebraMobileBackToken===zebraMobileBackToken){
+  zebraMobileBackArmed=true;
+  return;
+ }
+ if(!zebraMobileBackArmed)return;
+ zebraMobileBackArmed=false;
+ if(zebraGoBackInsideOS()){
+  armZebraMobileBack();
+ }else{
+  // Never trap the visitor at the session selector / powered-off machine.
+  zebraMobileBackLeaving=true;
+  history.back();
+ }
+});
+window.addEventListener("pageshow",function(event){
+ if(event.persisted){
+  zebraMobileBackLeaving=false;
+  zebraMobileBackArmed=false;
+  if(!$("power-screen").classList.contains("active"))armZebraMobileBack();
+ }
+});
 function getStore(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function setStore(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 function setWall(name,custom){var w=$("wallpaper");w.className="wallpaper wallpaper-"+name;w.style.backgroundImage=custom?'url("'+custom+'")':"";w.style.backgroundSize=custom?"cover":"";if(session&&!custom)setStore("zebra.wall."+session,name)}
