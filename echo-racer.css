@@ -3953,8 +3953,8 @@ body > .er-lab-window.er-lab-floating{
  padding:clamp(7px,1.5vh,18px)!important;background:#030407ed!important
 }
 .zebra-game-body .zg.er .er-overlay.er-stage-home .er-brand-logo{
- display:block!important;width:min(86%,370px)!important;height:auto!important;
- max-height:min(47%,340px)!important;object-fit:contain!important;
+ display:block!important;width:min(97%,450px)!important;height:auto!important;
+ max-height:min(62%,390px)!important;object-fit:contain!important;
  margin:0 auto clamp(7px,1.6vh,16px)!important;filter:none!important;image-rendering:auto!important
 }
 .zebra-game-body .zg.er .er-overlay.er-stage-home .er-start-call,
@@ -4051,7 +4051,7 @@ body > .er-lab-window.er-lab-floating{
 }
 @media(max-width:700px){
  .zebra-game-body .zg.er .er-overlay.er-stage-home .er-brand-logo{
-  width:min(90%,280px)!important;max-height:44%!important;margin-bottom:6px!important
+  width:min(97%,345px)!important;max-height:57%!important;margin-bottom:4px!important
  }
  .zebra-game-body .zg.er .er-overlay.er-stage-home{gap:3px!important}
  .zebra-game-body .zg.er .er-overlay.er-stage-home .er-overlay-button,

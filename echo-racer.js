@@ -31,16 +31,16 @@ const APPEAR_FADE_DEPTH=7.2;
 const PATTERN_COUNT=28;
 // Four distinct campaign levels; Free Roam remains diagnostic-only.
 const LEVELS=[
- {id:"run",name:"SIGNAL",subtitle:"LE PREMIER TUNNEL",speed:1,gap:1,arcade:true,
+ {id:"run",name:"INITIATION",subtitle:"LE PREMIER TUNNEL",speed:1,gap:1,arcade:true,
   duration:105,track:"p1",musicAt:0,motion:0,patterns:[0,1,3,7,10,13],
   colors:{colorMain:"#ff3ed1",colorAccent:"#74efff",colorPanels:"#6b1e71",colorBackdrop:"#0b0619",colorHazard:"#ef3a5c"}},
- {id:"l2",name:"NÉON",subtitle:"PORTES MOBILES",speed:1.07,gap:.97,arcade:true,
+ {id:"l2",name:"CIRCUIT",subtitle:"PORTES MOBILES",speed:1.07,gap:.97,arcade:true,
   duration:101,track:"p1",musicAt:106,motion:1,patterns:[1,4,6,7,9,12,15,17,19,21],
   colors:{colorMain:"#24f0da",colorAccent:"#fa74e7",colorPanels:"#105c64",colorBackdrop:"#04151c",colorHazard:"#fe8d4c"}},
- {id:"l3",name:"MIRAGE",subtitle:"MURS OSCILLANTS",speed:1.13,gap:.95,arcade:true,
+ {id:"l3",name:"RAPIDE",subtitle:"MURS OSCILLANTS",speed:1.13,gap:.95,arcade:true,
   duration:108,track:"p3",musicAt:0,motion:2,patterns:[2,5,8,11,14,18,20,22,23,25],
   colors:{colorMain:"#86a1ff",colorAccent:"#fc86f0",colorPanels:"#343b92",colorBackdrop:"#080c25",colorHazard:"#ff6dba"}},
- {id:"l4",name:"HYPERDRIVE",subtitle:"OBSTACLES QUI AVANCENT",speed:1.19,gap:.93,arcade:true,
+ {id:"l4",name:"EXTRÊME",subtitle:"MURS FONÇANTS",speed:1.19,gap:.93,arcade:true,
   duration:103,track:"p3",musicAt:56,motion:3,patterns:[3,8,9,14,17,19,21,23,24,26,27],
   colors:{colorMain:"#ffc46c",colorAccent:"#6ffff3",colorPanels:"#854131",colorBackdrop:"#1b0913",colorHazard:"#ff486f"}},
  {id:"free",name:"FREE ROAM",subtitle:"DIAGNOSTIC SANS OBSTACLES",speed:1,gap:1,spin:0,patterns:[]}
@@ -609,7 +609,7 @@ function mount(root){
   btn.setAttribute("aria-label","Niveau "+(i+1)+" — "+level.name);
   const image=node("img","er-level-art");
   image.src="/assets/games/lvl"+(i+1)+".png";image.alt="";image.loading="lazy";
-  btn.append(image,node("span","er-level-name","0"+(i+1)+" · "+level.name),
+  btn.append(image,node("span","er-level-name",level.subtitle),
    node("span","er-level-state"));
   btn.onclick=()=>{menuIndex=i;confirmLevel();};
   levelPicker.appendChild(btn);levelButtons.push(btn);
