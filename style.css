@@ -141,6 +141,22 @@
 /* ZebraOS v0.9 — a live read-only GitHub volume inside My Computer. */
 .github-drive-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;border-bottom:1px solid #8e9996;padding-bottom:8px;margin-bottom:8px}
 .github-drive-toolbar button{min-height:29px}
+/* Square Windows-style navigation keys; use existing classic relief. */
+.github-drive-toolbar .github-nav-button{
+ display:inline-flex;align-items:center;justify-content:center;
+ width:36px;min-width:36px;height:32px;min-height:32px;padding:0;
+ border:2px outset #eee;border-radius:0!important;
+ background:#c6c6c6;color:#111;box-shadow:none;font:20px/1 Tahoma,Arial,sans-serif
+}
+.github-drive-toolbar .github-nav-button:hover{background:#d4d4d4}
+.github-drive-toolbar .github-nav-button:active{border-style:inset}
+.github-drive-toolbar .github-nav-button svg{
+ display:block;width:20px;height:20px;flex:none;fill:none;
+ stroke:#191919;stroke-width:2.2;stroke-linecap:square;stroke-linejoin:miter
+}
+@media(max-width:700px){
+ .github-drive-toolbar .github-nav-button{width:38px;min-width:38px;height:35px;min-height:35px;padding:0}
+}
 .github-drive-toolbar button:nth-last-child(1){margin-left:auto;background:#d5e4db}
 .github-drive-hint{font:11px/1.55 Tahoma,Arial,sans-serif;color:#4a5a5c;margin:9px 0}
 .github-drive-state,.github-drive-empty{background:#eceeed;border:1px inset #abb7b2;color:#2c3636;padding:16px 12px;font:11px/1.5 "Courier New",monospace}

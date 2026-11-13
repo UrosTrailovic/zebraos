@@ -430,10 +430,12 @@ function zebraIsMobileBack(){
    ((window.matchMedia&&window.matchMedia("(pointer: coarse)").matches)||innerWidth<=700));
 }
 function armZebraMobileBack(){
- if(!zebraIsMobileBack()||zebraMobileBackArmed||zebraMobileBackLeaving)return;
+ if(!zebraIsMobileBack()||zebraMobileBackLeaving)return;
  try{
-  if(!history.state||history.state.zebraMobileBackToken!==zebraMobileBackToken)
-   history.pushState({zebraMobileBackToken:zebraMobileBackToken},"",location.href);
+  // Re-arm after every popstate, including when returning to a stale guard.
+  if(zebraMobileBackArmed&&history.state&&
+     history.state.zebraMobileBackToken===zebraMobileBackToken)return;
+  history.pushState({zebraMobileBackToken:zebraMobileBackToken},"",location.href);
   zebraMobileBackArmed=true;
  }catch(e){zebraMobileBackArmed=false;}
 }
@@ -457,15 +459,8 @@ function zebraGoBackInsideOS(){
   });
   var w=windows[0];
   if(w){
-   // Keep the actual current explorer and its native Up action.
-   var folderPath=w.querySelector(".folder-path");
-   var toolbar=w.querySelector(".github-drive-toolbar");
-   if(folderPath&&toolbar&&folderPath.textContent.indexOf("C:\\BUREAU\\")===0){
-    var up=Array.from(toolbar.querySelectorAll("button")).find(function(b){
-     return b.textContent.trim()==="↑";
-    });
-    if(up){up.click();return true;}
-   }
+   // The Samsung Back key closes the top window, even when it is a folder.
+   // Folder navigation is handled by the on-screen back arrow.
    var windowClose=w.querySelector(".titlebuttons [data-close]");
    if(windowClose){windowClose.click();return true;}
   }
@@ -488,17 +483,12 @@ function zebraGoBackInsideOS(){
 }
 window.addEventListener("popstate",function(event){
  if(!zebraIsMobileBack()||zebraMobileBackLeaving)return;
- // Browser Forward to the same in-page guard does not undo OS actions.
- if(event.state&&event.state.zebraMobileBackToken===zebraMobileBackToken){
-  zebraMobileBackArmed=true;
-  return;
- }
- if(!zebraMobileBackArmed)return;
+ // Android may pop to an older ZebraOS entry carrying our own token.
+ // Handle each physical Back, including those entries, then re-arm.
  zebraMobileBackArmed=false;
  if(zebraGoBackInsideOS()){
   armZebraMobileBack();
  }else{
-  // Never trap the visitor at the session selector / powered-off machine.
   zebraMobileBackLeaving=true;
   history.back();
  }
@@ -708,6 +698,7 @@ function addResizeHandles(w){
  });
 }
 function windowBox(id,title,width,height){
+ armZebraMobileBack();
  var launcher=document.activeElement;
  if(opened[id]){
   if(opened[id].w.classList.contains("minimized"))sfx("restore");
