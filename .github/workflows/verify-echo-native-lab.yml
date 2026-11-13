@@ -50,7 +50,15 @@ jobs:
             report.gameMounted=true;
             game._echoDebug.test();
             const toggle=game.querySelector('.er-lab-toggle');
-            toggle.click();
+            // This must be reachable by mouse, not only via toggle.click().
+            const rect=toggle.getBoundingClientRect();
+            const hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);
+            report.toggleVisible=rect.width>0&&rect.height>0&&!toggle.hidden;
+            report.togglePointerEvents=getComputedStyle(toggle).pointerEvents==='auto';
+            report.toggleActuallyHit=hit===toggle||toggle.contains(hit);
+            if(!report.toggleVisible||!report.togglePointerEvents||!report.toggleActuallyHit)
+              throw Error('CONFIG TEST not mouse-clickable; hit='+(hit?hit.className:'none'));
+            hit.click();
             const windowOS=document.querySelector('.window[data-app-id="racer-lab"]');
             report.realWindow=!!windowOS&&windowOS.parentElement.id==='windows-area';
             report.notClipped=!game.contains(windowOS);
