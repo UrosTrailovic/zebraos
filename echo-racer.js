@@ -422,7 +422,7 @@ function mount(root){
  const heading=node("div","er-heading");
  const wordmark=node("div","er-wordmark");
  const headerLogo=node("img","er-header-logo");
- headerLogo.src="/assets/games/echo-raccer-logo.png";
+ headerLogo.src="/assets/games/echo-racer-logo-2026.webp?v=1";
  headerLogo.alt="ECHO RACER";
  wordmark.appendChild(headerLogo);
  heading.appendChild(wordmark);wrap.appendChild(heading);
@@ -545,7 +545,7 @@ function mount(root){
  const sheen=node("div","er-crt");sheen.setAttribute("aria-hidden","true");
  const overlay=node("div","er-overlay");
  const brandLogo=node("img","er-brand-logo");
- brandLogo.src="/assets/games/echo-raccer-logo.png";
+ brandLogo.src="/assets/games/echo-racer-logo-2026.webp?v=1";
  brandLogo.alt="Echo Racer";
  const logo=node("h2","er-title","ECHO RACER");
  const crashIcon=node("img","er-crash-icon");

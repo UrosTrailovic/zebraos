@@ -114,6 +114,17 @@ function playMechanicalClick(name,multiplier){
 
 /* Custom ZebraOS desktop sprite: user-supplied 128px PNGs, optimised for small UI sizes. */
 function osIcon(name,size){
+  if(name==="racer"){
+    // User-supplied Echo Racer 2 logo; one image for desktop, menus and titlebar.
+    var racerLogo=el("img","os-icon-graphic");
+    racerLogo.src="/assets/games/echo-racer-logo-2026.webp?v=1";
+    racerLogo.alt="";racerLogo.width=size;racerLogo.height=size;
+    racerLogo.style.width=size+"px";
+    racerLogo.style.height=size+"px";
+    racerLogo.style.objectFit="contain";
+    racerLogo.setAttribute("aria-hidden","true");
+    return racerLogo;
+  }
   if(name==="snake"){
     var znak=el("img","os-icon-graphic");
     znak.src="/STUDIO/BUREAU/Jeux/Znake.exe.zebraos.json.icone.png?v=1";
@@ -121,7 +132,7 @@ function osIcon(name,size){
     znak.style.width=size+"px";znak.style.height=size+"px";znak.style.objectFit="contain";
     znak.setAttribute("aria-hidden","true");return znak;
   }
-  if(name==="tetris"||name==="snake"||name==="paint"||name==="racer"){
+  if(name==="tetris"||name==="snake"||name==="paint"){
     var retro=el("span","zapp-icon zapp-"+name,name==="tetris"?"▦":name==="snake"?"▥":name==="racer"?"◇":"✎");
     retro.style.width=size+"px";retro.style.height=size+"px";
     retro.style.fontSize=Math.round(size*.63)+"px";
@@ -863,7 +874,7 @@ var gameModules={
  snake:{name:"Znake.exe",width:650,height:700,global:"ZebraSnake",
   files:["snake.js?v=8.7"],css:"snake.css?v=8.9"},
  racer:{name:"Echo Racer.exe",width:750,height:790,global:"ZebraEchoRacer",
-  files:["echo-racer.js?v=18.5"],css:"echo-racer.css?v=18.5"},
+  files:["echo-racer.js?v=18.6"],css:"echo-racer.css?v=18.5"},
  paint:{name:"ZebraPaint.exe",width:850,height:640,global:"ZebraPaint",
   files:["paint.js?v=1.4"],css:"paint-responsive.css?v=1.4"}
 };
