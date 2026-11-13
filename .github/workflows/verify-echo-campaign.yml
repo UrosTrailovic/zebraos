@@ -75,16 +75,22 @@ jobs:
               assert menu.locator(".er-test-button").is_visible()
               assert menu.locator(".er-quit-button").is_visible()
               page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-menu.png")
-              menu.locator(".er-overlay-button").click()
+              (page.locator(game+" .window-body").evaluate("(n)=>n._echoDebug.controller(\'pulse\')") if mobile else menu.locator(".er-overlay-button").click())
               levels=page.locator(game+" .er-stage-levels .er-level-button")
               assert levels.count()==4,"There must be four actual cards"
               assert all(levels.nth(i).locator("img").evaluate("(n)=>n.complete&&n.naturalWidth>0") for i in range(4)),"One of four level textures missing"
               locked=[levels.nth(i).get_attribute("aria-disabled") for i in range(4)]
               assert locked==["false","true","true","true"],f"Unexpected locks: {locked}"
               page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-levels.png")
-              levels.nth(1).evaluate("(b)=>b.click()")
+              if mobile:
+                  page.locator(game+" .window-body").evaluate("(n)=>{n._echoDebug.controller('down');n._echoDebug.controller('pulse');}")
+              else:
+                  levels.nth(1).evaluate("(b)=>b.click()")
               assert "menu"==page.locator(game+" .window-body").evaluate("(n)=>n._echoDebug.snapshot().mode"),"Locked level started"
-              levels.nth(0).click()
+              if mobile:
+                  page.locator(game+" .window-body").evaluate("(n)=>{n._echoDebug.controller('up');n._echoDebug.controller('pulse');}")
+              else:
+                  levels.nth(0).click()
               body=page.locator(game+" .window-body")
               assert body.evaluate("(n)=>n._echoDebug.snapshot().mode")=="running","Level one did not launch"
               assert body.evaluate("(n)=>n._echoDebug.level().id")=="run"
@@ -98,11 +104,17 @@ jobs:
               state=body.evaluate("(n)=>({snap:n._echoDebug.snapshot(),level:n._echoDebug.level()})")
               assert state["snap"]["mode"]=="finished",f"Level did not finish: {state['snap']['mode']}"
               assert state["level"]["unlockedLevel"]==2 and state["level"]["completedLevels"]==1
-              page.locator(game+" .er-finale-actions button").last.click()
+              if mobile:
+                  page.locator(game+" .window-body").evaluate("(n)=>{n._echoDebug.controller('down');n._echoDebug.controller('pulse');}")
+              else:
+                  page.locator(game+" .er-finale-actions button").last.click()
               levels=page.locator(game+" .er-stage-levels .er-level-button")
               assert levels.nth(1).get_attribute("aria-disabled")=="false","Level 2 still locked"
               assert levels.nth(2).get_attribute("aria-disabled")=="true","Level 3 unlocked too early"
-              levels.nth(1).click()
+              if mobile:
+                  page.locator(game+" .window-body").evaluate("(n)=>{n._echoDebug.controller('down');n._echoDebug.controller('pulse');}")
+              else:
+                  levels.nth(1).click()
               state=body.evaluate("(n)=>({level:n._echoDebug.level(),snap:n._echoDebug.snapshot()})")
               assert state["level"]["id"]=="l2", "Level 2 did not launch"
               assert state["snap"]["lab"]["colorMain"]=="#24f0da","Level 2 palette missing"
