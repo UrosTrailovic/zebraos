@@ -1904,11 +1904,12 @@ function mount(root){
  }
  function bankSkill(reason="ENCAISSÉ"){
   if(skillBank<1)return 0;
-  // Points have already been added as each action happened. Closing the
-  // chain only resets its multiplier; it never awards them twice.
+  // Already-awarded points are banked; only a collision breaks a clean
+  // campaign run. A natural timeout must not erase the multiplier.
   const reward=Math.round(skillBank);
   bankedCount++;
-  skillBank=0;skillChain=combo=0;skillMultiplier=0;skillTimer=skillAge=0;
+  skillBank=0;skillTimer=skillAge=0;
+  if(!campaignRunning())skillChain=combo=skillMultiplier=0;
   return reward;
  }
  function breakCombo(){
@@ -1917,16 +1918,20 @@ function mount(root){
   cleanPassStreak=0;
   rewardLife=0;rewardText="";rewardKind="";scoreToast.hidden=true;
  }
+ function growCleanStreak(steps=1){
+  const oldMultiplier=skillMultiplier;
+  skillChain+=steps;combo=skillChain;
+  skillMultiplier=Math.min(lab.comboMax,1+Math.floor((skillChain-1)/lab.comboEvery));
+  if(skillMultiplier>Math.max(1,oldMultiplier))playRewardCue("chainStep");
+ }
  function awardSkill(kind,base,title){
   if(mode!=="running"||encoreMode==="transition"||selectedLevel.id==="free")return 0;
-  skillChain++;combo=skillChain;
-  skillMultiplier=Math.min(lab.comboMax,1+Math.floor((skillChain-1)/lab.comboEvery));
+  growCleanStreak();
   const gained=Math.round(base*skillMultiplier*scoreMultiplier);
   // Immediately update the real score, as in arcade racing games.
   score+=gained;bankedTotal+=gained;
   skillBank+=gained;skillTimer=lab.comboTimeout;
   if(kind==="near")nearMisses++;
-  if(skillChain>1&&skillChain%lab.comboEvery===1)playRewardCue("chainStep");
   showReward(title+" +"+gained.toLocaleString("fr-CH"),
    kind==="near"?"near":"skill",1.15);
   // Give visual feedback on the exact scoring frame; the ordinary
@@ -1940,6 +1945,10 @@ function mount(root){
   if(skillBank<=0)return;
   skillTimer=Math.max(0,skillTimer-dt);
   skillAge+=dt;
+  if(campaignRunning()&&(padBoostTime>0||nitroActive)){
+   // A maintained boost keeps the reward window open.
+   skillTimer=lab.comboTimeout;skillAge=0;
+  }
   if(skillTimer===0||skillAge>=lab.comboCashout)bankSkill("COMBO ENCAISSÉ");
  }
  function playDeathSound(){
@@ -2683,9 +2692,14 @@ function mount(root){
        const bonus=awardSkill("near",lab.scoreNear,"NEAR MISS");
        message="NEAR MISS · +"+bonus;messageLife=1.15;beep("pass");
       }else{
-       // Ordinary avoidance is not an event on every single gate.
-       // Only the fifth clean gate earns the grouped bonus/notice.
+       // At high speed, every clean gate grows the multiplier. Actual
+       // points remain a single grouped reward every fifth gate.
        cleanPassStreak++;
+       if(campaignRunning()&&(scoreMultiplier>=4||padBoostTime>0||nitroActive)){
+        growCleanStreak();
+        skillTimer=lab.comboTimeout;
+        renderHud();
+       }
        if(cleanPassStreak>=5){
         cleanPassStreak=0;cleanBonusCount++;
         awardSkill("clean",lab.scoreClean*5,"PASSAGE PROPRE ×5");
@@ -2831,19 +2845,14 @@ function mount(root){
   const beat=musicVisual.kick,high=musicVisual.treble;
   c.beginPath();c.arc(g.cx+shift.x,g.cy+shift.y-g.offset*r,r,0,TAU);
   const color=cyan?lab.colorAccent:lab.colorMain;
-  c.strokeStyle=labHex(color,clamp((cyan?.33:.27)+.49*near+
-   beat*.32+high*(cyan?.40:.19),0,1));
-  c.lineWidth=((cyan?1.6:1.3)+near*(cyan?1.6:1.1)+beat*3.2+high*1.6)*lab.ringThickness;
+  c.strokeStyle=labHex(color,clamp((cyan?.29:.24)+.42*near+
+   beat*.13+high*(cyan?.14:.075),0,.83));
+  // Single fine contour; music alters brightness more than geometry.
+  c.lineWidth=((cyan?1.35:1.10)+near*(cyan?1.12:.88)+
+   beat*.36+high*.18)*lab.ringThickness;
   c.shadowColor=color;
-  c.shadowBlur=lab.shadows?((cyan?3:2)+beat*11+high*6)*(near*.7+.3):0;
+  c.shadowBlur=lab.shadows?((cyan?1.6:1)+beat*2.3+high*.75)*(.35+near*.65):0;
   c.stroke();c.shadowBlur=0;
-  // Kicks ripple through the walls, not through an opaque screen flash.
-  if(beat>.16&&z<20&&index%3===0){
-   c.lineWidth=(1.5+beat*3.9)*lab.ringThickness;
-   c.strokeStyle=labHex(color,clamp(beat*.48*near,0,.7));
-   c.shadowColor=color;c.shadowBlur=lab.shadows?beat*16:0;
-   c.stroke();c.shadowBlur=0;
-  }
  }
  function drawTunnel(now){
   const g=wallGeom(),cold=blueTunnel();
@@ -2865,8 +2874,8 @@ function mount(root){
    const z=row*panelLength-panelOffset;
    if(z<0||z>RENDER_FAR_Z)continue;
    const fade=clamp(1-z/RENDER_FAR_Z,0,1);
-   const bassLight=clamp((musicVisual.bass*.32+musicVisual.kick*.17)*lab.light,0,.52);
-   const highLight=clamp((musicVisual.high*.48+musicVisual.treble*.45)*lab.light,0,.92);
+   const bassLight=clamp((musicVisual.bass*.14+musicVisual.kick*.07)*lab.light,0,.23);
+   const highLight=clamp((musicVisual.high*.20+musicVisual.treble*.13)*lab.light,0,.34);
    // LOD: distant plates span two sectors. Keep close-up seams at full
    // resolution while cutting geometry cost in the extended distance.
    const sectorStep=lab.panelDetail===0?4:lab.panelDetail===1?(z>15?4:2):(z>15?2:1);
@@ -2901,15 +2910,16 @@ function mount(root){
     const z=(RENDER_FAR_Z+.35)*step/24,pt=wallPoint(a,z);
     c.lineTo(pt.x,pt.y);
    }
-   c.strokeStyle=labHex(cyan?lab.colorAccent:cold?lab.colorMain:lab.colorMain,.12*lab.light);
-   c.lineWidth=(cyan?9:5)*lab.railThickness;c.shadowBlur=0;c.stroke();
+   c.strokeStyle=labHex(cyan?lab.colorAccent:lab.colorMain,.075*lab.light);
+   c.lineWidth=(cyan?5.2:3.7)*lab.railThickness;c.shadowBlur=0;c.stroke();
    c.strokeStyle=labHex(cyan?lab.colorAccent:lab.colorMain,
-    clamp((cyan?.44:.30)+musicVisual.high*(cyan?.50:.24)+
-     musicVisual.bass*.18+musicVisual.treble*.20,0,1));
-   c.lineWidth=((cyan?2.4:1.4)+musicVisual.high*(cyan?2.8:1.6)+
-    musicVisual.kick*1.4)*lab.railThickness;
+    clamp((cyan?.38:.26)+musicVisual.high*(cyan?.24:.12)+
+     musicVisual.bass*.065+musicVisual.treble*.12,0,.78));
+   c.lineWidth=((cyan?1.65:1.08)+musicVisual.high*.38+
+    musicVisual.kick*.18)*lab.railThickness;
    c.shadowColor=cyan?lab.colorAccent:lab.colorMain;
-   c.shadowBlur=lab.shadows?((cyan?3:2)+musicVisual.treble*10+musicVisual.kick*4):0;
+   c.shadowBlur=lab.shadows?((cyan?1.7:1)+musicVisual.treble*1.9+
+    musicVisual.kick*.8):0;
    c.stroke();c.shadowBlur=0;
   }
   const spacing=lab.ringGap;
@@ -2931,15 +2941,14 @@ function mount(root){
   // Physically small, music-driven phosphor strips instead of a blurred
   // full-screen radial gradient. Kicks pulse pink, treble cyan.
   const kick=musicVisual.kick,treble=musicVisual.treble;
-  if(kick>.12||treble>.12){
+  if(kick>.20||treble>.20){
    for(let i=0;i<8;i++){
     const a=screenAngle(i*TAU/8+.11),z=1.7+(i%3)*1.12;
     const amount=i%2===0?kick:treble;
-    if(amount<.13)continue;
-    wallPatch(a,a+STEP*.67,z,z+.10+amount*.30,
-     i%2===0?
-      labHex(cold?lab.colorMain:lab.colorMain,.17+amount*.58):
-      labHex(lab.colorAccent,.17+amount*.55),null,1);
+    if(amount<.23)continue;
+    wallPatch(a,a+STEP*.34,z,z+.07+amount*.08,
+     i%2===0?labHex(lab.colorMain,.10+amount*.22):
+      labHex(lab.colorAccent,.10+amount*.20),null,1);
    }
   }
  }
@@ -2959,29 +2968,29 @@ function mount(root){
    const newLaser=w.kind>=20;
    const obstacleColor=selectedLevel.id==="l2"&&!testMode?
     phaseProfiles.p3.colorHazard:lab.colorHazard;
-   const hazardLight=musicVisual.kick*.24+musicVisual.bass*.12;
+   const hazardLight=musicVisual.kick*.09+musicVisual.bass*.045;
    const skinFill=labTint(obstacleColor,
     clamp((newLaser?.65:skin===3?.74:skin===1?.85:1)+hazardLight,0,1));
    const obstacleAccent=selectedLevel.id==="l2"&&!testMode?
     phaseProfiles.p3.colorAccent:lab.colorAccent;
    const skinEdge=newLaser?obstacleAccent:obstacleColor;
    c.shadowColor=obstacleColor;
-   c.shadowBlur=lab.shadows?((newLaser?5:2)+musicVisual.kick*11+musicVisual.treble*5):0;
+   c.shadowBlur=lab.shadows?((newLaser?3:1)+musicVisual.kick*2.4+musicVisual.treble*.8):0;
    wallPatch(a,b,z,far,skinFill,skinEdge,newLaser?3:6);
    if(newLaser){
     // Light cross-braces mark the late-game barriers without altering hitboxes.
     const aa=wallPoint(a+.03,z+.10),bb=wallPoint(b-.03,far-.10);
     c.beginPath();c.moveTo(aa.x,aa.y);c.lineTo(bb.x,bb.y);
-    c.strokeStyle=labHex(obstacleAccent,clamp(.70+musicVisual.treble*.3,0,1));
-    c.lineWidth=1.5+musicVisual.treble*2.3;c.stroke();
+    c.strokeStyle=labHex(obstacleAccent,clamp(.63+musicVisual.treble*.14,0,.82));
+    c.lineWidth=1.35+musicVisual.treble*.35;c.stroke();
    }
    c.shadowBlur=0;
    // Pale amber warning edge separates dangerous gates from pink wall trim.
    const q0=wallPoint(a+.025,z+.035),q1=wallPoint(b-.025,z+.035);
    c.beginPath();c.moveTo(q0.x,q0.y);c.lineTo(q1.x,q1.y);
    c.strokeStyle=labHex(obstacleAccent,
-    clamp(.48+musicVisual.kick*.23+musicVisual.treble*.28,0,1));
-   c.lineWidth=1.35+musicVisual.kick*1.7+musicVisual.treble*.9;
+    clamp(.44+musicVisual.kick*.13+musicVisual.treble*.11,0,.74));
+   c.lineWidth=1.2+musicVisual.kick*.28+musicVisual.treble*.16;
    c.shadowBlur=0;c.stroke();
   }
   c.restore();

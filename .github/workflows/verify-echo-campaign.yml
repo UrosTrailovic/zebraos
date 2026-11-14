@@ -181,6 +181,37 @@ jobs:
               assert 1.25<motion["factor"]<1.66, f"World scroll factor must reflect tunnel speed: {motion}"
               body.evaluate("(n)=>n._echoDebug.draw()")
               page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-stage1.png")
+              # Simulate a fast uninterrupted turbo run and perfect passes.
+              # Real wall collision still resets the streak; idling does not.
+              combo_test=body.evaluate("""(n)=>{
+                const d=n._echoDebug;
+                for(let i=0;i<14;i++){
+                  const previous=d.snapshot().passed;
+                  d.injectWave([5],2.9); // safe gap, not a near miss
+                  for(let j=0;j<18&&d.snapshot().passed===previous;j++)d.advance(.05);
+                }
+                const before=d.snapshot();
+                const shown=n.querySelector('.er-score-combo').classList.contains('active');
+                for(let i=0;i<650;i++)d.advance(.05);
+                const after=d.snapshot();
+                const kept=n.querySelector('.er-score-combo').classList.contains('active');
+                const scoreBeforeHit=after.score;
+                d.simulateHit();
+                const hit=d.snapshot();
+                return {passed:before.passed,multiplier:before.arcade.multiplier,
+                 chain:before.arcade.chain,shown,kept,
+                 bankedBefore:before.arcade.bankedCount,bankedAfter:after.arcade.bankedCount,
+                 multiplierAfterWait:after.arcade.multiplier,hitMultiplier:hit.arcade.multiplier,
+                 scoreBeforeHit,scoreAfterHit:hit.score,
+                 visibleAfterHit:n.querySelector('.er-score-combo').classList.contains('active')};
+              }""")
+              assert combo_test["passed"]>=14, f"Clean gates never registered: {combo_test}"
+              assert combo_test["multiplier"]>=5 and combo_test["shown"],f"Perfect fast passes did not raise multiplier: {combo_test}"
+              assert combo_test["bankedAfter"]>combo_test["bankedBefore"],f"Test did not exercise auto bank: {combo_test}"
+              assert combo_test["multiplierAfterWait"]>=5 and combo_test["kept"],f"Idle cashout erased clean combo: {combo_test}"
+              assert combo_test["hitMultiplier"]==0 and not combo_test["visibleAfterHit"],f"Wall impact did not reset combo: {combo_test}"
+              assert combo_test["scoreAfterHit"]==combo_test["scoreBeforeHit"],f"Wall impact erased earned score: {combo_test}"
+              print("CLEAN_STREAK_TEST "+json.dumps(combo_test,ensure_ascii=False),flush=True)
               # In the dedicated test environment only, hazards were disabled
               # through saved editor parameters to validate timed completion without collisions.
               body.evaluate("""(n)=>{
