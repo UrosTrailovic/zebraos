@@ -3115,66 +3115,78 @@ function mount(root){
   }
   c.restore();
  }
- // Each danger is drawn on the same curved tube as the walls.
+ // Render physical beams, laser contact caps, moving drone and detached mines.
  function drawHazard(h){
-  if(h.cleared||h.z>RENDER_FAR_Z||h.z+(h.length||0)<-.6)return;
-  const fade=clamp((SPAWN_Z-h.z)/4.4,0,1);if(fade<.004)return;
-  const z=Math.max(.05,h.z),far=Math.max(z+.08,h.z+h.length);
-  c.save();c.globalAlpha*=fade;c.lineCap="round";c.lineJoin="round";
-  if(h.type==="sweeper"){
-   // Two short contact strips and a cross-beam rotating together.
-   for(let i=0;i<2;i++){
-    const a=screenAngle(h.rotation+i*PI);
-    wallPatch(a-STEP*.40,a+STEP*.40,z,far,
-     labHex("#ef587a",.25),labHex("#ffb4bd",.80),4);
+  if(h.cleared)return;
+  if(h.type==="laser"){
+   if(h.z>RENDER_FAR_Z||h.z<-.7)return;
+   const fade=clamp((SPAWN_Z-h.z)/4.2,0,1),z=Math.max(.05,h.z);
+   if(fade<.004)return;
+   c.save();c.globalAlpha*=fade;c.lineCap="round";c.lineJoin="round";
+   for(const ray of h.rays){
+    const a=screenAngle(h.rotation+ray.a),b=a+PI;
+    const p=wallPoint(a,z),q=wallPoint(b,z);
+    const end={x:lerp(p.x,q.x,ray.reach),y:lerp(p.y,q.y,ray.reach)};
+    const w=clamp(p.r*.028,1.35,5.5);
+    c.beginPath();c.moveTo(p.x,p.y);c.lineTo(end.x,end.y);
+    c.shadowColor="#ff567c";c.shadowBlur=lab.shadows?11:4;
+    c.strokeStyle="rgba(255,75,110,.42)";c.lineWidth=w*3;c.stroke();
+    c.shadowBlur=0;c.strokeStyle="#ff8193";c.lineWidth=w*1.25;c.stroke();
+    c.strokeStyle="#fff1e9";c.lineWidth=Math.max(.7,w*.33);c.stroke();
+    // Only a full ray contacts the opposite wall.
+    for(const endpoint of (ray.reach>=.92?[a,b]:[a])){
+     const contact=wallPoint(endpoint,z),r=clamp(contact.r*.067,1.6,9);
+     wallPatch(endpoint-STEP*.60,endpoint+STEP*.60,z,z+.44,
+      labHex("#ff597e",.16),labHex("#ff9eb0",.65),2);
+     c.fillStyle="#462034";c.strokeStyle="#ffbdc5";c.lineWidth=1;
+     c.beginPath();c.arc(contact.x,contact.y,r,0,TAU);c.fill();c.stroke();
+     c.fillStyle="#ffe3d7";c.beginPath();c.arc(contact.x,contact.y,r*.38,0,TAU);c.fill();
+    }
+    if(ray.reach<.92){
+     c.fillStyle="#ffcab0";c.beginPath();c.arc(end.x,end.y,Math.max(1,w*.7),0,TAU);c.fill();
+    }
    }
-   const mid=Math.max(.05,h.z+h.length*.42);
-   const p0=wallPoint(screenAngle(h.rotation),mid),p1=wallPoint(screenAngle(h.rotation+PI),mid);
-   c.beginPath();c.moveTo(p0.x,p0.y);c.lineTo(p1.x,p1.y);
-   c.strokeStyle=labHex("#ff667b",.75);c.lineWidth=3.1;c.stroke();
-   c.strokeStyle=labHex("#ffe9ec",.87);c.lineWidth=.9;c.stroke();
-   for(const p of [p0,p1]){
-    c.beginPath();c.arc(p.x,p.y,clamp(p.r*.055,1.5,7),0,TAU);
-    c.fillStyle="#ffcfda";c.fill();
-   }
-  }else if(h.type==="electric"){
-   const warning=clamp((HIT_Z+13-h.z)/9,0,1);
-   const a=screenAngle(h.center-h.width*.5),b=a+h.width;
-   wallPatch(a,b,z,far,
-    labHex("#40d8e9",.13+warning*.33),
-    labHex("#adf8e8",.45+warning*.44),5);
-   for(let i=0;i<3;i++){
-    const depth=z+(far-z)*(i+.5)/3;
-    const p0=wallPoint(a+h.width*.12,depth+.23);
-    const p1=wallPoint(a+h.width*.53,depth-.1);
-    const p2=wallPoint(a+h.width*.39,depth-.25);
-    const p3=wallPoint(a+h.width*.83,depth-.44);
-    c.beginPath();c.moveTo(p0.x,p0.y);c.lineTo(p1.x,p1.y);
-    c.lineTo(p2.x,p2.y);c.lineTo(p3.x,p3.y);
-    c.strokeStyle=warning>.65?"#e5f6bc":"#7fcedb";
-    c.lineWidth=1.2+warning*.75;c.stroke();
-   }
+   c.restore();
   }else if(h.type==="drone"){
-   const body=wallPoint(screenAngle(h.bodyAngle),z),r=clamp(body.r*.14,3.5,17);
-   c.fillStyle="#253445";c.strokeStyle="#ffe0df";c.lineWidth=1.4;
-   c.beginPath();c.moveTo(body.x,body.y-r);c.lineTo(body.x+r*.82,body.y);
-   c.lineTo(body.x,body.y+r);c.lineTo(body.x-r*.82,body.y);
-   c.closePath();c.fill();c.stroke();
-   c.fillStyle="#fa6b88";c.beginPath();c.arc(body.x,body.y,r*.28,0,TAU);c.fill();
-   if(h.locked&&!h.fired){
-    const boltZ=Math.max(.05,h.boltZ),a=screenAngle(h.targetAngle);
-    const bolt=wallPoint(a,boltZ),br=clamp(bolt.r*.10,4,16);
-    // Once targeted, the projectile is non-homing and clearly marked.
-    wallPatch(a-STEP*.55,a+STEP*.55,boltZ,boltZ+.85,
-     labHex("#ff7993",.16),labHex("#ffbdc6",.66),3);
-    c.strokeStyle="#ff889a";c.lineWidth=1.7;c.beginPath();
-    c.arc(bolt.x,bolt.y,br,0,TAU);c.stroke();
-    c.fillStyle="#ffd2d8";c.beginPath();c.arc(bolt.x,bolt.y,br*.38,0,TAU);c.fill();
-    c.strokeStyle=labHex("#ff7f94",.36);c.lineWidth=.9;c.beginPath();
-    c.moveTo(body.x,body.y);c.lineTo(bolt.x,bolt.y);c.stroke();
+   if(h.z>RENDER_FAR_Z&&h.mines.length===0)return;
+   if(h.z<=RENDER_FAR_Z&&h.z>-.7){
+    const z=Math.max(.05,h.z),a=screenAngle(h.bodyAngle),p=wallPoint(a,z);
+    const trail=wallPoint(a,z+2.6),r=clamp(p.r*.18,4,23);
+    c.save();c.globalAlpha*=clamp((SPAWN_Z-h.z)/4,0,1);
+    c.beginPath();c.moveTo(p.x,p.y);c.lineTo(trail.x,trail.y);
+    c.strokeStyle=labHex("#99f8f5",.62);c.lineWidth=Math.max(1,r*.21);c.stroke();
+    c.translate(p.x,p.y);c.rotate(-a*.15);
+    c.fillStyle="#192d3b";c.strokeStyle="#c1fbff";c.lineWidth=Math.max(1,r*.12);
+    c.beginPath();c.moveTo(-r*1.5,-r*.08);c.lineTo(-r*.43,-r*.61);
+    c.lineTo(0,-r*.82);c.lineTo(r*.43,-r*.61);c.lineTo(r*1.5,-r*.08);
+    c.lineTo(r*.72,r*.60);c.lineTo(0,r*.88);c.lineTo(-r*.72,r*.60);
+    c.closePath();c.fill();c.stroke();
+    for(const side of [-1,1]){
+     const x=side*r*1.15,y=Math.sin(h.age*24+side)*r*.10;
+     c.beginPath();c.arc(x,y,r*.34,0,TAU);c.stroke();
+     c.beginPath();c.moveTo(x-r*.24,y-r*.15);c.lineTo(x+r*.24,y+r*.15);
+     c.strokeStyle="#82fff0";c.stroke();
+    }
+    c.fillStyle="#ff9c5d";c.beginPath();c.arc(0,-r*.10,r*.27,0,TAU);c.fill();
+    c.restore();
+   }
+   // Autonomous mines slide in depth at the locked launch angle.
+   for(const mine of h.mines){
+    if(mine.z>RENDER_FAR_Z||mine.z<-.7)continue;
+    const z=Math.max(.05,mine.z),a=screenAngle(mine.angle);
+    const p=wallPoint(a,z),tail=wallPoint(a,z+1.6);
+    const r=clamp(p.r*.14,3,18);
+    c.save();c.globalAlpha*=clamp((SPAWN_Z-mine.z)/5,0,1);
+    c.beginPath();c.moveTo(p.x,p.y);c.lineTo(tail.x,tail.y);
+    c.strokeStyle="#ffa56d";c.lineWidth=Math.max(1,r*.18);c.stroke();
+    wallPatch(a-STEP*.75,a+STEP*.75,z,z+.64,
+     labHex("#ff9d5d",.15),labHex("#ffd29e",.65),3);
+    c.fillStyle="#542d29";c.strokeStyle="#ffce91";c.lineWidth=1.5;
+    c.beginPath();c.arc(p.x,p.y,r,0,TAU);c.fill();c.stroke();
+    c.fillStyle="#ffb65a";c.beginPath();c.arc(p.x,p.y,r*.42,0,TAU);c.fill();
+    c.restore();
    }
   }
-  c.restore();
  }
  // Shield collectible attached to the same bent tube as every obstacle.
  function drawShieldPickup(pickup){
