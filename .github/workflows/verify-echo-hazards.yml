@@ -68,7 +68,7 @@ jobs:
                   results=page.evaluate("""() => {
                    const d=document.querySelector('#game')._echoDebug;
                    function simulate(type,hit){
-                    d.test();d.setTestInvincible(false);
+                    d.testPhase('p1');d.setTestInvincible(false);
                     const z=d.hitDepth+(type==='drone'?4.5:.4);
                     const h=d.injectHazard(type,z);
                     if(!h)throw Error('Could not inject '+type);
@@ -89,7 +89,7 @@ jobs:
                    const sweptHit=simulate('sweeper',true),sweptSafe=simulate('sweeper',false);
                    const electricHit=simulate('electric',true),electricSafe=simulate('electric',false);
                    const droneHit=simulate('drone',true),droneSafe=simulate('drone',false);
-                   d.test();d.setTestInvincible(false);const target=d.injectHazard('drone',d.hitDepth+5);
+                   d.testPhase('p1');d.setTestInvincible(false);const target=d.injectHazard('drone',d.hitDepth+5);
                    d.pulse();const pulseDestroyed=target.cleared;
                    for(let i=0;i<45;i++)d.advance(.05);
                    return {sweptHit:sweptHit.lives,sweptSafe:sweptSafe.lives,
