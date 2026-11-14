@@ -192,6 +192,10 @@ jobs:
                 }
                 const before=d.snapshot();
                 const shown=n.querySelector('.er-score-combo').classList.contains('active');
+                // An explicit cashout tests the actual bug without waiting
+                // for a timeout that active boosts correctly extend forever.
+                const cashed=d.cashout();
+                const afterCashout=d.snapshot();
                 for(let i=0;i<650;i++)d.advance(.05);
                 const after=d.snapshot();
                 const kept=n.querySelector('.er-score-combo').classList.contains('active');
@@ -200,15 +204,17 @@ jobs:
                 const hit=d.snapshot();
                 return {passed:before.passed,multiplier:before.arcade.multiplier,
                  chain:before.arcade.chain,shown,kept,
-                 bankedBefore:before.arcade.bankedCount,bankedAfter:after.arcade.bankedCount,
+                 bankedBefore:before.arcade.bankedCount,bankedAfter:afterCashout.arcade.bankedCount,
+                 amountCashed:cashed,multiplierAfterCashout:afterCashout.arcade.multiplier,
                  multiplierAfterWait:after.arcade.multiplier,hitMultiplier:hit.arcade.multiplier,
                  scoreBeforeHit,scoreAfterHit:hit.score,
                  visibleAfterHit:n.querySelector('.er-score-combo').classList.contains('active')};
               }""")
               assert combo_test["passed"]>=14, f"Clean gates never registered: {combo_test}"
               assert combo_test["multiplier"]>=5 and combo_test["shown"],f"Perfect fast passes did not raise multiplier: {combo_test}"
-              assert combo_test["bankedAfter"]>combo_test["bankedBefore"],f"Test did not exercise auto bank: {combo_test}"
-              assert combo_test["multiplierAfterWait"]>=5 and combo_test["kept"],f"Idle cashout erased clean combo: {combo_test}"
+              assert combo_test["amountCashed"]>0 and combo_test["bankedAfter"]>combo_test["bankedBefore"],f"Explicit cashout did not run: {combo_test}"
+              assert combo_test["multiplierAfterCashout"]==combo_test["multiplier"],f"Banking points erased multiplier: {combo_test}"
+              assert combo_test["multiplierAfterWait"]>=5 and combo_test["kept"],f"Continued clean boosting erased multiplier: {combo_test}"
               assert combo_test["hitMultiplier"]==0 and not combo_test["visibleAfterHit"],f"Wall impact did not reset combo: {combo_test}"
               assert combo_test["scoreAfterHit"]==combo_test["scoreBeforeHit"],f"Wall impact erased earned score: {combo_test}"
               print("CLEAN_STREAK_TEST "+json.dumps(combo_test,ensure_ascii=False),flush=True)
