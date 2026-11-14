@@ -32,16 +32,16 @@ const PATTERN_COUNT=28;
 // Four distinct campaign levels; Free Roam remains diagnostic-only.
 const LEVELS=[
  {id:"run",name:"INITIATION",subtitle:"LE PREMIER TUNNEL",speed:1,gap:1,arcade:true,
-  fallbackDuration:220,track:"p1",musicAt:0,motion:0,rise:2.3,patterns:[0,1,3,7,10,13],
+  fallbackDuration:314.472,track:"p1",musicAt:0,motion:0,rise:2.3,patterns:[0,1,3,7,10,13],
   colors:{colorMain:"#ff3ed1",colorAccent:"#74efff",colorPanels:"#6b1e71",colorBackdrop:"#0b0619",colorHazard:"#ef3a5c"}},
  {id:"l2",name:"CIRCUIT",subtitle:"PORTES MOBILES",speed:1.07,gap:.97,arcade:true,
-  fallbackDuration:220,track:"p1",musicAt:0,motion:1,rise:3.1,patterns:[1,4,6,7,9,12,15,17,19,21],
+  fallbackDuration:314.472,track:"p1",musicAt:0,motion:1,rise:3.1,patterns:[1,4,6,7,9,12,15,17,19,21],
   colors:{colorMain:"#24f0da",colorAccent:"#fa74e7",colorPanels:"#105c64",colorBackdrop:"#04151c",colorHazard:"#fe8d4c"}},
  {id:"l3",name:"RAPIDE",subtitle:"MURS OSCILLANTS",speed:1.13,gap:.95,arcade:true,
-  fallbackDuration:180,track:"p3",musicAt:0,motion:2,rise:3.7,patterns:[2,5,8,11,14,18,20,22,23,25],
+  fallbackDuration:192.287,track:"p3",musicAt:0,motion:2,rise:3.7,patterns:[2,5,8,11,14,18,20,22,23,25],
   colors:{colorMain:"#86a1ff",colorAccent:"#fc86f0",colorPanels:"#343b92",colorBackdrop:"#080c25",colorHazard:"#ff6dba"}},
  {id:"l4",name:"EXTRÊME",subtitle:"MURS FONÇANTS",speed:1.19,gap:.93,arcade:true,
-  fallbackDuration:180,track:"p3",musicAt:0,motion:3,rise:4.2,patterns:[3,8,9,14,17,19,21,23,24,26,27],
+  fallbackDuration:192.287,track:"p3",musicAt:0,motion:3,rise:4.2,patterns:[3,8,9,14,17,19,21,23,24,26,27],
   colors:{colorMain:"#ffc46c",colorAccent:"#6ffff3",colorPanels:"#854131",colorBackdrop:"#1b0913",colorHazard:"#ff486f"}},
  {id:"free",name:"FREE ROAM",subtitle:"DIAGNOSTIC SANS OBSTACLES",speed:1,gap:1,spin:0,patterns:[]}
 ];
@@ -2561,7 +2561,7 @@ function mount(root){
     if(campaignRunning()){
      const uninterrupted=padBoostTime>0||nitroActive;
      boostChain=uninterrupted?Math.min(6,boostChain+1):1;
-     padBoostTime=Math.max(padBoostTime,Math.max(5,lab.boostPadDuration));
+     padBoostTime=Math.max(padBoostTime,Math.max(6.5,lab.boostPadDuration));
     }else padBoostTime=Math.max(padBoostTime,lab.boostPadDuration);
     shipBoostFade=1;turboLight=1;
     const gained=awardSkill("pad",lab.scorePad,"BOOST PAD");

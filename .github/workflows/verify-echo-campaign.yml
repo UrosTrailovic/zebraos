@@ -112,15 +112,18 @@ jobs:
               assert body.evaluate("(n)=>n._echoDebug.level().id")=="run"
               tracks=body.evaluate("(n)=>n._echoDebug.level().available.map(l=>[l.music,l.offset])")
               assert tracks==[["p1",0],["p1",0],["p3",0],["p3",0]], "Every full song must start at zero"
+              assert 314.0<body.evaluate("(n)=>n._echoDebug.level().duration")<315.0, "Song 1 duration should be 314 s"
               first=body.evaluate("""(n)=>{
                 const d=n._echoDebug;
-                d.injectPickup('pad',[0,1,2]);d.advance(.05);
+                d.injectPickup('pad',[0,1,2]);
+                for(let i=0;i<12&&d.gauges().chain===0;i++)d.advance(.05);
                 return d.gauges();
               }""")
               assert first["chain"]==1 and first["padTime"]>0, "First boost not recognized"
               second=body.evaluate("""(n)=>{
                 const d=n._echoDebug;
-                d.injectPickup('pad',[0,1,2]);d.advance(.05);
+                d.injectPickup('pad',[0,1,2]);
+                for(let i=0;i<12&&d.gauges().chain<2;i++)d.advance(.05);
                 return d.gauges();
               }""")
               assert second["chain"]==2, "Second uninterrupted pad did not chain"
@@ -131,7 +134,7 @@ jobs:
               # In the dedicated test environment only, hazards were disabled
               # through saved editor parameters to make the 105s simulation deterministic.
               body.evaluate("""(n)=>{
-                for(let i=0;i<5300&&n._echoDebug.snapshot().mode==='running';i++)
+                for(let i=0;i<7000&&n._echoDebug.snapshot().mode==='running';i++)
                   n._echoDebug.advance(.05);
                 n._echoDebug.tickFinale(4);
               }""")
@@ -157,7 +160,7 @@ jobs:
               page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-stage2.png")
               for finished_index in (2,3,4):
                   body.evaluate("""(n)=>{
-                    for(let i=0;i<5300&&n._echoDebug.snapshot().mode==='running';i++)
+                    for(let i=0;i<7000&&n._echoDebug.snapshot().mode==='running';i++)
                       n._echoDebug.advance(.05);
                     n._echoDebug.tickFinale(4);
                   }""")
