@@ -78,9 +78,13 @@ jobs:
                      d.advance(.05);
                      if(!hit)d.setShipAngle(aim+Math.PI/2);
                     }else if(!hit)d.setShipAngle(aim+Math.PI/2);
-                    for(let i=0;i<48;i++)d.advance(.05);
+                    const trace=[];
+                    for(let i=0;i<48;i++){
+                     d.advance(.05);
+                     if(i<9)trace.push({step:i,z:h.z,hit:h.hit,fired:h.fired,lives:d.snapshot().lives,angle:d.snapshot().angle,mode:d.snapshot().mode});
+                    }
                     d.draw();
-                    return {lives:d.snapshot().lives,render:d.lastRenderError(),hazards:d.snapshot().hazards,mode:d.snapshot().mode,travel:d.snapshot().travel,invincible:d.snapshot().lab.invincible,hidden:document.hidden};
+                    return {lives:d.snapshot().lives,render:d.lastRenderError(),hazards:d.snapshot().hazards,mode:d.snapshot().mode,travel:d.snapshot().travel,invincible:d.snapshot().lab.invincible,hidden:document.hidden,trace};
                    }
                    const sweptHit=simulate('sweeper',true),sweptSafe=simulate('sweeper',false);
                    const electricHit=simulate('electric',true),electricSafe=simulate('electric',false);
