@@ -14,45 +14,58 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Syntaxe et répartition exacte par niveau
+      - name: Vérifier la syntaxe et la progression des menaces
         run: |
           node --check echo-racer.js
           node <<'NODE'
           const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
           const context={window:{}};
           vm.runInNewContext(fs.readFileSync('echo-racer.js','utf8'),context,{timeout:2500});
-          const pick=context.window.ZebraEchoRacer.hazardTypeForLevel;
-          const allowed={run:[],l2:['sweeper'],l3:['electric','sweeper'],l4:['electric','sweeper','drone'],free:[]};
-          for(const [level,expected] of Object.entries(allowed)){
-           const types=new Set();
-           for(let i=1;i<=180;i++){
-            const type=pick(level,i);
-            if(i<5)assert.equal(type,null,'Special appeared during introduction');
-            if(type)types.add(type);
+          const api=context.window.ZebraEchoRacer;
+          const families={run:['laser'],l2:['laser'],l3:['laser'],l4:['drone','laser'],free:[]};
+          for(const [id,expected] of Object.entries(families)){
+           const actual=new Set();
+           for(let gate=1;gate<=175;gate++){
+            const t=api.hazardTypeForLevel(id,gate);
+            if(gate<5)assert.equal(t,null);
+            if(t)actual.add(t);
            }
-           assert.deepEqual([...types].sort(),expected.sort(),level+' families mismatch');
+           assert.deepEqual([...actual].sort(),expected.sort(),id);
+           if(id==='free')continue;
+           for(let gate=7;gate<50;gate++){
+            const p=api.laserBlueprint(id,gate);
+            assert.ok(p.count>=1&&p.count<=3);
+            if(id!=='run')assert.ok(p.count>=2,'later levels require crossed rays');
+            assert.equal(p.rotating,id==='l3'||id==='l4');
+           }
           }
-          console.log('LEVEL_HAZARDS_PASS: four intended family sets and clear introduction');
+          // A partial beam only touches its originating rim, not the opposite wall.
+          const partial={rotation:0,rays:[{a:0,reach:.55}]};
+          assert.equal(api.laserContact(0,partial),true);
+          assert.equal(api.laserContact(Math.PI,partial),false);
+          const triple={rotation:0,rays:[{a:0,reach:1},{a:Math.PI/3,reach:1},{a:2*Math.PI/3,reach:1}]};
+          assert.equal(api.laserContact(Math.PI/6,triple),false);
+          console.log('HAZARD_PROGRESSION_OK: no electricity, laser shapes and safe sectors');
           NODE
-      - name: Préparer le navigateur
+      - name: Installer Chromium
         run: |
           python3 -m pip install --quiet playwright
           python3 -m playwright install --with-deps chromium
-      - name: Tester les collisions et les échappatoires sur PC et mobile
+      - name: Tester collisions, esquives et mouvement PC/mobile
         run: |
           cat > _verify_echo_hazards.html <<'HTML'
-          <!doctype html><html lang="fr"><head><meta charset="utf-8">
+          <!doctype html><html><head><meta charset="utf-8">
           <meta name="viewport" content="width=device-width,initial-scale=1">
           <link rel="stylesheet" href="/style.css">
           <link rel="stylesheet" href="/echo-racer.css">
-          <style>body{margin:0;background:#222}.window{position:relative;width:100%;height:880px}
+          <style>body{margin:0;background:#222}.window{position:relative;height:870px;width:100%}
           .window-body{height:100%;width:100%;padding:0}</style></head>
           <body><div class="window focused"><div id="game" class="window-body zebra-game-body"></div></div>
-          <script src="/echo-racer.js"></script><script>
-          window.addEventListener('load',()=>window.ZebraEchoRacer.mount(document.querySelector('#game')));
-          </script></body></html>
+          <script src="/echo-racer.js"></script>
+          <script>window.addEventListener('load',()=>window.ZebraEchoRacer.mount(document.querySelector('#game')));</script>
+          </body></html>
           HTML
-          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/echo-hazards-http.log 2>&1 &
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/echo-lasers-http.log 2>&1 &
           python3 - <<'PY'
           import json
           from playwright.sync_api import sync_playwright
@@ -62,48 +75,71 @@ jobs:
                   page=browser.new_page(viewport={'width':width,'height':height})
                   errors=[]
                   page.on('pageerror',lambda e: errors.append(str(e)))
-                  page.add_init_script("localStorage.setItem('zebra.echo-racer.lab.v1', JSON.stringify({invincible:false}));")
+                  page.add_init_script("localStorage.setItem('zebra.echo-racer.campaign.unlocked.v1','4')")
                   page.goto('http://127.0.0.1:8765/_verify_echo_hazards.html',wait_until='load')
                   page.wait_for_function("!!document.querySelector('#game')._echoDebug")
-                  results=page.evaluate("""() => {
-                   const d=document.querySelector('#game')._echoDebug;
-                   function simulate(type,hit){
-                    d.testPhase('p1');d.setTestInvincible(false);
-                    const z=d.hitDepth+(type==='drone'?4.5:.4);
-                    const h=d.injectHazard(type,z);
-                    if(!h)throw Error('Could not inject '+type);
-                    const aim=type==='sweeper'?h.rotation:type==='electric'?h.center:0;
-                    d.setShipAngle(aim);
-                    if(type==='drone'){
-                     d.advance(.05);
-                     if(!hit)d.setShipAngle(aim+Math.PI/2);
-                    }else if(!hit)d.setShipAngle(aim+Math.PI/2);
-                    const trace=[];
-                    for(let i=0;i<48;i++){
-                     d.advance(.05);
-                     if(i<9)trace.push({step:i,z:h.z,hit:h.hit,fired:h.fired,lives:d.snapshot().lives,angle:d.snapshot().angle,mode:d.snapshot().mode,invuln:d.snapshot().invuln,invincible:d.snapshot().lab.invincible});
-                    }
-                    d.draw();
-                    return {lives:d.snapshot().lives,render:d.lastRenderError(),hazards:d.snapshot().hazards,mode:d.snapshot().mode,travel:d.snapshot().travel,invincible:d.snapshot().lab.invincible,hidden:document.hidden,trace};
+                  result=page.evaluate("""() => {
+                   const d=document.querySelector('#game')._echoDebug,PI=Math.PI;
+                   const advance=(n)=>{for(let i=0;i<n;i++)d.advance(.05);};
+                   const start=()=>{d.testPhase('p1');d.setTestInvincible(false);};
+                   function laserCase(rayList,shipAngle){
+                    start();
+                    const h=d.injectHazard('laser',d.hitDepth+.44);
+                    h.rays=rayList;h.rotation=0;h.spin=0;
+                    d.setShipAngle(shipAngle);
+                    advance(16);d.draw();
+                    return d.snapshot().lives;
                    }
-                   const sweptHit=simulate('sweeper',true),sweptSafe=simulate('sweeper',false);
-                   const electricHit=simulate('electric',true),electricSafe=simulate('electric',false);
-                   const droneHit=simulate('drone',true),droneSafe=simulate('drone',false);
-                   d.testPhase('p1');d.setTestInvincible(false);const target=d.injectHazard('drone',d.hitDepth+5);
-                   d.pulse();const pulseDestroyed=target.cleared;
-                   for(let i=0;i<45;i++)d.advance(.05);
-                   return {sweptHit:sweptHit.lives,sweptSafe:sweptSafe.lives,
-                    electricHit:electricHit.lives,electricSafe:electricSafe.lives,
-                    droneHit:droneHit.lives,droneSafe:droneSafe.lives,
-                    pulseDestroyed,pulseSafe:d.snapshot().lives===3,
-                    diagnostic:{sweptHit,electricHit,droneHit},renderErrors:[sweptHit.render,sweptSafe.render,electricHit.render,electricSafe.render,droneHit.render,droneSafe.render]};
+                   const star=[{a:0,reach:1},{a:PI/3,reach:1},{a:2*PI/3,reach:1}];
+                   const starHit=laserCase(star,0),starDodge=laserCase(star,PI/6);
+                   const shortHit=laserCase([{a:0,reach:.57}],0);
+                   const shortDodge=laserCase([{a:0,reach:.57}],PI);
+                   // Level 3 introduces actual rotation of the full laser hitbox.
+                   d.menu();
+                   const selectedL3=d.selectLevel('l3');start();
+                   const spinning=d.injectHazard('laser',d.hitDepth+13);
+                   const firstAngle=spinning.rotation,spin=spinning.spin;
+                   advance(18);d.draw();
+                   const lastAngle=spinning.rotation,rotated=Math.abs(lastAngle-firstAngle)>.15;
+                   // A drone patrols, then tracks the ship and drops two
+                   // independent mines. Its angular position must actually change.
+                   start();const mover=d.injectHazard('drone',d.hitDepth+22);
+                   const from=mover.bodyAngle;
+                   d.setShipAngle(PI);advance(34);d.draw();
+                   const moved=Math.abs(((mover.bodyAngle-from+PI*3)%(PI*2))-PI)>.14;
+                   const dropped=mover.drops>=1;
+                   const mine=mover.mines[0],mineBefore=mine&&mine.z;
+                   advance(2);
+                   const mineMoved=!!mine&&mine.z<mineBefore;
+                   function droneCase(hit){
+                    start();
+                    const h=d.injectHazard('drone',d.hitDepth+4.5);
+                    h.bodyAngle=0;h.trackAngle=0;h.patrolPhase=0;
+                    d.setShipAngle(0);d.advance(.05);
+                    if(!hit)d.setShipAngle(PI);
+                    advance(55);d.draw();
+                    return d.snapshot().lives;
+                   }
+                   const mineHit=droneCase(true),mineDodge=droneCase(false);
+                   start();
+                   const target=d.injectHazard('drone',d.hitDepth+5);
+                   d.advance(.05);const countBefore=target.mines.length;
+                   d.pulse();const pulseKill=target.cleared&&target.mines.length===0;
+                   advance(35);d.draw();
+                   const pulseSafe=d.snapshot().lives===3;
+                   const noElectric=d.injectHazard('electric')===null;
+                   return {starHit,starDodge,shortHit,shortDodge,selectedL3,spin,rotated,
+                    moved,dropped,mineMoved,mineHit,mineDodge,
+                    countBefore,pulseKill,pulseSafe,noElectric,renderError:d.lastRenderError()};
                   }""")
-                  print('HAZARD_BROWSER',width,json.dumps(results),flush=True)
-                  assert results['sweptHit']==2 and results['sweptSafe']==3,results
-                  assert results['electricHit']==2 and results['electricSafe']==3,results
-                  assert results['droneHit']==2 and results['droneSafe']==3,results
-                  assert results['pulseDestroyed'] and results['pulseSafe'],results
-                  assert not any(results['renderErrors']),results
+                  print('ECHO_HAZARDS',width,json.dumps(result),flush=True)
+                  assert result['starHit']==2 and result['starDodge']==3,result
+                  assert result['shortHit']==2 and result['shortDodge']==3,result
+                  assert result['selectedL3'] and abs(result['spin'])>.2 and result['rotated'],result
+                  assert result['moved'] and result['dropped'] and result['mineMoved'],result
+                  assert result['mineHit']==2 and result['mineDodge']==3,result
+                  assert result['countBefore']>=1 and result['pulseKill'] and result['pulseSafe'],result
+                  assert result['noElectric'] and not result['renderError'],result
                   assert not errors,errors
                   page.close()
               browser.close()
