@@ -34,13 +34,13 @@ const LEVELS=[
  {id:"run",name:"INITIATION",subtitle:"LE PREMIER TUNNEL",speed:1,gap:1,arcade:true,
   fallbackDuration:217,track:"p1",musicAt:0,motion:0,rise:2.3,patterns:[0,1,3,7,10,13],
   colors:{colorMain:"#ff3ed1",colorAccent:"#74efff",colorPanels:"#6b1e71",colorBackdrop:"#0b0619",colorHazard:"#ef3a5c"}},
- {id:"l2",name:"CIRCUIT",subtitle:"PORTES MOBILES",speed:1.07,gap:.97,arcade:true,
+ {id:"l2",name:"CIRCUIT",subtitle:"MURS ET BALAYEURS",speed:1.07,gap:.97,arcade:true,
   fallbackDuration:192.287,track:"p3",musicAt:0,motion:1,rise:3.1,patterns:[1,4,6,7,9,12,15,17,19,21],
   colors:{colorMain:"#24f0da",colorAccent:"#fa74e7",colorPanels:"#105c64",colorBackdrop:"#04151c",colorHazard:"#145e87"}},
- {id:"l3",name:"RAPIDE",subtitle:"MURS OSCILLANTS",speed:1.13,gap:.95,arcade:true,
+ {id:"l3",name:"RAPIDE",subtitle:"MURS, BALAYEURS ET ÉLECTRICITÉ",speed:1.13,gap:.95,arcade:true,
   fallbackDuration:120.529,track:"p4",musicAt:0,motion:2,rise:3.7,patterns:[2,5,8,11,14,18,20,22,23,25],
   colors:{colorMain:"#86a1ff",colorAccent:"#fc86f0",colorPanels:"#343b92",colorBackdrop:"#080c25",colorHazard:"#ff6dba"}},
- {id:"l4",name:"EXTRÊME",subtitle:"MURS FONÇANTS",speed:1.19,gap:.93,arcade:true,
+ {id:"l4",name:"EXTRÊME",subtitle:"MURS, BALAYEURS, ÉLECTRICITÉ ET DRONES",speed:1.19,gap:.93,arcade:true,
   fallbackDuration:142.812,track:"p5",musicAt:0,motion:3,rise:4.2,patterns:[3,8,9,14,17,19,21,23,24,26,27],
   colors:{colorMain:"#ffc46c",colorAccent:"#6ffff3",colorPanels:"#854131",colorBackdrop:"#1b0913",colorHazard:"#ff486f"}},
  {id:"free",name:"FREE ROAM",subtitle:"DIAGNOSTIC SANS OBSTACLES",speed:1,gap:1,spin:0,patterns:[]}
@@ -56,6 +56,14 @@ const SHIELD_START=34,SHIELD_GAP_MIN=51,SHIELD_GAP_MAX=77;
 const SHIELD_RARE_MIN=96,SHIELD_RARE_MAX=135;
 const PICKUP_FRONT=1.05,PICKUP_BACK=.85,PAD_SIDE=STEP*.29,SHIELD_SIDE=STEP*.36;
 const PULSE_REACH=8.4;
+// One new hazard replaces (never stacks with) an existing gate slot.
+function hazardTypeForLevel(levelId,gate){
+ if(gate<5)return null;
+ if(levelId==="l2")return gate%6===0?"sweeper":null;
+ if(levelId==="l3")return gate%7===0?"electric":gate%7===4?"sweeper":null;
+ if(levelId==="l4")return gate%9===0?"drone":gate%9===3?"electric":gate%9===6?"sweeper":null;
+ return null;
+}
 const NITRO_BURN_SECONDS=3.2,NITRO_REFILL_SECONDS=5,NITRO_REGEN_WAIT=.45;
 function angularDelta(a,b){return ((a-b+PI)%TAU+TAU)%TAU-PI;}
 function inGap(i,start,width){
@@ -135,6 +143,7 @@ function mount(root){
  let best=Number(load("best.run",load("best.3",load("best","0"))))||0;
  let distance=0,travel=0,passed=0,combo=0,waves=[],pads=[],shields=[],
   nextGateAt=START_GATE_AT,nextPadAt=PAD_START,nextShieldAt=SHIELD_START,
+   hazards=[],
   lastGateAt=-100,trail=[],sparks=[],currentSpeed=0,gateCount=0,padCount=0,shieldCount=0,scoreMultiplier=1;
  let invuln=0,pulseCharge=2,pulseGlow=0,padBoostTime=0,pulseFx=0,pulseHitFx=0,shieldFlash=0;
  let boostChain=0;
@@ -1129,7 +1138,7 @@ function mount(root){
   if(spec.id==="bendFrequency")bendProfiles.clear();
   if(spec.id==="frameLimit")labLastPaint=0;
   if(spec.id==="bendFrequency"||spec.id==="bendIntensity"||spec.id==="verticalBend")bendCache.clear();
-  if(spec.id==="obstaclesEnabled"&&!target[spec.id]&&activePhase===editorPhase)waves=[];
+  if(spec.id==="obstaclesEnabled"&&!target[spec.id]&&activePhase===editorPhase){waves=[];hazards=[];}
   if(spec.id==="boostPadsEnabled"&&activePhase===editorPhase){
    if(!target[spec.id]){
     pads=[];padBoostTime=0;boostChain=0;shipBoostFade=0;turboLight=0;
@@ -2050,7 +2059,7 @@ function mount(root){
   nitroFullLatched=false;
   for(const kind of Object.keys(rewardCueCounts))rewardCueCounts[kind]=0;
   scoreToast.hidden=true;scoreCombo.classList.remove("active");
-  waves=[];pads=[];shields=[];
+  waves=[];pads=[];shields=[];hazards=[];
   nextGateAt=selectedLevel.id==="free"?Infinity:START_GATE_AT;
   nextPadAt=selectedLevel.id==="free"?Infinity:PAD_START;
   nextShieldAt=selectedLevel.id==="free"?Infinity:SHIELD_START;
@@ -2104,7 +2113,7 @@ function mount(root){
   screen.classList.remove("er-crashing");lockDeathControls(false);
   finaleOverlay.hidden=true;finaleTime=0;
   if(!testMode&&mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
-  musicRequest++;resetSteering();stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];trail=[];turnVelocity=0;
+  musicRequest++;resetSteering();stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];hazards=[];trail=[];turnVelocity=0;
   shieldCollect.classList.remove("er-shield-collected");pulseFx=pulseHitFx=shieldFlash=0;
   elapsed=0;arcadeSilentClock=0;encoreMode="normal";encoreTime=0;testMode=false;wrap.dataset.circuit="menu";labToggle.hidden=true;labHide();padBoostTime=0;boostChain=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
@@ -2202,13 +2211,23 @@ function mount(root){
  function pulse(){
   if(mode!=="running"||pulseCharge<=0)return;
   pulseCharge--;pulseGlow=.95;pulseFx=1;beep("pulse");
-  const target=waves.filter(w=>!w.cleared&&w.z>=HIT_Z-.6&&w.z<=HIT_Z+PULSE_REACH)
-   .sort((a,b)=>a.z-b.z)[0];
+  const nearby=[
+   ...waves.filter(w=>!w.cleared&&w.z>=HIT_Z-.6&&w.z<=HIT_Z+PULSE_REACH).map(w=>({z:w.z,wall:w})),
+   ...hazards.filter(h=>h.type==="drone"&&!h.cleared&&h.z>=HIT_Z-.6&&h.z<=HIT_Z+PULSE_REACH).map(h=>({z:h.z,drone:h}))
+  ].sort((a,b)=>a.z-b.z);
+  const target=nearby[0];
   if(target){
-   target.cleared=true;
    const gained=awardSkill("pulse",lab.scorePulse,"PULSE BREAK");
-   message="MUR DÉTRUIT · +"+gained+" EN COMBO";messageLife=1.45;
-   shatterWave(target);
+   if(target.wall){
+    target.wall.cleared=true;message="MUR DÉTRUIT · +"+gained+" EN COMBO";
+    shatterWave(target.wall);
+   }else{
+    target.drone.cleared=true;target.drone.fired=true;
+    message="DRONE DÉTRUIT · +"+gained+" EN COMBO";
+    burst(target.drone.bodyAngle,"#ffafbd",34,target.drone.z,true);
+    pulseHitFx=1;shake=Math.max(shake,1.5);
+   }
+   messageLife=1.45;
   }else{message="ONDE LIBÉRÉE";messageLife=1.05;burst(angle,"#a6faff",30,2.1,true);}
   renderHud();
  }
@@ -2282,6 +2301,63 @@ function mount(root){
    rushFactor:rush?rand(1.07,move===3?1.27:1.16):1,age:0,
    cleared:false,credited:false};
  }
+ // The specials have their own collision shapes and update over depth/time.
+ function createHazard(type){
+  if(type==="sweeper")return {type,z:SPAWN_Z,length:4.4,
+   rotation:(angle+rand(.65,1.55))%TAU,spin:(Math.random()<.5?-1:1)*rand(.24,.43),
+   hit:false,cleared:false,age:0};
+  if(type==="electric")return {type,z:SPAWN_Z,length:5.5,
+   center:(angle+rand(1.4,TAU-1.4))%TAU,width:STEP*3,
+   hit:false,cleared:false,age:0};
+  return {type:"drone",z:SPAWN_Z,length:1.2,
+   bodyAngle:(angle+rand(1.25,TAU-1.25))%TAU,
+   locked:false,targetAngle:null,boltZ:null,fired:false,cleared:false,age:0};
+ }
+ function hazardAngleHit(h,shipAngle){
+  if(h.type==="sweeper")return Math.abs(angularDelta(shipAngle,h.rotation))<STEP*.40||
+   Math.abs(angularDelta(shipAngle,h.rotation+PI))<STEP*.40;
+  if(h.type==="electric")return Math.abs(angularDelta(shipAngle,h.center))<h.width*.5;
+  return false;
+ }
+ function hitByHazard(label){
+  if(mode!=="running"||invuln>0||(testMode&&lab.invincible))return false;
+  lives--;invuln=1.35;flash=.47;shake=3;beep("hit");breakCombo();
+  if(lives>0)nextShieldAt=Math.min(nextShieldAt,travel+rand(lives===1?5:12,lives===1?11:24));
+  if(lives===1){warningLife=2.25;warningBeepDelay=.15;warningChirp=0;}
+  message=label;messageLife=1.05;burst(angle,"#ff5caa",23);
+  if(lives<=0)gameOver();
+  return true;
+ }
+ function updateHazards(dt,dz){
+  for(const h of hazards){
+   const oldZ=h.z;
+   h.z-=dz;h.age+=dt;
+   if(h.cleared)continue;
+   if(h.type==="drone"){
+    // A locked shot NEVER homes: the player can always steer away.
+    if(!h.locked&&h.z<=25){h.locked=true;h.targetAngle=angle;h.boltZ=h.z;}
+    if(h.locked&&!h.fired){
+     const previous=h.boltZ;
+     h.boltZ-=dz*1.06;
+     if(previous>HIT_Z&&h.boltZ<=HIT_Z){
+      h.fired=true;
+      if(Math.abs(angularDelta(angle,h.targetAngle))<STEP*.55)
+       hitByHazard("TIR DE DRONE");
+     }
+    }
+   }else{
+    if(h.type==="sweeper")h.rotation=(h.rotation+h.spin*dt+TAU)%TAU;
+    // Continuous contact over a depth window, not a one-frame wall check.
+    const active=oldZ+h.length>=HIT_Z&&h.z<=HIT_Z&&h.z+h.length>=HIT_Z;
+    if(active&&!h.hit&&hazardAngleHit(h,angle)){
+     h.hit=true;
+     hitByHazard(h.type==="electric"?"SURCHARGE":"BALAYEUR");
+    }
+   }
+   if(mode!=="running")break;
+  }
+  hazards=hazards.filter(h=>!h.cleared&&(h.type==="drone"?h.z>-.7:h.z+h.length>-.7));
+ }
  function nextGateGap(){
   const hard=[2,8,9,19,21,23,26].includes(nextWave);
   // Endlessly increasing density, never a wall of impossible instant hits.
@@ -2290,7 +2366,11 @@ function mount(root){
     cycle===6?rand(22.0,26.0):rand(GAP_MIN,GAP_MAX);
   if(hard)gap+=2.8;
   const density=clamp(1-directorStage*.055,.62,1);
-  return Math.max(lab.gapMinimum,gap*density/lab.obstacleDensity)*selectedLevel.gap;
+  const regular=Math.max(lab.gapMinimum,gap*density/lab.obstacleDensity)*selectedLevel.gap;
+  const approaching=hazardTypeForLevel(selectedLevel.id,gateCount+1);
+  const leaving=hazardTypeForLevel(selectedLevel.id,gateCount);
+  // Guaranteed clear approach and exit, even at highest density/boost.
+  return approaching||leaving?Math.max(19.5,regular):regular;
  }
  function smoothEncore(x){
   x=clamp(x,0,1);
@@ -2585,9 +2665,17 @@ function mount(root){
   while(travel>=nextGateAt){
    gateCount++;
    const spawnAt=nextGateAt;
-   const wave=createWave();
-   wave.z=SPAWN_Z-(travel-spawnAt);
-   if(lab.obstaclesEnabled)waves.push(wave);
+   const special=!testMode&&selectedLevel.arcade?
+    hazardTypeForLevel(selectedLevel.id,gateCount):null;
+   if(lab.obstaclesEnabled){
+    if(special){
+     const hazard=createHazard(special);hazard.z=SPAWN_Z-(travel-spawnAt);
+     hazards.push(hazard);
+    }else{
+     const wave=createWave();wave.z=SPAWN_Z-(travel-spawnAt);
+     waves.push(wave);
+    }
+   }
    lastGateAt=spawnAt;
    nextGateAt+=nextGateGap();
   }
@@ -2676,14 +2764,8 @@ function mount(root){
    if(oldZ>HIT_Z&&w.z<=HIT_Z&&!w.credited){
     w.credited=true;passed++;
     if(!w.cleared&&collisionAt(angle,w)&&invuln<=0&&!(testMode&&lab.invincible)){
-     lives--;invuln=1.35;flash=.47;shake=3;beep("hit");
-     breakCombo();
-     if(lives>0)nextShieldAt=Math.min(nextShieldAt,travel+rand(lives===1?5:12,lives===1?11:24));
-     if(lives===1){
-      warningLife=2.25;warningBeepDelay=.15;warningChirp=0;
-     }
-     message="IMPACT !";messageLife=1.05;burst(angle,"#ff5caa",23);
-     if(lives<=0){gameOver();break;}
+     hitByHazard("IMPACT !");
+     if(mode!=="running")break;
     }else{
      if(!w.cleared){
       const near=nearMiss(angle,w);
@@ -2715,6 +2797,8 @@ function mount(root){
    }
   }
   waves=waves.filter(w=>w.z>-.8);
+  if(mode==="running")updateHazards(dt,dz);
+  if(mode!=="running")return;
   sparks.forEach(p=>{p.a+=p.va*dt;p.z+=p.vz*dt;p.life-=dt;});
   sparks=sparks.filter(p=>p.life>0);
   if(!testMode&&score>best){
@@ -2995,6 +3079,67 @@ function mount(root){
   }
   c.restore();
  }
+ // Each danger is drawn on the same curved tube as the walls.
+ function drawHazard(h){
+  if(h.cleared||h.z>RENDER_FAR_Z||h.z+(h.length||0)<-.6)return;
+  const fade=clamp((SPAWN_Z-h.z)/4.4,0,1);if(fade<.004)return;
+  const z=Math.max(.05,h.z),far=Math.max(z+.08,h.z+h.length);
+  c.save();c.globalAlpha*=fade;c.lineCap="round";c.lineJoin="round";
+  if(h.type==="sweeper"){
+   // Two short contact strips and a cross-beam rotating together.
+   for(let i=0;i<2;i++){
+    const a=screenAngle(h.rotation+i*PI);
+    wallPatch(a-STEP*.40,a+STEP*.40,z,far,
+     labHex("#ef587a",.25),labHex("#ffb4bd",.80),4);
+   }
+   const mid=Math.max(.05,h.z+h.length*.42);
+   const p0=wallPoint(screenAngle(h.rotation),mid),p1=wallPoint(screenAngle(h.rotation+PI),mid);
+   c.beginPath();c.moveTo(p0.x,p0.y);c.lineTo(p1.x,p1.y);
+   c.strokeStyle=labHex("#ff667b",.75);c.lineWidth=3.1;c.stroke();
+   c.strokeStyle=labHex("#ffe9ec",.87);c.lineWidth=.9;c.stroke();
+   for(const p of [p0,p1]){
+    c.beginPath();c.arc(p.x,p.y,clamp(p.r*.055,1.5,7),0,TAU);
+    c.fillStyle="#ffcfda";c.fill();
+   }
+  }else if(h.type==="electric"){
+   const warning=clamp((HIT_Z+13-h.z)/9,0,1);
+   const a=screenAngle(h.center-h.width*.5),b=a+h.width;
+   wallPatch(a,b,z,far,
+    labHex("#40d8e9",.13+warning*.33),
+    labHex("#adf8e8",.45+warning*.44),5);
+   for(let i=0;i<3;i++){
+    const depth=z+(far-z)*(i+.5)/3;
+    const p0=wallPoint(a+h.width*.12,depth+.23);
+    const p1=wallPoint(a+h.width*.53,depth-.1);
+    const p2=wallPoint(a+h.width*.39,depth-.25);
+    const p3=wallPoint(a+h.width*.83,depth-.44);
+    c.beginPath();c.moveTo(p0.x,p0.y);c.lineTo(p1.x,p1.y);
+    c.lineTo(p2.x,p2.y);c.lineTo(p3.x,p3.y);
+    c.strokeStyle=warning>.65?"#e5f6bc":"#7fcedb";
+    c.lineWidth=1.2+warning*.75;c.stroke();
+   }
+  }else if(h.type==="drone"){
+   const body=wallPoint(screenAngle(h.bodyAngle),z),r=clamp(body.r*.14,3.5,17);
+   c.fillStyle="#253445";c.strokeStyle="#ffe0df";c.lineWidth=1.4;
+   c.beginPath();c.moveTo(body.x,body.y-r);c.lineTo(body.x+r*.82,body.y);
+   c.lineTo(body.x,body.y+r);c.lineTo(body.x-r*.82,body.y);
+   c.closePath();c.fill();c.stroke();
+   c.fillStyle="#fa6b88";c.beginPath();c.arc(body.x,body.y,r*.28,0,TAU);c.fill();
+   if(h.locked&&!h.fired){
+    const boltZ=Math.max(.05,h.boltZ),a=screenAngle(h.targetAngle);
+    const bolt=wallPoint(a,boltZ),br=clamp(bolt.r*.10,4,16);
+    // Once targeted, the projectile is non-homing and clearly marked.
+    wallPatch(a-STEP*.55,a+STEP*.55,boltZ,boltZ+.85,
+     labHex("#ff7993",.16),labHex("#ffbdc6",.66),3);
+    c.strokeStyle="#ff889a";c.lineWidth=1.7;c.beginPath();
+    c.arc(bolt.x,bolt.y,br,0,TAU);c.stroke();
+    c.fillStyle="#ffd2d8";c.beginPath();c.arc(bolt.x,bolt.y,br*.38,0,TAU);c.fill();
+    c.strokeStyle=labHex("#ff7f94",.36);c.lineWidth=.9;c.beginPath();
+    c.moveTo(body.x,body.y);c.lineTo(bolt.x,bolt.y);c.stroke();
+   }
+  }
+  c.restore();
+ }
  // Shield collectible attached to the same bent tube as every obstacle.
  function drawShieldPickup(pickup){
   if(lives===MAX_LIVES||pickup.credited||pickup.z>RENDER_FAR_Z||pickup.z<-.45)return;
@@ -3149,6 +3294,7 @@ function mount(root){
   for(let i=pads.length-1;i>=0;i--)drawPad(pads[i]);
   for(let i=shields.length-1;i>=0;i--)drawShieldPickup(shields[i]);
   for(let i=waves.length-1;i>=0;i--)drawWave(waves[i]);
+  for(let i=hazards.length-1;i>=0;i--)drawHazard(hazards[i]);
   c.restore();
   for(const p of (lab.particles<=0?[]:sparks)){
    const t=wallPoint(screenAngle(p.a),p.z);
@@ -3366,8 +3512,8 @@ function mount(root){
     nitroReady:nitroFullLatched,cues:{...rewardCueCounts},toast:rewardText},
    labDetached:!wrap.contains(labPanel)&&!!labPanel.parentElement,
    phaseActive:activePhase,phaseEditing:editorPhase,
-   phaseProfiles:JSON.parse(JSON.stringify(phaseProfiles)),fps:labFps,angle,turnVelocity,lives,score,best,distance,travel,visualTravel:labVisualTravel(),passed,combo,directorStage,musicDropSurge,
-   encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,loop:music?music.loop:false,track:musicTrackId,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
+   phaseProfiles:JSON.parse(JSON.stringify(phaseProfiles)),fps:labFps,angle,turnVelocity,invuln,lives,score,best,distance,travel,visualTravel:labVisualTravel(),passed,combo,directorStage,musicDropSurge,
+   encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,loop:music?music.loop:false,track:musicTrackId,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,hazards:hazards.map(h=>({type:h.type,z:h.z,length:h.length,center:h.center,rotation:h.rotation,spin:h.spin,hit:h.hit,locked:h.locked,targetAngle:h.targetAngle,boltZ:h.boltZ,fired:h.fired,cleared:h.cleared})),waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
   cashout:()=>bankSkill("TEST CASHOUT"),
   triggerEncore:beginEncore,triggerFinale:()=>beginFinale("debug"),tickFinale:updateFinale,
@@ -3407,6 +3553,13 @@ function mount(root){
    if(kind==="pad")pads.push(o);else if(kind==="shield")shields.push(o);
    return o;
   },
+  hazardForGate:(level,gate)=>hazardTypeForLevel(level,gate),
+  injectHazard:(type,z=HIT_Z+9)=>{
+   if(mode!=="running"||!["sweeper","electric","drone"].includes(type))return null;
+   const h=createHazard(type);h.z=z;hazards.push(h);return h;
+  },
+  setShipAngle:(v)=>{angle=(v%TAU+TAU)%TAU;return angle;},
+  setTestInvincible:(v)=>{if(!testMode)return null;lab.invincible=!!v;return lab.invincible;},
   injectWave:(sectors,z=HIT_Z+PULSE_REACH-.4)=>{
    const o={kind:0,sectors:[...sectors],z,length:1,rotation:0,spin:0,cleared:false,credited:false};
    waves.push(o);return o;
@@ -3494,5 +3647,5 @@ function mount(root){
  raf=requestAnimationFrame(frameTick);
  return dispose;
 }
-window.ZebraEchoRacer={mount,pattern,collisionAt};
+window.ZebraEchoRacer={mount,pattern,collisionAt,hazardTypeForLevel};
 }());
