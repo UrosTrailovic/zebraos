@@ -35,7 +35,9 @@ jobs:
           console.log('LEVEL_HAZARDS_PASS: four intended family sets and clear introduction');
           NODE
       - name: Préparer le navigateur
-        run: python3 -m pip install --quiet playwright
+        run: |
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install --with-deps chromium
       - name: Tester les collisions et les échappatoires sur PC et mobile
         run: |
           cat > _verify_echo_hazards.html <<'HTML'
