@@ -437,7 +437,9 @@ function mount(root){
    Math.round(parseInt(hex.slice(3,5),16)*k)+","+
    Math.round(parseInt(hex.slice(5,7),16)*k)+","+clamp(alpha,0,1)+")";
  }
- const labVisualTravel=()=>travel*lab.visualSpeed;
+ // In campaign the drawn tunnel and obstacle collision planes now use the
+ // same travel clock. TEST keeps its own visualSpeed parameter unchanged.
+ const labVisualTravel=()=>campaignRunning()?travel:travel*lab.visualSpeed;
  let dragPointer=null,dragX=0,dragLastTs=0,dragVelocity=0;
  let sliderPointer=null,steerValue=0,menuSliderDir=0,menuSliderNext=0;
  const wrap=node("section","er zg zg-retro");
@@ -1518,14 +1520,15 @@ function mount(root){
      beginFinale("song-ended");
    });
    music.onerror=function(){
-    if(!live||!selectedLevel.arcade||testMode||
-       (musicTrackId!=="p4"&&musicTrackId!=="p5")||musicFallbackAttempted){
-     musicError=true;return;
-    }
-    // Gracefully use existing song 2 until the new MP3 is on GitHub Pages.
-    musicFallbackAttempted=true;musicFallbackActive=true;musicError=false;
-    try{music.src=musicUrlPhase3;music.load();}
-    catch(_){musicError=true;}
+    musicError=true;
+    if(!live||!campaignRunning()||
+       (musicTrackId!=="p4"&&musicTrackId!=="p5"))return;
+    // MINIMAL and deep house must never be replaced by level-2 audio.
+    // A missing asset produces a clear notice and a timed silent run.
+    musicFallbackAttempted=true;musicFallbackActive=true;
+    message=musicTrackId==="p4"?
+     "MINIMAL : FICHIER AUDIO MANQUANT":"DEEP HOUSE : FICHIER AUDIO MANQUANT";
+    messageLife=5;
    };
    const context=ensureAudioContext();
    if(context&&context.createMediaElementSource&&context.createAnalyser){
@@ -2383,13 +2386,13 @@ function mount(root){
  }
  function campaignRunning(){return selectedLevel.arcade&&!testMode;}
  function steeringSensitivity(){
-  return campaignRunning()?clamp(1+Math.max(0,currentSpeed-6.15)*.072,1,1.52):1;
+  return campaignRunning()?clamp(1+Math.max(0,currentSpeed-6.15)*.019,1,1.16):1;
  }
  function boostPadMultiplier(){
   if(!campaignRunning())return lab.boostPadSpeed;
-  const initial=clamp(1+(lab.boostPadSpeed-1)*.38,1.24,1.34);
+  const initial=clamp(1+(lab.boostPadSpeed-1)*.65,1.46,1.55);
   // Repeated boost pads stack gradually, halfway between prior weak and extreme tuning.
-  return clamp(initial+Math.max(0,boostChain-1)*.075,1.24,1.64);
+  return clamp(initial+Math.max(0,boostChain-1)*.048,1.46,1.78);
  }
  function directMusicPressure(dt){
   if(campaignRunning()){
@@ -2486,7 +2489,7 @@ function mount(root){
   const nitroThrust=lab.nitroStart+lab.nitroGrowth*(1-Math.exp(-nitroBurnTime*.72));
   // Pads used to multiply speed by 1.85: keep them optional and manageable.
   const padMultiplier=boostPadMultiplier();
-  const nitroMultiplier=campaignRunning()?clamp(1+(nitroThrust-1)*.70,1.22,1.52):nitroThrust;
+  const nitroMultiplier=campaignRunning()?clamp(1+(nitroThrust-1)*1.20,1.50,1.66):nitroThrust;
   const multiplier=lab.boostPadsEnabled&&padBoostTime>0?padMultiplier:nitroActive?nitroMultiplier:1;
   const targetSpeed=base*multiplier;
   // Gentle acceleration on boost, faster return to the normal cruising speed.
@@ -2498,7 +2501,7 @@ function mount(root){
   // Score multiplier follows ACTUAL travel speed (including pad/manual boost).
   scoreMultiplier= speed>=8.2?5:speed>=6.85?4:speed>=5.65?3:speed>=4.7?2:1;
   // One physical depth displacement: both geometry (travel) and gates use it.
-  const dz=speed*dt;
+  const dz=speed*dt*(campaignRunning()?clamp(lab.visualSpeed,1,1.65):1);
   travel+=dz;
   distance+=dz*125;
   score+=dt*(15+Math.min(35,distance/210))*scoreMultiplier;
@@ -3289,7 +3292,7 @@ function mount(root){
     nitroReady:nitroFullLatched,cues:{...rewardCueCounts},toast:rewardText},
    labDetached:!wrap.contains(labPanel)&&!!labPanel.parentElement,
    phaseActive:activePhase,phaseEditing:editorPhase,
-   phaseProfiles:JSON.parse(JSON.stringify(phaseProfiles)),fps:labFps,angle,turnVelocity,lives,score,best,distance,travel,passed,combo,directorStage,musicDropSurge,
+   phaseProfiles:JSON.parse(JSON.stringify(phaseProfiles)),fps:labFps,angle,turnVelocity,lives,score,best,distance,travel,visualTravel:labVisualTravel(),passed,combo,directorStage,musicDropSurge,
    encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,loop:music?music.loop:false,track:musicTrackId,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
   triggerEncore:beginEncore,triggerFinale:()=>beginFinale("debug"),tickFinale:updateFinale,
@@ -3310,7 +3313,7 @@ function mount(root){
   ship:()=>({idleLoaded:shipReady.idle,boostLoaded:shipReady.boost,boostMix:shipBoostFade,tunnelLight:turboLight}),
   level:()=>({id:selectedLevel.id,free:selectedLevel.id==="free",gap:selectedLevel.gap,
    duration:selectedLevel.arcade?arcadeSongDuration():null,unlockedLevel,completedLevels,
-   musicFallbackActive,musicRequestedUrl:musicUrls[selectedLevel.track]||null,
+   musicFallbackActive,musicMissing:musicFallbackActive,musicRequestedUrl:musicUrls[selectedLevel.track]||null,
    steeringSensitivity:steeringSensitivity(),boostChain,boostMultiplier:boostPadMultiplier(),
    available:CAMPAIGN.map((l,i)=>({id:l.id,open:i<unlockedLevel,done:i<completedLevels,
     music:l.track,offset:l.musicAt,patterns:[...l.patterns],speed:l.speed,motion:l.motion}))}),

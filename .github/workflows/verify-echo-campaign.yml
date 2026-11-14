@@ -35,6 +35,16 @@ jobs:
               assert seconds>30, f'Unexpectedly short song: {name}'
               print(f'FULL_TRACK_DURATION {name} {seconds:.3f} seconds',flush=True)
           PY
+      - name: Vérifier l’absence de remplacement musical incorrect
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          js=Path('echo-racer.js').read_text(encoding='utf-8')
+          assert 'music.src=musicUrlPhase3' not in js, 'MINIMAL or dep house silently replaced with level-2 song'
+          assert 'FICHIER AUDIO MANQUANT' in js
+          assert 'echo-racer-minimal.mp3' in js and 'echo-racer-dep-house.mp3' in js
+          print('AUDIO_FALLBACK_PASS: missing personal tracks do not play other songs')
+          PY
       - name: Installer le navigateur de test
         run: python3 -m pip install --quiet playwright
       - name: Tester les parcours PC et Android simulé
@@ -129,8 +139,27 @@ jobs:
               }""")
               assert second["chain"]==2, "Second uninterrupted pad did not chain"
               assert second["speedMultiplier"]>first["speedMultiplier"], "Chained pads must increase speed gradually"
-              assert 1.30<first["speedMultiplier"]<=1.35, "First boost should be more powerful but controlled"
-              assert second["speedMultiplier"]<=1.64, "Uncontrolled chained boost multiplier"
+              assert 1.53<first["speedMultiplier"]<=1.55, "First boost must be around ×1.55"
+              assert second["speedMultiplier"]<=1.78, "Uncontrolled chained boost multiplier"
+              assert body.evaluate("(n)=>n._echoDebug.level().steeringSensitivity")<=1.16, "Steering ramps too strongly with speed"
+              # One injected stationary wave should advance at exactly the
+              # same pace as the visible tunnel lines, not 1.5x slower.
+              motion=body.evaluate("""(n)=>{
+                const d=n._echoDebug;
+                d.injectWave([2], 15);
+                const before=d.snapshot();
+                const waveZ=before.waves.at(-1).z;
+                d.advance(.05);
+                const after=d.snapshot();
+                return {
+                  tunnel:after.visualTravel-before.visualTravel,
+                  gate:waveZ-after.waves.at(-1).z,
+                  factor:(after.travel-before.travel)/
+                    Math.max(.00001,(after.currentSpeed+before.currentSpeed)*.5*.05)
+                };
+              }""")
+              assert abs(motion["tunnel"]-motion["gate"])<.001, "Tunnel and obstacle scroll are still desynchronized"
+              assert 1.25<motion["factor"]<1.66, f"World scroll factor must reflect tunnel speed: {motion}"
               body.evaluate("(n)=>n._echoDebug.draw()")
               page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-stage1.png")
               # In the dedicated test environment only, hazards were disabled
