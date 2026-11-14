@@ -244,6 +244,22 @@ jobs:
                       assert abs(selected["level"]["duration"]-durations[next_index])<1.0,"Wrong course soundtrack length"
                       if next_index==2:
                           assert "echo-racer-minimal.mp3" in selected["level"]["musicRequestedUrl"]
+                          # Real rendered Canvas must change with low kick vs
+                          # high treble; not just display reactive debug numbers.
+                          visuals=body.evaluate("""(n)=>{
+                            const d=n._echoDebug;
+                            const silent=d.probeMusicVisual(0,0,0,0,0);
+                            const kick=d.probeMusicVisual(.85,.25,.08,1,0);
+                            const treble=d.probeMusicVisual(.12,.38,.92,0,1);
+                            return {silent,kick,treble};
+                          }""")
+                          assert visuals["silent"]["kick"]==0 and visuals["silent"]["treble"]==0
+                          assert visuals["kick"]["kick"]>.75 and visuals["kick"]["bass"]>.5
+                          assert visuals["treble"]["treble"]>.75 and visuals["treble"]["high"]>.5
+                          assert visuals["kick"]["brightness"]!=visuals["silent"]["brightness"], "Bass kick must visibly relight rendered Canvas"
+                          assert visuals["treble"]["brightness"]!=visuals["silent"]["brightness"], "Treble must visibly relight rendered Canvas"
+                          assert visuals["treble"]["brightness"]!=visuals["kick"]["brightness"], "Highs and kicks must have different reactions"
+                          print("REACTIVE_CANVAS_TEST "+json.dumps(visuals,ensure_ascii=False),flush=True)
                       if next_index==3:
                           assert "echo-racer-dep-house.mp3" in selected["level"]["musicRequestedUrl"]
                       assert selected["snap"]["lab"]["colorMain"]==["#ff3ed1","#24f0da","#86a1ff","#ffc46c"][next_index]
@@ -256,6 +272,42 @@ jobs:
               page.wait_for_function("""!!document.querySelector('.window[data-app-id="racer"] .window-body')?._echoDebug""",timeout=20000)
               saved=page.locator(game+" .window-body").evaluate("(n)=>n._echoDebug.level().unlockedLevel")
               assert saved==4,"All four completed stages not persisted in localStorage"
+
+              # A delayed MINIMAL audio.play() must not let elapsed game time
+              # trigger victory while the song has not even started.
+              page.locator(game+" [data-close]").click()
+              page.evaluate("localStorage.setItem('zebra.echo-racer.sfx','on')")
+              page.reload(wait_until="domcontentloaded")
+              page.evaluate("""() => {
+                const oldPlay=HTMLMediaElement.prototype.play;
+                HTMLMediaElement.prototype.play=function(){
+                  if(this.src.includes('echo-racer-minimal.mp3'))
+                    return new Promise(()=>{});
+                  return oldPlay.call(this);
+                };
+              }""")
+              page.wait_for_function("!!window.__EchoCampaignTest")
+              page.evaluate("window.__EchoCampaignTest.admin();window.__EchoCampaignTest.open()")
+              page.wait_for_function("""!!document.querySelector('.window[data-app-id="racer"] .window-body')?._echoDebug""",timeout=20000)
+              delayed=page.locator(game+" .window-body")
+              pending=delayed.evaluate("""(n)=>{
+                const d=n._echoDebug;
+                if(!d.selectLevel('l3'))throw Error('Level 3 still locked');
+                d.start(false);
+                for(let i=0;i<2600&&d.snapshot().mode==='running';i++)d.advance(.05);
+                return {mode:d.snapshot().mode,clock:d.level().audioClock,
+                 duration:d.level().duration,error:d.snapshot().music.error};
+              }""")
+              assert pending["mode"]=="running", f"Level ended while MINIMAL was still loading: {pending}"
+              assert pending["clock"]<1, f"Song clock must wait for audio: {pending}"
+              assert 119<pending["duration"]<122
+              ended=delayed.evaluate("""(n)=>{
+                const d=n._echoDebug;
+                d.simulateSongEnd();d.tickFinale(4);
+                return {mode:d.snapshot().mode,level:d.level().id};
+              }""")
+              assert ended["mode"]=="finished" and ended["level"]=="l3", f"Audio ended did not finish level: {ended}"
+              print("DELAYED_MINIMAL_TEST "+json.dumps({"pending":pending,"ended":ended},ensure_ascii=False),flush=True)
               assert not errors, "Uncaught JS errors: "+repr(errors)
               result={"viewport":f"{width}x{height}","textTitle":True,"fourCards":True,"unchainedBoostSpeed":first["speedMultiplier"],"chainedBoostSpeed":second["speedMultiplier"],"level1Finished":True,"unlocked2":True,"locked3":True,"movement2":True,"allFourFinished":all_four_done,"saved":True,"pageErrors":errors}
               print("CAMPAIGN_TEST "+json.dumps(result,ensure_ascii=False),flush=True)

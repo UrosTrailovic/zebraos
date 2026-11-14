@@ -158,6 +158,7 @@ function mount(root){
  // Dedicated Echo Racer audio system: never touch ZebraAMP or other games.
  let music=null,musicSource=null,musicAnalyser=null,musicBins=null,musicError=false;
  let musicTrackId="p1",musicRequest=0;
+ let arcadeSilentClock=0; // Progress only while truly muted/unavailable; audible media owns timing.
  // Dedicated song boost; do not alter engine SFX or ZebraAMP's audio graph.
  let musicGain=null,musicLimiter=null;
  const MUSIC_GAIN=1.9;
@@ -176,7 +177,24 @@ function mount(root){
  const BOOST_FADE_IN_SECONDS=.11,BOOST_FADE_OUT_SECONDS=.23;
  let flySound=null,boostSound=null,flyFade=0,boostGain=0;
  let boostBuffer=null,boostSource=null,boostOutput=null,boostLoad=null,boostAudioFailed=false;
- const audioFx={bass:0,mid:0,high:0,kick:0,previousBass:0,slowBass:0,beatCooldown:0,energy:0};
+ const audioFx={bass:0,mid:0,high:0,kick:0,previousBass:0,slowBass:0,
+  slowHigh:0,trebleHit:0,beatCooldown:0,energy:0};
+ // Reuse one envelope per frame; no allocations per panel (mobile GPU).
+ const musicVisual={bass:0,kick:0,high:0,treble:0};
+ let musicVisualPreview=false;
+ function updateMusicVisual(){
+  const playing=music&&musicTrackId===selectedLevel.track&&
+   !music.paused&&!musicError&&soundEnabled&&!globalMuted();
+  const strength=musicVisualPreview?1.75:
+   mode==="running"&&playing?(campaignRunning()?1.75:1.3):0;
+  const punch=clamp(lab.punch,.15,3);
+  musicVisual.kick=clamp((audioFx.kick*.90+audioFx.bass*.18)*strength*punch,0,1);
+  musicVisual.bass=clamp((audioFx.bass*.92+audioFx.mid*.16+audioFx.kick*.17)*
+   strength*punch*lab.bassLight,0,1);
+  musicVisual.high=clamp((audioFx.high*.76+audioFx.mid*.19)*strength*punch*lab.trebleLight,0,1);
+  musicVisual.treble=clamp((audioFx.trebleHit*.68+audioFx.high*.39)*
+   strength*punch*lab.trebleLight,0,1);
+ }
  // Persistent TEST lab settings. Impact labels indicate likely rendering cost.
  const LAB_DEFAULTS={
    "baseSpeed": 6.15,
@@ -885,7 +903,7 @@ function mount(root){
  const soundButton=button("♫ SON ON","er-sound",()=>{
   soundEnabled=!soundEnabled;save("sfx",soundEnabled?"on":"off");
    if(!soundEnabled)pauseMusic();
-   else if(mode==="running"&&selectedLevel.arcade&&!testMode)startMusicAtPhase(selectedLevel.track,elapsed);
+   else if(mode==="running"&&selectedLevel.arcade&&!testMode)startMusicAtPhase(selectedLevel.track,arcadeSilentClock);
    else if(mode==="running")startMusic(false);
    renderSound();
  });
@@ -1511,6 +1529,7 @@ function mount(root){
      ||musicTrackId!=="p1"||music.currentTime<MUSIC_TAIL_AT)return;
     beginEncore();
    });
+   music.addEventListener("playing",()=>{if(campaignRunning())musicError=false;});
    music.addEventListener("ended",()=>{
     if(!live||mode!=="running")return;
     if(campaignRunning()){finishArcadeLevel("music-ended");return;}
@@ -1779,7 +1798,7 @@ function mount(root){
  function stopMusic(){
   pauseMusic();stopEngine();
   if(music)try{music.currentTime=0;}catch(_){}
-  audioFx.bass=audioFx.mid=audioFx.high=audioFx.kick=audioFx.previousBass=audioFx.slowBass=audioFx.energy=0;
+  audioFx.bass=audioFx.mid=audioFx.high=audioFx.kick=audioFx.previousBass=audioFx.slowBass=audioFx.slowHigh=audioFx.trebleHit=audioFx.energy=0;
   audioFx.beatCooldown=0;
  }
  function sampleMusic(dt){
@@ -1793,6 +1812,8 @@ function mount(root){
    audioFx.bass*=decay;audioFx.mid*=decay;audioFx.high*=decay;
    audioFx.kick=Math.max(0,audioFx.kick-dt*2.9);
    audioFx.previousBass*=decay;audioFx.slowBass*=decay;audioFx.energy*=decay;
+   audioFx.trebleHit=Math.max(0,audioFx.trebleHit-dt*3.2);
+   audioFx.slowHigh*=decay;
    return;
   }
   try{musicAnalyser.getByteFrequencyData(musicBins);}catch(_){return;}
@@ -1803,19 +1824,25 @@ function mount(root){
   }
   // High-sensitivity normalization for mixed, mastered MP3 material.
   // Leave headroom for loud mastered MP3s: avoid permanent saturation.
-  const bass=clamp((avg(1,10)-12)/175,0,1),
-        mid=clamp((avg(11,50)-10)/166,0,1),
-        high=clamp((avg(51,180)-8)/156,0,1);
+  // More contrast on real bass, treble and kick transients (including house).
+  const bass=clamp((avg(1,12)-8)/135,0,1),
+        mid=clamp((avg(12,60)-7)/137,0,1),
+        high=clamp((avg(60,180)-6)/117,0,1);
   const attack=1-Math.exp(-dt*23),release=1-Math.exp(-dt*7);
   audioFx.bass+=(bass-audioFx.bass)*(bass>audioFx.bass?attack:release);
   audioFx.mid+=(mid-audioFx.mid)*(mid>audioFx.mid?attack:release);
   audioFx.high+=(high-audioFx.high)*(high>audioFx.high?attack:release);
-  const baseline=audioFx.slowBass;
-  audioFx.slowBass+=(bass-audioFx.slowBass)*(1-Math.exp(-dt*1.6));
+  const baseline=audioFx.slowBass,highBaseline=audioFx.slowHigh;
+  audioFx.slowBass+=(bass-audioFx.slowBass)*(1-Math.exp(-dt*1.75));
+  audioFx.slowHigh+=(high-audioFx.slowHigh)*(1-Math.exp(-dt*2.4));
   audioFx.beatCooldown=Math.max(0,audioFx.beatCooldown-dt);
-  if(bass>.25/lab.beatSensitivity&&bass-baseline>.085/lab.beatSensitivity&&audioFx.beatCooldown<=0){
-   audioFx.kick=1;audioFx.beatCooldown=.17;
-  }else audioFx.kick=Math.max(0,audioFx.kick-dt*3.2);
+  if(bass>.19/lab.beatSensitivity&&bass-baseline>.052/lab.beatSensitivity&&audioFx.beatCooldown<=0){
+   audioFx.kick=1;audioFx.beatCooldown=.18;
+  }else audioFx.kick=Math.max(0,audioFx.kick-dt*3.45);
+  const hiAttack=high-highBaseline;
+  audioFx.trebleHit=high>.14&&hiAttack>.038?
+   Math.max(audioFx.trebleHit,clamp(.45+hiAttack*4.5,0,1)):
+   Math.max(0,audioFx.trebleHit-dt*3.25);
   audioFx.energy=clamp(audioFx.bass*.55+audioFx.mid*.33+
     audioFx.high*.22+audioFx.kick*.25,0,1);
   audioFx.previousBass=bass;
@@ -2018,7 +2045,7 @@ function mount(root){
   nextGateAt=selectedLevel.id==="free"?Infinity:START_GATE_AT;
   nextPadAt=selectedLevel.id==="free"?Infinity:PAD_START;
   nextShieldAt=selectedLevel.id==="free"?Infinity:SHIELD_START;
-  lastGateAt=-100;elapsed=0;nextWave=-1;gateCount=0;padCount=0;shieldCount=0;
+  lastGateAt=-100;elapsed=0;arcadeSilentClock=0;nextWave=-1;gateCount=0;padCount=0;shieldCount=0;
   directorStage=0;musicDropSurge=0;musicLoops=0;
   encoreMode="normal";encoreTime=0;testMode=testPhase===true;
   wrap.dataset.circuit=!testMode&&selectedLevel.arcade?selectedLevel.id:"test";
@@ -2070,7 +2097,7 @@ function mount(root){
   if(!testMode&&mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
   musicRequest++;resetSteering();stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];trail=[];turnVelocity=0;
   shieldCollect.classList.remove("er-shield-collected");pulseFx=pulseHitFx=shieldFlash=0;
-  elapsed=0;encoreMode="normal";encoreTime=0;testMode=false;wrap.dataset.circuit="menu";labToggle.hidden=true;labHide();padBoostTime=0;boostChain=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
+  elapsed=0;arcadeSilentClock=0;encoreMode="normal";encoreTime=0;testMode=false;wrap.dataset.circuit="menu";labToggle.hidden=true;labHide();padBoostTime=0;boostChain=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
   skillBank=skillChain=skillAge=skillTimer=0;skillMultiplier=0;rewardLife=0;
   cleanPassStreak=0;
@@ -2385,6 +2412,15 @@ function mount(root){
    music.duration:selectedLevel.fallbackDuration||MUSIC_TAIL_AT;
  }
  function campaignRunning(){return selectedLevel.arcade&&!testMode;}
+ function arcadeSongClock(){
+  // The running soundtrack is authoritative, especially on slow mobile
+  // connections. When muted/unavailable, continue from its last time
+  // instead of an unrelated timer started before the MP3 had loaded.
+  if(!campaignRunning())return elapsed;
+  const matching=music&&musicTrackId===selectedLevel.track;
+  return soundEnabled&&!globalMuted()&&!musicError&&!musicFallbackActive&&matching?
+   Math.max(0,music.currentTime||0):arcadeSilentClock;
+ }
  function steeringSensitivity(){
   return campaignRunning()?clamp(1+Math.max(0,currentSpeed-6.15)*.019,1,1.16):1;
  }
@@ -2396,7 +2432,7 @@ function mount(root){
  }
  function directMusicPressure(dt){
   if(campaignRunning()){
-   const target=selectedLevel.motion+Math.floor(elapsed/Math.max(24,arcadeSongDuration()/3));
+   const target=selectedLevel.motion+Math.floor(arcadeSongClock()/Math.max(24,arcadeSongDuration()/3));
    directorStage=Math.max(directorStage,target);
    musicDropSurge=Math.max(0,musicDropSurge-dt*.2);
    return;
@@ -2431,13 +2467,26 @@ function mount(root){
   if(campaignRunning()){
    const duration=arcadeSongDuration();
    const matching=!!music&&musicTrackId===selectedLevel.track;
-   const playing=matching&&!music.paused&&soundEnabled&&!globalMuted()&&!musicError;
-   if(matching&&(music.ended||music.currentTime>=duration-.08)){
+   const mediaClock=matching&&Number.isFinite(music.currentTime)?
+    Math.max(0,music.currentTime):0;
+   // An audible level ends when its actual audio finishes. Level 1 has
+   // its separately verified audible end at 217s (encoded silent tail).
+   if(matching&&(music.ended||mediaClock>=duration-.04)){
     finishArcadeLevel("audio-completed");return;
    }
-   if((!playing||musicFallbackActive)&&elapsed>=duration){
-    finishArcadeLevel(musicFallbackActive?"asset-fallback":"silent-song-finished");return;
+   const trulySilent=!soundEnabled||globalMuted()||musicError||
+    musicFallbackActive||!window.Audio;
+   if(trulySilent){
+    // Silent levels still end, but count from the last media position.
+    arcadeSilentClock=Math.max(arcadeSilentClock,mediaClock)+dt;
+    if(arcadeSilentClock>=duration){
+     finishArcadeLevel(musicFallbackActive?"asset-fallback":"silent-song-finished");return;
+    }
+   }else if(matching&&!music.paused){
+    arcadeSilentClock=Math.max(arcadeSilentClock,mediaClock);
    }
+   // Otherwise the MP3 is still loading/buffering/paused unexpectedly.
+   // Never "win" while its playable ending has not been reached.
   }
   updateEncore(dt);
   if(mode!=="running")return;
@@ -2477,7 +2526,7 @@ function mount(root){
   const encoreThrust=encoreMode==="blue"?lab.phaseBonus:0;
   // Campaign challenge comes mainly from normal cruise. Each full song
   // increases that speed progressively; difficulty is not boost-dependent.
-  const progress=campaignRunning()?clamp(elapsed/arcadeSongDuration(),0,1):0;
+  const progress=campaignRunning()?clamp(arcadeSongClock()/arcadeSongDuration(),0,1):0;
   const smoothProgress=progress*progress*(3-2*progress);
   const base=campaignRunning()?
    clamp(lab.baseSpeed*selectedLevel.speed+
@@ -2779,14 +2828,22 @@ function mount(root){
   const g=geometryCache,r=wallPoint(0,z).r,shift=tunnelBend(z);
   const near=clamp(1-z/RENDER_FAR_Z,0,1),cyan=index%5===0,cold=blueTunnel();
   // Controlled changes of the line itself, not a fat bloom filter.
-  const beat=clamp((audioFx.kick*.65+audioFx.bass*.35)*lab.punch,0,1);
-  const high=clamp(audioFx.high*lab.punch,0,1);
+  const beat=musicVisual.kick,high=musicVisual.treble;
   c.beginPath();c.arc(g.cx+shift.x,g.cy+shift.y-g.offset*r,r,0,TAU);
-  c.strokeStyle=cyan?labHex(lab.colorAccent,clamp((.32+.54*near+high*.12)*lab.light,0,.97)):
-   labHex(cold?lab.colorMain:lab.colorMain,clamp((.25+.53*near+beat*.18)*lab.light,0,.97));
-  c.lineWidth=((cyan?1.7:1.2)+near*(cyan?1.6:1.1)+beat*1.1)*lab.ringThickness;
-  c.shadowColor=cyan?lab.colorAccent:cold?lab.colorMain:lab.colorMain;
-  c.shadowBlur=lab.shadows?(cyan?2:1):0;c.stroke();c.shadowBlur=0;
+  const color=cyan?lab.colorAccent:lab.colorMain;
+  c.strokeStyle=labHex(color,clamp((cyan?.33:.27)+.49*near+
+   beat*.32+high*(cyan?.40:.19),0,1));
+  c.lineWidth=((cyan?1.6:1.3)+near*(cyan?1.6:1.1)+beat*3.2+high*1.6)*lab.ringThickness;
+  c.shadowColor=color;
+  c.shadowBlur=lab.shadows?((cyan?3:2)+beat*11+high*6)*(near*.7+.3):0;
+  c.stroke();c.shadowBlur=0;
+  // Kicks ripple through the walls, not through an opaque screen flash.
+  if(beat>.16&&z<20&&index%3===0){
+   c.lineWidth=(1.5+beat*3.9)*lab.ringThickness;
+   c.strokeStyle=labHex(color,clamp(beat*.48*near,0,.7));
+   c.shadowColor=color;c.shadowBlur=lab.shadows?beat*16:0;
+   c.stroke();c.shadowBlur=0;
+  }
  }
  function drawTunnel(now){
   const g=wallGeom(),cold=blueTunnel();
@@ -2808,8 +2865,8 @@ function mount(root){
    const z=row*panelLength-panelOffset;
    if(z<0||z>RENDER_FAR_Z)continue;
    const fade=clamp(1-z/RENDER_FAR_Z,0,1);
-   const bassLight=clamp((audioFx.bass*.13+audioFx.kick*.1)*lab.punch*lab.light*lab.bassLight,0,.35);
-   const highLight=clamp(audioFx.high*.48*lab.punch*lab.light*lab.trebleLight,0,.75);
+   const bassLight=clamp((musicVisual.bass*.32+musicVisual.kick*.17)*lab.light,0,.52);
+   const highLight=clamp((musicVisual.high*.48+musicVisual.treble*.45)*lab.light,0,.92);
    // LOD: distant plates span two sectors. Keep close-up seams at full
    // resolution while cutting geometry cost in the extended distance.
    const sectorStep=lab.panelDetail===0?4:lab.panelDetail===1?(z>15?4:2):(z>15?2:1);
@@ -2846,11 +2903,13 @@ function mount(root){
    }
    c.strokeStyle=labHex(cyan?lab.colorAccent:cold?lab.colorMain:lab.colorMain,.12*lab.light);
    c.lineWidth=(cyan?9:5)*lab.railThickness;c.shadowBlur=0;c.stroke();
-   c.strokeStyle=labHex(cyan?lab.colorAccent:cold?lab.colorMain:lab.colorMain,
-    clamp((cyan?.72+audioFx.high*.28*lab.punch:.43+audioFx.mid*.36*lab.punch)*lab.light,0,1));
-   c.lineWidth=((cyan?2.4:1.4)+audioFx.high*(cyan?.8:.5)+audioFx.kick*.35)*lab.railThickness;
-   c.shadowColor=cyan?lab.colorAccent:cold?lab.colorMain:lab.colorMain;
-   c.shadowBlur=lab.shadows?(cyan?2:1):0;
+   c.strokeStyle=labHex(cyan?lab.colorAccent:lab.colorMain,
+    clamp((cyan?.44:.30)+musicVisual.high*(cyan?.50:.24)+
+     musicVisual.bass*.18+musicVisual.treble*.20,0,1));
+   c.lineWidth=((cyan?2.4:1.4)+musicVisual.high*(cyan?2.8:1.6)+
+    musicVisual.kick*1.4)*lab.railThickness;
+   c.shadowColor=cyan?lab.colorAccent:lab.colorMain;
+   c.shadowBlur=lab.shadows?((cyan?3:2)+musicVisual.treble*10+musicVisual.kick*4):0;
    c.stroke();c.shadowBlur=0;
   }
   const spacing=lab.ringGap;
@@ -2871,8 +2930,7 @@ function mount(root){
   c.fillRect(g.cx+vanishing.x-g.R*.2,g.cy+vanishing.y-g.R*.2,g.R*.4,g.R*.4);
   // Physically small, music-driven phosphor strips instead of a blurred
   // full-screen radial gradient. Kicks pulse pink, treble cyan.
-  const kick=clamp((audioFx.kick*.65+audioFx.bass*.3)*lab.punch,0,1);
-  const treble=clamp(audioFx.high*.8*lab.punch,0,.8);
+  const kick=musicVisual.kick,treble=musicVisual.treble;
   if(kick>.12||treble>.12){
    for(let i=0;i<8;i++){
     const a=screenAngle(i*TAU/8+.11),z=1.7+(i%3)*1.12;
@@ -2901,23 +2959,29 @@ function mount(root){
    const newLaser=w.kind>=20;
    const obstacleColor=selectedLevel.id==="l2"&&!testMode?
     phaseProfiles.p3.colorHazard:lab.colorHazard;
-   const skinFill=labTint(obstacleColor,newLaser?.65:skin===3?.74:skin===1?.85:1);
+   const hazardLight=musicVisual.kick*.24+musicVisual.bass*.12;
+   const skinFill=labTint(obstacleColor,
+    clamp((newLaser?.65:skin===3?.74:skin===1?.85:1)+hazardLight,0,1));
    const obstacleAccent=selectedLevel.id==="l2"&&!testMode?
     phaseProfiles.p3.colorAccent:lab.colorAccent;
    const skinEdge=newLaser?obstacleAccent:obstacleColor;
-   c.shadowColor=obstacleColor;c.shadowBlur=lab.shadows?(newLaser?5:2):0;
+   c.shadowColor=obstacleColor;
+   c.shadowBlur=lab.shadows?((newLaser?5:2)+musicVisual.kick*11+musicVisual.treble*5):0;
    wallPatch(a,b,z,far,skinFill,skinEdge,newLaser?3:6);
    if(newLaser){
     // Light cross-braces mark the late-game barriers without altering hitboxes.
     const aa=wallPoint(a+.03,z+.10),bb=wallPoint(b-.03,far-.10);
     c.beginPath();c.moveTo(aa.x,aa.y);c.lineTo(bb.x,bb.y);
-    c.strokeStyle=obstacleAccent;c.lineWidth=1.5;c.stroke();
+    c.strokeStyle=labHex(obstacleAccent,clamp(.70+musicVisual.treble*.3,0,1));
+    c.lineWidth=1.5+musicVisual.treble*2.3;c.stroke();
    }
    c.shadowBlur=0;
    // Pale amber warning edge separates dangerous gates from pink wall trim.
    const q0=wallPoint(a+.025,z+.035),q1=wallPoint(b-.025,z+.035);
    c.beginPath();c.moveTo(q0.x,q0.y);c.lineTo(q1.x,q1.y);
-   c.strokeStyle="rgba(255,226,173,.88)";c.lineWidth=1.35;
+   c.strokeStyle=labHex(obstacleAccent,
+    clamp(.48+musicVisual.kick*.23+musicVisual.treble*.28,0,1));
+   c.lineWidth=1.35+musicVisual.kick*1.7+musicVisual.treble*.9;
    c.shadowBlur=0;c.stroke();
   }
   c.restore();
@@ -3067,6 +3131,7 @@ function mount(root){
  }
  function paint(now){
   if(!live||!root.isConnected)return;
+  updateMusicVisual();
   c.setTransform(renderDpr,0,0,renderDpr,0,0);c.clearRect(0,0,W,H);
   c.save();
   if(shake>0)c.translate(rand(-shake,shake),rand(-shake,shake));
@@ -3298,6 +3363,32 @@ function mount(root){
   triggerEncore:beginEncore,triggerFinale:()=>beginFinale("debug"),tickFinale:updateFinale,
   simulateSongEnd:()=>{if(!music)return false;music.dispatchEvent(new Event("ended"));return true;},
   draw:()=>paint(performance.now()),
+  // Test the real Canvas reaction without playing sound out loud. Channels
+  // are injected for one *render only*, then the live analyser takes back
+  // control. Useful for desktop/mobile browser regression screenshots.
+  probeMusicVisual:(bass,mid,high,kick,trebleHit)=>{
+   const original={...audioFx};
+   Object.assign(audioFx,{
+    bass:clamp(bass,0,1),mid:clamp(mid,0,1),high:clamp(high,0,1),
+    kick:clamp(kick,0,1),trebleHit:clamp(trebleHit,0,1)
+   });
+   musicVisualPreview=true;
+   let result;
+   try{
+    paint(12345);
+    const pixels=c.getImageData(0,0,canvas.width,canvas.height).data;
+    let brightness=0;
+    for(let i=0;i<pixels.length;i+=64)
+     brightness+=pixels[i]+pixels[i+1]+pixels[i+2];
+    result={...musicVisual,brightness,canvasWidth:canvas.width,canvasHeight:canvas.height};
+   }finally{
+    musicVisualPreview=false;
+    Object.assign(audioFx,original);
+   }
+   return result;
+  },
+  reactiveState:()=>({...musicVisual,sourceAvailable:!!musicAnalyser,
+   musicPlaying:!!music&&!music.paused}),
   test:()=>start(true),testPhase:(id)=>{if(!phaseProfiles[id])return false;start(true,id);return true;},
   editPhase:(id)=>{if(!phaseProfiles[id])return false;editorPhase=id;labRefresh();return true;},
   exportPhases:exportTuningJSON,labOpen:labOpen,labClose:labHide,labPreset:(name)=>{const buttons=[...labPresetBox.querySelectorAll("button")];const b=buttons.find(x=>x.textContent===name);if(b){b.click();return true;}return false;},
@@ -3315,6 +3406,7 @@ function mount(root){
    duration:selectedLevel.arcade?arcadeSongDuration():null,unlockedLevel,completedLevels,
    musicFallbackActive,musicMissing:musicFallbackActive,musicRequestedUrl:musicUrls[selectedLevel.track]||null,
    steeringSensitivity:steeringSensitivity(),boostChain,boostMultiplier:boostPadMultiplier(),
+   audioClock:arcadeSongClock(),silentClock:arcadeSilentClock,
    available:CAMPAIGN.map((l,i)=>({id:l.id,open:i<unlockedLevel,done:i<completedLevels,
     music:l.track,offset:l.musicAt,patterns:[...l.patterns],speed:l.speed,motion:l.motion}))}),
   gauges:()=>({speed:Math.round(currentSpeed*25),charge:mode==="menu"?0:selectedLevel.id==="free"?freeChargeVisual:nitroFuel,boosting:nitroActive||padBoostTime>0,
