@@ -2236,7 +2236,7 @@ function mount(root){
     target.wall.cleared=true;message="MUR DÉTRUIT · +"+gained+" EN COMBO";
     shatterWave(target.wall);
    }else{
-    target.drone.cleared=true;target.drone.fired=true;
+    target.drone.cleared=true;target.drone.mines=[];
     message="DRONE DÉTRUIT · +"+gained+" EN COMBO";
     burst(target.drone.bodyAngle,"#ffafbd",34,target.drone.z,true);
     pulseHitFx=1;shake=Math.max(shake,1.5);
@@ -2427,7 +2427,7 @@ function mount(root){
   if(mode!=="running"||encoreMode!=="normal"||selectedLevel.id==="free")return false;
   bankSkill("PHASE TERMINÉE");
   encoreMode="transition";encoreTime=0;
-  waves=[];pads=[];shields=[];sparks=[];
+  waves=[];pads=[];shields=[];hazards=[];sparks=[];
   nextGateAt=nextPadAt=nextShieldAt=Infinity;
   invuln=Math.max(invuln,ENCORE_TRANSITION_SECONDS+2);
   padBoostTime=0;nitroHeld=false;nitroActive=false;nitroBurnTime=0;
@@ -3561,7 +3561,7 @@ function mount(root){
    labDetached:!wrap.contains(labPanel)&&!!labPanel.parentElement,
    phaseActive:activePhase,phaseEditing:editorPhase,
    phaseProfiles:JSON.parse(JSON.stringify(phaseProfiles)),fps:labFps,angle,turnVelocity,invuln,lives,score,best,distance,travel,visualTravel:labVisualTravel(),passed,combo,directorStage,musicDropSurge,
-   encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,loop:music?music.loop:false,track:musicTrackId,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,hazards:hazards.map(h=>({type:h.type,z:h.z,length:h.length,center:h.center,rotation:h.rotation,spin:h.spin,hit:h.hit,locked:h.locked,targetAngle:h.targetAngle,boltZ:h.boltZ,fired:h.fired,cleared:h.cleared})),waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
+   encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,loop:music?music.loop:false,track:musicTrackId,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,hazards:hazards.map(h=>({type:h.type,z:h.z,length:h.length,rotation:h.rotation,spin:h.spin,hit:h.hit,rays:h.rays&&h.rays.map(r=>({...r})),bodyAngle:h.bodyAngle,trackAngle:h.trackAngle,patrolPhase:h.patrolPhase,drops:h.drops,mines:h.mines&&h.mines.map(m=>({...m})),cleared:h.cleared})),waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
   cashout:()=>bankSkill("TEST CASHOUT"),
   triggerEncore:beginEncore,triggerFinale:()=>beginFinale("debug"),tickFinale:updateFinale,
@@ -3602,8 +3602,10 @@ function mount(root){
    return o;
   },
   hazardForGate:(level,gate)=>hazardTypeForLevel(level,gate),
+  laserBlueprint:(level,gate)=>laserBlueprint(level,gate),
+  laserContact:(a,h)=>laserContact(a,h),
   injectHazard:(type,z=HIT_Z+9)=>{
-   if(mode!=="running"||!["sweeper","electric","drone"].includes(type))return null;
+   if(mode!=="running"||!["laser","drone"].includes(type))return null;
    const h=createHazard(type);h.z=z;hazards.push(h);return h;
   },
   setShipAngle:(v)=>{angle=(v%TAU+TAU)%TAU;return angle;},
@@ -3695,5 +3697,5 @@ function mount(root){
  raf=requestAnimationFrame(frameTick);
  return dispose;
 }
-window.ZebraEchoRacer={mount,pattern,collisionAt,hazardTypeForLevel};
+window.ZebraEchoRacer={mount,pattern,collisionAt,hazardTypeForLevel,laserBlueprint,laserContact};
 }());
