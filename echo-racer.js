@@ -32,11 +32,11 @@ const PATTERN_COUNT=28;
 // Four distinct campaign levels; Free Roam remains diagnostic-only.
 const LEVELS=[
  {id:"run",name:"INITIATION",subtitle:"LE PREMIER TUNNEL",speed:1,gap:1,arcade:true,
-  fallbackDuration:314.472,track:"p1",musicAt:0,motion:0,rise:2.3,patterns:[0,1,3,7,10,13],
+  fallbackDuration:217,track:"p1",musicAt:0,motion:0,rise:2.3,patterns:[0,1,3,7,10,13],
   colors:{colorMain:"#ff3ed1",colorAccent:"#74efff",colorPanels:"#6b1e71",colorBackdrop:"#0b0619",colorHazard:"#ef3a5c"}},
  {id:"l2",name:"CIRCUIT",subtitle:"PORTES MOBILES",speed:1.07,gap:.97,arcade:true,
-  fallbackDuration:314.472,track:"p1",musicAt:0,motion:1,rise:3.1,patterns:[1,4,6,7,9,12,15,17,19,21],
-  colors:{colorMain:"#24f0da",colorAccent:"#fa74e7",colorPanels:"#105c64",colorBackdrop:"#04151c",colorHazard:"#fe8d4c"}},
+  fallbackDuration:192.287,track:"p3",musicAt:0,motion:1,rise:3.1,patterns:[1,4,6,7,9,12,15,17,19,21],
+  colors:{colorMain:"#24f0da",colorAccent:"#fa74e7",colorPanels:"#105c64",colorBackdrop:"#04151c",colorHazard:"#145e87"}},
  {id:"l3",name:"RAPIDE",subtitle:"MURS OSCILLANTS",speed:1.13,gap:.95,arcade:true,
   fallbackDuration:120.529,track:"p4",musicAt:0,motion:2,rise:3.7,patterns:[2,5,8,11,14,18,20,22,23,25],
   colors:{colorMain:"#86a1ff",colorAccent:"#fc86f0",colorPanels:"#343b92",colorBackdrop:"#080c25",colorHazard:"#ff6dba"}},
@@ -399,7 +399,10 @@ function mount(root){
   const oldPadsEnabled=lab.boostPadsEnabled;
   activePhase=id;
   Object.assign(lab,phaseProfiles[id]);
-  if(selectedLevel.arcade&&!testMode)Object.assign(lab,selectedLevel.colors);
+  if(selectedLevel.arcade&&!testMode){
+   Object.assign(lab,selectedLevel.colors);
+   if(selectedLevel.id==="l2")lab.colorHazard=phaseProfiles.p3.colorHazard;
+  }
   // A phase without pads must not inherit pickups/boost from the last one.
   if(!lab.boostPadsEnabled){
    pads=[];padBoostTime=0;boostChain=0;shipBoostFade=0;turboLight=0;
@@ -1497,14 +1500,19 @@ function mount(root){
    // Song 1 has a silent encoded tail. Its audible finish at ~217 s
    // triggers the five-second blackout. Song 2 plays ONLY in blue phase.
    music.addEventListener("timeupdate",()=>{
+    if(campaignRunning()&&selectedLevel.track==="p1"&&musicTrackId==="p1"&&
+       mode==="running"&&music.currentTime>=MUSIC_TAIL_AT-.08){
+     finishArcadeLevel("audible-track-end");return;
+    }
     if(selectedLevel.arcade&&!testMode)return;
     if(!live||mode!=="running"||encoreMode!=="normal"
      ||musicTrackId!=="p1"||music.currentTime<MUSIC_TAIL_AT)return;
     beginEncore();
    });
    music.addEventListener("ended",()=>{
-    if(!live||mode!=="running"||!soundEnabled)return;
-    if(selectedLevel.arcade&&!testMode){finishArcadeLevel("music-ended");return;}
+    if(!live||mode!=="running")return;
+    if(campaignRunning()){finishArcadeLevel("music-ended");return;}
+    if(!soundEnabled)return;
     if(musicTrackId==="p1"&&encoreMode==="normal"){beginEncore();return;}
     if(musicTrackId==="p3"&&encoreMode==="blue")
      beginFinale("song-ended");
@@ -2013,6 +2021,7 @@ function mount(root){
   wrap.dataset.circuit=!testMode&&selectedLevel.arcade?selectedLevel.id:"test";
   if(testMode&&PHASES.some(p=>p.id===requestedPhase))testLaunchPhase=requestedPhase;
   applyPhase("p1");
+  bendProfiles.clear(); // Rebuild gentler course profile after the menu.
   trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
   invuln=0;pulseCharge=2;pulseGlow=pulseFx=pulseHitFx=shieldFlash=padBoostTime=flash=shake=0;
   boostChain=0;
@@ -2366,8 +2375,8 @@ function mount(root){
   }
  }
  function arcadeSongDuration(){
-  // In normal playback, the real music duration sets the level length.
-  // If a new asset is pending, use the measured original file duration.
+  // The first MP3 has a long encoded silent tail; finish at audible end.
+  if(selectedLevel.track==="p1")return MUSIC_TAIL_AT;
   return !musicFallbackActive&&music&&musicTrackId===selectedLevel.track&&
    Number.isFinite(music.duration)&&music.duration>1?
    music.duration:selectedLevel.fallbackDuration||MUSIC_TAIL_AT;
@@ -2378,9 +2387,9 @@ function mount(root){
  }
  function boostPadMultiplier(){
   if(!campaignRunning())return lab.boostPadSpeed;
-  const initial=clamp(1+(lab.boostPadSpeed-1)*.19,1.09,1.20);
-  // Continuous pickups increase acceleration gradually, capped at ×1.43.
-  return clamp(initial+Math.max(0,boostChain-1)*.058,1.09,1.43);
+  const initial=clamp(1+(lab.boostPadSpeed-1)*.38,1.24,1.34);
+  // Repeated boost pads stack gradually, halfway between prior weak and extreme tuning.
+  return clamp(initial+Math.max(0,boostChain-1)*.075,1.24,1.64);
  }
  function directMusicPressure(dt){
   if(campaignRunning()){
@@ -2417,10 +2426,13 @@ function mount(root){
   if(mode!=="running"||document.hidden)return;
   dt=clamp(dt,0,.05);elapsed+=dt;
   if(campaignRunning()){
-   const playing=music&&musicTrackId===selectedLevel.track&&!music.paused&&soundEnabled&&!globalMuted()&&!musicError;
-   // Let the audio 'ended' event finish an audible level. Otherwise use
-   // its full duration, never the old 101–108-second cut.
-   if((!playing||musicFallbackActive)&&elapsed>=arcadeSongDuration()){
+   const duration=arcadeSongDuration();
+   const matching=!!music&&musicTrackId===selectedLevel.track;
+   const playing=matching&&!music.paused&&soundEnabled&&!globalMuted()&&!musicError;
+   if(matching&&(music.ended||music.currentTime>=duration-.08)){
+    finishArcadeLevel("audio-completed");return;
+   }
+   if((!playing||musicFallbackActive)&&elapsed>=duration){
     finishArcadeLevel(musicFallbackActive?"asset-fallback":"silent-song-finished");return;
    }
   }
@@ -2474,12 +2486,12 @@ function mount(root){
   const nitroThrust=lab.nitroStart+lab.nitroGrowth*(1-Math.exp(-nitroBurnTime*.72));
   // Pads used to multiply speed by 1.85: keep them optional and manageable.
   const padMultiplier=boostPadMultiplier();
-  const nitroMultiplier=campaignRunning()?clamp(1+(nitroThrust-1)*.46,1.04,1.29):nitroThrust;
+  const nitroMultiplier=campaignRunning()?clamp(1+(nitroThrust-1)*.70,1.22,1.52):nitroThrust;
   const multiplier=lab.boostPadsEnabled&&padBoostTime>0?padMultiplier:nitroActive?nitroMultiplier:1;
   const targetSpeed=base*multiplier;
   // Gentle acceleration on boost, faster return to the normal cruising speed.
   const response=campaignRunning()?
-   (targetSpeed>=currentSpeed?(multiplier>1?3.4:lab.speedRiseResponse):3.0):
+   (targetSpeed>=currentSpeed?(multiplier>1?4.6:lab.speedRiseResponse):3.0):
    (targetSpeed>=currentSpeed?lab.speedRiseResponse:lab.speedFallResponse);
   currentSpeed+=(targetSpeed-currentSpeed)*(1-Math.exp(-dt*response));
   const speed=currentSpeed;
@@ -2674,7 +2686,9 @@ function mount(root){
  function trackProfile(cell){
   if(bendProfiles.has(cell))return bendProfiles.get(cell);
   const difficulty=trackDifficulty(cell),events=[];
-  const count=clamp(Math.round(difficulty.count*lab.bendFrequency),1,6);
+  const count=campaignRunning()?
+   clamp(Math.round(difficulty.count*Math.min(lab.bendFrequency,1)*.56),1,2):
+   clamp(Math.round(difficulty.count*lab.bendFrequency),1,6);
   for(let i=0;i<count;i++){
    // One smooth pulse per slot: wide gaps early, tightly packed curves late.
    const slot=TRACK_STRETCH/count;
@@ -2710,7 +2724,10 @@ function mount(root){
    // Quintic ease on both ends: camera has no kink entering or leaving.
    const u=t<.5?t*2:(1-t)*2;
    const smooth=u*u*u*(u*(u*6-15)+10);
-   x+=e.ax*smooth*lab.bendIntensity;y+=e.ay*smooth*lab.verticalBend;
+   const horizontal=campaignRunning()?.52:1;
+   const vertical=campaignRunning()?.38:1;
+   x+=e.ax*smooth*lab.bendIntensity*horizontal;
+   y+=e.ay*smooth*lab.verticalBend*vertical;
   }
   return{x,y};
  }
@@ -2879,15 +2896,19 @@ function mount(root){
    // Distinct material families help players identify gate silhouettes.
    const skin=w.kind%4;
    const newLaser=w.kind>=20;
-   const skinFill=labTint(lab.colorHazard,newLaser?.65:skin===3?.74:skin===1?.85:1);
-   const skinEdge=newLaser?lab.colorAccent:lab.colorHazard;
-   c.shadowColor=lab.colorHazard;c.shadowBlur=lab.shadows?(newLaser?5:2):0;
+   const obstacleColor=selectedLevel.id==="l2"&&!testMode?
+    phaseProfiles.p3.colorHazard:lab.colorHazard;
+   const skinFill=labTint(obstacleColor,newLaser?.65:skin===3?.74:skin===1?.85:1);
+   const obstacleAccent=selectedLevel.id==="l2"&&!testMode?
+    phaseProfiles.p3.colorAccent:lab.colorAccent;
+   const skinEdge=newLaser?obstacleAccent:obstacleColor;
+   c.shadowColor=obstacleColor;c.shadowBlur=lab.shadows?(newLaser?5:2):0;
    wallPatch(a,b,z,far,skinFill,skinEdge,newLaser?3:6);
    if(newLaser){
     // Light cross-braces mark the late-game barriers without altering hitboxes.
     const aa=wallPoint(a+.03,z+.10),bb=wallPoint(b-.03,far-.10);
     c.beginPath();c.moveTo(aa.x,aa.y);c.lineTo(bb.x,bb.y);
-    c.strokeStyle=lab.colorAccent;c.lineWidth=1.5;c.stroke();
+    c.strokeStyle=obstacleAccent;c.lineWidth=1.5;c.stroke();
    }
    c.shadowBlur=0;
    // Pale amber warning edge separates dangerous gates from pink wall trim.

@@ -111,9 +111,9 @@ jobs:
               assert body.evaluate("(n)=>n._echoDebug.snapshot().mode")=="running","Level one did not launch"
               assert body.evaluate("(n)=>n._echoDebug.level().id")=="run"
               tracks=body.evaluate("(n)=>n._echoDebug.level().available.map(l=>[l.music,l.offset])")
-              assert tracks==[["p1",0],["p1",0],["p4",0],["p5",0]], "Existing songs for 1/2; MINIMAL and dep house for 3/4"
+              assert tracks==[["p1",0],["p3",0],["p4",0],["p5",0]], "Level 2 must use existing TEST phase-3 song, not level 1"
               assert body.evaluate("(n)=>n._echoDebug.level().musicRequestedUrl").endswith("echoraccaersong.mp3?v=1")
-              assert 314.0<body.evaluate("(n)=>n._echoDebug.level().duration")<315.0, "Song 1 duration should be 314 s"
+              assert 216.9<body.evaluate("(n)=>n._echoDebug.level().duration")<217.1, "Level 1 must finish at audible end (~217s) rather than 314s"
               first=body.evaluate("""(n)=>{
                 const d=n._echoDebug;
                 d.injectPickup('pad',[0,1,2]);
@@ -129,11 +129,12 @@ jobs:
               }""")
               assert second["chain"]==2, "Second uninterrupted pad did not chain"
               assert second["speedMultiplier"]>first["speedMultiplier"], "Chained pads must increase speed gradually"
-              assert second["speedMultiplier"]<=1.43, "Uncontrolled boost multiplier"
+              assert 1.30<first["speedMultiplier"]<=1.35, "First boost should be more powerful but controlled"
+              assert second["speedMultiplier"]<=1.64, "Uncontrolled chained boost multiplier"
               body.evaluate("(n)=>n._echoDebug.draw()")
               page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-stage1.png")
               # In the dedicated test environment only, hazards were disabled
-              # through saved editor parameters to make the 105s simulation deterministic.
+              # through saved editor parameters to validate timed completion without collisions.
               body.evaluate("""(n)=>{
                 for(let i=0;i<7000&&n._echoDebug.snapshot().mode==='running';i++)
                   n._echoDebug.advance(.05);
@@ -155,7 +156,10 @@ jobs:
                   levels.nth(1).click()
               state=body.evaluate("(n)=>({level:n._echoDebug.level(),snap:n._echoDebug.snapshot()})")
               assert state["level"]["id"]=="l2", "Level 2 did not launch"
+              assert state["level"]["musicRequestedUrl"].endswith("echoraccersongpt2.mp3?v=1"), "Level 2 must play the available TEST phase-3 track"
+              assert abs(state["level"]["duration"]-192.287)<1, "Level 2 should play the whole phase-3 track"
               assert state["snap"]["lab"]["colorMain"]=="#24f0da","Level 2 palette missing"
+              assert state["snap"]["lab"]["colorHazard"]=="#145e87","Level 2 obstacles must inherit TEST phase-3 color"
               assert state["level"]["available"][1]["motion"]==1
               body.evaluate("(n)=>n._echoDebug.draw()")
               page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-stage2.png")
@@ -188,7 +192,7 @@ jobs:
                       selected=body.evaluate("(n)=>({level:n._echoDebug.level(),snap:n._echoDebug.snapshot()})")
                       assert selected["level"]["id"]==["run","l2","l3","l4"][next_index]
                       assert selected["level"]["available"][next_index]["motion"]==next_index
-                      durations=[314.472,314.472,120.529,142.812]
+                      durations=[217,192.287,120.529,142.812]
                       assert abs(selected["level"]["duration"]-durations[next_index])<1.0,"Wrong course soundtrack length"
                       if next_index==2:
                           assert "echo-racer-minimal.mp3" in selected["level"]["musicRequestedUrl"]
