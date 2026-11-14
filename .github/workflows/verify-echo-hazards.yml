@@ -68,7 +68,7 @@ jobs:
                   results=page.evaluate("""() => {
                    const d=document.querySelector('#game')._echoDebug;
                    function simulate(type,hit){
-                    d.test();
+                    d.test();d.setTestInvincible(false);
                     const z=d.hitDepth+(type==='drone'?4.5:.4);
                     const h=d.injectHazard(type,z);
                     if(!h)throw Error('Could not inject '+type);
@@ -80,19 +80,19 @@ jobs:
                     }else if(!hit)d.setShipAngle(aim+Math.PI/2);
                     for(let i=0;i<48;i++)d.advance(.05);
                     d.draw();
-                    return {lives:d.snapshot().lives,render:d.lastRenderError(),hazards:d.snapshot().hazards};
+                    return {lives:d.snapshot().lives,render:d.lastRenderError(),hazards:d.snapshot().hazards,mode:d.snapshot().mode,travel:d.snapshot().travel,invincible:d.snapshot().lab.invincible,hidden:document.hidden};
                    }
                    const sweptHit=simulate('sweeper',true),sweptSafe=simulate('sweeper',false);
                    const electricHit=simulate('electric',true),electricSafe=simulate('electric',false);
                    const droneHit=simulate('drone',true),droneSafe=simulate('drone',false);
-                   d.test();const target=d.injectHazard('drone',d.hitDepth+5);
+                   d.test();d.setTestInvincible(false);const target=d.injectHazard('drone',d.hitDepth+5);
                    d.pulse();const pulseDestroyed=target.cleared;
                    for(let i=0;i<45;i++)d.advance(.05);
                    return {sweptHit:sweptHit.lives,sweptSafe:sweptSafe.lives,
                     electricHit:electricHit.lives,electricSafe:electricSafe.lives,
                     droneHit:droneHit.lives,droneSafe:droneSafe.lives,
                     pulseDestroyed,pulseSafe:d.snapshot().lives===3,
-                    renderErrors:[sweptHit.render,sweptSafe.render,electricHit.render,electricSafe.render,droneHit.render,droneSafe.render]};
+                    diagnostic:{sweptHit,electricHit,droneHit},renderErrors:[sweptHit.render,sweptSafe.render,electricHit.render,electricSafe.render,droneHit.render,droneSafe.render]};
                   }""")
                   print('HAZARD_BROWSER',width,json.dumps(results),flush=True)
                   assert results['sweptHit']==2 and results['sweptSafe']==3,results
