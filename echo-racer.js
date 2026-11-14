@@ -34,13 +34,13 @@ const LEVELS=[
  {id:"run",name:"INITIATION",subtitle:"LE PREMIER TUNNEL",speed:1,gap:1,arcade:true,
   fallbackDuration:217,track:"p1",musicAt:0,motion:0,rise:2.3,patterns:[0,1,3,7,10,13],
   colors:{colorMain:"#ff3ed1",colorAccent:"#74efff",colorPanels:"#6b1e71",colorBackdrop:"#0b0619",colorHazard:"#ef3a5c"}},
- {id:"l2",name:"CIRCUIT",subtitle:"MURS ET BALAYEURS",speed:1.07,gap:.97,arcade:true,
+ {id:"l2",name:"CIRCUIT",subtitle:"MURS ET CROIX LASER",speed:1.07,gap:.97,arcade:true,
   fallbackDuration:192.287,track:"p3",musicAt:0,motion:1,rise:3.1,patterns:[1,4,6,7,9,12,15,17,19,21],
   colors:{colorMain:"#24f0da",colorAccent:"#fa74e7",colorPanels:"#105c64",colorBackdrop:"#04151c",colorHazard:"#145e87"}},
- {id:"l3",name:"RAPIDE",subtitle:"MURS, BALAYEURS ET ÉLECTRICITÉ",speed:1.13,gap:.95,arcade:true,
+ {id:"l3",name:"RAPIDE",subtitle:"MURS ET LASERS ROTATIFS",speed:1.13,gap:.95,arcade:true,
   fallbackDuration:120.529,track:"p4",musicAt:0,motion:2,rise:3.7,patterns:[2,5,8,11,14,18,20,22,23,25],
   colors:{colorMain:"#86a1ff",colorAccent:"#fc86f0",colorPanels:"#343b92",colorBackdrop:"#080c25",colorHazard:"#ff6dba"}},
- {id:"l4",name:"EXTRÊME",subtitle:"MURS, BALAYEURS, ÉLECTRICITÉ ET DRONES",speed:1.19,gap:.93,arcade:true,
+ {id:"l4",name:"EXTRÊME",subtitle:"LASERS ET DRONES CHASSEURS",speed:1.19,gap:.93,arcade:true,
   fallbackDuration:142.812,track:"p5",musicAt:0,motion:3,rise:4.2,patterns:[3,8,9,14,17,19,21,23,24,26,27],
   colors:{colorMain:"#ffc46c",colorAccent:"#6ffff3",colorPanels:"#854131",colorBackdrop:"#1b0913",colorHazard:"#ff486f"}},
  {id:"free",name:"FREE ROAM",subtitle:"DIAGNOSTIC SANS OBSTACLES",speed:1,gap:1,spin:0,patterns:[]}
@@ -56,13 +56,27 @@ const SHIELD_START=34,SHIELD_GAP_MIN=51,SHIELD_GAP_MAX=77;
 const SHIELD_RARE_MIN=96,SHIELD_RARE_MAX=135;
 const PICKUP_FRONT=1.05,PICKUP_BACK=.85,PAD_SIDE=STEP*.29,SHIELD_SIDE=STEP*.36;
 const PULSE_REACH=8.4;
-// One new hazard replaces (never stacks with) an existing gate slot.
-function hazardTypeForLevel(levelId,gate){
+// Lasers, drones and walls occupy exclusive gate slots.
+function hazardTypeForLevel(id,gate){
  if(gate<5)return null;
- if(levelId==="l2")return gate%6===0?"sweeper":null;
- if(levelId==="l3")return gate%7===0?"electric":gate%7===4?"sweeper":null;
- if(levelId==="l4")return gate%9===0?"drone":gate%9===3?"electric":gate%9===6?"sweeper":null;
+ if(id==="run")return gate%7===0?"laser":null;
+ if(id==="l2")return gate%4===0?"laser":null;
+ if(id==="l3")return gate%2===0?"laser":null;
+ if(id==="l4")return gate%7===0?"drone":gate%7===2||gate%7===5?"laser":null;
  return null;
+}
+function laserBlueprint(level,gate){
+ const count=level==="run"?(gate>=21&&gate%3===0?2:1):
+  level==="l2"?(gate%3===0?3:2):
+  level==="l3"?(gate%4===0?3:2):(gate%3===0?2:3);
+ return {count,rotating:level==="l3"||level==="l4"};
+}
+// Both visual endcaps and collisions are computed from the same rays.
+function laserContact(a,h){
+ return h.rays.some(ray=>{
+  if(Math.abs(angularDelta(a,h.rotation+ray.a))<=STEP*.60)return true;
+  return ray.reach>=.92&&Math.abs(angularDelta(a,h.rotation+ray.a+PI))<=STEP*.60;
+ });
 }
 const NITRO_BURN_SECONDS=3.2,NITRO_REFILL_SECONDS=5,NITRO_REGEN_WAIT=.45;
 function angularDelta(a,b){return ((a-b+PI)%TAU+TAU)%TAU-PI;}
@@ -2301,23 +2315,23 @@ function mount(root){
    rushFactor:rush?rand(1.07,move===3?1.27:1.16):1,age:0,
    cleared:false,credited:false};
  }
- // The specials have their own collision shapes and update over depth/time.
+ // A crossed laser gate or a mobile, tracking, mine-laying enemy.
  function createHazard(type){
-  if(type==="sweeper")return {type,z:SPAWN_Z,length:4.4,
-   rotation:(angle+rand(.65,1.55))%TAU,spin:(Math.random()<.5?-1:1)*rand(.24,.43),
-   hit:false,cleared:false,age:0};
-  if(type==="electric")return {type,z:SPAWN_Z,length:5.5,
-   center:(angle+rand(1.4,TAU-1.4))%TAU,width:STEP*3,
-   hit:false,cleared:false,age:0};
+  if(type==="laser"){
+   const {count,rotating}=laserBlueprint(selectedLevel.id,gateCount);
+   const variant=gateCount%4,rays=[];
+   for(let i=0;i<count;i++){
+    rays.push({a:i*PI/count+rand(-.085,.085),
+     reach:(variant===1&&i===count-1||variant===2&&i===0)?rand(.50,.72):1});
+   }
+   return {type,z:SPAWN_Z,length:.9,rays,rotation:rand(0,TAU),
+    spin:rotating?(Math.random()<.5?-1:1)*rand(.25,.52):0,
+    hit:false,cleared:false,age:0};
+  }
+  const bodyAngle=(angle+rand(.85,1.65))%TAU;
   return {type:"drone",z:SPAWN_Z,length:1.2,
-   bodyAngle:(angle+rand(1.25,TAU-1.25))%TAU,
-   locked:false,targetAngle:null,boltZ:null,fired:false,cleared:false,age:0};
- }
- function hazardAngleHit(h,shipAngle){
-  if(h.type==="sweeper")return Math.abs(angularDelta(shipAngle,h.rotation))<STEP*.40||
-   Math.abs(angularDelta(shipAngle,h.rotation+PI))<STEP*.40;
-  if(h.type==="electric")return Math.abs(angularDelta(shipAngle,h.center))<h.width*.5;
-  return false;
+   bodyAngle,trackAngle:bodyAngle,patrolPhase:rand(0,TAU),
+   age:0,mines:[],drops:0,bodyHit:false,cleared:false};
  }
  function hitByHazard(label){
   if(mode!=="running"||invuln>0||(testMode&&lab.invincible))return false;
@@ -2331,32 +2345,54 @@ function mount(root){
  function updateHazards(dt,dz){
   for(const h of hazards){
    const oldZ=h.z;
-   h.z-=dz;h.age+=dt;
+   h.age+=dt;
    if(h.cleared)continue;
-   if(h.type==="drone"){
-    // A locked shot NEVER homes: the player can always steer away.
-    if(!h.locked&&h.z<=25){h.locked=true;h.targetAngle=angle;h.boltZ=h.z;}
-    if(h.locked&&!h.fired){
-     const previous=h.boltZ;
-     h.boltZ-=dz*1.06;
-     if(previous>HIT_Z&&h.boltZ<=HIT_Z){
-      h.fired=true;
-      if(Math.abs(angularDelta(angle,h.targetAngle))<STEP*.55)
-       hitByHazard("TIR DE DRONE");
+   if(h.type==="laser"){
+    h.z-=dz;
+    h.rotation=(h.rotation+h.spin*dt+TAU)%TAU;
+    if(!h.hit&&oldZ>=HIT_Z&&h.z<=HIT_Z){
+     h.hit=true;
+     if(laserContact(angle,h))hitByHazard("LASER");
+    }
+   }else if(h.type==="drone"){
+    // Independently moving drone: real lateral patrol and imperfect pursuit.
+    h.z-=dz*.92;
+    const chasing=h.z<23;
+    h.trackAngle=(h.trackAngle+angularDelta(angle,h.trackAngle)*
+     (1-Math.exp(-dt*(chasing?1.45:.55)))+TAU)%TAU;
+    h.patrolPhase+=dt*(chasing?2.9:2.05);
+    const sweep=h.trackAngle+Math.sin(h.patrolPhase)*(.41+(chasing?.17:0));
+    const turn=clamp(angularDelta(sweep,h.bodyAngle),-dt*1.58,dt*1.58);
+    h.bodyAngle=(h.bodyAngle+turn+TAU)%TAU;
+    // Two independent projectiles. No late homing and no instant hits.
+    if(h.drops<1&&h.z<=21){
+     h.mines.push({angle:(h.bodyAngle+.24+TAU)%TAU,z:h.z,hit:false});
+     h.drops=1;
+    }
+    if(h.drops<2&&h.z<=12){
+     h.mines.push({angle:(h.trackAngle-.19+TAU)%TAU,z:h.z,hit:false});
+     h.drops=2;
+    }
+    for(const mine of h.mines){
+     const oldMineZ=mine.z;
+     mine.z-=dz*1.17;
+     if(!mine.hit&&oldMineZ>=HIT_Z&&mine.z<=HIT_Z){
+      mine.hit=true;
+      if(Math.abs(angularDelta(angle,mine.angle))<=STEP*.75)
+       hitByHazard("MINE DE DRONE");
      }
     }
-   }else{
-    if(h.type==="sweeper")h.rotation=(h.rotation+h.spin*dt+TAU)%TAU;
-    // Continuous contact over a depth window, not a one-frame wall check.
-    const active=oldZ+h.length>=HIT_Z&&h.z<=HIT_Z&&h.z+h.length>=HIT_Z;
-    if(active&&!h.hit&&hazardAngleHit(h,angle)){
-     h.hit=true;
-     hitByHazard(h.type==="electric"?"SURCHARGE":"BALAYEUR");
+    h.mines=h.mines.filter(m=>m.z>-.6);
+    if(!h.bodyHit&&oldZ>=HIT_Z&&h.z<=HIT_Z){
+     h.bodyHit=true;
+     if(Math.abs(angularDelta(angle,h.bodyAngle))<=STEP*.65)
+      hitByHazard("COLLISION DRONE");
     }
    }
    if(mode!=="running")break;
   }
-  hazards=hazards.filter(h=>!h.cleared&&(h.type==="drone"?h.z>-.7:h.z+h.length>-.7));
+  hazards=hazards.filter(h=>!h.cleared&&
+   (h.type==="drone"?h.z>-.7||h.mines.length>0:h.z>-.7));
  }
  function nextGateGap(){
   const hard=[2,8,9,19,21,23,26].includes(nextWave);
