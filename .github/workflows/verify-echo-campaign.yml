@@ -24,12 +24,14 @@ jobs:
           test -s "assets/games/echo-racer-logo-2026.webp"
           test -s assets/games/echoraccaersong.mp3
           test -s assets/games/echoraccersongpt2.mp3
+          test -s assets/games/echo-racer-minimal.mp3
+          test -s assets/games/echo-racer-dep-house.mp3
       - name: Mesurer la durée exacte des deux pistes originales
         run: |
           python3 -m pip install --quiet mutagen
           python3 - <<'PY'
           from mutagen.mp3 import MP3
-          for name in ['echoraccaersong.mp3','echoraccersongpt2.mp3']:
+          for name in ['echoraccaersong.mp3','echoraccersongpt2.mp3','echo-racer-minimal.mp3','echo-racer-dep-house.mp3']:
               path='assets/games/'+name
               seconds=MP3(path).info.length
               assert seconds>30, f'Unexpectedly short song: {name}'
@@ -81,6 +83,23 @@ jobs:
                 localStorage.removeItem('zebra.echo-racer.campaign.completed.v1');
               }''')
               page.reload(wait_until="domcontentloaded")
+              # Verify the complete real MP3 files load and decode metadata in Chrome.
+              audio_info=page.evaluate("""async () => {
+                const paths=['/assets/games/echo-racer-minimal.mp3?v=2','/assets/games/echo-racer-dep-house.mp3?v=2'];
+                return await Promise.all(paths.map(src=>new Promise((resolve,reject)=>{
+                  const audio=new Audio();
+                  const timer=setTimeout(()=>reject(Error('timeout '+src)),20000);
+                  audio.addEventListener('loadedmetadata',()=>{
+                    clearTimeout(timer);resolve({src,duration:audio.duration,readyState:audio.readyState});
+                  },{once:true});
+                  audio.addEventListener('error',()=>{
+                    clearTimeout(timer);reject(Error('audio load failed '+src+' '+(audio.error?.code||'')));
+                  },{once:true});
+                  audio.preload='metadata';audio.src=src;audio.load();
+                })));
+              }""")
+              assert 119<audio_info[0]["duration"]<122, f"MINIMAL duration unexpected: {audio_info}"
+              assert 141<audio_info[1]["duration"]<144, f"dep house duration unexpected: {audio_info}"
               page.wait_for_function("!!window.__EchoCampaignTest")
               page.evaluate("window.__EchoCampaignTest.admin();window.__EchoCampaignTest.open()")
               page.wait_for_function("""!!document.querySelector('.window[data-app-id="racer"] .window-body')?._echoDebug""",timeout=25000)

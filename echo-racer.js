@@ -163,8 +163,8 @@ function mount(root){
  const MUSIC_GAIN=1.9;
  const musicUrl="/assets/games/echoraccaersong.mp3?v=1";
  const musicUrlPhase3="/assets/games/echoraccersongpt2.mp3?v=1";
- const musicUrlMinimal="/assets/games/echo-racer-minimal.mp3?v=1";
- const musicUrlDepHouse="/assets/games/echo-racer-dep-house.mp3?v=1";
+ const musicUrlMinimal="/assets/games/echo-racer-minimal.mp3?v=2";
+ const musicUrlDepHouse="/assets/games/echo-racer-dep-house.mp3?v=2";
  const musicUrls={p1:musicUrl,p3:musicUrlPhase3,p4:musicUrlMinimal,p5:musicUrlDepHouse};
  // Allow already published courses to keep working if new media is pending.
  let musicFallbackActive=false,musicFallbackAttempted=false;
