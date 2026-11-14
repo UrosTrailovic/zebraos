@@ -3559,6 +3559,7 @@ function mount(root){
    const h=createHazard(type);h.z=z;hazards.push(h);return h;
   },
   setShipAngle:(v)=>{angle=(v%TAU+TAU)%TAU;return angle;},
+  setTestInvincible:(v)=>{if(!testMode)return null;lab.invincible=!!v;return lab.invincible;},
   injectWave:(sectors,z=HIT_Z+PULSE_REACH-.4)=>{
    const o={kind:0,sectors:[...sectors],z,length:1,rotation:0,spin:0,cleared:false,credited:false};
    waves.push(o);return o;
