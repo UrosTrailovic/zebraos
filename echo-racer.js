@@ -38,10 +38,10 @@ const LEVELS=[
   fallbackDuration:314.472,track:"p1",musicAt:0,motion:1,rise:3.1,patterns:[1,4,6,7,9,12,15,17,19,21],
   colors:{colorMain:"#24f0da",colorAccent:"#fa74e7",colorPanels:"#105c64",colorBackdrop:"#04151c",colorHazard:"#fe8d4c"}},
  {id:"l3",name:"RAPIDE",subtitle:"MURS OSCILLANTS",speed:1.13,gap:.95,arcade:true,
-  fallbackDuration:192.287,track:"p3",musicAt:0,motion:2,rise:3.7,patterns:[2,5,8,11,14,18,20,22,23,25],
+  fallbackDuration:120.529,track:"p4",musicAt:0,motion:2,rise:3.7,patterns:[2,5,8,11,14,18,20,22,23,25],
   colors:{colorMain:"#86a1ff",colorAccent:"#fc86f0",colorPanels:"#343b92",colorBackdrop:"#080c25",colorHazard:"#ff6dba"}},
  {id:"l4",name:"EXTRÊME",subtitle:"MURS FONÇANTS",speed:1.19,gap:.93,arcade:true,
-  fallbackDuration:192.287,track:"p3",musicAt:0,motion:3,rise:4.2,patterns:[3,8,9,14,17,19,21,23,24,26,27],
+  fallbackDuration:142.812,track:"p5",musicAt:0,motion:3,rise:4.2,patterns:[3,8,9,14,17,19,21,23,24,26,27],
   colors:{colorMain:"#ffc46c",colorAccent:"#6ffff3",colorPanels:"#854131",colorBackdrop:"#1b0913",colorHazard:"#ff486f"}},
  {id:"free",name:"FREE ROAM",subtitle:"DIAGNOSTIC SANS OBSTACLES",speed:1,gap:1,spin:0,patterns:[]}
 ];
@@ -163,6 +163,11 @@ function mount(root){
  const MUSIC_GAIN=1.9;
  const musicUrl="/assets/games/echoraccaersong.mp3?v=1";
  const musicUrlPhase3="/assets/games/echoraccersongpt2.mp3?v=1";
+ const musicUrlMinimal="/assets/games/echo-racer-minimal.mp3?v=1";
+ const musicUrlDepHouse="/assets/games/echo-racer-dep-house.mp3?v=1";
+ const musicUrls={p1:musicUrl,p3:musicUrlPhase3,p4:musicUrlMinimal,p5:musicUrlDepHouse};
+ // Allow already published courses to keep working if new media is pending.
+ let musicFallbackActive=false,musicFallbackAttempted=false;
  // Two lightweight players independent of the music analyser.
  const flyUrl="/assets/spaceship-fly-sfx.mp3";
  const boostUrl="/assets/boostsfx.mp3?v=2";
@@ -1504,7 +1509,16 @@ function mount(root){
     if(musicTrackId==="p3"&&encoreMode==="blue")
      beginFinale("song-ended");
    });
-   music.onerror=function(){musicError=true;};
+   music.onerror=function(){
+    if(!live||!selectedLevel.arcade||testMode||
+       (musicTrackId!=="p4"&&musicTrackId!=="p5")||musicFallbackAttempted){
+     musicError=true;return;
+    }
+    // Gracefully use existing song 2 until the new MP3 is on GitHub Pages.
+    musicFallbackAttempted=true;musicFallbackActive=true;musicError=false;
+    try{music.src=musicUrlPhase3;music.load();}
+    catch(_){musicError=true;}
+   };
    const context=ensureAudioContext();
    if(context&&context.createMediaElementSource&&context.createAnalyser){
     try{
@@ -1698,12 +1712,13 @@ function mount(root){
  }
  function selectMusicTrack(phase){
   const track=ensureMusic();if(!track)return null;
-  const wanted=phase==="p3"?"p3":"p1";
-  if(musicTrackId!==wanted){
+  const wanted=Object.prototype.hasOwnProperty.call(musicUrls,phase)?phase:"p1";
+  if(musicTrackId!==wanted||musicFallbackActive){
    musicRequest++;
    try{track.pause();}catch(_){}
    musicTrackId=wanted;
-   track.src=wanted==="p3"?musicUrlPhase3:musicUrl;
+   musicFallbackActive=false;musicFallbackAttempted=false;
+   track.src=musicUrls[wanted];
    track.loop=false;
    track.preload="auto";
    try{track.load();}catch(_){}
@@ -1713,7 +1728,7 @@ function mount(root){
  function startMusicAtPhase(phase,seconds){
   if(!soundEnabled||globalMuted()||document.hidden)return;
   const track=selectMusicTrack(phase);if(!track)return;
-  const request=++musicRequest,expected=phase==="p3"?"p3":"p1";
+  const request=++musicRequest,expected=Object.prototype.hasOwnProperty.call(musicUrls,phase)?phase:"p1";
   const play=()=>{
    if(!live||mode!=="running"||encoreMode==="transition"||
       musicRequest!==request||musicTrackId!==expected)return;
@@ -2351,9 +2366,10 @@ function mount(root){
   }
  }
  function arcadeSongDuration(){
-  // Each level uses an entire, original audio file. The real media duration
-  // drives muted/offline playback when metadata is available.
-  return music&&musicTrackId===selectedLevel.track&&Number.isFinite(music.duration)&&music.duration>1?
+  // In normal playback, the real music duration sets the level length.
+  // If a new asset is pending, use the measured original file duration.
+  return !musicFallbackActive&&music&&musicTrackId===selectedLevel.track&&
+   Number.isFinite(music.duration)&&music.duration>1?
    music.duration:selectedLevel.fallbackDuration||MUSIC_TAIL_AT;
  }
  function campaignRunning(){return selectedLevel.arcade&&!testMode;}
@@ -2404,8 +2420,8 @@ function mount(root){
    const playing=music&&musicTrackId===selectedLevel.track&&!music.paused&&soundEnabled&&!globalMuted()&&!musicError;
    // Let the audio 'ended' event finish an audible level. Otherwise use
    // its full duration, never the old 101–108-second cut.
-   if(!playing&&elapsed>=arcadeSongDuration()){
-    finishArcadeLevel("silent-song-finished");return;
+   if((!playing||musicFallbackActive)&&elapsed>=arcadeSongDuration()){
+    finishArcadeLevel(musicFallbackActive?"asset-fallback":"silent-song-finished");return;
    }
   }
   updateEncore(dt);
@@ -2414,7 +2430,9 @@ function mount(root){
   // meanwhile display a different phase without changing the active run.
   const songClock=music&&!music.paused&&soundEnabled&&!globalMuted()?
    music.currentTime:elapsed;
-  const actualPhase=selectedLevel.arcade&&!testMode?selectedLevel.track:
+  // New tracks reuse the TEST p3 preset, plus each campaign level's palette.
+  const actualPhase=selectedLevel.arcade&&!testMode?
+   (selectedLevel.track==="p1"?"p1":"p3"):
    encoreMode==="blue"?"p3":songClock>=MUSIC_DROP_AT?"p2":"p1";
   if(activePhase!==actualPhase)applyPhase(actualPhase);
   directMusicPressure(dt);
@@ -3271,6 +3289,7 @@ function mount(root){
   ship:()=>({idleLoaded:shipReady.idle,boostLoaded:shipReady.boost,boostMix:shipBoostFade,tunnelLight:turboLight}),
   level:()=>({id:selectedLevel.id,free:selectedLevel.id==="free",gap:selectedLevel.gap,
    duration:selectedLevel.arcade?arcadeSongDuration():null,unlockedLevel,completedLevels,
+   musicFallbackActive,musicRequestedUrl:musicUrls[selectedLevel.track]||null,
    steeringSensitivity:steeringSensitivity(),boostChain,boostMultiplier:boostPadMultiplier(),
    available:CAMPAIGN.map((l,i)=>({id:l.id,open:i<unlockedLevel,done:i<completedLevels,
     music:l.track,offset:l.musicAt,patterns:[...l.patterns],speed:l.speed,motion:l.motion}))}),

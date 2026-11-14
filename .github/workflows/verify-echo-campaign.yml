@@ -111,7 +111,8 @@ jobs:
               assert body.evaluate("(n)=>n._echoDebug.snapshot().mode")=="running","Level one did not launch"
               assert body.evaluate("(n)=>n._echoDebug.level().id")=="run"
               tracks=body.evaluate("(n)=>n._echoDebug.level().available.map(l=>[l.music,l.offset])")
-              assert tracks==[["p1",0],["p1",0],["p3",0],["p3",0]], "Every full song must start at zero"
+              assert tracks==[["p1",0],["p1",0],["p4",0],["p5",0]], "Existing songs for 1/2; MINIMAL and dep house for 3/4"
+              assert body.evaluate("(n)=>n._echoDebug.level().musicRequestedUrl").endswith("echoraccaersong.mp3?v=1")
               assert 314.0<body.evaluate("(n)=>n._echoDebug.level().duration")<315.0, "Song 1 duration should be 314 s"
               first=body.evaluate("""(n)=>{
                 const d=n._echoDebug;
@@ -187,6 +188,12 @@ jobs:
                       selected=body.evaluate("(n)=>({level:n._echoDebug.level(),snap:n._echoDebug.snapshot()})")
                       assert selected["level"]["id"]==["run","l2","l3","l4"][next_index]
                       assert selected["level"]["available"][next_index]["motion"]==next_index
+                      durations=[314.472,314.472,120.529,142.812]
+                      assert abs(selected["level"]["duration"]-durations[next_index])<1.0,"Wrong course soundtrack length"
+                      if next_index==2:
+                          assert "echo-racer-minimal.mp3" in selected["level"]["musicRequestedUrl"]
+                      if next_index==3:
+                          assert "echo-racer-dep-house.mp3" in selected["level"]["musicRequestedUrl"]
                       assert selected["snap"]["lab"]["colorMain"]==["#ff3ed1","#24f0da","#86a1ff","#ffc46c"][next_index]
                       body.evaluate("(n)=>n._echoDebug.draw()")
                       page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-stage{next_index+1}.png")
