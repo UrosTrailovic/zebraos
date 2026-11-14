@@ -32,16 +32,16 @@ const PATTERN_COUNT=28;
 // Four distinct campaign levels; Free Roam remains diagnostic-only.
 const LEVELS=[
  {id:"run",name:"INITIATION",subtitle:"LE PREMIER TUNNEL",speed:1,gap:1,arcade:true,
-  duration:105,track:"p1",musicAt:0,motion:0,patterns:[0,1,3,7,10,13],
+  fallbackDuration:220,track:"p1",musicAt:0,motion:0,rise:2.3,patterns:[0,1,3,7,10,13],
   colors:{colorMain:"#ff3ed1",colorAccent:"#74efff",colorPanels:"#6b1e71",colorBackdrop:"#0b0619",colorHazard:"#ef3a5c"}},
  {id:"l2",name:"CIRCUIT",subtitle:"PORTES MOBILES",speed:1.07,gap:.97,arcade:true,
-  duration:101,track:"p1",musicAt:106,motion:1,patterns:[1,4,6,7,9,12,15,17,19,21],
+  fallbackDuration:220,track:"p1",musicAt:0,motion:1,rise:3.1,patterns:[1,4,6,7,9,12,15,17,19,21],
   colors:{colorMain:"#24f0da",colorAccent:"#fa74e7",colorPanels:"#105c64",colorBackdrop:"#04151c",colorHazard:"#fe8d4c"}},
  {id:"l3",name:"RAPIDE",subtitle:"MURS OSCILLANTS",speed:1.13,gap:.95,arcade:true,
-  duration:108,track:"p3",musicAt:0,motion:2,patterns:[2,5,8,11,14,18,20,22,23,25],
+  fallbackDuration:180,track:"p3",musicAt:0,motion:2,rise:3.7,patterns:[2,5,8,11,14,18,20,22,23,25],
   colors:{colorMain:"#86a1ff",colorAccent:"#fc86f0",colorPanels:"#343b92",colorBackdrop:"#080c25",colorHazard:"#ff6dba"}},
  {id:"l4",name:"EXTRÊME",subtitle:"MURS FONÇANTS",speed:1.19,gap:.93,arcade:true,
-  duration:103,track:"p3",musicAt:56,motion:3,patterns:[3,8,9,14,17,19,21,23,24,26,27],
+  fallbackDuration:180,track:"p3",musicAt:0,motion:3,rise:4.2,patterns:[3,8,9,14,17,19,21,23,24,26,27],
   colors:{colorMain:"#ffc46c",colorAccent:"#6ffff3",colorPanels:"#854131",colorBackdrop:"#1b0913",colorHazard:"#ff486f"}},
  {id:"free",name:"FREE ROAM",subtitle:"DIAGNOSTIC SANS OBSTACLES",speed:1,gap:1,spin:0,patterns:[]}
 ];
@@ -137,6 +137,7 @@ function mount(root){
   nextGateAt=START_GATE_AT,nextPadAt=PAD_START,nextShieldAt=SHIELD_START,
   lastGateAt=-100,trail=[],sparks=[],currentSpeed=0,gateCount=0,padCount=0,shieldCount=0,scoreMultiplier=1;
  let invuln=0,pulseCharge=2,pulseGlow=0,padBoostTime=0,pulseFx=0,pulseHitFx=0,shieldFlash=0;
+ let boostChain=0;
  let nitroHeld=false,nitroActive=false,nitroFuel=0,nitroRegenWait=0,nitroBurnTime=0,freeChargeVisual=0;
  // Arcade risk/reward: event points stay pending until a safe cash-out.
  let skillBank=0,skillChain=0,skillMultiplier=1,skillTimer=0,skillAge=0;
@@ -396,7 +397,7 @@ function mount(root){
   if(selectedLevel.arcade&&!testMode)Object.assign(lab,selectedLevel.colors);
   // A phase without pads must not inherit pickups/boost from the last one.
   if(!lab.boostPadsEnabled){
-   pads=[];padBoostTime=0;shipBoostFade=0;turboLight=0;
+   pads=[];padBoostTime=0;boostChain=0;shipBoostFade=0;turboLight=0;
   }
   if(oldPadsEnabled!==lab.boostPadsEnabled)nextPadAt=travel+PAD_START;
   if(oldBendFrequency!==lab.bendFrequency)bendProfiles.clear();
@@ -558,9 +559,7 @@ function mount(root){
  }
  const sheen=node("div","er-crt");sheen.setAttribute("aria-hidden","true");
  const overlay=node("div","er-overlay");
- const brandLogo=node("img","er-brand-logo");
- brandLogo.src="/assets/games/echo-racer-logo-2026.webp?v=1";
- brandLogo.alt="Echo Racer";
+ const homeTitle=node("h1","er-home-title","ECHO RACER 2");
  const logo=node("h2","er-title","ECHO RACER");
  const crashIcon=node("img","er-crash-icon");
  crashIcon.src="/assets/games/warning.png";crashIcon.alt="";
@@ -609,8 +608,7 @@ function mount(root){
   btn.setAttribute("aria-label","Niveau "+(i+1)+" — "+level.name);
   const image=node("img","er-level-art");
   image.src="/assets/games/lvl"+(i+1)+".png";image.alt="";image.loading="lazy";
-  btn.append(image,node("span","er-level-name",level.subtitle),
-   node("span","er-level-state"));
+  btn.append(image,node("span","er-level-state"));
   btn.onclick=()=>{menuIndex=i;confirmLevel();};
   levelPicker.appendChild(btn);levelButtons.push(btn);
  });
@@ -692,18 +690,14 @@ function mount(root){
   const choosing=stage==="levels";
   overlay.classList.toggle("er-stage-levels",choosing);
   overlay.classList.toggle("er-stage-home",!choosing);
-  brandLogo.hidden=false;logo.hidden=true;crashIcon.hidden=true;crashSub.hidden=true;
+  homeTitle.hidden=choosing;logo.hidden=true;crashIcon.hidden=true;crashSub.hidden=true;
   overlay.classList.remove("er-stage-over","er-stage-pause");screen.classList.remove("er-death");
   pauseActions.hidden=true;
   levelPicker.hidden=!choosing;overlayButton.hidden=choosing;testButton.hidden=choosing;quitButton.hidden=choosing;
   backButton.hidden=!choosing;status.hidden=!choosing;
   prompt.hidden=true;introDiagnostic.hidden=true;introTrack.hidden=true;
-  expl.hidden=true;hint.hidden=!choosing;
-  if(choosing){
-   status.textContent="CHOISIS TON NIVEAU";
-   hint.textContent="↑ ↓ CHOISIR · A VALIDER · B RETOUR";
-   refreshLevelCards();
-  }
+  expl.hidden=true;hint.hidden=true;
+  if(choosing){status.textContent="CHOISIS TON NIVEAU";refreshLevelCards();}
   overlayButton.classList.remove("er-overlay-restart");
   overlayButton.textContent="JOUER";
   overlayButton.setAttribute("aria-label","Choisir un niveau");
@@ -727,7 +721,7 @@ function mount(root){
  const pauseSound=pauseAction("♫ SON ON","er-pause-sound",()=>soundButton.click());
  const pauseMenu=pauseAction("☷ MENU","er-pause-menu",()=>toMenu());
  pauseActions.append(pauseRestart,pauseSound,pauseMenu);pauseActions.hidden=true;
- overlay.append(introDiagnostic,brandLogo,introTrack,crashIcon,logo,crashSub,status,prompt,levelPicker,expl,hint,overlayButton,testButton,quitButton,backButton,pauseActions);
+ overlay.append(introDiagnostic,homeTitle,introTrack,crashIcon,logo,crashSub,status,prompt,levelPicker,expl,hint,overlayButton,testButton,quitButton,backButton,pauseActions);
  const dashboard=node("div","er-dashboard");
  dashboard.setAttribute("role","group");dashboard.setAttribute("aria-label","Tableau de bord vitesse et boost");
  const dashHeader=node("div","er-dashboard-header");
@@ -881,6 +875,7 @@ function mount(root){
  const soundButton=button("♫ SON ON","er-sound",()=>{
   soundEnabled=!soundEnabled;save("sfx",soundEnabled?"on":"off");
    if(!soundEnabled)pauseMusic();
+   else if(mode==="running"&&selectedLevel.arcade&&!testMode)startMusicAtPhase(selectedLevel.track,elapsed);
    else if(mode==="running")startMusic(false);
    renderSound();
  });
@@ -1109,7 +1104,7 @@ function mount(root){
   if(spec.id==="obstaclesEnabled"&&!target[spec.id]&&activePhase===editorPhase)waves=[];
   if(spec.id==="boostPadsEnabled"&&activePhase===editorPhase){
    if(!target[spec.id]){
-    pads=[];padBoostTime=0;shipBoostFade=0;turboLight=0;
+    pads=[];padBoostTime=0;boostChain=0;shipBoostFade=0;turboLight=0;
    }
    nextPadAt=travel+PAD_START;
   }
@@ -1946,7 +1941,8 @@ function mount(root){
   const charge=mode==="menu"?0:free?freeChargeVisual:nitroFuel;
   setDigital(boostGauge.value,free&&mode!=="menu"&&charge>=.999?"∞":
    String(Math.round(charge*100)).padStart(3,"0"));
-  boostGauge.statusEl.textContent=mode==="menu"?"EN VEILLE":padBoostTime>0?"TURBO":nitroActive?"NITRO":free?(charge>=.999?"ILLIMITÉ":"CHARGE"):
+  boostGauge.statusEl.textContent=mode==="menu"?"EN VEILLE":padBoostTime>0&&campaignRunning()?
+   "TURBO ×"+boostPadMultiplier().toFixed(2):padBoostTime>0?"TURBO":nitroActive?"NITRO":free?(charge>=.999?"ILLIMITÉ":"CHARGE"):
    charge>=.999?"PRÊT":nitroRegenWait>0?"PAUSE":"RECHARGE";
   boostGauge.row.classList.toggle("er-dashboard-active",active);
   dashboard.classList.toggle("er-boost-active",active);
@@ -2004,6 +2000,7 @@ function mount(root){
   applyPhase("p1");
   trail=[];sparks=[];currentSpeed=0;scoreMultiplier=1;
   invuln=0;pulseCharge=2;pulseGlow=pulseFx=pulseHitFx=shieldFlash=padBoostTime=flash=shake=0;
+  boostChain=0;
   shieldCollect.classList.remove("er-shield-collected");
   nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
   shipBoostFade=0;turboLight=0;warningLife=0;warningBeepDelay=0;warningChirp=0;
@@ -2033,7 +2030,7 @@ function mount(root){
   fitCanvas();
   try{paint(performance.now());}catch(error){console.error("Echo Racer initial frame",error);}
   beep("collect");
-  if(!testMode&&selectedLevel.arcade)startMusicAtPhase(selectedLevel.track,selectedLevel.musicAt);
+  if(!testMode&&selectedLevel.arcade)startMusicAtPhase(selectedLevel.track,0);
   else if(!testMode||testLaunchPhase==="p1")startMusicAtPhase("p1",0);
   else if(testLaunchPhase==="p2")startMusicAtPhase("p1",MUSIC_DROP_AT+2);
   renderHud();
@@ -2046,7 +2043,7 @@ function mount(root){
   if(!testMode&&mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
   musicRequest++;resetSteering();stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];trail=[];turnVelocity=0;
   shieldCollect.classList.remove("er-shield-collected");pulseFx=pulseHitFx=shieldFlash=0;
-  elapsed=0;encoreMode="normal";encoreTime=0;testMode=false;wrap.dataset.circuit="menu";labToggle.hidden=true;labHide();padBoostTime=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
+  elapsed=0;encoreMode="normal";encoreTime=0;testMode=false;wrap.dataset.circuit="menu";labToggle.hidden=true;labHide();padBoostTime=0;boostChain=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
   skillBank=skillChain=skillAge=skillTimer=0;skillMultiplier=0;rewardLife=0;
   cleanPassStreak=0;
@@ -2075,7 +2072,7 @@ function mount(root){
   flash=1.8;shake=12;playDeathSound();
   screen.classList.add("er-death");
   overlay.hidden=false;introDiagnostic.hidden=true;introTrack.hidden=true;
-  brandLogo.hidden=true;logo.hidden=false;logo.textContent="GAME OVER";
+  homeTitle.hidden=true;logo.hidden=false;logo.textContent="GAME OVER";
   crashIcon.hidden=false;crashSub.hidden=false;
   overlay.classList.remove("er-stage-home","er-stage-levels","er-stage-pause");
   pauseActions.hidden=true;
@@ -2092,7 +2089,7 @@ function mount(root){
   if(mode==="running"){resetSteering();endNitro();mode="paused";pauseIndex=0;
    testButton.hidden=true;introDiagnostic.hidden=true;introTrack.hidden=true;pauseMusic();turnVelocity=0;dragPointer=null;keys.clear();levelPicker.hidden=true;backButton.hidden=true;overlay.hidden=false;
    overlay.classList.add("er-stage-pause");pauseActions.hidden=false;
-   brandLogo.hidden=true;logo.hidden=false;logo.textContent="PAUSE";
+   homeTitle.hidden=true;logo.hidden=false;logo.textContent="PAUSE";
    prompt.hidden=false;prompt.textContent="SIGNAL SUSPENDU";
    status.hidden=false;status.textContent="LE TUNNEL T'ATTEND";
    expl.hidden=true;hint.hidden=true;
@@ -2111,8 +2108,9 @@ function mount(root){
   // Single press = tiny rotation; holding the key rotates continuously.
   if(which==="left"||which==="right"){
    const d=which==="right"?-1:1;
-   angle=(angle+d*STEP*.085+TAU)%TAU;
-   turnVelocity=clamp(turnVelocity+d*.56,-3.25,3.25);
+   const sensitivity=steeringSensitivity();
+   angle=(angle+d*STEP*.085*sensitivity+TAU)%TAU;
+   turnVelocity=clamp(turnVelocity+d*.56*sensitivity,-4.9,4.9);
   }
   // Up/down control forward speed only. There is no 2D ship translation.
  }
@@ -2284,7 +2282,7 @@ function mount(root){
   finaleCause="level-"+reason;finaleTime=0;mode="finale";
   musicRequest++;stopMusic();resetSteering();endNitro();keys.clear();
   waves=[];pads=[];shields=[];sparks=[];
-  padBoostTime=0;nitroActive=false;nitroHeld=false;
+  padBoostTime=0;boostChain=0;nitroActive=false;nitroHeld=false;
   labToggle.hidden=true;labHide();
   if(score>best){best=Math.floor(score);save("best."+selectedLevel.id,best);}
   const index=CAMPAIGN.indexOf(selectedLevel)+1;
@@ -2302,7 +2300,7 @@ function mount(root){
   musicRequest++;stopMusic();
   resetSteering();endNitro();keys.clear();
   waves=[];pads=[];shields=[];sparks=[];
-  padBoostTime=0;nitroActive=false;nitroHeld=false;
+  padBoostTime=0;boostChain=0;nitroActive=false;nitroHeld=false;
   labToggle.hidden=true;labHide();
   message="FIN DE COURSE";messageLife=2.5;
   if(!testMode&&score>best){
@@ -2352,9 +2350,25 @@ function mount(root){
     beginFinale("no-audio-fallback");
   }
  }
+ function arcadeSongDuration(){
+  // Each level uses an entire, original audio file. The real media duration
+  // drives muted/offline playback when metadata is available.
+  return music&&musicTrackId===selectedLevel.track&&Number.isFinite(music.duration)&&music.duration>1?
+   music.duration:selectedLevel.fallbackDuration||MUSIC_TAIL_AT;
+ }
+ function campaignRunning(){return selectedLevel.arcade&&!testMode;}
+ function steeringSensitivity(){
+  return campaignRunning()?clamp(1+Math.max(0,currentSpeed-6.15)*.072,1,1.52):1;
+ }
+ function boostPadMultiplier(){
+  if(!campaignRunning())return lab.boostPadSpeed;
+  const initial=clamp(1+(lab.boostPadSpeed-1)*.19,1.09,1.20);
+  // Continuous pickups increase acceleration gradually, capped at ×1.43.
+  return clamp(initial+Math.max(0,boostChain-1)*.058,1.09,1.43);
+ }
  function directMusicPressure(dt){
-  if(selectedLevel.arcade&&!testMode){
-   const target=selectedLevel.motion+Math.floor(elapsed/Math.max(22,selectedLevel.duration/3));
+  if(campaignRunning()){
+   const target=selectedLevel.motion+Math.floor(elapsed/Math.max(24,arcadeSongDuration()/3));
    directorStage=Math.max(directorStage,target);
    musicDropSurge=Math.max(0,musicDropSurge-dt*.2);
    return;
@@ -2386,8 +2400,13 @@ function mount(root){
  function advance(dt){
   if(mode!=="running"||document.hidden)return;
   dt=clamp(dt,0,.05);elapsed+=dt;
-  if(selectedLevel.arcade&&!testMode&&elapsed>=selectedLevel.duration){
-   finishArcadeLevel("time");return;
+  if(campaignRunning()){
+   const playing=music&&musicTrackId===selectedLevel.track&&!music.paused&&soundEnabled&&!globalMuted()&&!musicError;
+   // Let the audio 'ended' event finish an audible level. Otherwise use
+   // its full duration, never the old 101–108-second cut.
+   if(!playing&&elapsed>=arcadeSongDuration()){
+    finishArcadeLevel("silent-song-finished");return;
+   }
   }
   updateEncore(dt);
   if(mode!=="running")return;
@@ -2404,9 +2423,11 @@ function mount(root){
   const digitalSteer=(keys.has("left")?1:0)-(keys.has("right")?1:0);
   const analogSteer=Math.abs(steerValue)<.065?0:-Math.sign(steerValue)*Math.pow(Math.abs(steerValue),1.2);
   const steer=digitalSteer||analogSteer;
-  const targetTurn=steer*lab.steerSpeed;
-  // Accelerate decisively, coast when released, brake quickly by counter-steer.
-  const turnRate=steer?(turnVelocity*steer<0?lab.steerReverse:lab.steerResponse):lab.steerInertia;
+  const sensitivity=steeringSensitivity();
+  const targetTurn=steer*lab.steerSpeed*sensitivity;
+  // A faster ship responds more sharply, including on the mobile controller.
+  const turnRate=(steer?(turnVelocity*steer<0?lab.steerReverse:lab.steerResponse):lab.steerInertia)*
+   (campaignRunning()?1+(sensitivity-1)*.65:1);
   turnVelocity+=(targetTurn-turnVelocity)*(1-Math.exp(-dt*turnRate));
   if(!steer&&Math.abs(turnVelocity)<.01)turnVelocity=0;
   if(dragPointer===null)angle=(angle+turnVelocity*dt+TAU)%TAU;
@@ -2421,14 +2442,27 @@ function mount(root){
   const survivalThrust=Math.min(2.05,elapsed/105)*lab.acceleration;
   const musicThrust=(audioFx.energy*.35+audioFx.kick*.09)*lab.punch*lab.musicSpeedInfluence;
   const encoreThrust=encoreMode==="blue"?lab.phaseBonus:0;
-  const base=clamp(lab.baseSpeed+stageThrust+survivalThrust+growth+
-   throttle*.65+musicThrust+musicDropSurge*.44+encoreThrust,
-   5.4,lab.speedCap)*selectedLevel.speed;
-  // Turbo is still rewarding, but the basic flight stays exciting.
+  // Campaign challenge comes mainly from normal cruise. Each full song
+  // increases that speed progressively; difficulty is not boost-dependent.
+  const progress=campaignRunning()?clamp(elapsed/arcadeSongDuration(),0,1):0;
+  const smoothProgress=progress*progress*(3-2*progress);
+  const base=campaignRunning()?
+   clamp(lab.baseSpeed*selectedLevel.speed+
+    selectedLevel.rise*(.18*progress+.82*smoothProgress)*lab.acceleration+
+    throttle*.65+musicThrust*.3,5.4,lab.speedCap*selectedLevel.speed):
+   clamp(lab.baseSpeed+stageThrust+survivalThrust+growth+
+    throttle*.65+musicThrust+musicDropSurge*.44+encoreThrust,
+    5.4,lab.speedCap)*selectedLevel.speed;
   const nitroThrust=lab.nitroStart+lab.nitroGrowth*(1-Math.exp(-nitroBurnTime*.72));
-  const multiplier=lab.boostPadsEnabled&&padBoostTime>0?lab.boostPadSpeed:nitroActive?nitroThrust:1;
+  // Pads used to multiply speed by 1.85: keep them optional and manageable.
+  const padMultiplier=boostPadMultiplier();
+  const nitroMultiplier=campaignRunning()?clamp(1+(nitroThrust-1)*.46,1.04,1.29):nitroThrust;
+  const multiplier=lab.boostPadsEnabled&&padBoostTime>0?padMultiplier:nitroActive?nitroMultiplier:1;
   const targetSpeed=base*multiplier;
-  const response=targetSpeed>=currentSpeed?lab.speedRiseResponse:lab.speedFallResponse;
+  // Gentle acceleration on boost, faster return to the normal cruising speed.
+  const response=campaignRunning()?
+   (targetSpeed>=currentSpeed?(multiplier>1?3.4:lab.speedRiseResponse):3.0):
+   (targetSpeed>=currentSpeed?lab.speedRiseResponse:lab.speedFallResponse);
   currentSpeed+=(targetSpeed-currentSpeed)*(1-Math.exp(-dt*response));
   const speed=currentSpeed;
   // Score multiplier follows ACTUAL travel speed (including pad/manual boost).
@@ -2441,6 +2475,7 @@ function mount(root){
   tickSkill(dt);
   invuln=Math.max(0,invuln-dt);
   padBoostTime=Math.max(0,padBoostTime-dt);
+  if(campaignRunning()&&padBoostTime<=0&&!nitroActive)boostChain=0;
   pulseGlow=Math.max(0,pulseGlow-dt);
   pulseFx=Math.max(0,pulseFx-dt/1.0);
   pulseHitFx=Math.max(0,pulseHitFx-dt/1.0);
@@ -2523,10 +2558,16 @@ function mount(root){
    if(!pad.credited&&pickupDepth(oldZ,pad.z,pad.length)
      &&pickupContact(angle,pad,PAD_SIDE)){
     pad.credited=true;
-    padBoostTime=Math.max(padBoostTime,lab.boostPadDuration);
+    if(campaignRunning()){
+     const uninterrupted=padBoostTime>0||nitroActive;
+     boostChain=uninterrupted?Math.min(6,boostChain+1):1;
+     padBoostTime=Math.max(padBoostTime,Math.max(5,lab.boostPadDuration));
+    }else padBoostTime=Math.max(padBoostTime,lab.boostPadDuration);
     shipBoostFade=1;turboLight=1;
     const gained=awardSkill("pad",lab.scorePad,"BOOST PAD");
-    pulseGlow=.68;message="TURBO PAD · +"+gained+" EN COMBO";messageLife=1.2;
+    pulseGlow=.68;
+    message=campaignRunning()?"TURBO ENCHAÎNÉ · ×"+boostPadMultiplier().toFixed(2):
+     "TURBO PAD · +"+gained+" EN COMBO";messageLife=1.2;
     burst(angle,"#72f7ff",34);
     startBoostLoop();beep("collect");
    }
@@ -3130,7 +3171,7 @@ function mount(root){
   if(!bounds.width)return;
   // Horizontal swipe = orbital rotation, no teleporting inside the circle.
   const dx=clamp(e.clientX-dragX,-bounds.width*.25,bounds.width*.25);
-  const delta=-dx/bounds.width*TAU*1.0;
+  const delta=-dx/bounds.width*TAU*steeringSensitivity();
   const stamp=Number(e.timeStamp)||Date.now();
   const sec=clamp((stamp-dragLastTs)/1000,.016,.12);
   dragVelocity=lerp(dragVelocity,clamp(delta/sec,-3.35,3.35),.43);
@@ -3229,11 +3270,13 @@ function mount(root){
   },
   ship:()=>({idleLoaded:shipReady.idle,boostLoaded:shipReady.boost,boostMix:shipBoostFade,tunnelLight:turboLight}),
   level:()=>({id:selectedLevel.id,free:selectedLevel.id==="free",gap:selectedLevel.gap,
-   duration:selectedLevel.duration||null,unlockedLevel,completedLevels,
+   duration:selectedLevel.arcade?arcadeSongDuration():null,unlockedLevel,completedLevels,
+   steeringSensitivity:steeringSensitivity(),boostChain,boostMultiplier:boostPadMultiplier(),
    available:CAMPAIGN.map((l,i)=>({id:l.id,open:i<unlockedLevel,done:i<completedLevels,
     music:l.track,offset:l.musicAt,patterns:[...l.patterns],speed:l.speed,motion:l.motion}))}),
   gauges:()=>({speed:Math.round(currentSpeed*25),charge:mode==="menu"?0:selectedLevel.id==="free"?freeChargeVisual:nitroFuel,boosting:nitroActive||padBoostTime>0,
-   held:nitroHeld,manualBoost:nitroActive,burnTime:nitroBurnTime,regenWait:nitroRegenWait}),
+   held:nitroHeld,manualBoost:nitroActive,burnTime:nitroBurnTime,regenWait:nitroRegenWait,
+   chain:boostChain,padTime:padBoostTime,speedMultiplier:boostPadMultiplier()}),
   engineAudio:()=>({flyLoaded:!!flySound,boostLoaded:!!boostSound,
    flyPlaying:!!flySound&&!flySound.paused,boostPlaying:!!boostSound&&!boostSound.paused,
    flyVolume:flySound?flySound.volume:0,boostVolume:boostOutput?boostOutput.gain.value:boostSound?boostSound.volume:0,

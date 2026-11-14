@@ -3947,134 +3947,134 @@ body > .er-lab-window.er-lab-floating{
 }
 
 
-/* Echo Racer 19: compact retro-arcade main menu, using the user's actual logo. */
+/* Echo Racer 20 — simple analog arcade menu and unframed level thumbnails.
+   Only use the original four level images: do not redraw artwork. */
 .zebra-game-body .zg.er .er-overlay.er-stage-home{
- justify-content:center!important;gap:clamp(2px,1vh,10px)!important;
- padding:clamp(7px,1.5vh,18px)!important;background:#030407ed!important
+ justify-content:center!important;gap:clamp(5px,1.8vh,17px)!important;
+ padding:clamp(10px,2vh,22px)!important;background:#030407ed!important
 }
-.zebra-game-body .zg.er .er-overlay.er-stage-home .er-brand-logo{
- display:block!important;width:min(97%,450px)!important;height:auto!important;
- max-height:min(62%,390px)!important;object-fit:contain!important;
- margin:0 auto clamp(7px,1.6vh,16px)!important;filter:none!important;image-rendering:auto!important
+.zebra-game-body .zg.er .er-overlay.er-stage-home .er-home-title{
+ display:block!important;max-width:96%!important;min-height:0!important;
+ margin:0 auto clamp(16px,4vh,44px)!important;padding:0!important;
+ color:#e7e7eb!important;text-align:center!important;white-space:nowrap!important;
+ letter-spacing:.17em!important;text-shadow:none!important;text-transform:none!important;
+ font:700 clamp(19px,3.6vw,36px)/1.22 "Courier New",monospace!important
 }
-.zebra-game-body .zg.er .er-overlay.er-stage-home .er-start-call,
 .zebra-game-body .zg.er .er-overlay.er-stage-home .er-intro-diagnostic,
-.zebra-game-body .zg.er .er-overlay.er-stage-home .er-intro-track{display:none!important}
+.zebra-game-body .zg.er .er-overlay.er-stage-home .er-intro-track,
+.zebra-game-body .zg.er .er-overlay.er-stage-home .er-start-call{display:none!important}
 .zebra-game-body .zg.er .er-overlay.er-stage-home .er-overlay-button,
 .zebra-game-body .zg.er .er-overlay.er-stage-home .er-test-button,
 .zebra-game-body .zg.er .er-overlay.er-stage-home .er-quit-button{
- display:block!important;flex:0 0 auto!important;width:min(84%,300px)!important;
- height:auto!important;min-height:36px!important;margin:0 auto!important;
- padding:5px 8px!important;border:0!important;border-radius:0!important;
- background:transparent!important;box-shadow:none!important;
- color:#e7e7e9!important;text-shadow:1px 1px #000!important;
- font:700 clamp(14px,2vw,19px)/1.35 "Courier New",monospace!important;
- letter-spacing:.3px!important;text-align:center!important;
- filter:none!important;cursor:pointer!important;touch-action:manipulation!important
+ display:block!important;flex:0 0 auto!important;
+ width:min(86%,300px)!important;height:auto!important;min-height:37px!important;
+ padding:5px 10px!important;margin:0 auto!important;
+ background:transparent!important;border:0!important;border-radius:0!important;
+ box-shadow:none!important;outline:0!important;filter:none!important;
+ color:#e7e7eb!important;text-align:center!important;text-shadow:none!important;
+ font:700 clamp(14px,2vw,20px)/1.3 "Courier New",monospace!important;
+ letter-spacing:.08em!important;cursor:pointer!important;transform:none!important
 }
-.zebra-game-body .zg.er .er-overlay.er-stage-home .er-overlay-button.selected::before,
-.zebra-game-body .zg.er .er-overlay.er-stage-home .er-test-button.selected::before,
-.zebra-game-body .zg.er .er-overlay.er-stage-home .er-quit-button.selected::before{
- content:"»"!important;display:inline!important;position:static!important;
- margin:0 8px 0 0!important;background:none!important;color:#9dfaff!important
+.zebra-game-body .zg.er .er-overlay.er-stage-home .selected::before{
+ content:"»"!important;position:static!important;display:inline!important;
+ background:none!important;margin-right:9px!important;color:#a0effe!important
 }
-.zebra-game-body .zg.er .er-overlay.er-stage-home .er-overlay-button.selected::after,
-.zebra-game-body .zg.er .er-overlay.er-stage-home .er-test-button.selected::after,
-.zebra-game-body .zg.er .er-overlay.er-stage-home .er-quit-button.selected::after{
- content:"«"!important;display:inline!important;position:static!important;
- margin:0 0 0 8px!important;background:none!important;color:#9dfaff!important
+.zebra-game-body .zg.er .er-overlay.er-stage-home .selected::after{
+ content:"«"!important;position:static!important;display:inline!important;
+ background:none!important;margin-left:9px!important;color:#a0effe!important
 }
 .zebra-game-body .zg.er .er-overlay.er-stage-home button:hover,
 .zebra-game-body .zg.er .er-overlay.er-stage-home button:focus-visible{
- color:#a5faff!important;transform:none!important;filter:none!important;outline:1px dotted #9ceaf0!important
-}
-.zebra-game-body .zg.er .er-overlay.er-stage-home .er-quit-button[hidden],
-.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-quit-button[hidden],
-.zebra-game-body .zg.er .er-overlay.er-stage-home .er-level-picker[hidden],
-.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-overlay-button[hidden],
-.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-test-button[hidden]{
- display:none!important
+ color:#b5faff!important;box-shadow:none!important;outline:0!important
 }
 .zebra-game-body .zg.er .er-overlay.er-stage-levels{
- justify-content:center!important;gap:7px!important;padding:12px!important;
- background:#040508f1!important
+ justify-content:center!important;gap:clamp(7px,1.4vh,15px)!important;
+ padding:clamp(8px,1.8vh,18px)!important;background:#030407ec!important
 }
-.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-brand-logo{display:none!important}
+.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-home-title,
+.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-hint{display:none!important}
+.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-title-sub{
+ display:block!important;color:#eaeaf0!important;
+ font:700 clamp(11px,1.6vw,15px)/1.4 "Courier New",monospace!important;
+ letter-spacing:.17em!important;text-align:center!important
+}
 .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-picker{
  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
- width:min(100%,460px)!important;max-width:460px!important;
- gap:9px!important;margin:0 auto!important;overflow:visible!important
+ width:min(100%,560px)!important;max-width:560px!important;
+ gap:clamp(8px,1.8vw,22px)!important;margin:0 auto!important;
+ background:none!important;box-shadow:none!important;overflow:visible!important
 }
 .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button,
-.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button.selected{
- display:flex!important;flex-direction:column!important;align-items:center!important;
- justify-content:center!important;position:relative!important;
- width:100%!important;height:auto!important;min-height:105px!important;
- padding:8px 4px!important;gap:3px!important;
- border:1px solid #52616d!important;border-radius:2px!important;
- background:#0c0f18!important;background-image:none!important;
- color:#f3f5fa!important;font:700 12px/1.15 "Courier New",monospace!important;
- box-shadow:inset 0 0 0 1px #191e29!important;
- text-shadow:none!important;filter:none!important;transform:none!important
+.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button.selected,
+.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button:focus-visible{
+ display:flex!important;flex-direction:column!important;position:relative!important;
+ align-items:center!important;justify-content:center!important;
+ gap:4px!important;width:100%!important;height:auto!important;
+ min-height:85px!important;padding:3px!important;margin:0!important;
+ border:0!important;border-radius:0!important;background:transparent!important;
+ background-image:none!important;box-shadow:none!important;outline:0!important;
+ color:#f0f0f0!important;text-shadow:none!important;filter:none!important;
+ transform:none!important;cursor:pointer!important
 }
-.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button.selected{
- border-color:#a4f0f7!important;box-shadow:0 0 0 1px #a4f0f7!important
+.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button.selected::before{
+ content:"»"!important;position:absolute!important;top:36%!important;left:0!important;
+ color:#9df6ff!important;background:none!important;
+ font:700 21px/1 "Courier New",monospace!important
 }
-.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button img.er-level-art{
- display:block;width:min(100%,185px);height:53px;object-fit:contain;
- image-rendering:pixelated;filter:none
+.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button.selected::after{
+ content:"«"!important;position:absolute!important;top:36%!important;right:0!important;
+ color:#9df6ff!important;background:none!important;
+ font:700 21px/1 "Courier New",monospace!important
 }
-.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-name{
- display:block;font:bold 11px/1.15 "Courier New",monospace!important;
- color:#f0f0f0!important;letter-spacing:.35px!important
+.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button .er-level-art{
+ display:block!important;width:94%!important;max-width:100%!important;
+ height:auto!important;max-height:clamp(44px,13vh,94px)!important;
+ object-fit:contain!important;image-rendering:pixelated!important;
+ border:0!important;border-radius:0!important;
+ background:none!important;box-shadow:none!important
+}
+.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button.er-level-locked .er-level-art{
+ filter:grayscale(1) brightness(.44)!important
 }
 .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-state{
- display:block;font:9px/1 "Courier New",monospace!important;
- color:#7df0ca!important;letter-spacing:.8px!important
+ display:block!important;color:#8aeccc!important;
+ font:400 clamp(8px,1.2vw,10px)/1.1 "Courier New",monospace!important;
+ letter-spacing:.10em!important;text-align:center!important
 }
-.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-locked img.er-level-art{filter:grayscale(1) brightness(.48)}
-.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-locked .er-level-state{color:#b1a7b9!important}
-.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-complete .er-level-state{color:#a7fafa!important}
+.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-locked .er-level-state{
+ color:#9992a0!important
+}
 .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-menu-back{
- flex:0 0 auto!important;width:auto!important;height:auto!important;min-height:31px!important;
- padding:5px 13px!important;border:0!important;border-radius:0!important;
- background:transparent!important;color:#eee!important;
- font:bold 12px/1.3 "Courier New",monospace!important;
- text-shadow:none!important;filter:none!important;cursor:pointer!important
+ width:auto!important;min-height:31px!important;margin:4px auto!important;
+ padding:4px 12px!important;background:none!important;border:0!important;
+ border-radius:0!important;box-shadow:none!important;
+ color:#e9e9ec!important;font:700 13px/1.3 "Courier New",monospace!important;
+ text-align:center!important;cursor:pointer!important;filter:none!important
 }
-.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-title-sub{
- display:block!important;font:700 12px "Courier New",monospace!important;color:#f1f3ff!important
-}
-.zebra-game-body .zg.er .er-overlay.er-stage-levels .er-hint{
- display:block!important;font:10px "Courier New",monospace!important;
- color:#90a9b9!important;text-align:center!important
-}
+.zebra-game-body .zg.er .er-overlay.er-stage-home [hidden],
+.zebra-game-body .zg.er .er-overlay.er-stage-levels [hidden]{display:none!important}
 @media(max-width:700px){
- .zebra-game-body .zg.er .er-overlay.er-stage-home .er-brand-logo{
-  width:min(97%,345px)!important;max-height:57%!important;margin-bottom:4px!important
+ .zebra-game-body .zg.er .er-overlay.er-stage-home .er-home-title{
+  font-size:clamp(18px,4.2vw,25px)!important;letter-spacing:.10em!important;
+  margin-bottom:clamp(14px,3vh,28px)!important
  }
  .zebra-game-body .zg.er .er-overlay.er-stage-home{gap:3px!important}
  .zebra-game-body .zg.er .er-overlay.er-stage-home .er-overlay-button,
  .zebra-game-body .zg.er .er-overlay.er-stage-home .er-test-button,
  .zebra-game-body .zg.er .er-overlay.er-stage-home .er-quit-button{
-  min-height:33px!important;font-size:14px!important;padding:3px!important
+  font-size:14px!important;min-height:33px!important;padding:3px!important
  }
- .zebra-game-body .zg.er .er-overlay.er-stage-levels{gap:4px!important;padding:6px!important}
- .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-picker{gap:5px!important}
+ .zebra-game-body .zg.er .er-overlay.er-stage-levels{gap:5px!important;padding:6px!important}
+ .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-picker{gap:7px!important}
  .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button,
  .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button.selected{
-  min-height:77px!important;padding:4px 2px!important;gap:1px!important
+  min-height:63px!important;padding:2px!important;gap:1px!important
  }
- .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button img.er-level-art{height:37px!important}
- .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-name{font-size:9px!important}
- .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-state{font-size:8px!important}
- .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-hint{font-size:8px!important}
-}
-
-/* Arcade home: clear the legacy mobile focus box; only « » indicate selection. */
-.zebra-game-body .zg.er .er-overlay.er-stage-home .er-overlay-button.selected,
-.zebra-game-body .zg.er .er-overlay.er-stage-home .er-test-button.selected,
-.zebra-game-body .zg.er .er-overlay.er-stage-home .er-quit-button.selected{
- outline:0!important;outline-offset:0!important;box-shadow:none!important;
- filter:none!important
+ .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button .er-level-art{
+  max-height:clamp(37px,8vh,60px)!important
+ }
+ .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button.selected::before,
+ .zebra-game-body .zg.er .er-overlay.er-stage-levels .er-level-button.selected::after{
+  font-size:16px!important
+ }
 }

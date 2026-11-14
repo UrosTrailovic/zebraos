@@ -24,6 +24,17 @@ jobs:
           test -s "assets/games/echo-racer-logo-2026.webp"
           test -s assets/games/echoraccaersong.mp3
           test -s assets/games/echoraccersongpt2.mp3
+      - name: Mesurer la durée exacte des deux pistes originales
+        run: |
+          python3 -m pip install --quiet mutagen
+          python3 - <<'PY'
+          from mutagen.mp3 import MP3
+          for name in ['echoraccaersong.mp3','echoraccersongpt2.mp3']:
+              path='assets/games/'+name
+              seconds=MP3(path).info.length
+              assert seconds>30, f'Unexpectedly short song: {name}'
+              print(f'FULL_TRACK_DURATION {name} {seconds:.3f} seconds',flush=True)
+          PY
       - name: Installer le navigateur de test
         run: python3 -m pip install --quiet playwright
       - name: Tester les parcours PC et Android simulé
@@ -67,10 +78,11 @@ jobs:
               game='.window[data-app-id="racer"]'
               menu=page.locator(game+" .er-overlay.er-stage-home")
               assert menu.is_visible(),"Main menu hidden"
-              logo=menu.locator(".er-brand-logo")
-              assert logo.evaluate("(n)=>n.naturalWidth>0"),"Logo missing"
-              logo_h=logo.evaluate("(n)=>n.getBoundingClientRect().height")
-              assert logo_h>=100, f"Logo too small {logo_h}"
+              title=menu.locator(".er-home-title")
+              assert title.is_visible(), "Text title missing"
+              assert title.inner_text().strip()=="ECHO RACER 2", "Wrong arcade title"
+              assert float(title.evaluate("(n)=>parseFloat(getComputedStyle(n).letterSpacing)"))>1, "Title needs letter spacing"
+              assert menu.locator(".er-brand-logo").count()==0, "Old image logo still present"
               assert menu.locator(".er-overlay-button").inner_text().strip()=="JOUER"
               assert menu.locator(".er-test-button").is_visible()
               assert menu.locator(".er-quit-button").is_visible()
@@ -79,6 +91,10 @@ jobs:
               levels=page.locator(game+" .er-stage-levels .er-level-button")
               assert levels.count()==4,"There must be four actual cards"
               assert all(levels.nth(i).locator("img").evaluate("(n)=>n.complete&&n.naturalWidth>0") for i in range(4)),"One of four level textures missing"
+              assert all(levels.nth(i).evaluate("(n)=>getComputedStyle(n).borderTopWidth")=="0px" for i in range(4)), "Level cards still have a border"
+              assert all(levels.nth(i).evaluate("(n)=>getComputedStyle(n).backgroundColor")=="rgba(0, 0, 0, 0)" for i in range(4)), "Level cards still have a background"
+              assert all(levels.nth(i).locator(".er-level-name").count()==0 for i in range(4)), "Redundant level subtitles"
+              assert not page.locator(game+" .er-stage-levels .er-hint").is_visible(), "Redundant controller instructions"
               locked=[levels.nth(i).get_attribute("aria-disabled") for i in range(4)]
               assert locked==["false","true","true","true"],f"Unexpected locks: {locked}"
               page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-levels.png")
@@ -94,12 +110,28 @@ jobs:
               body=page.locator(game+" .window-body")
               assert body.evaluate("(n)=>n._echoDebug.snapshot().mode")=="running","Level one did not launch"
               assert body.evaluate("(n)=>n._echoDebug.level().id")=="run"
+              tracks=body.evaluate("(n)=>n._echoDebug.level().available.map(l=>[l.music,l.offset])")
+              assert tracks==[["p1",0],["p1",0],["p3",0],["p3",0]], "Every full song must start at zero"
+              first=body.evaluate("""(n)=>{
+                const d=n._echoDebug;
+                d.injectPickup('pad',[0,1,2]);d.advance(.05);
+                return d.gauges();
+              }""")
+              assert first["chain"]==1 and first["padTime"]>0, "First boost not recognized"
+              second=body.evaluate("""(n)=>{
+                const d=n._echoDebug;
+                d.injectPickup('pad',[0,1,2]);d.advance(.05);
+                return d.gauges();
+              }""")
+              assert second["chain"]==2, "Second uninterrupted pad did not chain"
+              assert second["speedMultiplier"]>first["speedMultiplier"], "Chained pads must increase speed gradually"
+              assert second["speedMultiplier"]<=1.43, "Uncontrolled boost multiplier"
               body.evaluate("(n)=>n._echoDebug.draw()")
               page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-stage1.png")
               # In the dedicated test environment only, hazards were disabled
               # through saved editor parameters to make the 105s simulation deterministic.
               body.evaluate("""(n)=>{
-                for(let i=0;i<2120&&n._echoDebug.snapshot().mode==='running';i++)
+                for(let i=0;i<5300&&n._echoDebug.snapshot().mode==='running';i++)
                   n._echoDebug.advance(.05);
                 n._echoDebug.tickFinale(4);
               }""")
@@ -125,7 +157,7 @@ jobs:
               page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-stage2.png")
               for finished_index in (2,3,4):
                   body.evaluate("""(n)=>{
-                    for(let i=0;i<2300&&n._echoDebug.snapshot().mode==='running';i++)
+                    for(let i=0;i<5300&&n._echoDebug.snapshot().mode==='running';i++)
                       n._echoDebug.advance(.05);
                     n._echoDebug.tickFinale(4);
                   }""")
@@ -163,7 +195,7 @@ jobs:
               saved=page.locator(game+" .window-body").evaluate("(n)=>n._echoDebug.level().unlockedLevel")
               assert saved==4,"All four completed stages not persisted in localStorage"
               assert not errors, "Uncaught JS errors: "+repr(errors)
-              result={"viewport":f"{width}x{height}","logoHeight":logo_h,"fourCards":True,"level1Finished":True,"unlocked2":True,"locked3":True,"movement2":True,"allFourFinished":all_four_done,"saved":True,"pageErrors":errors}
+              result={"viewport":f"{width}x{height}","textTitle":True,"fourCards":True,"unchainedBoostSpeed":first["speedMultiplier"],"chainedBoostSpeed":second["speedMultiplier"],"level1Finished":True,"unlocked2":True,"locked3":True,"movement2":True,"allFourFinished":all_four_done,"saved":True,"pageErrors":errors}
               print("CAMPAIGN_TEST "+json.dumps(result,ensure_ascii=False),flush=True)
               ctx.close()
           with sync_playwright() as p:
