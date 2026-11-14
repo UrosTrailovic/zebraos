@@ -3079,6 +3079,67 @@ function mount(root){
   }
   c.restore();
  }
+ // Each danger is drawn on the same curved tube as the walls.
+ function drawHazard(h){
+  if(h.cleared||h.z>RENDER_FAR_Z||h.z+(h.length||0)<-.6)return;
+  const fade=clamp((SPAWN_Z-h.z)/4.4,0,1);if(fade<.004)return;
+  const z=Math.max(.05,h.z),far=Math.max(z+.08,h.z+h.length);
+  c.save();c.globalAlpha*=fade;c.lineCap="round";c.lineJoin="round";
+  if(h.type==="sweeper"){
+   // Two short contact strips and a cross-beam rotating together.
+   for(let i=0;i<2;i++){
+    const a=screenAngle(h.rotation+i*PI);
+    wallPatch(a-STEP*.40,a+STEP*.40,z,far,
+     labHex("#ef587a",.25),labHex("#ffb4bd",.80),4);
+   }
+   const mid=Math.max(.05,h.z+h.length*.42);
+   const p0=wallPoint(screenAngle(h.rotation),mid),p1=wallPoint(screenAngle(h.rotation+PI),mid);
+   c.beginPath();c.moveTo(p0.x,p0.y);c.lineTo(p1.x,p1.y);
+   c.strokeStyle=labHex("#ff667b",.75);c.lineWidth=3.1;c.stroke();
+   c.strokeStyle=labHex("#ffe9ec",.87);c.lineWidth=.9;c.stroke();
+   for(const p of [p0,p1]){
+    c.beginPath();c.arc(p.x,p.y,clamp(p.r*.055,1.5,7),0,TAU);
+    c.fillStyle="#ffcfda";c.fill();
+   }
+  }else if(h.type==="electric"){
+   const warning=clamp((HIT_Z+13-h.z)/9,0,1);
+   const a=screenAngle(h.center-h.width*.5),b=a+h.width;
+   wallPatch(a,b,z,far,
+    labHex("#40d8e9",.13+warning*.33),
+    labHex("#adf8e8",.45+warning*.44),5);
+   for(let i=0;i<3;i++){
+    const depth=z+(far-z)*(i+.5)/3;
+    const p0=wallPoint(a+h.width*.12,depth+.23);
+    const p1=wallPoint(a+h.width*.53,depth-.1);
+    const p2=wallPoint(a+h.width*.39,depth-.25);
+    const p3=wallPoint(a+h.width*.83,depth-.44);
+    c.beginPath();c.moveTo(p0.x,p0.y);c.lineTo(p1.x,p1.y);
+    c.lineTo(p2.x,p2.y);c.lineTo(p3.x,p3.y);
+    c.strokeStyle=warning>.65?"#e5f6bc":"#7fcedb";
+    c.lineWidth=1.2+warning*.75;c.stroke();
+   }
+  }else if(h.type==="drone"){
+   const body=wallPoint(screenAngle(h.bodyAngle),z),r=clamp(body.r*.14,3.5,17);
+   c.fillStyle="#253445";c.strokeStyle="#ffe0df";c.lineWidth=1.4;
+   c.beginPath();c.moveTo(body.x,body.y-r);c.lineTo(body.x+r*.82,body.y);
+   c.lineTo(body.x,body.y+r);c.lineTo(body.x-r*.82,body.y);
+   c.closePath();c.fill();c.stroke();
+   c.fillStyle="#fa6b88";c.beginPath();c.arc(body.x,body.y,r*.28,0,TAU);c.fill();
+   if(h.locked&&!h.fired){
+    const boltZ=Math.max(.05,h.boltZ),a=screenAngle(h.targetAngle);
+    const bolt=wallPoint(a,boltZ),br=clamp(bolt.r*.10,4,16);
+    // Once targeted, the projectile is non-homing and clearly marked.
+    wallPatch(a-STEP*.55,a+STEP*.55,boltZ,boltZ+.85,
+     labHex("#ff7993",.16),labHex("#ffbdc6",.66),3);
+    c.strokeStyle="#ff889a";c.lineWidth=1.7;c.beginPath();
+    c.arc(bolt.x,bolt.y,br,0,TAU);c.stroke();
+    c.fillStyle="#ffd2d8";c.beginPath();c.arc(bolt.x,bolt.y,br*.38,0,TAU);c.fill();
+    c.strokeStyle=labHex("#ff7f94",.36);c.lineWidth=.9;c.beginPath();
+    c.moveTo(body.x,body.y);c.lineTo(bolt.x,bolt.y);c.stroke();
+   }
+  }
+  c.restore();
+ }
  // Shield collectible attached to the same bent tube as every obstacle.
  function drawShieldPickup(pickup){
   if(lives===MAX_LIVES||pickup.credited||pickup.z>RENDER_FAR_Z||pickup.z<-.45)return;
@@ -3233,6 +3294,7 @@ function mount(root){
   for(let i=pads.length-1;i>=0;i--)drawPad(pads[i]);
   for(let i=shields.length-1;i>=0;i--)drawShieldPickup(shields[i]);
   for(let i=waves.length-1;i>=0;i--)drawWave(waves[i]);
+  for(let i=hazards.length-1;i>=0;i--)drawHazard(hazards[i]);
   c.restore();
   for(const p of (lab.particles<=0?[]:sparks)){
    const t=wallPoint(screenAngle(p.a),p.z);
@@ -3451,7 +3513,7 @@ function mount(root){
    labDetached:!wrap.contains(labPanel)&&!!labPanel.parentElement,
    phaseActive:activePhase,phaseEditing:editorPhase,
    phaseProfiles:JSON.parse(JSON.stringify(phaseProfiles)),fps:labFps,angle,turnVelocity,lives,score,best,distance,travel,visualTravel:labVisualTravel(),passed,combo,directorStage,musicDropSurge,
-   encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,loop:music?music.loop:false,track:musicTrackId,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
+   encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,loop:music?music.loop:false,track:musicTrackId,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,hazards:hazards.map(h=>({type:h.type,z:h.z,length:h.length,center:h.center,rotation:h.rotation,spin:h.spin,hit:h.hit,locked:h.locked,targetAngle:h.targetAngle,boltZ:h.boltZ,fired:h.fired,cleared:h.cleared})),waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
   cashout:()=>bankSkill("TEST CASHOUT"),
   triggerEncore:beginEncore,triggerFinale:()=>beginFinale("debug"),tickFinale:updateFinale,
@@ -3491,6 +3553,12 @@ function mount(root){
    if(kind==="pad")pads.push(o);else if(kind==="shield")shields.push(o);
    return o;
   },
+  hazardForGate:(level,gate)=>hazardTypeForLevel(level,gate),
+  injectHazard:(type,z=HIT_Z+9)=>{
+   if(mode!=="running"||!["sweeper","electric","drone"].includes(type))return null;
+   const h=createHazard(type);h.z=z;hazards.push(h);return h;
+  },
+  setShipAngle:(v)=>{angle=(v%TAU+TAU)%TAU;return angle;},
   injectWave:(sectors,z=HIT_Z+PULSE_REACH-.4)=>{
    const o={kind:0,sectors:[...sectors],z,length:1,rotation:0,spin:0,cleared:false,credited:false};
    waves.push(o);return o;
@@ -3578,5 +3646,5 @@ function mount(root){
  raf=requestAnimationFrame(frameTick);
  return dispose;
 }
-window.ZebraEchoRacer={mount,pattern,collisionAt};
+window.ZebraEchoRacer={mount,pattern,collisionAt,hazardTypeForLevel};
 }());
