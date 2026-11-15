@@ -3658,11 +3658,22 @@ function mount(root){
    labDetached:!wrap.contains(labPanel)&&!!labPanel.parentElement,
    phaseActive:activePhase,phaseEditing:editorPhase,
    phaseProfiles:JSON.parse(JSON.stringify(phaseProfiles)),fps:labFps,angle,turnVelocity,invuln,lives,score,best,distance,travel,visualTravel:labVisualTravel(),passed,combo,directorStage,musicDropSurge,
+   outro:{active:outroActive,fade:outroFade,duration:CINEMATIC_OUTRO_SECONDS,
+    clock:arcadeSongClock(),songDuration:campaignRunning()?arcadeSongDuration():null,
+    clearance:CINEMATIC_OUTRO_CLEARANCE,
+    visibility:screen.style.getPropertyValue("--er-outro-visibility")},
    encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,loop:music?music.loop:false,track:musicTrackId,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,hazards:hazards.map(h=>({type:h.type,z:h.z,length:h.length,rotation:h.rotation,spin:h.spin,hit:h.hit,rays:h.rays&&h.rays.map(r=>({...r})),bodyAngle:h.bodyAngle,trackAngle:h.trackAngle,patrolPhase:h.patrolPhase,drops:h.drops,mines:h.mines&&h.mines.map(m=>({...m})),cleared:h.cleared})),waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
   cashout:()=>bankSkill("TEST CASHOUT"),
   triggerEncore:beginEncore,triggerFinale:()=>beginFinale("debug"),tickFinale:updateFinale,
   simulateSongEnd:()=>{if(!music)return false;music.dispatchEvent(new Event("ended"));return true;},
+  // Used only by browser regression tests; does not seek or modify audio.
+  testOutroClock:(seconds)=>{
+   if(!campaignRunning()||!Number.isFinite(seconds))return false;
+   debugArcadeClock=clamp(seconds,0,arcadeSongDuration());
+   return true;
+  },
+  clearTestOutroClock:()=>{debugArcadeClock=null;return true;},
   draw:()=>paint(performance.now()),
   // Test the real Canvas reaction without playing sound out loud. Channels
   // are injected for one *render only*, then the live analyser takes back
@@ -3798,5 +3809,5 @@ function mount(root){
  raf=requestAnimationFrame(frameTick);
  return dispose;
 }
-window.ZebraEchoRacer={mount,pattern,collisionAt,hazardTypeForLevel,makeHazardSchedule,laserBlueprint,laserContact};
+window.ZebraEchoRacer={mount,pattern,collisionAt,hazardTypeForLevel,makeHazardSchedule,laserBlueprint,laserContact,cinematicOutroFade};
 }());
