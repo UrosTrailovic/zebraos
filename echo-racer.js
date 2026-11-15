@@ -2685,6 +2685,25 @@ function mount(root){
   }
   updateEncore(dt);
   if(mode!=="running")return;
+  // No new obstacles for seven seconds before the fifteen-second outro.
+  // Existing gates pass naturally instead of vanishing on the fade frame.
+  const outroClock=campaignRunning()?arcadeSongClock():0;
+  const outroDuration=campaignRunning()?arcadeSongDuration():Infinity;
+  const outroPreparing=campaignRunning()&&
+   outroClock>=outroDuration-CINEMATIC_OUTRO_SECONDS-CINEMATIC_OUTRO_CLEARANCE;
+  if(campaignRunning()&&outroClock>=outroDuration-CINEMATIC_OUTRO_SECONDS){
+   if(!outroActive){
+    outroActive=true;
+    // No collisions or stray projectiles during the last 15 seconds.
+    waves=[];hazards=[];pads=[];shields=[];sparks=[];
+    pulseFx=pulseGlow=pulseHitFx=shieldFlash=0;
+    warningLife=0;messageLife=0;rewardLife=0;
+    scoreToast.hidden=true;
+    shieldCollect.classList.remove("er-shield-collected");
+    padBoostTime=0;boostChain=0;
+   }
+   outroFade=Math.max(outroFade,cinematicOutroFade(outroClock,outroDuration));
+  }
   // Apply the tuned profile at the real musical boundary. The editor may
   // meanwhile display a different phase without changing the active run.
   const songClock=music&&!music.paused&&soundEnabled&&!globalMuted()?
@@ -2694,7 +2713,7 @@ function mount(root){
    (selectedLevel.track==="p1"?"p1":"p3"):
    encoreMode==="blue"?"p3":songClock>=MUSIC_DROP_AT?"p2":"p1";
   if(activePhase!==actualPhase)applyPhase(actualPhase);
-  directMusicPressure(dt);
+  if(!outroActive)directMusicPressure(dt);
   // Inverted orbital steering: pressing LEFT rotates the camera/ship toward
   // the opposite tunnel angle. Keep keyboard and touch D-pad consistent.
   const digitalSteer=(keys.has("left")?1:0)-(keys.has("right")?1:0);
@@ -2768,7 +2787,7 @@ function mount(root){
   }
   // Separate obstacles by WORLD distance, not seconds. At faster speeds,
   // each gate still has a long, empty tunnel leading to the next one.
-  while(travel>=nextGateAt){
+  while(!outroPreparing&&travel>=nextGateAt){
    gateCount++;
    const spawnAt=nextGateAt;
    const special=!testMode&&selectedLevel.arcade?
@@ -2786,7 +2805,7 @@ function mount(root){
    nextGateAt+=nextGateGap();
   }
   // Pads have their OWN calendar and cannot appear on top of a hazard.
-  while(travel>=nextPadAt){
+  while(!outroPreparing&&travel>=nextPadAt){
    if(!lab.boostPadsEnabled){
     nextPadAt=travel+PAD_START;
     break;
@@ -2803,7 +2822,7 @@ function mount(root){
   }
   // Shield frequency depends on remaining lives: 3 = none; 2 = scarce;
   // 1 = existing frequency. The schedule never builds a spawn backlog.
-  while(travel>=nextShieldAt){
+  while(!outroPreparing&&travel>=nextShieldAt){
    if(lives===MAX_LIVES){
     nextShieldAt+=rand(SHIELD_RARE_MIN,SHIELD_RARE_MAX)/lab.shieldFrequency;continue;
    }
@@ -3435,6 +3454,14 @@ function mount(root){
   drawShip(); // Ship is now the only permanent POV marker.
   if(flash>0){
    c.fillStyle="rgba(255,70,143,"+(flash*.23)+")";c.fillRect(0,0,W,H);
+  }
+  // Same gradual blackout on the world and its ship silhouette.
+  const cinematicAlpha=outroActive?(mode==="finale"||mode==="finished"?1:outroFade):0;
+  screen.classList.toggle("er-cinematic-outro",outroActive);
+  screen.style.setProperty("--er-outro-visibility",String(1-cinematicAlpha));
+  if(cinematicAlpha>0){
+   c.save();c.fillStyle="rgba(0,0,0,"+cinematicAlpha+")";
+   c.fillRect(0,0,W,H);c.restore();
   }
   if(mode==="finale"||mode==="finished"){
    const fade=mode==="finished"?1:smoothEncore(finaleTime/FINALE_FADE_SECONDS);
