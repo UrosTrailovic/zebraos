@@ -45,6 +45,47 @@ jobs:
           assert.equal(api.laserContact(Math.PI,partial),false);
           const triple={rotation:0,rays:[{a:0,reach:1},{a:Math.PI/3,reach:1},{a:2*Math.PI/3,reach:1}]};
           assert.equal(api.laserContact(Math.PI/6,triple),false);
+          // Reproducible randomized encounters, varied across seeds and restarts.
+          const seeds=[1,7,125,0x1234abcd];
+          for(const id of ['run','l2','l3','l4','free']){
+           let foundLaserStreak=false,foundDrone=false,foundLongWalls=false;
+           let sampleFirst=null;
+           for(const seed of seeds){
+            const seq=api.makeHazardSchedule(id,240,seed);
+            const seqLong=api.makeHazardSchedule(id,320,seed);
+            assert.equal(seq.length,240);
+            assert.deepEqual([...seq.slice(0,240)],[...seqLong.slice(0,240)]);
+            assert.deepEqual([...seq.slice(0,4)],[null,null,null,null]);
+            if(seed===seeds[0])sampleFirst=[...seq];
+            else if(id!=='free'&&seed===seeds[1])
+             assert.notDeepEqual([...seq.slice(0,120)],sampleFirst.slice(0,120),'sequence never changes');
+            let laserRun=0,wallRun=0;
+            for(let i=0;i<seq.length;i++){
+             const type=seq[i];
+             assert.ok([null,'laser','drone'].includes(type),'unexpected obstacle family');
+             if(type==='laser'){laserRun++;wallRun=0;}
+             else {laserRun=0;wallRun=type===null?wallRun+1:0;}
+             if(laserRun>=2)foundLaserStreak=true;
+             if(wallRun>=4)foundLongWalls=true;
+             if(laserRun>3)assert.fail('laser chain too long');
+             if(type==='drone'){
+              foundDrone=true;
+              for(let offset of [-2,-1,1,2]){
+               if(i+offset>=0&&i+offset<seq.length)
+                assert.notEqual(seq[i+offset],'laser','drone spawned inside laser chain');
+              }
+             }
+             assert.equal(api.hazardTypeForLevel(id,i+1,seed),type);
+            }
+           }
+           if(id==='free')assert.ok(!foundLaserStreak&&!foundDrone);
+           else assert.ok(foundLongWalls,'missing wall rhythm: '+id);
+           if(id==='l2'||id==='l3'||id==='l4')
+            assert.ok(foundLaserStreak,'missing multi-laser cinematic sequences: '+id);
+           if(id==='l4')assert.ok(foundDrone,'missing drones');
+           if(id!=='l4')assert.ok(!foundDrone,'drones before finale');
+          }
+          console.log('ENCOUNTER_RHYTHM_OK: 5 modes, 4 seeds, short laser chains, separated drones');
           console.log('HAZARD_PROGRESSION_OK: no electricity, laser shapes and safe sectors');
           NODE
       - name: Installer Chromium
@@ -128,9 +169,18 @@ jobs:
                    advance(35);d.draw();
                    const pulseSafe=d.snapshot().lives===3;
                    const noElectric=d.injectHazard('electric')===null;
+                   d.menu();
+                   const selectedFinal=d.selectLevel('l4');
+                   d.start(false);
+                   const finalPalette=d.palette();
+                   const finalPlan=d.encounterPlan();
+                   const finalDangers=finalPlan.events.some(x=>x==='laser')&&finalPlan.events.some(x=>x==='drone');
+                   const darkFinal=selectedFinal&&finalPalette.colorBackdrop==='#02030b'&&
+                    finalPalette.colorPanels==='#151124'&&finalPalette.colorMain==='#d82d5e';
+                   d.draw();
                    return {starHit,starDodge,shortHit,shortDodge,selectedL3,spin,rotated,
                     moved,dropped,mineMoved,mineHit,mineDodge,
-                    countBefore,pulseKill,pulseSafe,noElectric,renderError:d.lastRenderError()};
+                    countBefore,pulseKill,pulseSafe,noElectric,selectedFinal,darkFinal,finalDangers,finalPalette,renderError:d.lastRenderError()};
                   }""")
                   print('ECHO_HAZARDS',width,json.dumps(result),flush=True)
                   assert result['starHit']==2 and result['starDodge']==3,result
@@ -140,6 +190,7 @@ jobs:
                   assert result['mineHit']==2 and result['mineDodge']==3,result
                   assert result['countBefore']>=1 and result['pulseKill'] and result['pulseSafe'],result
                   assert result['noElectric'] and not result['renderError'],result
+                  assert result['darkFinal'] and result['finalDangers'],result
                   assert not errors,errors
                   page.close()
               browser.close()
