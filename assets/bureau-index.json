@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-08T08:25:41.744418+00:00",
+  "generatedAt": "2026-11-15T18:35:58.686Z",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -28,9 +28,9 @@
       "type": "dir"
     },
     {
-      "path": "STUDIO/BUREAU/Jeux/Echo Racer.exe.zebraos.json",
+      "path": "STUDIO/BUREAU/Jeux/Echo Racer 2 Beta.exe.zebraos.json",
       "type": "app",
-      "name": "Echo Racer.exe",
+      "name": "Echo Racer 2 Beta.exe",
       "app": "racer",
       "icon": "racer",
       "sessions": [
