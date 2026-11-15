@@ -4103,3 +4103,55 @@ body > .er-lab-window.er-lab-floating{
  background-position:center!important;
  background-repeat:no-repeat!important;
 }
+
+
+/* Echo Racer 2 Beta — restrained double CRT pulse on the small ×N counter.
+   Reuse the existing 2-note combo SFX; do not add HUD popups or audio spam. */
+.zebra-game-body .zg.er .er-score-combo .er-score-multiplier{
+ transform-origin:8% 52%;
+ will-change:auto;
+}
+.zebra-game-body .zg.er .er-score-combo.er-combo-up .er-score-multiplier{
+ animation:er-combo-double-rise .54s ease-out both;
+}
+.zebra-game-body .zg.er .er-score-combo.er-combo-down .er-score-multiplier{
+ animation:er-combo-double-fall .54s ease-out both;
+}
+@keyframes er-combo-double-rise{
+ 0%,100%{transform:scale(1);filter:brightness(1)}
+ 15%{transform:scale(1.065);filter:brightness(1.78)}
+ 27%{transform:scale(1.015);filter:brightness(.98)}
+ 42%{transform:scale(1.045);filter:brightness(1.53)}
+ 61%{transform:scale(1);filter:brightness(1)}
+}
+@keyframes er-combo-double-fall{
+ 0%,100%{transform:scale(1);filter:brightness(1)}
+ 15%{transform:scale(.94);filter:brightness(1.35) saturate(.65)}
+ 27%{transform:scale(.99);filter:brightness(.88)}
+ 42%{transform:scale(.965);filter:brightness(1.28) saturate(.78)}
+ 61%{transform:scale(1);filter:brightness(1)}
+}
+/* The number that was lost flickers out in 220 ms and fully disappears. */
+.zebra-game-body .zg.er .er-score-combo.er-combo-breaking{
+ opacity:1!important;
+ transition:none!important;
+}
+.zebra-game-body .zg.er .er-score-combo.er-combo-breaking .er-score-multiplier{
+ animation:er-combo-drop-out .22s ease-out both;
+}
+@keyframes er-combo-drop-out{
+ 0%{opacity:1;transform:scale(1);filter:brightness(1)}
+ 24%{opacity:.7;transform:scale(.97);filter:brightness(1.42) saturate(.8)}
+ 50%{opacity:.48;transform:scale(.94);filter:brightness(.78)}
+ 100%{opacity:0;transform:scale(.86);filter:brightness(.55)}
+}
+@media(prefers-reduced-motion:reduce){
+ .zebra-game-body .zg.er .er-score-combo.er-combo-up .er-score-multiplier,
+ .zebra-game-body .zg.er .er-score-combo.er-combo-down .er-score-multiplier,
+ .zebra-game-body .zg.er .er-score-combo.er-combo-breaking .er-score-multiplier{
+  animation:none!important;
+ }
+ .zebra-game-body .zg.er .er-score-combo.er-combo-breaking{
+  opacity:0!important;
+ }
+}

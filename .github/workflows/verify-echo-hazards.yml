@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - 'echo-racer.js'
+      - 'echo-racer.css'
       - 'app.js'
       - '.github/workflows/verify-echo-hazards.yml'
   workflow_dispatch:
@@ -284,6 +285,75 @@ jobs:
                       assert x['cardMode']=='finished' and x['cardVisible'],x
                       assert not x['reset'] and not x['renderError'],x
                   assert not errors,errors
+                  page.close()
+              browser.close()
+          PY
+
+      - name: Tester le double clignotement du multiplicateur et l'extinction sur impact
+        run: |
+          python3 -m http.server 8771 --bind 127.0.0.1 >/tmp/echo-combo-http.log 2>&1 &
+          python3 - <<'PY'
+          import json
+          from playwright.sync_api import sync_playwright
+          with sync_playwright() as p:
+              browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
+              for width,height in [(1280,900),(390,844)]:
+                  page=browser.new_page(viewport={'width':width,'height':height})
+                  errors=[]
+                  page.on('pageerror',lambda e: errors.append(str(e)))
+                  page.goto('http://127.0.0.1:8771/_verify_echo_hazards.html',wait_until='load')
+                  page.wait_for_function("!!document.querySelector('#game')._echoDebug")
+                  result=page.evaluate("""() => {
+                   const root=document.querySelector('#game'),d=root._echoDebug;
+                   const combo=root.querySelector('.er-score-combo');
+                   const digit=combo.querySelector('.er-score-multiplier');
+                   d.testPhase('p1');
+                   const baseline=d.snapshot().arcade.comboFeedback;
+                   function five(){
+                    for(let i=0;i<5;i++)d.injectWave([7],d.hitDepth+.12);
+                    for(let i=0;i<12;i++)d.advance(.05);
+                   }
+                   // On the TEST track, one reward is granted every five
+                   // genuine clean gates. Four rewards yield ×2, seven ×3.
+                   for(let i=0;i<4;i++)five();
+                   const initial=d.snapshot().arcade.comboFeedback;
+                   const riseName=getComputedStyle(digit).animationName;
+                   const riseFrames=digit.getAnimations().map(a=>a.effect&&a.effect.getKeyframes?a.effect.getKeyframes():[])
+                    .flat().filter(f=>f.filter&&f.filter.includes('brightness(1.')).length;
+                   const beforeRepeat=digit.getAnimations().length;
+                   d.advance(.05);
+                   const afterRepeat=digit.getAnimations().length;
+                   for(let i=0;i<3;i++)five();
+                   const upgraded=d.snapshot().arcade.comboFeedback;
+                   const upgradeName=getComputedStyle(digit).animationName;
+                   d.simulateHit();
+                   const lost=d.snapshot().arcade.comboFeedback;
+                   const activeAfter=combo.classList.contains('active');
+                   const dropAnim=getComputedStyle(digit).animationName;
+                   return {baseline,initial,riseName,riseFrames,beforeRepeat,afterRepeat,
+                    upgraded,upgradeName,lost,activeAfter,dropAnim,renderError:d.lastRenderError()};
+                  }""")
+                  print('COMBO_DOUBLE_FLASH',width,json.dumps(result),flush=True)
+                  assert result['baseline']['rendered']==0,result
+                  assert result['initial']['rendered']==2 and result['initial']['up'],result
+                  assert result['riseName']=='er-combo-double-rise',result
+                  assert result['beforeRepeat']==result['afterRepeat'],result
+                  assert result['upgraded']['rendered']>=3 and result['upgraded']['up'],result
+                  assert result['upgradeName']=='er-combo-double-rise',result
+                  assert result['lost']['rendered']==0 and result['lost']['breaking'],result
+                  assert not result['activeAfter'] and result['dropAnim']=='er-combo-drop-out',result
+                  assert not result['renderError'] and not errors,(result,errors)
+                  page.wait_for_timeout(330)
+                  after=page.evaluate("""() => {
+                   const root=document.querySelector('#game'),d=root._echoDebug;
+                   const combo=root.querySelector('.er-score-combo');
+                   d.menu();
+                   return {text:combo.textContent.trim(),active:combo.classList.contains('active'),
+                    breaking:combo.classList.contains('er-combo-breaking'),
+                    rendered:d.snapshot().arcade.comboFeedback.rendered};
+                  }""")
+                  print('COMBO_RESET',width,json.dumps(after),flush=True)
+                  assert after=={'text':'','active':False,'breaking':False,'rendered':0},after
                   page.close()
               browser.close()
           PY

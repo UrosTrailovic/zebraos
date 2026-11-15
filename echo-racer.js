@@ -926,6 +926,12 @@ function mount(root){
  scoreCombo.setAttribute("aria-label","Multiplicateur de combo");
  const skillComboEl=node("strong","er-score-multiplier","");
  scoreCombo.appendChild(skillComboEl);
+ let comboLastHudValue=0;
+ skillComboEl.addEventListener("animationend",event=>{
+  if(event.target!==skillComboEl||event.animationName!=="er-combo-drop-out")return;
+  scoreCombo.classList.remove("er-combo-breaking");
+  if(!scoreCombo.classList.contains("active"))skillComboEl.textContent="";
+ });
  const scoreTop=node("div","er-score-top");
  scoreTop.setAttribute("aria-label","Score de la course");
  const scoreTotal=node("strong","er-score-total","0");
@@ -2055,10 +2061,26 @@ function mount(root){
   setDigital(scoreEl,String(Math.floor(score)).padStart(5,"0"));
   const playing=mode==="running"||mode==="paused";
   const showMultiplier=playing&&skillChain>0&&skillMultiplier>=2;
+  const displayMultiplier=showMultiplier?skillMultiplier:0;
+  if(displayMultiplier!==comboLastHudValue){
+   scoreCombo.classList.remove("er-combo-up","er-combo-down","er-combo-breaking");
+   if(displayMultiplier>0){
+    skillComboEl.textContent="×"+displayMultiplier;
+    // Restart the restrained two-beat CRT flash on any numeric change.
+    void skillComboEl.offsetWidth;
+    scoreCombo.classList.add(displayMultiplier>comboLastHudValue?"er-combo-up":"er-combo-down");
+   }else if(comboLastHudValue>=2&&mode==="running"&&!outroActive&&
+    !(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches)){
+    // On impact, briefly fade the OLD number; never display ×0.
+    void skillComboEl.offsetWidth;
+    scoreCombo.classList.add("er-combo-breaking");
+   }else skillComboEl.textContent="";
+   comboLastHudValue=displayMultiplier;
+  }else if(!showMultiplier&&!scoreCombo.classList.contains("er-combo-breaking"))
+   skillComboEl.textContent="";
   scoreCombo.classList.toggle("active",showMultiplier);
-  scoreCombo.classList.toggle("hot",skillMultiplier>=5);
+  scoreCombo.classList.toggle("hot",showMultiplier&&skillMultiplier>=5);
   scoreCombo.setAttribute("aria-hidden",String(!showMultiplier));
-  skillComboEl.textContent=showMultiplier?"×"+skillMultiplier:"";
   scoreTop.classList.toggle("active",playing);
   scoreTotal.textContent=Math.floor(score).toLocaleString("fr-CH");
   scoreToast.hidden=!playing||rewardLife<=0||!rewardText;
@@ -2125,7 +2147,9 @@ function mount(root){
   skillMultiplier=0;rewardLife=0;rewardText=rewardKind="";
   nitroFullLatched=false;
   for(const kind of Object.keys(rewardCueCounts))rewardCueCounts[kind]=0;
-  scoreToast.hidden=true;scoreCombo.classList.remove("active");
+  scoreToast.hidden=true;
+  comboLastHudValue=0;skillComboEl.textContent="";
+  scoreCombo.classList.remove("active","er-combo-up","er-combo-down","er-combo-breaking");
   waves=[];pads=[];shields=[];hazards=[];
   encounterSeed=(Math.random()*0x100000000)>>>0;
   encounterPlan=makeHazardSchedule(selectedLevel.id,256,encounterSeed);
@@ -2187,6 +2211,8 @@ function mount(root){
   elapsed=0;arcadeSilentClock=0;encoreMode="normal";encoreTime=0;testMode=false;wrap.dataset.circuit="menu";labToggle.hidden=true;labHide();padBoostTime=0;boostChain=0;nitroHeld=false;nitroActive=false;nitroFuel=0;nitroRegenWait=0;nitroBurnTime=0;freeChargeVisual=0;
   currentSpeed=0;score=0;scoreMultiplier=1;warningLife=0;warningBeepDelay=0;
   skillBank=skillChain=skillAge=skillTimer=0;skillMultiplier=0;rewardLife=0;
+  comboLastHudValue=0;skillComboEl.textContent="";
+  scoreCombo.classList.remove("active","er-combo-up","er-combo-down","er-combo-breaking");
   cleanPassStreak=0;
   overlay.hidden=false;renderMenuStage("home");
   renderHud();
@@ -3653,6 +3679,10 @@ function mount(root){
    finale:{time:finaleTime,cause:finaleCause,visible:!finaleOverlay.hidden,
     scoreText:finaleScore.textContent,stats:finaleStats.textContent},
    arcade:{bank:skillBank,chain:skillChain,multiplier:skillMultiplier,
+    comboFeedback:{rendered:comboLastHudValue,text:skillComboEl.textContent,
+     up:scoreCombo.classList.contains("er-combo-up"),
+     down:scoreCombo.classList.contains("er-combo-down"),
+     breaking:scoreCombo.classList.contains("er-combo-breaking")},
     speedMultiplier:scoreMultiplier,bankedTotal,bankedCount,nearMisses,cleanPassStreak,cleanBonusCount,
     nitroReady:nitroFullLatched,cues:{...rewardCueCounts},toast:rewardText},
    labDetached:!wrap.contains(labPanel)&&!!labPanel.parentElement,
