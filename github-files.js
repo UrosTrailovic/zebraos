@@ -8,6 +8,7 @@
 "use strict";
 var ROOT="STUDIO/BUREAU", REPO="UrosTrailovic/zebraos", BRANCH="main";
 var INDEX="assets/bureau-index.json";
+var INDEX_REV="echo-racer-2-beta-20261115";
 var APP_IDS={
  "explorer:root":true,"explorer:recycle":true,"studio-manager":true,
  amp:true,settings:true,tetris:true,snake:true,racer:true,paint:true,
@@ -176,8 +177,8 @@ function load(){
    }
   }catch(_){}
  }
- loading=read(site(INDEX))
-  .catch(function(){return read(raw(INDEX));})
+ loading=read(site(INDEX)+"?rev="+INDEX_REV)
+  .catch(function(){return read(raw(INDEX)+"?rev="+INDEX_REV);})
   .then(function(result){
    known=result.entries;stamp=result.stamp;desktopOrder=result.desktopOrder;
    notify();

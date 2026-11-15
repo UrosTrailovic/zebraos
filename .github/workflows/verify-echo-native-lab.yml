@@ -3,6 +3,8 @@ on:
   push:
     paths:
       - 'app.js'
+      - 'assets/bureau-index.json'
+      - 'STUDIO/BUREAU/Jeux/Echo Racer 2 Beta.exe.zebraos.json'
       - 'echo-racer.js'
       - 'echo-racer.css'
       - 'index.html'
@@ -19,6 +21,24 @@ jobs:
         run: |
           node --check app.js
           node --check echo-racer.js
+          node <<'NODE'
+          const fs=require('fs'),assert=require('node:assert/strict');
+          const newPath='STUDIO/BUREAU/Jeux/Echo Racer 2 Beta.exe.zebraos.json';
+          const oldPath='STUDIO/BUREAU/Jeux/Echo Racer.exe.zebraos.json';
+          assert.ok(fs.existsSync(newPath),'Renamed game file missing');
+          assert.ok(!fs.existsSync(oldPath),'Obsolete Echo Racer.exe file still present');
+          const manifest=JSON.parse(fs.readFileSync(newPath,'utf8'));
+          const index=JSON.parse(fs.readFileSync('assets/bureau-index.json','utf8'));
+          const entries=index.entries.filter(e=>e.app==='racer');
+          assert.equal(entries.length,1);
+          assert.equal(manifest.name,'Echo Racer 2 Beta.exe');
+          assert.equal(entries[0].name,manifest.name);
+          assert.equal(entries[0].path,newPath);
+          assert.equal(entries[0].app,manifest.app);
+          assert.deepEqual(entries[0].sessions,['admin']);
+          assert.deepEqual(manifest.sessions,['admin']);
+          console.log('ECHO_RACER_2_BETA_SHORTCUT_OK');
+          NODE
       - name: Ouvrir réellement deux fenêtres ZebraOS dans Chromium
         run: |
           python3 - <<'PY'
@@ -48,6 +68,12 @@ jobs:
             }
             if(!game||!game._echoDebug)throw Error('Echo Racer never mounted');
             report.gameMounted=true;
+            const racerWindow=document.querySelector('.window[data-app-id="racer"]');
+            const title=racerWindow.querySelector('.titlebar .windowtitle');
+            const buildLabel='Echo Racer 2 Beta — v2.0.0-beta.1';
+            report.gameWindowTitle=title.textContent===buildLabel;
+            report.gameTaskbarTitle=[...document.querySelectorAll('#task-items .win-button')]
+              .some(btn=>btn.textContent===buildLabel);
             game._echoDebug.test();
             // OS opening uses a 700ms wireframe transition; wait until the
             // genuine visible window is no longer .window-pending before hit test.
@@ -70,6 +96,8 @@ jobs:
             report.realWindow=!!windowOS&&windowOS.parentElement.id==='windows-area';
             report.notClipped=!game.contains(windowOS);
             report.nativeTitlebar=!!windowOS&&!!windowOS.querySelector('.titlebar [data-close]');
+            report.labWindowTitle=!!windowOS&&
+             windowOS.querySelector('.titlebar .windowtitle').textContent==='Echo Racer 2 Beta — CONFIG TEST';
             report.taskbar=document.querySelectorAll('#task-items .win-button').length>=2;
             const lab=windowOS&&windowOS.querySelector('.er-lab-window');
             report.workshop=!!lab&&!lab.hidden&&getComputedStyle(lab).position==='relative';
