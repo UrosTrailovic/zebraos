@@ -2441,6 +2441,12 @@ function mount(root){
   hazards=hazards.filter(h=>!h.cleared&&
    (h.type==="drone"?h.z>-.7||h.mines.length>0:h.z>-.7));
  }
+ function plannedHazard(gate){
+  if(gate<1)return null;
+  if(gate>encounterPlan.length)
+   encounterPlan=makeHazardSchedule(selectedLevel.id,Math.max(gate+256,encounterPlan.length*2),encounterSeed);
+  return encounterPlan[gate-1]||null;
+ }
  function nextGateGap(){
   const hard=[2,8,9,19,21,23,26].includes(nextWave);
   // Endlessly increasing density, never a wall of impossible instant hits.
@@ -2450,9 +2456,14 @@ function mount(root){
   if(hard)gap+=2.8;
   const density=clamp(1-directorStage*.055,.62,1);
   const regular=Math.max(lab.gapMinimum,gap*density/lab.obstacleDensity)*selectedLevel.gap;
-  const approaching=hazardTypeForLevel(selectedLevel.id,gateCount+1);
-  const leaving=hazardTypeForLevel(selectedLevel.id,gateCount);
-  // Guaranteed clear approach and exit, even at highest density/boost.
+  const approaching=plannedHazard(gateCount+1);
+  const leaving=plannedHazard(gateCount);
+  // A James-Bond laser chain is tighter but retains reaction distance.
+  if(approaching==="laser"&&leaving==="laser")
+   return Math.max(16.5,Math.min(regular,18.6));
+  // Active drones and their independent mines get extra breathing room.
+  if(approaching==="drone"||leaving==="drone")
+   return Math.max(23.5,regular);
   return approaching||leaving?Math.max(19.5,regular):regular;
  }
  function smoothEncore(x){
@@ -2749,7 +2760,7 @@ function mount(root){
    gateCount++;
    const spawnAt=nextGateAt;
    const special=!testMode&&selectedLevel.arcade?
-    hazardTypeForLevel(selectedLevel.id,gateCount):null;
+    plannedHazard(gateCount):null;
    if(lab.obstaclesEnabled){
     if(special){
      const hazard=createHazard(special);hazard.z=SPAWN_Z-(travel-spawnAt);
@@ -3648,7 +3659,11 @@ function mount(root){
    if(kind==="pad")pads.push(o);else if(kind==="shield")shields.push(o);
    return o;
   },
-  hazardForGate:(level,gate)=>hazardTypeForLevel(level,gate),
+  hazardForGate:(level,gate,seed)=>hazardTypeForLevel(level,gate,seed),
+  encounterPlan:()=>({seed:encounterSeed,events:encounterPlan.slice(0,160)}),
+  scheduledHazard:(gate)=>plannedHazard(gate),
+  palette:()=>({colorMain:lab.colorMain,colorAccent:lab.colorAccent,
+   colorPanels:lab.colorPanels,colorBackdrop:lab.colorBackdrop,colorHazard:lab.colorHazard}),
   laserBlueprint:(level,gate)=>laserBlueprint(level,gate),
   laserContact:(a,h)=>laserContact(a,h),
   injectHazard:(type,z=HIT_Z+9)=>{
@@ -3744,5 +3759,5 @@ function mount(root){
  raf=requestAnimationFrame(frameTick);
  return dispose;
 }
-window.ZebraEchoRacer={mount,pattern,collisionAt,hazardTypeForLevel,laserBlueprint,laserContact};
+window.ZebraEchoRacer={mount,pattern,collisionAt,hazardTypeForLevel,makeHazardSchedule,laserBlueprint,laserContact};
 }());
