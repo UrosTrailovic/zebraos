@@ -4073,3 +4073,16 @@ body > .er-lab-window.er-lab-floating{
   font-size:16px!important
  }
 }
+
+
+/* Echo Racer cinematic music outro — fade the live score with the ship and
+   tunnel for the final 15 s. Menus, pause buttons and completion stay legible. */
+.zebra-game-body .zg.er .er-screen.er-cinematic-outro .er-score-top.active,
+.zebra-game-body .zg.er .er-screen.er-cinematic-outro .er-score-combo.active{
+ opacity:var(--er-outro-visibility,1)!important;
+ transition:none!important;
+}
+.zebra-game-body .zg.er .er-screen.er-cinematic-outro .er-race-event.visible,
+.zebra-game-body .zg.er .er-screen.er-cinematic-outro .er-shield-collect{
+ opacity:var(--er-outro-visibility,1)!important;
+}
