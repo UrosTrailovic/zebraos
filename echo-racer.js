@@ -42,7 +42,7 @@ const LEVELS=[
   colors:{colorMain:"#86a1ff",colorAccent:"#fc86f0",colorPanels:"#343b92",colorBackdrop:"#080c25",colorHazard:"#ff6dba"}},
  {id:"l4",name:"EXTRÊME",subtitle:"LASERS ET DRONES CHASSEURS",speed:1.19,gap:.93,arcade:true,
   fallbackDuration:142.812,track:"p5",musicAt:0,motion:3,rise:4.2,patterns:[3,8,9,14,17,19,21,23,24,26,27],
-  colors:{colorMain:"#ffc46c",colorAccent:"#6ffff3",colorPanels:"#854131",colorBackdrop:"#1b0913",colorHazard:"#ff486f"}},
+  colors:{colorMain:"#d82d5e",colorAccent:"#87dfff",colorPanels:"#151124",colorBackdrop:"#02030b",colorHazard:"#ff416a"}},
  {id:"free",name:"FREE ROAM",subtitle:"DIAGNOSTIC SANS OBSTACLES",speed:1,gap:1,spin:0,patterns:[]}
 ];
 const CAMPAIGN=LEVELS.slice(0,4);
@@ -56,14 +56,59 @@ const SHIELD_START=34,SHIELD_GAP_MIN=51,SHIELD_GAP_MAX=77;
 const SHIELD_RARE_MIN=96,SHIELD_RARE_MAX=135;
 const PICKUP_FRONT=1.05,PICKUP_BACK=.85,PAD_SIDE=STEP*.29,SHIELD_SIDE=STEP*.36;
 const PULSE_REACH=8.4;
-// Lasers, drones and walls occupy exclusive gate slots.
-function hazardTypeForLevel(id,gate){
- if(gate<5)return null;
- if(id==="run")return gate%7===0?"laser":null;
- if(id==="l2")return gate%4===0?"laser":null;
- if(id==="l3")return gate%2===0?"laser":null;
- if(id==="l4")return gate%7===0?"drone":gate%7===2||gate%7===5?"laser":null;
- return null;
+// Each run has fresh, seeded encounter phrases rather than a mechanical
+// MUR / LASER / MUR / LASER rhythm.
+function encounterRandom(seed){
+ let a=seed>>>0;
+ return ()=>{
+  a=(a+0x6d2b79f5)>>>0;
+  let t=a;
+  t=Math.imul(t^(t>>>15),t|1);
+  t^=t+Math.imul(t^(t>>>7),t|61);
+  return ((t^(t>>>14))>>>0)/4294967296;
+ };
+}
+function makeHazardSchedule(id,count=200,seed=0x8b37c219){
+ const n=clamp(Math.floor(Number(count)||0),0,10000),out=[];
+ if(!["run","l2","l3","l4"].includes(id))return Array(n).fill(null);
+ const random=encounterRandom(seed),pick=(a,b)=>a+Math.floor(random()*(b-a+1));
+ const append=(kind,length)=>{for(let i=0;i<length&&out.length<n;i++)out.push(kind);};
+ append(null,4);
+ while(out.length<n){
+  if(id==="run"){
+   append(null,pick(5,10));
+   append("laser",out.length>=24&&random()<.16?2:1);
+  }else if(id==="l2"){
+   append(null,pick(2,6));
+   const roll=random();
+   append("laser",roll<.14?3:roll<.35?2:1);
+  }else if(id==="l3"){
+   append(null,pick(2,5));
+   const roll=random();
+   append("laser",roll<.15?3:roll<.40?2:1);
+  }else{
+   // The dramatic finale interleaves wall runs, laser sequences and drones.
+   // Drones and laser chains always have two walls between them.
+   append(null,pick(2,5));
+   const roll=random(),length=roll<.18?3:roll<.53?2:1;
+   const withDrone=random()<.34;
+   if(withDrone&&random()<.5){
+    append("drone",1);
+    append(null,pick(2,3));
+    append("laser",length);
+   }else{
+    append("laser",length);
+    if(withDrone){append(null,pick(2,4));append("drone",1);}
+   }
+  }
+ }
+ return out;
+}
+// Public test helper stays reproducible; real gameplay uses a new seed.
+function hazardTypeForLevel(id,gate,seed=0x8b37c219){
+ if(!Number.isFinite(gate)||gate<1)return null;
+ const g=Math.floor(gate);
+ return makeHazardSchedule(id,g,seed)[g-1]||null;
 }
 function laserBlueprint(level,gate){
  const count=level==="run"?(gate>=21&&gate%3===0?2:1):
@@ -157,7 +202,7 @@ function mount(root){
  let best=Number(load("best.run",load("best.3",load("best","0"))))||0;
  let distance=0,travel=0,passed=0,combo=0,waves=[],pads=[],shields=[],
   nextGateAt=START_GATE_AT,nextPadAt=PAD_START,nextShieldAt=SHIELD_START,
-   hazards=[],
+   hazards=[],encounterSeed=0,encounterPlan=[],
   lastGateAt=-100,trail=[],sparks=[],currentSpeed=0,gateCount=0,padCount=0,shieldCount=0,scoreMultiplier=1;
  let invuln=0,pulseCharge=2,pulseGlow=0,padBoostTime=0,pulseFx=0,pulseHitFx=0,shieldFlash=0;
  let boostChain=0;
@@ -2074,6 +2119,8 @@ function mount(root){
   for(const kind of Object.keys(rewardCueCounts))rewardCueCounts[kind]=0;
   scoreToast.hidden=true;scoreCombo.classList.remove("active");
   waves=[];pads=[];shields=[];hazards=[];
+  encounterSeed=(Math.random()*0x100000000)>>>0;
+  encounterPlan=makeHazardSchedule(selectedLevel.id,256,encounterSeed);
   nextGateAt=selectedLevel.id==="free"?Infinity:START_GATE_AT;
   nextPadAt=selectedLevel.id==="free"?Infinity:PAD_START;
   nextShieldAt=selectedLevel.id==="free"?Infinity:SHIELD_START;
@@ -2394,6 +2441,12 @@ function mount(root){
   hazards=hazards.filter(h=>!h.cleared&&
    (h.type==="drone"?h.z>-.7||h.mines.length>0:h.z>-.7));
  }
+ function plannedHazard(gate){
+  if(gate<1)return null;
+  if(gate>encounterPlan.length)
+   encounterPlan=makeHazardSchedule(selectedLevel.id,Math.max(gate+256,encounterPlan.length*2),encounterSeed);
+  return encounterPlan[gate-1]||null;
+ }
  function nextGateGap(){
   const hard=[2,8,9,19,21,23,26].includes(nextWave);
   // Endlessly increasing density, never a wall of impossible instant hits.
@@ -2403,9 +2456,14 @@ function mount(root){
   if(hard)gap+=2.8;
   const density=clamp(1-directorStage*.055,.62,1);
   const regular=Math.max(lab.gapMinimum,gap*density/lab.obstacleDensity)*selectedLevel.gap;
-  const approaching=hazardTypeForLevel(selectedLevel.id,gateCount+1);
-  const leaving=hazardTypeForLevel(selectedLevel.id,gateCount);
-  // Guaranteed clear approach and exit, even at highest density/boost.
+  const approaching=plannedHazard(gateCount+1);
+  const leaving=plannedHazard(gateCount);
+  // A James-Bond laser chain is tighter but retains reaction distance.
+  if(approaching==="laser"&&leaving==="laser")
+   return Math.max(16.5,Math.min(regular,18.6));
+  // Active drones and their independent mines get extra breathing room.
+  if(approaching==="drone"||leaving==="drone")
+   return Math.max(23.5,regular);
   return approaching||leaving?Math.max(19.5,regular):regular;
  }
  function smoothEncore(x){
@@ -2702,7 +2760,7 @@ function mount(root){
    gateCount++;
    const spawnAt=nextGateAt;
    const special=!testMode&&selectedLevel.arcade?
-    hazardTypeForLevel(selectedLevel.id,gateCount):null;
+    plannedHazard(gateCount):null;
    if(lab.obstaclesEnabled){
     if(special){
      const hazard=createHazard(special);hazard.z=SPAWN_Z-(travel-spawnAt);
@@ -3601,7 +3659,11 @@ function mount(root){
    if(kind==="pad")pads.push(o);else if(kind==="shield")shields.push(o);
    return o;
   },
-  hazardForGate:(level,gate)=>hazardTypeForLevel(level,gate),
+  hazardForGate:(level,gate,seed)=>hazardTypeForLevel(level,gate,seed),
+  encounterPlan:()=>({seed:encounterSeed,events:encounterPlan.slice(0,160)}),
+  scheduledHazard:(gate)=>plannedHazard(gate),
+  palette:()=>({colorMain:lab.colorMain,colorAccent:lab.colorAccent,
+   colorPanels:lab.colorPanels,colorBackdrop:lab.colorBackdrop,colorHazard:lab.colorHazard}),
   laserBlueprint:(level,gate)=>laserBlueprint(level,gate),
   laserContact:(a,h)=>laserContact(a,h),
   injectHazard:(type,z=HIT_Z+9)=>{
@@ -3697,5 +3759,5 @@ function mount(root){
  raf=requestAnimationFrame(frameTick);
  return dispose;
 }
-window.ZebraEchoRacer={mount,pattern,collisionAt,hazardTypeForLevel,laserBlueprint,laserContact};
+window.ZebraEchoRacer={mount,pattern,collisionAt,hazardTypeForLevel,makeHazardSchedule,laserBlueprint,laserContact};
 }());
