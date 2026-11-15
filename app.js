@@ -869,14 +869,14 @@ function openUtility(name){
 /* ZebraOS lazy apps: rien n'est téléchargé avant le premier lancement.
    Le navigateur + Service Worker conservent les fichiers après ce chargement. */
 // Echo Racer 2: human-assigned public build version, independent of CSS/JS cache keys.
-var echoRacerBuildVersion="v2.0.0-beta.1";
+var echoRacerBuildVersion="v2.0.0-beta.2";
 var gameModules={
  tetris:{name:"Tetris.exe",width:735,height:770,global:"ZebraTetris",
   files:["tetris-artwork.js?v=1.8","tetris.js?v=3.1"]},
  snake:{name:"Znake.exe",width:650,height:700,global:"ZebraSnake",
   files:["snake.js?v=8.7"],css:"snake.css?v=8.9"},
  racer:{name:"Echo Racer 2 Beta — "+echoRacerBuildVersion,width:750,height:790,global:"ZebraEchoRacer",
-  files:["echo-racer.js?v=21.3"],css:"echo-racer.css?v=20.3"},
+  files:["echo-racer.js?v=21.4"],css:"echo-racer.css?v=20.4"},
  paint:{name:"ZebraPaint.exe",width:850,height:640,global:"ZebraPaint",
   files:["paint.js?v=1.4"],css:"paint-responsive.css?v=1.4"}
 };
