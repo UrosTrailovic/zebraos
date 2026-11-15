@@ -299,7 +299,7 @@ jobs:
                           print("REACTIVE_CANVAS_TEST "+json.dumps(visuals,ensure_ascii=False),flush=True)
                       if next_index==3:
                           assert "echo-racer-dep-house.mp3" in selected["level"]["musicRequestedUrl"]
-                      assert selected["snap"]["lab"]["colorMain"]==["#ff3ed1","#24f0da","#86a1ff","#ffc46c"][next_index]
+                      assert selected["snap"]["lab"]["colorMain"]==["#ff3ed1","#24f0da","#86a1ff","#d82d5e"][next_index]
                       body.evaluate("(n)=>n._echoDebug.draw()")
                       page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-stage{next_index+1}.png")
               all_four_done=body.evaluate("(n)=>n._echoDebug.level().completedLevels")==4
