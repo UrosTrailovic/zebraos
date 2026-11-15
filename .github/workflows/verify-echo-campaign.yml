@@ -345,6 +345,40 @@ jobs:
               }""")
               assert ended["mode"]=="finished" and ended["level"]=="l3", f"Audio ended did not finish level: {ended}"
               print("DELAYED_MINIMAL_TEST "+json.dumps({"pending":pending,"ended":ended},ensure_ascii=False),flush=True)
+              # Pause selector must frame the *visible PLAY artwork*, not the
+              # old wide 210px touch box. The other three buttons stay unchanged.
+              pause_probe=delayed.evaluate("""(n)=>{
+                const d=n._echoDebug;
+                d.menu();
+                if(!d.selectLevel('l3'))throw Error('Cannot open L3 for pause check');
+                d.start(false);d.pause();
+                const screen=n.querySelector('.er-screen');
+                const play=screen.querySelector('.er-stage-pause .er-overlay-button');
+                const restart=screen.querySelector('.er-stage-pause .er-pause-restart');
+                const playBox=play.getBoundingClientRect(),screenBox=screen.getBoundingClientRect();
+                const style=getComputedStyle(play);
+                const wasSelected=play.classList.contains('selected');
+                d.controller('down');
+                const restartSelected=restart.classList.contains('selected')&&!play.classList.contains('selected');
+                d.controller('up');
+                const restored=play.classList.contains('selected');
+                return {mode:d.snapshot().mode,wasSelected,restartSelected,restored,
+                 playWidth:playBox.width,playHeight:playBox.height,
+                 actualRatio:playBox.width/playBox.height,
+                 centerOffset:Math.abs((playBox.left+playBox.right-screenBox.left-screenBox.right)/2),
+                 artSize:style.backgroundSize,image:style.backgroundImage,
+                 restartWidth:restart.getBoundingClientRect().width};
+              }""")
+              assert pause_probe["mode"]=="paused" and pause_probe["wasSelected"],pause_probe
+              assert pause_probe["restartSelected"] and pause_probe["restored"],pause_probe
+              assert abs(pause_probe["actualRatio"]-186/58)<.05,pause_probe
+              assert pause_probe["centerOffset"]<3,pause_probe
+              assert pause_probe["artSize"]=="100% 100%",pause_probe
+              assert "playbtn.png" in pause_probe["image"],pause_probe
+              if mobile: assert pause_probe["restartWidth"]>50,pause_probe
+              else: assert pause_probe["restartWidth"]==0,pause_probe
+              page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-pause.png")
+              print("PAUSE_PLAY_SELECTOR "+json.dumps(pause_probe,ensure_ascii=False),flush=True)
               assert not errors, "Uncaught JS errors: "+repr(errors)
               result={"viewport":f"{width}x{height}","textTitle":True,"fourCards":True,"unchainedBoostSpeed":first["speedMultiplier"],"chainedBoostSpeed":second["speedMultiplier"],"level1Finished":True,"unlocked2":True,"locked3":True,"movement2":True,"allFourFinished":all_four_done,"saved":True,"pageErrors":errors}
               print("CAMPAIGN_TEST "+json.dumps(result,ensure_ascii=False),flush=True)

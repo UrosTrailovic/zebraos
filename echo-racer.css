@@ -4086,3 +4086,20 @@ body > .er-lab-window.er-lab-floating{
 .zebra-game-body .zg.er .er-screen.er-cinematic-outro .er-shield-collect{
  opacity:var(--er-outro-visibility,1)!important;
 }
+
+
+/* Pause screen: the cyan selected frame must match the visible PLAY PNG.
+   playbtn.png is 186×58; the old button was ~210px wide on phones, while
+   background-size:contain only drew ~125px of that image inside it. */
+.zebra-game-body .zg.er .er-overlay.er-stage-pause .er-overlay-button{
+ box-sizing:border-box!important;
+ width:auto!important;
+ min-width:0!important;
+ max-width:100%!important;
+ aspect-ratio:186 / 58!important;
+ flex:0 0 auto!important;
+ padding:0!important;
+ background-size:100% 100%!important;
+ background-position:center!important;
+ background-repeat:no-repeat!important;
+}
