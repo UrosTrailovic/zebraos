@@ -48,6 +48,12 @@ const LEVELS=[
 const CAMPAIGN=LEVELS.slice(0,4);
 const MUSIC_DROP_AT=68,MUSIC_SECOND_DROP_AT=162,MUSIC_TAIL_AT=217,MUSIC_LOOP_FROM=68;
 const ENCORE_TRANSITION_SECONDS=5;
+const CINEMATIC_OUTRO_SECONDS=15,CINEMATIC_OUTRO_CLEARANCE=7;
+function cinematicOutroFade(clock,duration){
+ if(!Number.isFinite(clock)||!Number.isFinite(duration)||duration<=CINEMATIC_OUTRO_SECONDS)return 0;
+ const t=clamp((clock-(duration-CINEMATIC_OUTRO_SECONDS))/CINEMATIC_OUTRO_SECONDS,0,1);
+ return t*t*(3-2*t);
+}
 // Distances are in world units. Short double-gates punctuate longer stretches.
 const GAP_MIN=15.2,GAP_MAX=21.4,START_GATE_AT=.48;
 // A separate rhythm of collectible wall pads between the hazard waves.
@@ -207,6 +213,7 @@ function mount(root){
  let invuln=0,pulseCharge=2,pulseGlow=0,padBoostTime=0,pulseFx=0,pulseHitFx=0,shieldFlash=0;
  let boostChain=0;
  let nitroHeld=false,nitroActive=false,nitroFuel=0,nitroRegenWait=0,nitroBurnTime=0,freeChargeVisual=0;
+ let outroActive=false,outroFade=0,debugArcadeClock=null;
  // Arcade risk/reward: event points stay pending until a safe cash-out.
  let skillBank=0,skillChain=0,skillMultiplier=1,skillTimer=0,skillAge=0;
  let bankedTotal=0,bankedCount=0,nearMisses=0;
@@ -2108,6 +2115,7 @@ function mount(root){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
   finaleOverlay.hidden=true;finaleTime=0;finaleCause="";phase3Elapsed=0;finaleSelection=0;
+  outroActive=false;outroFade=0;debugArcadeClock=null;
   lockDeathControls(false);
   musicRequest++;pauseMusic();
   resetSteering();mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
@@ -2172,7 +2180,7 @@ function mount(root){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
   screen.classList.remove("er-crashing");lockDeathControls(false);
-  finaleOverlay.hidden=true;finaleTime=0;
+  finaleOverlay.hidden=true;finaleTime=0;outroActive=false;outroFade=0;debugArcadeClock=null;
   if(!testMode&&mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
   musicRequest++;resetSteering();stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];hazards=[];trail=[];turnVelocity=0;
   shieldCollect.classList.remove("er-shield-collected");pulseFx=pulseHitFx=shieldFlash=0;
@@ -2516,9 +2524,12 @@ function mount(root){
  function finishArcadeLevel(reason="time"){
   if(mode!=="running"||!selectedLevel.arcade||testMode)return false;
   bankSkill("NIVEAU TERMINÉ");
-  finaleCause="level-"+reason;finaleTime=0;mode="finale";
+  // The ship and tunnel have already faded throughout the music outro.
+  if(outroActive)outroFade=1;
+  finaleCause="level-"+reason;
+  finaleTime=outroActive?FINALE_FADE_SECONDS-.55:0;mode="finale";
   musicRequest++;stopMusic();resetSteering();endNitro();keys.clear();
-  waves=[];pads=[];shields=[];sparks=[];
+  waves=[];hazards=[];pads=[];shields=[];sparks=[];
   padBoostTime=0;boostChain=0;nitroActive=false;nitroHeld=false;
   labToggle.hidden=true;labHide();
   if(score>best){best=Math.floor(score);save("best."+selectedLevel.id,best);}
@@ -2596,6 +2607,7 @@ function mount(root){
  }
  function campaignRunning(){return selectedLevel.arcade&&!testMode;}
  function arcadeSongClock(){
+  if(debugArcadeClock!==null)return debugArcadeClock;
   // The running soundtrack is authoritative, especially on slow mobile
   // connections. When muted/unavailable, continue from its last time
   // instead of an unrelated timer started before the MP3 had loaded.
