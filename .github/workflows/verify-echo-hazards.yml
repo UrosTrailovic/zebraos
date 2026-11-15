@@ -195,3 +195,95 @@ jobs:
                   page.close()
               browser.close()
           PY
+      - name: Vérifier le fondu final de quinze secondes sur PC et mobile
+        run: |
+          node <<'NODE'
+          const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+          const window={};
+          vm.runInNewContext(fs.readFileSync('echo-racer.js','utf8'),{window},{timeout:2500});
+          const fade=window.ZebraEchoRacer.cinematicOutroFade;
+          for(const duration of [120.529,142.812,192.287,217]){
+           assert.equal(fade(duration-16,duration),0);
+           assert.equal(fade(duration-15,duration),0);
+           assert.ok(Math.abs(fade(duration-7.5,duration)-.5)<1e-6);
+           assert.equal(fade(duration,duration),1);
+          }
+          console.log('CINEMATIC_FADE_MATH_OK: 15s and all four song lengths');
+          NODE
+          python3 -m http.server 8767 --bind 127.0.0.1 >/tmp/echo-outro-http.log 2>&1 &
+          python3 - <<'PY'
+          import json
+          from playwright.sync_api import sync_playwright
+          with sync_playwright() as p:
+              browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
+              for width,height in [(1280,900),(390,844)]:
+                  page=browser.new_page(viewport={'width':width,'height':height})
+                  errors=[]
+                  page.on('pageerror',lambda e: errors.append(str(e)))
+                  page.add_init_script("localStorage.setItem('zebra.echo-racer.campaign.unlocked.v1','4')")
+                  page.goto('http://127.0.0.1:8767/_verify_echo_hazards.html',wait_until='load')
+                  page.wait_for_function("!!document.querySelector('#game')._echoDebug")
+                  results=page.evaluate("""() => {
+                   const d=document.querySelector('#game')._echoDebug;
+                   const values=[];
+                   for(const id of ['run','l2','l3','l4']){
+                    d.menu();
+                    if(!d.selectLevel(id))throw Error('Unable to select '+id);
+                    d.start(false);
+                    const duration=d.level().duration;
+                    const set=(seconds)=>{
+                     if(!d.testOutroClock(seconds))throw Error('Clock unavailable for '+id);
+                     d.advance(.05);d.advance(.05);d.draw();
+                     return d.snapshot();
+                    };
+                    const pre=set(duration-24);
+                    d.injectWave([0],12);
+                    d.injectHazard('laser',12);
+                    const clearance=set(duration-21);
+                    const entry=set(duration-15);
+                    const empty=entry.waves.length===0&&entry.hazards.length===0&&
+                     entry.pads.length===0&&entry.shields.length===0;
+                    const mid=set(duration-7.5);
+                    const screen=document.querySelector('#game .er-screen');
+                    const score=screen.querySelector('.er-score-top');
+                    const alphaMid=Number(getComputedStyle(score).opacity);
+                    const midClass=screen.classList.contains('er-cinematic-outro');
+                    const late=set(duration-.1);
+                    const alphaLate=Number(getComputedStyle(score).opacity);
+                    const canvas=screen.querySelector('canvas');
+                    const ctx=canvas.getContext('2d');
+                    const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+                    let light=0;for(let i=0;i<pixels.length;i+=104)light+=pixels[i]+pixels[i+1]+pixels[i+2];
+                    const renderError=d.lastRenderError();
+                    const endEvent=d.simulateSongEnd();
+                    const beforeCard=d.snapshot();
+                    d.tickFinale(.6);
+                    const card=d.snapshot();
+                    d.menu();d.draw();
+                    const reset=d.snapshot();
+                    values.push({id,duration,preActive:pre.outro.active,
+                     clearingActive:clearance.outro.active,
+                     entryFade:entry.outro.fade,empty,
+                     midFade:mid.outro.fade,alphaMid,midClass,
+                     lateFade:late.outro.fade,alphaLate,light,
+                     endEvent,preCardMode:beforeCard.mode,cardMode:card.mode,
+                     cardVisible:card.finale.visible,reset:reset.outro.active,
+                     renderError});
+                   }
+                   return values;
+                  }""")
+                  print('CINEMATIC_OUTRO_BROWSER',width,json.dumps(results),flush=True)
+                  for x in results:
+                      assert not x['preActive'] and not x['clearingActive'],x
+                      assert x['empty'] and x['entryFade']==0,x
+                      assert .47<x['midFade']<.53 and x['midClass'],x
+                      assert .40<x['alphaMid']<.60,x
+                      assert x['lateFade']>.995 and x['alphaLate']<.02,x
+                      assert x['light']<35000,x
+                      assert x['endEvent'] and x['preCardMode']=='finale',x
+                      assert x['cardMode']=='finished' and x['cardVisible'],x
+                      assert not x['reset'] and not x['renderError'],x
+                  assert not errors,errors
+                  page.close()
+              browser.close()
+          PY
