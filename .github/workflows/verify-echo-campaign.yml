@@ -375,7 +375,8 @@ jobs:
               assert pause_probe["centerOffset"]<3,pause_probe
               assert pause_probe["artSize"]=="100% 100%",pause_probe
               assert "playbtn.png" in pause_probe["image"],pause_probe
-              assert pause_probe["restartWidth"]>50,pause_probe
+              if mobile: assert pause_probe["restartWidth"]>50,pause_probe
+              else: assert pause_probe["restartWidth"]==0,pause_probe
               page.screenshot(path=f"/tmp/campaign-{'mobile' if mobile else 'pc'}-pause.png")
               print("PAUSE_PLAY_SELECTOR "+json.dumps(pause_probe,ensure_ascii=False),flush=True)
               assert not errors, "Uncaught JS errors: "+repr(errors)
