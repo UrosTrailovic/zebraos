@@ -48,6 +48,12 @@ const LEVELS=[
 const CAMPAIGN=LEVELS.slice(0,4);
 const MUSIC_DROP_AT=68,MUSIC_SECOND_DROP_AT=162,MUSIC_TAIL_AT=217,MUSIC_LOOP_FROM=68;
 const ENCORE_TRANSITION_SECONDS=5;
+const CINEMATIC_OUTRO_SECONDS=15,CINEMATIC_OUTRO_CLEARANCE=7;
+function cinematicOutroFade(clock,duration){
+ if(!Number.isFinite(clock)||!Number.isFinite(duration)||duration<=CINEMATIC_OUTRO_SECONDS)return 0;
+ const t=clamp((clock-(duration-CINEMATIC_OUTRO_SECONDS))/CINEMATIC_OUTRO_SECONDS,0,1);
+ return t*t*(3-2*t);
+}
 // Distances are in world units. Short double-gates punctuate longer stretches.
 const GAP_MIN=15.2,GAP_MAX=21.4,START_GATE_AT=.48;
 // A separate rhythm of collectible wall pads between the hazard waves.
@@ -207,6 +213,7 @@ function mount(root){
  let invuln=0,pulseCharge=2,pulseGlow=0,padBoostTime=0,pulseFx=0,pulseHitFx=0,shieldFlash=0;
  let boostChain=0;
  let nitroHeld=false,nitroActive=false,nitroFuel=0,nitroRegenWait=0,nitroBurnTime=0,freeChargeVisual=0;
+ let outroActive=false,outroFade=0,debugArcadeClock=null;
  // Arcade risk/reward: event points stay pending until a safe cash-out.
  let skillBank=0,skillChain=0,skillMultiplier=1,skillTimer=0,skillAge=0;
  let bankedTotal=0,bankedCount=0,nearMisses=0;
@@ -2108,6 +2115,7 @@ function mount(root){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
   finaleOverlay.hidden=true;finaleTime=0;finaleCause="";phase3Elapsed=0;finaleSelection=0;
+  outroActive=false;outroFade=0;debugArcadeClock=null;
   lockDeathControls(false);
   musicRequest++;pauseMusic();
   resetSteering();mode="running";angle=0;turnVelocity=0;lives=MAX_LIVES;score=distance=travel=passed=combo=0;
@@ -2172,7 +2180,7 @@ function mount(root){
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
   screen.classList.remove("er-crashing");lockDeathControls(false);
-  finaleOverlay.hidden=true;finaleTime=0;
+  finaleOverlay.hidden=true;finaleTime=0;outroActive=false;outroFade=0;debugArcadeClock=null;
   if(!testMode&&mode!=="menu"&&score>0)save("best."+selectedLevel.id,best);
   musicRequest++;resetSteering();stopMusic();mode="menu";keys.clear();waves=[];pads=[];shields=[];hazards=[];trail=[];turnVelocity=0;
   shieldCollect.classList.remove("er-shield-collected");pulseFx=pulseHitFx=shieldFlash=0;
@@ -2516,9 +2524,12 @@ function mount(root){
  function finishArcadeLevel(reason="time"){
   if(mode!=="running"||!selectedLevel.arcade||testMode)return false;
   bankSkill("NIVEAU TERMINÉ");
-  finaleCause="level-"+reason;finaleTime=0;mode="finale";
+  // The ship and tunnel have already faded throughout the music outro.
+  if(outroActive)outroFade=1;
+  finaleCause="level-"+reason;
+  finaleTime=outroActive?FINALE_FADE_SECONDS-.55:0;mode="finale";
   musicRequest++;stopMusic();resetSteering();endNitro();keys.clear();
-  waves=[];pads=[];shields=[];sparks=[];
+  waves=[];hazards=[];pads=[];shields=[];sparks=[];
   padBoostTime=0;boostChain=0;nitroActive=false;nitroHeld=false;
   labToggle.hidden=true;labHide();
   if(score>best){best=Math.floor(score);save("best."+selectedLevel.id,best);}
@@ -2596,6 +2607,7 @@ function mount(root){
  }
  function campaignRunning(){return selectedLevel.arcade&&!testMode;}
  function arcadeSongClock(){
+  if(debugArcadeClock!==null)return debugArcadeClock;
   // The running soundtrack is authoritative, especially on slow mobile
   // connections. When muted/unavailable, continue from its last time
   // instead of an unrelated timer started before the MP3 had loaded.
@@ -2673,6 +2685,25 @@ function mount(root){
   }
   updateEncore(dt);
   if(mode!=="running")return;
+  // No new obstacles for seven seconds before the fifteen-second outro.
+  // Existing gates pass naturally instead of vanishing on the fade frame.
+  const outroClock=campaignRunning()?arcadeSongClock():0;
+  const outroDuration=campaignRunning()?arcadeSongDuration():Infinity;
+  const outroPreparing=campaignRunning()&&
+   outroClock>=outroDuration-CINEMATIC_OUTRO_SECONDS-CINEMATIC_OUTRO_CLEARANCE;
+  if(campaignRunning()&&outroClock>=outroDuration-CINEMATIC_OUTRO_SECONDS){
+   if(!outroActive){
+    outroActive=true;
+    // No collisions or stray projectiles during the last 15 seconds.
+    waves=[];hazards=[];pads=[];shields=[];sparks=[];
+    pulseFx=pulseGlow=pulseHitFx=shieldFlash=0;
+    warningLife=0;messageLife=0;rewardLife=0;
+    scoreToast.hidden=true;
+    shieldCollect.classList.remove("er-shield-collected");
+    padBoostTime=0;boostChain=0;
+   }
+   outroFade=Math.max(outroFade,cinematicOutroFade(outroClock,outroDuration));
+  }
   // Apply the tuned profile at the real musical boundary. The editor may
   // meanwhile display a different phase without changing the active run.
   const songClock=music&&!music.paused&&soundEnabled&&!globalMuted()?
@@ -2682,7 +2713,7 @@ function mount(root){
    (selectedLevel.track==="p1"?"p1":"p3"):
    encoreMode==="blue"?"p3":songClock>=MUSIC_DROP_AT?"p2":"p1";
   if(activePhase!==actualPhase)applyPhase(actualPhase);
-  directMusicPressure(dt);
+  if(!outroActive)directMusicPressure(dt);
   // Inverted orbital steering: pressing LEFT rotates the camera/ship toward
   // the opposite tunnel angle. Keep keyboard and touch D-pad consistent.
   const digitalSteer=(keys.has("left")?1:0)-(keys.has("right")?1:0);
@@ -2756,7 +2787,7 @@ function mount(root){
   }
   // Separate obstacles by WORLD distance, not seconds. At faster speeds,
   // each gate still has a long, empty tunnel leading to the next one.
-  while(travel>=nextGateAt){
+  while(!outroPreparing&&travel>=nextGateAt){
    gateCount++;
    const spawnAt=nextGateAt;
    const special=!testMode&&selectedLevel.arcade?
@@ -2774,7 +2805,7 @@ function mount(root){
    nextGateAt+=nextGateGap();
   }
   // Pads have their OWN calendar and cannot appear on top of a hazard.
-  while(travel>=nextPadAt){
+  while(!outroPreparing&&travel>=nextPadAt){
    if(!lab.boostPadsEnabled){
     nextPadAt=travel+PAD_START;
     break;
@@ -2791,7 +2822,7 @@ function mount(root){
   }
   // Shield frequency depends on remaining lives: 3 = none; 2 = scarce;
   // 1 = existing frequency. The schedule never builds a spawn backlog.
-  while(travel>=nextShieldAt){
+  while(!outroPreparing&&travel>=nextShieldAt){
    if(lives===MAX_LIVES){
     nextShieldAt+=rand(SHIELD_RARE_MIN,SHIELD_RARE_MAX)/lab.shieldFrequency;continue;
    }
@@ -3424,6 +3455,14 @@ function mount(root){
   if(flash>0){
    c.fillStyle="rgba(255,70,143,"+(flash*.23)+")";c.fillRect(0,0,W,H);
   }
+  // Same gradual blackout on the world and its ship silhouette.
+  const cinematicAlpha=outroActive?(mode==="finale"||mode==="finished"?1:outroFade):0;
+  screen.classList.toggle("er-cinematic-outro",outroActive);
+  screen.style.setProperty("--er-outro-visibility",String(1-cinematicAlpha));
+  if(cinematicAlpha>0){
+   c.save();c.fillStyle="rgba(0,0,0,"+cinematicAlpha+")";
+   c.fillRect(0,0,W,H);c.restore();
+  }
   if(mode==="finale"||mode==="finished"){
    const fade=mode==="finished"?1:smoothEncore(finaleTime/FINALE_FADE_SECONDS);
    c.fillStyle="rgba(0,0,0,"+fade+")";c.fillRect(0,0,W,H);
@@ -3619,11 +3658,22 @@ function mount(root){
    labDetached:!wrap.contains(labPanel)&&!!labPanel.parentElement,
    phaseActive:activePhase,phaseEditing:editorPhase,
    phaseProfiles:JSON.parse(JSON.stringify(phaseProfiles)),fps:labFps,angle,turnVelocity,invuln,lives,score,best,distance,travel,visualTravel:labVisualTravel(),passed,combo,directorStage,musicDropSurge,
+   outro:{active:outroActive,fade:outroFade,duration:CINEMATIC_OUTRO_SECONDS,
+    clock:arcadeSongClock(),songDuration:campaignRunning()?arcadeSongDuration():null,
+    clearance:CINEMATIC_OUTRO_CLEARANCE,
+    visibility:screen.style.getPropertyValue("--er-outro-visibility")},
    encore:{mode:encoreMode,time:encoreTime,visibility:encoreVisibility(),blue:blueTunnel()},pulseCharge,pulseFx,pulseHitFx,shieldFlash,shieldCount,nextShieldAt,music:{loaded:!!music,paused:music?music.paused:true,source:music?music.src:null,loop:music?music.loop:false,track:musicTrackId,phase:directorStage,loops:musicLoops,seconds:music?music.currentTime:elapsed,reactive:{bass:audioFx.bass,mid:audioFx.mid,high:audioFx.high,kick:audioFx.kick,energy:audioFx.energy},error:musicError},canvas:{width:W,height:H},gateCount,nextGateAt,hazards:hazards.map(h=>({type:h.type,z:h.z,length:h.length,rotation:h.rotation,spin:h.spin,hit:h.hit,rays:h.rays&&h.rays.map(r=>({...r})),bodyAngle:h.bodyAngle,trackAngle:h.trackAngle,patrolPhase:h.patrolPhase,drops:h.drops,mines:h.mines&&h.mines.map(m=>({...m})),cleared:h.cleared})),waves:waves.map(w=>({z:w.z,kind:w.kind,cleared:w.cleared,credited:w.credited,sectors:[...w.sectors],rotation:w.rotation,spin:w.spin,twist:w.twist})),shields:shields.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),pads:pads.map(p=>({z:p.z,sectors:[...p.sectors],credited:p.credited})),padBoostTime,currentSpeed,scoreMultiplier,gateCount,padCount}),
   advance:advance,start:start,pulse:pulse,boost:beginNitro,endBoost:endNitro,menu:toMenu,pause:togglePause,
   cashout:()=>bankSkill("TEST CASHOUT"),
   triggerEncore:beginEncore,triggerFinale:()=>beginFinale("debug"),tickFinale:updateFinale,
   simulateSongEnd:()=>{if(!music)return false;music.dispatchEvent(new Event("ended"));return true;},
+  // Used only by browser regression tests; does not seek or modify audio.
+  testOutroClock:(seconds)=>{
+   if(!campaignRunning()||!Number.isFinite(seconds))return false;
+   debugArcadeClock=clamp(seconds,0,arcadeSongDuration());
+   return true;
+  },
+  clearTestOutroClock:()=>{debugArcadeClock=null;return true;},
   draw:()=>paint(performance.now()),
   // Test the real Canvas reaction without playing sound out loud. Channels
   // are injected for one *render only*, then the live analyser takes back
@@ -3759,5 +3809,5 @@ function mount(root){
  raf=requestAnimationFrame(frameTick);
  return dispose;
 }
-window.ZebraEchoRacer={mount,pattern,collisionAt,hazardTypeForLevel,makeHazardSchedule,laserBlueprint,laserContact};
+window.ZebraEchoRacer={mount,pattern,collisionAt,hazardTypeForLevel,makeHazardSchedule,laserBlueprint,laserContact,cinematicOutroFade};
 }());
