@@ -12,6 +12,22 @@ BASE="http://127.0.0.1:8765/"
 OUT=Path("assets/manual")
 OUT.mkdir(parents=True,exist_ok=True)
 
+def snapshot_region(page,name,start_selector,end_selector):
+    start=page.locator(start_selector).bounding_box()
+    end=page.locator(end_selector).bounding_box()
+    if not start or not end:
+        raise RuntimeError("Zone playlist introuvable")
+    left=min(start["x"],end["x"])
+    top=min(start["y"],end["y"])
+    right=max(start["x"]+start["width"],end["x"]+end["width"])
+    bottom=max(start["y"]+start["height"],end["y"]+end["height"])
+    png=OUT/("_temp_"+name+".png")
+    page.screenshot(path=str(png),clip={"x":left,"y":top,"width":right-left,"height":bottom-top},animations="disabled")
+    picture=Image.open(png).convert("RGB")
+    picture.save(OUT/(name+".webp"),"WEBP",quality=76,method=6)
+    png.unlink()
+    print("MANUAL_SCREEN",name,picture.size,(OUT/(name+".webp")).stat().st_size,flush=True)
+
 def snapshot(page,name,selector,delay=0.6):
     loc=page.locator(selector)
     loc.wait_for(state="visible",timeout=15000)
@@ -69,9 +85,10 @@ with sync_playwright() as p:
       window.ZebraAMPConfig={windowBox(id,title,width,height){return window.__capWindow(id,width||690,height||740);}};
       window.ZebraAMP.open();
     }""")
-    snapshot(page,"amp","#cap-amp",0.8)
+    page.locator("#cap-amp .amp3-item-play").first.click(timeout=8000)
+    snapshot(page,"amp","#cap-amp",1.0)
     snapshot(page,"amp-controls","#cap-amp .amp3-controls")
-    snapshot(page,"amp-playlists","#cap-amp .amp3-playlist-tools")
+    snapshot_region(page,"amp-playlists","#cap-amp .amp3-playlist-tools","#cap-amp .amp3-bottom")
     page.locator("#cap-amp .amp3-speed-btn").click()
     snapshot(page,"amp-speed","#cap-amp .amp3-speed-panel",0.25)
     page.locator("#cap-amp .amp3-speed-btn").click()
@@ -84,13 +101,21 @@ with sync_playwright() as p:
 
     # Tetris, avec ses vraies commandes.
     page.evaluate("window.ZebraLazyApps.load('tetris')")
-    page.evaluate("""() => window.ZebraTetris.mount(window.__capWindow('tetris',760,820))""")
+    page.evaluate("""() => {
+      const body=window.__capWindow('tetris',760,820);
+      body.classList.add('zebra-game-body');
+      window.ZebraTetris.mount(body);
+    }""")
     snapshot(page,"tetris","#cap-tetris",0.7)
     page.evaluate("window.__destroyCap('tetris')")
 
     # Znake : menu et partie contre ZnakeBot.
     page.evaluate("window.ZebraLazyApps.load('snake')")
-    page.evaluate("""() => window.ZebraSnake.mount(window.__capWindow('znake',685,765))""")
+    page.evaluate("""() => {
+      const body=window.__capWindow('znake',685,765);
+      body.classList.add('zebra-game-body');
+      window.ZebraSnake.mount(body);
+    }""")
     snapshot(page,"znake-menu","#cap-znake",0.7)
     page.locator("#cap-znake [data-mode=robot]").click()
     page.locator("#cap-znake [data-level='1']").click()
