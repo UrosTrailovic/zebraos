@@ -3,14 +3,18 @@
 (function(){
 "use strict";
 var active=null,threshold=8;
+var RACER_PATH="STUDIO/BUREAU/Jeux/Echo Racer 2 Beta.exe.zebraos.json";
 function el(tag,cls,text){var x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x;}
 function button(text,fn,cls){var b=el("button",cls||"classic-button",text);b.type="button";b.onclick=fn;return b;}
 function storageKey(session){return "zebra.desktop.v1."+session;}
 function cleanState(session){
- var result={positions:{wide:{},narrow:{}},trash:[]};
+ var result={positions:{wide:{},narrow:{}},trash:[],racerTrashSeeded:session==="zebra"};
  try{
   var raw=JSON.parse(localStorage.getItem(storageKey(session))||"null");
-  if(!raw||typeof raw!=="object")return result;
+  if(!raw||typeof raw!=="object"){
+   if(session==="zebra")result.trash.push(RACER_PATH);
+   return result;
+  }
   if(raw.positions&&typeof raw.positions==="object"){
    ["wide","narrow"].forEach(function(mode){
     if(!raw.positions[mode]||typeof raw.positions[mode]!=="object")return;
@@ -22,6 +26,9 @@ function cleanState(session){
    });
   }
   if(Array.isArray(raw.trash))result.trash=raw.trash.filter(function(path){return typeof path==="string"&&path.length<1200;}).slice(0,300);
+  // Une fois par bureau Zebra : la restauration reste persistante.
+  if(session==="zebra"&&raw.racerTrashSeeded!==true&&!result.trash.includes(RACER_PATH))
+   result.trash.push(RACER_PATH);
  }catch(_){}
  return result;
 }
@@ -173,6 +180,7 @@ function setup(session,repaint,openTrash,osIcon){
  bin.onclick=function(e){if(Date.now()<bin._zebraDragUntil)return;openTrash();};
  screen.appendChild(bin);
  active={session:session,data:cleanState(session),root:root,screen:screen,trash:bin,repaint:repaint,openTrash:openTrash,menu:null};
+ if(session==="zebra")write();
  screen.addEventListener("contextmenu",backgroundMenu);
  document.addEventListener("pointerdown",outsideMenu);
  window.addEventListener("resize",positionAll);

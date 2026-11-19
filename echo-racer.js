@@ -196,6 +196,7 @@ function nearMiss(player,wave){
  return wave.sectors.some(id=>Math.abs(angularDelta(angle,obstacleAngle(wave,id)))<STEP*.72);
 }
 function mount(root){
+ const allowTest=!root.dataset.zebraSession||root.dataset.zebraSession==="admin";
  if(root._zebraDispose)root._zebraDispose();
  root.innerHTML="";
  let live=true,raf=0,ro=null,last=0,mode="menu",keys=new Set();
@@ -728,8 +729,8 @@ function mount(root){
   const home=mode==="menu"&&menuStage==="home";
   overlayButton.classList.toggle("selected",home&&homeIndex===0||
    mode==="paused"&&pauseIndex===0||mode==="over"&&overIndex===0);
-  testButton.classList.toggle("selected",home&&homeIndex===1);
-  quitButton.classList.toggle("selected",home&&homeIndex===2);
+  testButton.classList.toggle("selected",allowTest&&home&&homeIndex===1);
+  quitButton.classList.toggle("selected",home&&homeIndex===(allowTest?2:1));
   backButton.classList.toggle("selected",mode==="over"&&overIndex===1);
   finaleRestart.classList.toggle("selected",mode==="finished"&&finaleSelection===0);
   finaleMenu.classList.toggle("selected",mode==="finished"&&finaleSelection===1);
@@ -755,10 +756,10 @@ function mount(root){
     if(which==="pulse"){confirmLevel();return;}
     if(which==="boost"||which==="pause"){renderMenuStage("home");return;}
    }else{
-    if(backward||forward){homeIndex=(homeIndex+(forward?1:-1)+3)%3;beep("switch");paintMenuSelection();return;}
+    if(backward||forward){const count=allowTest?3:2;homeIndex=(homeIndex+(forward?1:-1)+count)%count;beep("switch");paintMenuSelection();return;}
     if(which==="pulse"||which==="pause"||which==="boost"){
      if(homeIndex===0)showLevelSelect();
-     else if(homeIndex===1){selectedLevel=LEVELS[0];start(true);}
+     else if(allowTest&&homeIndex===1){selectedLevel=LEVELS[0];start(true);}
      else quitButton.click();
     }
    }
@@ -796,7 +797,7 @@ function mount(root){
   homeTitle.hidden=choosing;logo.hidden=true;crashIcon.hidden=true;crashSub.hidden=true;
   overlay.classList.remove("er-stage-over","er-stage-pause");screen.classList.remove("er-death");
   pauseActions.hidden=true;
-  levelPicker.hidden=!choosing;overlayButton.hidden=choosing;testButton.hidden=choosing;quitButton.hidden=choosing;
+  levelPicker.hidden=!choosing;overlayButton.hidden=choosing;testButton.hidden=choosing||!allowTest;quitButton.hidden=choosing;
   backButton.hidden=!choosing;status.hidden=!choosing;
   prompt.hidden=true;introDiagnostic.hidden=true;introTrack.hidden=true;
   expl.hidden=true;hint.hidden=true;
@@ -1350,7 +1351,7 @@ function mount(root){
  dashboard.appendChild(labToggle);
  wrap.appendChild(labPanel);
  function labOpen(){
-  if(!testMode||window.matchMedia("(max-width:700px)").matches)return;
+  if(!allowTest||!testMode||window.matchMedia("(max-width:700px)").matches)return;
   const api=window.ZebraEchoLabWindow;
   const nativeHost=api&&typeof api.open==="function"?api.open():null;
   if(nativeHost){
@@ -2134,6 +2135,7 @@ function mount(root){
  }
  function restartRun(){start(testMode,testLaunchPhase);}
  function start(testPhase=false,requestedPhase=testLaunchPhase){
+  if(testPhase===true&&!allowTest)return;
   if(mode==="crashing"||(mode==="over"&&deathLock>0))return;
   deathFade=deathLock=0;crashCurtain.hidden=true;crashCurtain.style.opacity="0";
   finaleOverlay.hidden=true;finaleTime=0;finaleCause="";phase3Elapsed=0;finaleSelection=0;

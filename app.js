@@ -876,7 +876,7 @@ var gameModules={
  snake:{name:"Znake.exe",width:650,height:700,global:"ZebraSnake",
   files:["snake.js?v=8.7"],css:"snake.css?v=8.9"},
  racer:{name:"Echo Racer 2 Beta — "+echoRacerBuildVersion,width:750,height:790,global:"ZebraEchoRacer",
-  files:["echo-racer.js?v=21.4"],css:"echo-racer.css?v=20.4"},
+  files:["echo-racer.js?v=21.5"],css:"echo-racer.css?v=20.4"},
  paint:{name:"ZebraPaint.exe",width:850,height:640,global:"ZebraPaint",
   files:["paint.js?v=1.4"],css:"paint-responsive.css?v=1.4"}
 };
@@ -901,8 +901,6 @@ function loadAsset(url,css){
  return assetPromises[url];
 }
 function loadGameModule(name){
- // Echo Racer reste dans le dépôt, mais seul le bureau Admin peut le charger.
- if(name==="racer"&&session!=="admin")return Promise.reject(Error("Application réservée à la session Admin."));
  var module=gameModules[name];if(!module)return Promise.reject(Error("Application inconnue"));
  if(window[module.global])return Promise.resolve(window[module.global]);
  if(module.pending)return module.pending;
@@ -948,8 +946,6 @@ function primeZnakeMenu(root){
  }catch(_){stopZnakeMenuPrimer(root);}
 }
 function openGame(name){
- // Bloque aussi les anciens raccourcis ou appels directs à open("racer").
- if(name==="racer"&&session!=="admin")return;
  var entry=gameModules[name];if(!entry)return;
  var root=windowBox(name,entry.name,
    Math.min(entry.width,window.innerWidth-16),Math.min(entry.height,window.innerHeight-50));
@@ -969,7 +965,7 @@ function openGame(name){
   }
   root._zebraLoading=null;root.innerHTML="";
   root._zebraApp=name;
-  try{module.mount(root);}catch(err){
+  try{root.dataset.zebraSession=session;module.mount(root);}catch(err){
    if(name==="snake")stopZnakeMenuPrimer(root);
    root._zebraApp=null;
    root.textContent="Impossible de démarrer "+entry.name+" : "+err.message;

@@ -8,7 +8,7 @@
 "use strict";
 var ROOT="STUDIO/BUREAU", REPO="UrosTrailovic/zebraos", BRANCH="main";
 var INDEX="assets/bureau-index.json";
-var INDEX_REV="echo-racer-2-beta-20261115";
+var INDEX_REV="echo-racer-all-sessions-20261119";
 var APP_IDS={
  "explorer:root":true,"explorer:recycle":true,"studio-manager":true,
  amp:true,settings:true,tetris:true,snake:true,racer:true,paint:true,
@@ -57,8 +57,8 @@ function valid(entries){
    type:it.type,size:Number(it.size)||0,
    app:it.type==="app"?it.app:null,
    icon:it.type==="app"&&typeof it.icon==="string"?it.icon.slice(0,40):null,
-   sessions:it.type==="app"?(it.app==="racer"?["admin"]:
-     Array.isArray(it.sessions)?it.sessions.filter(function(id){return ["admin","zebra","visitor"].includes(id);}):null):null};
+   sessions:it.type==="app"&&Array.isArray(it.sessions)?
+     it.sessions.filter(function(id){return ["admin","zebra","visitor"].includes(id);}):null};
  });
 }
 function visible(item){
@@ -208,8 +208,6 @@ function sizeText(bytes){
  return bytes+" o";
 }
 function preview(item,opts){
- // Même avec un ancien index/une entrée conservée, le raccourci est Admin uniquement.
- if(item.app==="racer"&&(!opts||opts.session!=="admin"))return;
  if(item.type==="app"){
   if(APP_IDS[item.app]&&opts&&typeof opts.openApp==="function")opts.openApp(item.app);
   return;
@@ -355,7 +353,10 @@ function mount(host,path,opts){
   if(!isCurrent())return;
   files.innerHTML="";
   files.dataset.view=view;files.style.setProperty("--folder-icon-size",viewSizes[view]+"px");
-  var items=children(path).filter(function(item){return !item.sessions||item.sessions.includes(account);});
+  var items=children(path).filter(function(item){
+   return (!item.sessions||item.sessions.includes(account))&&
+    (!window.ZebraDesktop||!window.ZebraDesktop.isTrashed(account,item.path));
+  });
   msg.style.display=items.length?"none":"";
   msg.className="github-drive-empty";
   msg.textContent="Ce dossier est vide.";
