@@ -53,7 +53,10 @@ with sync_playwright() as p:
         assert wrapper.locator(".zmm-title").inner_text()=="ZebraAMP"
         img=wrapper.locator(".zmm-photo img").first
         img.wait_for(state="visible")
-        img.evaluate("(x)=>x.complete&&x.naturalWidth>0||Promise.reject(Error('Capture non chargée'))")
+        page.wait_for_function("""() => {
+          const image=document.querySelector('#live-welcome .zmm-photo img');
+          return image&&image.complete&&image.naturalWidth>0;
+        }""",timeout=20000)
         assert page.evaluate("window.__unexpectedLaunches.length")==0
         wrapper.screenshot(path=str(OUT/("mobile-amp.png" if mobile else "desktop-amp.png")))
         wrapper.get_by_role("button",name="◀ Retour").first.click()
