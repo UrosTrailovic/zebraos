@@ -1,0 +1,31 @@
+name: Vérifier ZebraPaint brouillons et calques
+on:
+  push:
+    paths:
+      - 'paint.js'
+      - 'paint-responsive.css'
+      - 'app.js'
+      - 'tests/paint-persistence.py'
+      - '.github/workflows/verify-paint-persistence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  persistence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Contrôler la syntaxe JavaScript
+        run: |
+          node --check paint.js
+          node --check app.js
+      - name: Préparer Playwright et Pillow
+        run: python3 -m pip install --quiet playwright Pillow
+      - name: Vérifier le projet et les images en navigateur Chromium
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/paint-persistence-http.log 2>&1 &
+          SERVER=$!
+          trap 'kill $SERVER 2>/dev/null || true' EXIT
+          sleep 1
+          python3 tests/paint-persistence.py

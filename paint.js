@@ -1,4 +1,4 @@
-/* ZebraPaint 1.4 — calques, transformations et projets éditables, sans dépendances. */
+/* ZebraPaint 1.5 — sauvegarde automatique et calques fiables. */
 (function(){
 "use strict";
 const W=640,H=400,UNDO_LIMIT=12,MAX_LAYERS=25;
@@ -6,6 +6,42 @@ const palette=["#000000","#ffffff","#808080","#c0c0c0","#800000","#ff0000","#808
 function el(tag,cls,text){const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x;}
 function btn(label,fn,cls="zp-button"){const x=el("button",cls,label);x.type="button";x.onclick=fn;return x;}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+// Les brouillons restent dans le navigateur, jamais dans le dépôt public.
+const DRAFT_DB="ZebraPaintDrafts",DRAFT_STORE="projects";
+let draftDBPromise=null;
+const pendingDraftWrites=new Map();
+function draftDB(){
+ if(typeof indexedDB==="undefined")return Promise.reject(new Error("IndexedDB indisponible"));
+ if(!draftDBPromise)draftDBPromise=new Promise((resolve,reject)=>{
+  const req=indexedDB.open(DRAFT_DB,1);
+  req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(DRAFT_STORE))req.result.createObjectStore(DRAFT_STORE);};
+  req.onsuccess=()=>{const db=req.result;db.onversionchange=()=>{db.close();draftDBPromise=null;};resolve(db);};
+  req.onerror=()=>reject(req.error||new Error("IndexedDB inaccessible"));
+ }).catch(error=>{draftDBPromise=null;throw error;});
+ return draftDBPromise;
+}
+function readDraft(key){
+ // Ne pas rouvrir un brouillon avant la fin de la sauvegarde de la fenêtre précédente.
+ const prior=pendingDraftWrites.get(key)||Promise.resolve();
+ return prior.catch(()=>{}).then(()=>draftDB()).then(db=>new Promise((resolve,reject)=>{
+  const req=db.transaction(DRAFT_STORE,"readonly").objectStore(DRAFT_STORE).get(key);
+  req.onsuccess=()=>resolve(req.result||null);
+  req.onerror=()=>reject(req.error||new Error("Lecture du brouillon impossible"));
+ }));
+}
+function writeDraft(key,project){
+ const prior=pendingDraftWrites.get(key)||Promise.resolve();
+ const current=prior.catch(()=>{}).then(()=>draftDB()).then(db=>new Promise((resolve,reject)=>{
+  const tx=db.transaction(DRAFT_STORE,"readwrite");
+  tx.objectStore(DRAFT_STORE).put({project,updatedAt:Date.now()},key);
+  tx.oncomplete=()=>resolve();
+  tx.onerror=()=>reject(tx.error||new Error("Écriture du brouillon impossible"));
+  tx.onabort=()=>reject(tx.error||new Error("Enregistrement interrompu"));
+ }));
+ pendingDraftWrites.set(key,current);
+ current.finally(()=>{if(pendingDraftWrites.get(key)===current)pendingDraftWrites.delete(key);}).catch(()=>{});
+ return current;
+}
 const svgPaths={
  select:'<path d="m4 2 7 19 2-8 8-2z"/>',
  pencil:'<path d="m4 20 4-1 12-12-3-3L5 16zM15 6l3 3"/>',
@@ -33,12 +69,16 @@ function mount(root){
  root.replaceChildren();
  let active=true,tool="select",color="#000000",size=6,selected=null,paintTarget=null,nextId=1;
  let layers=[],history=[],redo=[],drawing=false,drawingId=null,last=null,start=null,beforeShape=null,currentErase=null,draggingCleanup=null;
+ const draftKey="session:"+String(root.dataset.zebraSession||"zebra");
+ let editVersion=0,lastSavedVersion=0,saveTimer=null,lastWrite=Promise.resolve();
  const registry=new Map(),urls=new Set();
  const panel=el("div","zp");
  const bar=el("div","zp-menu");
  const upload=el("input");upload.type="file";upload.accept="image/*";upload.hidden=true;
  const projectInput=el("input");projectInput.type="file";projectInput.accept=".zpaint,application/json";projectInput.hidden=true;
  const message=el("div","zp-status","640 × 400 · ZebraPaint");
+ const saveIndicator=el("div","zp-autosave-status","Brouillon local : chargement…");
+ saveIndicator.setAttribute("role","status");
  const canvasFrame=el("div","zp-canvas-frame");
  const layerStage=el("div","zp-layer-stage");
  const canvas=el("canvas","zp-canvas");
@@ -105,7 +145,7 @@ function mount(root){
  changeControls.append(btn("✓ Terminer",()=>{select(null);choose("select");notice("Placement terminé : les calques restent modifiables.");},"zp-button zp-apply-image"),
    btn("× Supprimer",()=>removeLayer(selected),"zp-button"));
  bar.append(changeControls);
- panel.append(bar,body,panelLayers,options,message);root.append(panel);
+ panel.append(bar,body,panelLayers,options,message,saveIndicator);root.append(panel);
 
  const toolButtons={};
  toolDefs.forEach(([id,label,tooltip])=>{
@@ -117,6 +157,30 @@ function mount(root){
   toolButtons[id]=b;tools.append(b);
  });
  function notice(t){message.textContent=t;}
+ function scheduleDraft(){
+  editVersion++;
+  saveIndicator.textContent="Brouillon modifié · sauvegarde automatique…";
+  if(saveTimer!==null)clearTimeout(saveTimer);
+  saveTimer=setTimeout(flushDraft,950);
+ }
+ function flushDraft(){
+  if(saveTimer!==null){clearTimeout(saveTimer);saveTimer=null;}
+  if(editVersion===lastSavedVersion)return lastWrite;
+  let project;
+  try{project=serializeProject();}
+  catch(error){if(active)saveIndicator.textContent="Sauvegarde impossible : "+error.message;return lastWrite;}
+  const revision=editVersion;
+  if(active)saveIndicator.textContent="Enregistrement du brouillon…";
+  // Les écritures restent dans l'ordre si la fenêtre se ferme puis se rouvre.
+  lastWrite=lastWrite.catch(()=>{}).then(()=>writeDraft(draftKey,project));
+  lastWrite.then(()=>{
+   lastSavedVersion=Math.max(lastSavedVersion,revision);
+   if(active&&editVersion===revision)saveIndicator.textContent="Brouillon enregistré sur cet appareil";
+  }).catch(error=>{
+   if(active)saveIndicator.textContent="Brouillon non enregistré : "+error.message+" · exporte en .zpaint";
+  });
+  return lastWrite;
+ }
  function setColor(v){color=v;currentColor.style.background=v;pick.value=v;}
  function choose(t){
   tool=t;
@@ -139,6 +203,7 @@ function mount(root){
  }
  function bootLayers(){
   const background=createRaster("Fond","#ffffff"),drawingLayer=createRaster("Dessin 1");
+  background.background=true;
   layers=[background,drawingLayer];selected=drawingLayer.id;paintTarget=drawingLayer.id;
  }
  function newDocument(){
@@ -159,20 +224,20 @@ function mount(root){
  function cloneStrokes(strokes){return strokes.map(s=>({diameter:s.diameter,pts:s.pts.map(p=>p.slice())}));}
  function snapshot(){
   return {sel:selected,paint:paintTarget,
-   list:layers.map(l=>({id:l.id,type:l.type,name:l.name,visible:l.visible,locked:!!l.locked,opacity:l.opacity??1,
+   list:layers.map(l=>({id:l.id,type:l.type,name:l.name,background:!!l.background,visible:l.visible,locked:!!l.locked,opacity:l.opacity??1,
      x:l.x,y:l.y,w:l.w,h:l.h,angle:l.angle||0,skew:l.skew||0,flipX:l.flipX||1,flipY:l.flipY||1,
      erase:l.type==="image"?cloneStrokes(l.erase):null,
      pixels:l.type==="raster"?l.surface.getContext("2d").getImageData(0,0,W,H):null}))};
  }
  function record(){
   history.push(snapshot());if(history.length>UNDO_LIMIT)history.shift();
-  redo=[];updateHistory();
+  redo=[];updateHistory();scheduleDraft();
  }
  function updateHistory(){undoBtn.disabled=!history.length;redoBtn.disabled=!redo.length;}
  function restore(state){
   layers=state.list.map(d=>{
    const l=registry.get(d.id);
-   l.visible=d.visible;l.name=d.name;l.locked=!!d.locked;l.opacity=d.opacity??1;
+   l.visible=d.visible;l.name=d.name;l.background=!!d.background;l.locked=!!d.locked;l.opacity=d.opacity??1;
    if(l.type==="raster")l.surface.getContext("2d").putImageData(d.pixels,0,0);
    else{l.x=d.x;l.y=d.y;l.w=d.w;l.h=d.h;l.angle=d.angle||0;l.skew=d.skew||0;l.flipX=d.flipX||1;l.flipY=d.flipY||1;l.erase=cloneStrokes(d.erase);redrawImage(l);}
    return l;
@@ -181,8 +246,8 @@ function mount(root){
   paintTarget=layers.some(l=>l.id===state.paint&&l.type==="raster")?state.paint:null;
   render();updateHistory();
  }
- function undo(){if(!history.length)return;redo.push(snapshot());restore(history.pop());notice("Annulé.");}
- function redoAction(){if(!redo.length)return;history.push(snapshot());restore(redo.pop());notice("Rétabli.");}
+ function undo(){if(!history.length)return;redo.push(snapshot());restore(history.pop());scheduleDraft();notice("Annulé.");}
+ function redoAction(){if(!redo.length)return;history.push(snapshot());restore(redo.pop());scheduleDraft();notice("Rétabli.");}
  function getSelected(){return layers.find(l=>l.id===selected)||null;}
  function select(id){
   selected=layers.some(l=>l.id===id)?id:null;
@@ -200,6 +265,11 @@ function mount(root){
  }
  function moveLayer(id,dir){
   const i=layers.findIndex(l=>l.id===id),j=i+dir;if(i<0||j<0||j>=layers.length)return;
+  // Le Fond opaque reste derrière tous les calques : une photo ne peut
+  // plus disparaître sous le blanc en descendant dans la pile.
+  if(layers[0]?.background&&(i===0||j===0)){
+   notice("Le Fond reste derrière les images et les dessins.");return;
+  }
   record();const [layer]=layers.splice(i,1);layers.splice(j,0,layer);selected=id;render();
   notice("Ordre des calques modifié.");
  }
@@ -218,7 +288,8 @@ function mount(root){
  }
  function render(){
   layerStage.replaceChildren(...layers.map(l=>l.node));
-  layers.forEach(l=>{
+  layers.forEach((l,index)=>{
+   l.node.style.zIndex=String(index+1);
    l.node.hidden=!l.visible;
    l.node.style.opacity=String(l.opacity??1);
    if(l.type==="image")positionImage(l);
@@ -251,8 +322,12 @@ function mount(root){
    b.title="Sélectionner "+l.name+(l.id===paintTarget?" (calque de dessin actif)":"");
    const actions=el("div","zp-layer-buttons");
    const eye=btn(l.visible?"◉":"○",()=>visibility(l.id),"zp-layer-action");eye.title=l.visible?"Masquer":"Afficher";eye.setAttribute("aria-label",eye.title);
-   const up=btn("↑",()=>moveLayer(l.id,1),"zp-layer-action");up.disabled=layers[layers.length-1]===l;up.title="Devant";up.setAttribute("aria-label","Monter le calque");
-   const down=btn("↓",()=>moveLayer(l.id,-1),"zp-layer-action");down.disabled=layers[0]===l;down.title="Derrière";down.setAttribute("aria-label","Descendre le calque");
+   const up=btn("↑",()=>moveLayer(l.id,1),"zp-layer-action");
+   up.disabled=layers[layers.length-1]===l||!!l.background;
+   up.title="Devant";up.setAttribute("aria-label","Monter le calque");
+   const down=btn("↓",()=>moveLayer(l.id,-1),"zp-layer-action");
+   down.disabled=layers[0]===l||!!(layers[0]?.background&&layers[1]===l);
+   down.title="Derrière";down.setAttribute("aria-label","Descendre le calque");
    const lock=btn(l.locked?"🔒":"♢",()=>toggleLock(l.id),"zp-layer-action");
    lock.title=l.locked?"Déverrouiller":"Verrouiller";lock.setAttribute("aria-label",lock.title);
    const copy=btn("⧉",()=>duplicateLayer(l.id),"zp-layer-action");
@@ -340,7 +415,7 @@ function mount(root){
     baseW:l.baseW,aspect:l.aspect,erase:cloneStrokes(l.erase),visible:true};
    node.addEventListener("pointerdown",imagePointerDown);registry.set(copy.id,copy);
   }
-  copy.opacity=l.opacity??1;copy.locked=false;
+  copy.opacity=l.opacity??1;copy.locked=false;copy.background=false;
   if(copy.type==="image"){copy.angle=l.angle||0;copy.skew=l.skew||0;copy.flipX=l.flipX||1;copy.flipY=l.flipY||1;}
   const index=layers.findIndex(x=>x.id===id);
   layers.splice(index+1,0,copy);
@@ -580,15 +655,19 @@ function mount(root){
  }
  /* Format ZebraPaint : image raster par calque + métadonnées.
     Sauvegarde uniquement sur l'appareil de l'utilisateur. */
+ function serializeProject(){
+  return {format:"zebrapaint",version:1,width:W,height:H,
+   layers:layers.map(l=>({
+    type:l.type,name:l.name,background:!!l.background,visible:l.visible,
+    locked:!!l.locked,opacity:l.opacity??1,
+    x:l.x,y:l.y,w:l.w,h:l.h,baseW:l.baseW,aspect:l.aspect,
+    angle:l.angle||0,skew:l.skew||0,flipX:l.flipX||1,flipY:l.flipY||1,
+    image:l.surface.toDataURL("image/png")
+   }))};
+ }
  function saveProject(){
   try{
-   const project={format:"zebrapaint",version:1,width:W,height:H,
-    layers:layers.map(l=>({
-     type:l.type,name:l.name,visible:l.visible,locked:!!l.locked,opacity:l.opacity??1,
-     x:l.x,y:l.y,w:l.w,h:l.h,baseW:l.baseW,aspect:l.aspect,
-     angle:l.angle||0,skew:l.skew||0,flipX:l.flipX||1,flipY:l.flipY||1,
-     image:l.surface.toDataURL("image/png")
-    }))};
+   const project=serializeProject();
    const encoded=JSON.stringify(project);
    const blob=new Blob([encoded],{type:"application/json"});
    const url=URL.createObjectURL(blob);
@@ -599,9 +678,10 @@ function mount(root){
    notice("Projet .zpaint enregistré · "+layers.length+" calques rééditables.");
   }catch(err){notice("Impossible d'enregistrer le projet : "+err.message);}
  }
- async function loadProject(file){
-  if(!file)return;
-  if(file.size>35*1024*1024){notice("Projet trop volumineux (>35 Mo).");return;}
+ async function loadProject(file,fromDraft=false){
+  if(!file)return false;
+  const revisionAtStart=editVersion;
+  if(!fromDraft&&file.size>35*1024*1024){notice("Projet trop volumineux (>35 Mo).");return false;}
   try{
    const data=JSON.parse(await file.text());
    if(data.format!=="zebrapaint"||data.version!==1||data.width!==W||data.height!==H
@@ -620,10 +700,10 @@ function mount(root){
     if(image.width>4096||image.height>4096)throw new Error("Image trop grande");
     prepared.push({item,image});
    }
-   if(!active)return;
-   record();
+   if(!active||(fromDraft&&editVersion!==revisionAtStart))return false;
+   if(!fromDraft)record();
    const rebuilt=[];
-   prepared.forEach(({item,image})=>{
+   prepared.forEach(({item,image},index)=>{
     let layer;
     if(item.type==="raster"){
      layer=createRaster(String(item.name||"Dessin").slice(0,70));
@@ -636,7 +716,9 @@ function mount(root){
      surface.className="zp-image-visual";
      const handle=btn("⤡",()=>{},"zp-image-resize");
      handle.title="Redimensionner";handle.setAttribute("aria-label","Redimensionner l’image");
-     node.append(surface,handle);
+     const turn=btn("↻",()=>{},"zp-image-rotate");
+     turn.title="Tourner librement";turn.setAttribute("aria-label","Tourner l'image");
+     node.append(surface,handle,turn);
      layer={id:nextId++,type:"image",name:String(item.name||"Image").slice(0,70),
       img:image,url:item.image,surface,node,erase:[],
       x:Number(item.x)||0,y:Number(item.y)||0,w:Number(item.w)||100,h:Number(item.h)||100,
@@ -644,6 +726,8 @@ function mount(root){
      node.addEventListener("pointerdown",imagePointerDown);
      registry.set(layer.id,layer);
     }
+    layer.background=item.type==="raster"&&(item.background===true||
+       index===0&&item.name==="Fond"&&item.background!==false);
     layer.visible=item.visible!==false;layer.locked=!!item.locked;
     layer.opacity=clamp(Number(item.opacity??1),0,1);
     if(layer.type==="image"){
@@ -655,11 +739,34 @@ function mount(root){
     }
     rebuilt.push(layer);
    });
+   const backgroundIndex=rebuilt.findIndex(l=>l.background);
+   if(backgroundIndex>0)rebuilt.unshift(rebuilt.splice(backgroundIndex,1)[0]);
    layers=rebuilt;
-   const frontRaster=layers.slice().reverse().find(l=>l.type==="raster");
-   selected=frontRaster?.id||layers[layers.length-1].id;paintTarget=frontRaster?.id||null;
-   render();choose("select");notice("Projet ouvert : "+layers.length+" calques modifiables.");
-  }catch(err){notice("Impossible d'ouvrir le projet : "+err.message);}
+   const frontRaster=layers.slice().reverse().find(l=>l.type==="raster"&&!l.background);
+   selected=frontRaster?.id||layers[layers.length-1].id;
+   paintTarget=frontRaster?.id||layers.find(l=>l.type==="raster")?.id||null;
+   render();choose("select");
+   if(!fromDraft)notice("Projet ouvert : "+layers.length+" calques modifiables.");
+   return true;
+  }catch(err){
+   if(fromDraft)saveIndicator.textContent="Brouillon illisible · export .zpaint recommandé";
+   else notice("Impossible d'ouvrir le projet : "+err.message);
+   return false;
+  }
+ }
+ function restoreDraft(){
+  readDraft(draftKey).then(async saved=>{
+   if(!active||editVersion!==0)return;
+   if(!saved?.project){
+    saveIndicator.textContent="Sauvegarde automatique locale activée";return;
+   }
+   const blob=new Blob([JSON.stringify(saved.project)],{type:"application/json"});
+   const restored=await loadProject(blob,true);
+   if(restored&&active&&editVersion===0)
+    saveIndicator.textContent="Brouillon retrouvé · sauvegarde automatique activée";
+  }).catch(error=>{
+   if(active)saveIndicator.textContent="Sauvegarde locale indisponible : "+error.message;
+  });
  }
  projectInput.onchange=()=>{
   const file=projectInput.files?.[0];projectInput.value="";
@@ -685,8 +792,9 @@ function mount(root){
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){e.preventDefault();download();}
  }
  document.addEventListener("keydown",key);
- bootLayers();choose("select");updateHistory();
+ bootLayers();choose("select");updateHistory();restoreDraft();
  function dispose(){
+  if(editVersion!==lastSavedVersion)flushDraft();
   active=false;if(draggingCleanup)draggingCleanup();
   urls.forEach(url=>URL.revokeObjectURL(url));urls.clear();
   document.removeEventListener("keydown",key);
