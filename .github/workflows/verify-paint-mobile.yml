@@ -29,8 +29,7 @@ jobs:
               host.id="paint-test-host";host.className="zebra-game-body";
               host.style.cssText="position:absolute;top:8px;left:8px;width:350px;height:590px;z-index:9999;overflow:hidden;";
               document.body.appendChild(host);
-              const symbol=document.querySelector(".zboot-power-svg");
-              test.powerSvg=!!symbol&&getComputedStyle(symbol).display!=="none";
+              // Le bouton d'alimentation est vérifié par les tests du bureau, pas par ZebraPaint.
               await window.ZebraLazyApps.load("paint");
               window.ZebraPaint.mount(host);
               const frame=host.querySelector(".zp-canvas-frame");
@@ -147,7 +146,7 @@ jobs:
               // Dessiner quand une PHOTO est sélectionnée doit viser un calque
               // Dessin situé au-dessus et pas bloquer ni masquer le dessin.
               select("photo-bleue");
-              test.selectedImageKeepsStack=getComputedStyle(host.querySelector(".zp-imported-image")).zIndex==="auto";
+              test.selectedImageKeepsStack=Number(getComputedStyle(host.querySelector(".zp-imported-image")).zIndex)>0;
               tool("Crayon");
               const countBeforePaint=labels().length;
               color.value="#00ff00";color.dispatchEvent(new Event("input",{bubbles:true}));
