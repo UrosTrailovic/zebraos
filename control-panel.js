@@ -245,12 +245,35 @@ function showPerformance(ctx){
  schedule();
 }
 function showWelcome(ctx){
- var root=windowBody(ctx,"welcome","ZebraOS — Manuel de la machine",980,715);
- if(window.ZebraManual&&typeof window.ZebraManual.mount==="function"){
-  window.ZebraManual.mount(root,ctx);
- }else{
-  root.replaceChildren(e("p","zcp-help","Le manuel n'a pas pu être chargé. Actualise ZebraOS."));
- }
+ var root=windowBody(ctx,"welcome","Bienvenue dans ZebraOS",670,440);
+ if(root._zebraDispose)root._zebraDispose();
+ root.innerHTML="";
+ var wrap=e("div","zcp-welcome");
+ var heading=e("div","zcp-welcome-head");
+ var text=e("div");
+ text.appendChild(e("h2","","Bienvenue dans ZebraOS"));
+ text.appendChild(e("strong","","Le studio se trouve sur votre bureau."));
+ text.appendChild(e("p","","Pour ouvrir un programme, double-cliquez sur son icône. Sur mobile, une seule pression suffit."));
+ heading.appendChild(text);wrap.appendChild(heading);
+ var middle=e("div","zcp-welcome-middle");
+ var art=e("div","zcp-welcome-art");
+ var icon=e("img");icon.src="/assets/boot/logo.png";icon.alt="ZebraOS";art.appendChild(icon);
+ middle.appendChild(art);
+ var actions=e("div","zcp-welcome-actions");
+ [
+  ["Découvrir ZebraAMP",function(){
+   if(window.ZebraManual)window.ZebraManual.open(root,"amp",function(){showWelcome(ctx);});
+  }],
+  ["Ouvrir les fichiers",function(){ctx.openApp("explorer");}],
+  ["Personnaliser le fond",function(){showDisplay(ctx);}],
+  ["Régler la date et l’heure",function(){showDateTime(ctx);}],
+  ["Manuels des jeux et outils",function(){
+   if(window.ZebraManual)window.ZebraManual.open(root,"index",function(){showWelcome(ctx);});
+  }]
+ ].forEach(function(a){actions.appendChild(btn(a[0],a[1]));});
+ actions.appendChild(btn("Fermer",function(){close(ctx,"welcome");}));
+ middle.appendChild(actions);wrap.appendChild(middle);
+ root.appendChild(wrap);
 }
 function showDateTime(ctx){
  if(dialogInterval){clearInterval(dialogInterval);dialogInterval=null;}

@@ -1,4 +1,4 @@
-name: Contrôler le manuel ZebraOS publié
+name: Contrôler le Bienvenue publié
 on:
   push:
     branches: [main]
@@ -23,12 +23,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Installer le navigateur de contrôle
         run: python3 -m pip install --quiet playwright
-      - name: Vérifier fichiers publics et fenêtre de manuel
+      - name: Vérifier les captures et les manuels sur le domaine
         run: python3 tests/manual-production.py
-      - name: Captures du domaine public
+      - name: Captures de l'accueil public
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: zebraos-manuel-domaine
+          name: bienvenue-public-pc-mobile
           path: manual-production-screenshots/
           if-no-files-found: ignore

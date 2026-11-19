@@ -1,62 +1,65 @@
-"""Vérification réelle du manuel déployé sur www.zebratape2.net."""
+"""Le site public doit afficher le Bienvenue historique et ses vraies captures."""
 from pathlib import Path
-from urllib.request import Request, urlopen
+from urllib.request import urlopen,Request
 from playwright.sync_api import sync_playwright
 
 BASE="https://www.zebratape2.net/"
+FILES=["amp.webp","amp-controls.webp","amp-playlists.webp","amp-speed.webp","amp-reverb.webp",
+       "zebravis.webp","tetris.webp","znake-menu.webp","znake-versus.webp",
+       "paint.webp","sticky.webp","planner.webp"]
 OUT=Path("manual-production-screenshots")
 OUT.mkdir(exist_ok=True)
-checks={
-    "":b"zebra-manual-content.js?v=1.0",
-    "zebra-manual-content.js":b"window.ZebraManualContent=Object.freeze(pages)",
-    "zebra-manual.js":b"window.ZebraManual={mount:mount}",
-    "zebra-manual.css":b".zm-machine",
-    "control-panel.js":b"window.ZebraManual.mount(root,ctx)"
-}
-for path,mark in checks.items():
-    url=BASE+path+"?proof=20261119-m01"
-    with urlopen(Request(url,headers={"Cache-Control":"no-cache","User-Agent":"ZebraOS-manual-check"}),timeout=35) as response:
-        data=response.read()
-        assert response.status==200,(url,response.status)
-        assert mark in data,(url,"marqueur manuel absent")
-        print("LIVE_RESOURCE_OK",url,len(data),flush=True)
 
-with sync_playwright() as playwright:
-    browser=playwright.chromium.launch(channel="chrome",headless=True,args=["--no-sandbox","--disable-dev-shm-usage"])
-    for width,height,mobile in [(1366,900,False),(390,844,True)]:
-        ctx=browser.new_context(viewport={"width":width,"height":height},is_mobile=mobile,has_touch=mobile)
+for name,mark in [
+    ("",b"zebra-manual-content.js?v=2.0"),
+    ("zebra-manual-content.js",b"window.ZebraManualContent="),
+    ("zebra-manual.js",b"window.ZebraManual={open:open}"),
+    ("control-panel.js",b'window.ZebraManual.open(root,"amp"'),
+    ("zebra-manual.css",b".zmm-page")
+]:
+    url=BASE+name+"?manual-check=v2"
+    with urlopen(Request(url,headers={"Cache-Control":"no-cache","User-Agent":"ZebraOS-Welcome-Control"}),timeout=30) as res:
+        data=res.read()
+        assert res.status==200 and mark in data,(url,res.status)
+    print("WELCOME_LIVE_FILE",name or "index",len(data),flush=True)
+for filename in FILES:
+    url=BASE+"assets/manual/"+filename+"?manual-check=v2"
+    with urlopen(Request(url,headers={"Cache-Control":"no-cache","User-Agent":"ZebraOS-Welcome-Control"}),timeout=30) as res:
+        data=res.read()
+        assert res.status==200 and data[:4]==b"RIFF" and data[8:12]==b"WEBP",(url,res.status)
+    print("WELCOME_LIVE_SCREENSHOT",filename,len(data),flush=True)
+
+with sync_playwright() as p:
+    browser=p.chromium.launch(channel="chrome",headless=True,args=["--no-sandbox","--disable-dev-shm-usage"])
+    for w,h,mobile in [(1366,900,False),(390,844,True)]:
+        ctx=browser.new_context(viewport={"width":w,"height":h},is_mobile=mobile,has_touch=mobile)
         page=ctx.new_page()
         errors=[]
-        page.on("pageerror",lambda err:errors.append(str(err)))
-        page.goto(BASE+"?live-manuel=20261119",wait_until="domcontentloaded",timeout=40000)
-        page.wait_for_function("Boolean(window.ZebraManual&&window.ZebraManualContent&&window.ZebraControlPanel)",timeout=35000)
+        page.on("pageerror",lambda e:errors.append(str(e)))
+        page.goto(BASE+"?manual-check=v2",wait_until="domcontentloaded",timeout=40000)
+        page.wait_for_function("Boolean(window.ZebraManual&&window.ZebraControlPanel)",timeout=35000)
         page.evaluate("""() => {
-          window.__liveAppLaunches=[];
-          const w=document.createElement('div');
-          w.id='manual-live-test';w.className='window focused';
-          w.style.cssText='width:960px;height:710px;left:30px;top:30px;z-index:999999;';
-          const bar=document.createElement('div');bar.className='titlebar';bar.textContent='ZebraOS — Manuel de la machine';
-          const body=document.createElement('div');body.className='window-body';
-          w.append(bar,body);document.body.appendChild(w);
-          window.ZebraControlPanel.welcome({
-           windowBox(){return body;},
-           session(){return 'zebra';},
-           openApp(name){window.__liveAppLaunches.push(name);}
-          });
+          window.__unexpectedLaunches=[];
+          const w=document.createElement('div');w.className='window focused';w.id='live-welcome';
+          w.style.cssText='width:670px;height:440px;left:20px;top:20px;z-index:999999';
+          const body=document.createElement('div');body.className='window-body';w.appendChild(body);
+          document.body.appendChild(w);
+          window.ZebraControlPanel.welcome({windowBox(){return body;},session(){return 'zebra';},openApp(v){window.__unexpectedLaunches.push(v);}});
         }""")
-        wrapper=page.locator("#manual-live-test")
-        assert wrapper.locator(".zm-nav-item").count()==17
-        assert wrapper.locator(".zm-sheet .zm-title").inner_text()=="L'ORDINATEUR DU STUDIO"
-        filename="mobile.png" if mobile else "desktop.png"
-        wrapper.screenshot(path=str(OUT/filename))
-        if mobile:
-            wrapper.locator(".zm-picker").select_option("paint-layers")
-        else:
-            wrapper.locator(".zm-nav-item[data-page=paint-layers]").click()
-        assert "ZEBRAPAINT · CALQUES & IMAGES" in wrapper.locator(".zm-title").inner_text()
-        assert page.evaluate("window.__liveAppLaunches.length")==0
-        assert not errors,errors
-        print("LIVE_MANUAL_BROWSER_OK",filename,flush=True)
+        wrapper=page.locator("#live-welcome")
+        assert wrapper.locator(".zcp-welcome-head h2").inner_text()=="Bienvenue dans ZebraOS"
+        wrapper.screenshot(path=str(OUT/("mobile-bienvenue.png" if mobile else "desktop-bienvenue.png")))
+        wrapper.get_by_role("button",name="Découvrir ZebraAMP").click()
+        assert wrapper.locator(".zmm-title").inner_text()=="ZebraAMP"
+        img=wrapper.locator(".zmm-photo img").first
+        img.wait_for(state="visible")
+        img.evaluate("(x)=>x.complete&&x.naturalWidth>0||Promise.reject(Error('Capture non chargée'))")
+        assert page.evaluate("window.__unexpectedLaunches.length")==0
+        wrapper.screenshot(path=str(OUT/("mobile-amp.png" if mobile else "desktop-amp.png")))
+        wrapper.get_by_role("button",name="◀ Retour").first.click()
+        assert wrapper.locator(".zcp-welcome-head h2").count()==1
+        assert errors==[],errors
+        print("WELCOME_LIVE_BROWSER_PASS",{"mobile":mobile,"width":w,"height":h},flush=True)
         ctx.close()
     browser.close()
-print("LIVE_MANUAL_PASS",flush=True)
+print("WELCOME_LIVE_PASS",flush=True)
