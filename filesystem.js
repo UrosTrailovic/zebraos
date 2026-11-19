@@ -125,7 +125,7 @@ function launchDownload(item){
 function preview(host,item,opt){
   if(item.kind!=="file"||!item.blob)return;
   if(!(isAudio(item)||isImage(item)||isText(item)||isVideo(item))){launchDownload(item);return;}
-  var body=opt.windowBox("local-preview-"+item.id,item.name+" — STUDIO",Math.min(620,innerWidth-25),Math.min(490,innerHeight-75));
+  var body=opt.windowBox("local-preview-"+item.id,item.name+" — ZebraOS",Math.min(620,innerWidth-25),Math.min(490,innerHeight-75));
   body.innerHTML="";
   var tools=E("div","local-preview-tools");
   tools.appendChild(btn("⬇ Télécharger","classic-button",function(){launchDownload(item);}));
@@ -182,7 +182,7 @@ function openRoot(host,opt){
   if(!host)return;
   host.innerHTML="";
   var win=host.closest(".window");if(win){var t=win.querySelector(".windowtitle");if(t)t.textContent="Poste de travail — C:\\ROOT";}
-  host.appendChild(E("div","folder-path","POSTE DE TRAVAIL — STUDIO ZEBRA RECORD"));
+  host.appendChild(E("div","folder-path","POSTE DE TRAVAIL — ZEBRAOS"));
   host.appendChild(E("p","local-disk-hint","Tes brouillons restent sur cet appareil. Les fichiers publiés sont visibles par tous."));
   var list=E("div","folder-list local-drive-root");
   function drive(name,icon,desc,action){
@@ -216,7 +216,7 @@ async function mount(host,parent,opt){
     if(!node)break;
     names.unshift(node.name);cursor=node.parent;
   }
-  var title="Poste de travail — C:\\STUDIO"+(isTrash?"\\CORBEILLE":names.length?"\\"+names.join("\\"):"");
+  var title="Poste de travail — C:\\FICHIERS"+(isTrash?"\\CORBEILLE":names.length?"\\"+names.join("\\"):"");
   if(win){var span=win.querySelector(".windowtitle");if(span)span.textContent=title;}
   var tools=E("div","local-disk-toolbar");
   function add(label,fn){tools.appendChild(btn(label,"classic-button",fn));}
@@ -242,7 +242,7 @@ async function mount(host,parent,opt){
     if(clipboard)add("▣ Coller",function(){move(parent,host,refresh).catch(function(e){alertError(host,e.message);});});
   }
   host.appendChild(tools);
-  host.appendChild(E("div","folder-path",isTrash?"C:\\CORBEILLE":"C:\\STUDIO\\"+names.join("\\")));
+  host.appendChild(E("div","folder-path",isTrash?"C:\\CORBEILLE":"C:\\FICHIERS\\"+names.join("\\")));
   host.appendChild(E("p","local-disk-hint",isTrash?"Fichiers supprimés sur cet appareil. Restaure-les ou efface-les définitivement.":"Fichiers réels enregistrés dans ce navigateur. Pas de synchronisation GitHub automatique."));
   var list=E("div","folder-list local-file-list");
   host.appendChild(list);
@@ -318,7 +318,7 @@ async function mount(host,parent,opt){
     drop.ondrop=function(ev){ev.preventDefault();drop.classList.remove("drag-over");importFiles(parent,Array.from(ev.dataTransfer.files||[]),host,refresh);};
     host.appendChild(drop);
   }
-  host.appendChild(E("div","local-disk-status",items.length+" élément(s) • C:\\STUDIO"+(isTrash?"\\CORBEILLE":"")));
+  host.appendChild(E("div","local-disk-status",items.length+" élément(s) • C:\\FICHIERS"+(isTrash?"\\CORBEILLE":"")));
 }
 window.ZebraLocalFiles={mount:mount,home:openRoot,root:ROOT,
   openNamed:function(host,name,opt){

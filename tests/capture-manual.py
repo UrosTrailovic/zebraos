@@ -85,6 +85,8 @@ with sync_playwright() as p:
       window.ZebraAMPConfig={windowBox(id,title,width,height){return window.__capWindow(id,width||690,height||740);}};
       window.ZebraAMP.open();
     }""")
+    label=page.locator("#cap-amp .amp3-studio-label").inner_text()
+    assert label=="LECTEUR AUDIO",("Ancienne mention dans ZebraAMP",label)
     page.locator("#cap-amp .amp3-item-play").first.click(timeout=8000)
     snapshot(page,"amp","#cap-amp",1.0)
     snapshot(page,"amp-controls","#cap-amp .amp3-controls")

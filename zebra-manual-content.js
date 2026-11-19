@@ -5,7 +5,7 @@
 "use strict";
 window.ZebraManualContent=[
 {
- id:"amp",name:"ZebraAMP",intro:"Le lecteur musical du studio. Il permet d'écouter les albums, d'importer ses morceaux et de modifier le son pendant la lecture.",
+ id:"amp",name:"ZebraAMP",intro:"Le lecteur musical de ZebraOS. Il permet d'écouter les albums, d'importer ses morceaux et de modifier le son pendant la lecture.",
  sections:[
   {title:"Le lecteur",image:"amp.webp",description:"L'écran affiche le morceau chargé, sa durée et le spectre audio. La barre de progression permet de se déplacer dans le titre.",items:[
    ["Ⅰ◀ / ▶ / ■ / ▶Ⅰ","Titre précédent, lecture/pause, arrêt, titre suivant."],
@@ -19,12 +19,12 @@ window.ZebraManualContent=[
    ["Préréglages","Neutre, Basses, Clair, Vintage, Nuit et Voix. Le bouton de remise à zéro rétablit l'équilibre neutre."],
    ["Lecture","Cliquer sur un titre dans la playlist pour le charger, puis utiliser les boutons de transport."]
   ]},
-  {title:"Playlists et morceaux",image:"amp-playlists.webp",description:"Les collections Zebra Tape 2 et Zebralogy reprennent les fichiers du studio. Les playlists personnelles se créent à part.",items:[
+  {title:"Playlists et morceaux",image:"amp-playlists.webp",description:"Les collections Zebra Tape 2 et Zebralogy reprennent les fichiers de ZebraOS. Les playlists personnelles se créent à part.",items:[
    ["PLAYLIST","Choisir l'album ou la liste que l'on veut écouter."],
    ["＋ NOUVELLE","Créer une playlist personnelle et lui donner un nom."],
    ["＋ IMPORTER DES SONS","Ajouter un ou plusieurs fichiers audio depuis l'appareil."],
    ["✎","Modifier le nom et la pochette d'une playlist personnelle."],
-   ["ACTUALISER","Rechercher de nouveau les morceaux publiés du studio."]
+   ["ACTUALISER","Rechercher de nouveau les morceaux disponibles."]
   ]},
   {title:"Vitesse de lecture",image:"amp-speed.webp",description:"Le curseur passe de 50 à 150 %. À 100 %, la lecture est normale. Comme sur un vinyle, modifier la vitesse modifie aussi la hauteur du son.",items:[
    ["50–150 %","Ralentir ou accélérer la lecture par étapes de 5 %."],
@@ -85,7 +85,7 @@ window.ZebraManualContent=[
  ]
 },
 {
- id:"paint",name:"ZebraPaint",intro:"L'atelier de dessin du studio. Sa toile de 640 × 400 pixels accueille des traits, des formes et des photos sur plusieurs calques.",
+ id:"paint",name:"ZebraPaint",intro:"L'atelier de dessin de ZebraOS. Sa toile de 640 × 400 pixels accueille des traits, des formes et des photos sur plusieurs calques.",
  sections:[
   {title:"La surface de dessin",image:"paint.webp",description:"Les outils sont à gauche, la toile au centre, les calques et leurs réglages dans les autres panneaux.",items:[
    ["Crayon / Pinceau","Tracer librement avec la couleur et la taille choisies."],
@@ -126,7 +126,7 @@ window.ZebraManualContent=[
  ]
 },
 {
- id:"planner",name:"ZebraPlanner",intro:"Un agenda local pour organiser les événements et les tâches du studio, avec dates, heures et suivi de réalisation.",
+ id:"planner",name:"ZebraPlanner",intro:"Un agenda local pour organiser les événements et les tâches quotidiennes, avec dates, heures et suivi de réalisation.",
  sections:[
   {title:"Utiliser le calendrier",image:"planner.webp",description:"Le mois est affiché en grille. Choisir un jour pour voir ses tâches et en ajouter.",items:[
    ["‹ / ›","Passer au mois précédent ou suivant."],

@@ -6,7 +6,7 @@ Un faux système d'exploitation rétro, développé en HTML, CSS et JavaScript, 
 
 Tous les fichiers visibles sur le bureau viennent de **`STUDIO/BUREAU`**.
 
-- Le bureau démarre vide, sauf les applications système (Poste de travail, ZebraAMP, Panneau de configuration, Gestionnaire Studio en Admin).
+- Le bureau démarre vide, sauf les applications système (Poste de travail, ZebraAMP, Panneau de configuration, Gestionnaire de fichiers en Admin).
 - Un dossier ajouté dans `STUDIO/BUREAU` devient une icône sur le bureau.
 - Les sous-dossiers et fichiers se consultent dans les fenêtres de l'explorateur.
 - Les icônes personnalisées sont lues depuis `icone.png` placé dans chaque dossier, ou `nom.ext.icone.png` à côté d'un fichier.

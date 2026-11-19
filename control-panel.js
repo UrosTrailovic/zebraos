@@ -67,7 +67,6 @@ function mountPanel(root,ctx){
   ["Fond d’écran","▣","Fonds d’écran et apparence",function(){showDisplay(ctx);}],
   ["Sons","♫","Sons de l’interface",function(){showSounds(ctx);}],
   ["Date et heure","◷","Calendrier et horloge",function(){showDateTime(ctx);}],
-  ["Système","▤","Détails de l’ordinateur",function(){showSystem(ctx);}],
   ["Performances","▥","Compteur FPS en direct",function(){showPerformance(ctx);}],
   ["À propos de ZebraOS","ⓘ","Informations sur ZebraOS",function(){showAbout(ctx);}]
  ];
@@ -87,7 +86,7 @@ function mountPanel(root,ctx){
   grid.appendChild(tile);
  });
  main.appendChild(grid);
- main.appendChild(e("div","zcp-status","7 éléments · Ordinateur du studio"));
+ main.appendChild(e("div","zcp-status","6 éléments · ZebraOS"));
  root.appendChild(main);
 }
 function footer(root,buttons){
@@ -130,39 +129,17 @@ function showAbout(ctx){
  head.appendChild(logo);
  var description=e("div");
  description.appendChild(e("strong","","ZebraOS"));
- description.appendChild(e("div","","Édition Studio · Version "+PANEL_VERSION));
- description.appendChild(e("div","","© 2026 Zebra Record"));
+ description.appendChild(e("div","","Version "+PANEL_VERSION));
  head.appendChild(description);wrap.appendChild(head);
  var info=e("div","zcp-about-details");
  info.appendChild(e("p","","Ce système est un environnement rétro interactif accessible dans un navigateur."));
  info.appendChild(e("p","","Édition créée pour Zebra Tape 2."));
  info.appendChild(e("hr"));
  info.appendChild(e("p","","Session en cours : "+ctx.session()));
- info.appendChild(e("p","","Ordinateur simulé : Zebra Studio"));
+ info.appendChild(e("p","","Ordinateur simulé : ZebraOS"));
  info.appendChild(e("p","","Les caractéristiques matérielles ne sont pas émulées."));
  wrap.appendChild(info);
  footer(wrap,[["OK",function(){close(ctx,"about");}]]);
- root.appendChild(wrap);
-}
-function showSystem(ctx){
- var root=windowBody(ctx,"system","Propriétés du système",490,400);
- root.innerHTML="";
- var wrap=e("div","zcp-dialog");
- var tabs=e("div","zcp-tabs");tabs.appendChild(e("div","zcp-tab active","Général"));wrap.appendChild(tabs);
- var row=e("div","zcp-system-hero");
- var icon=e("img");icon.src="/assets/boot/logo.png";icon.alt="";row.appendChild(icon);
- var detail=e("div");detail.appendChild(e("strong","","ZebraOS 2.0"));
- detail.appendChild(e("p","","Édition Studio — Zebra Record"));
- detail.appendChild(e("p","","Interface de bureau simulée"));
- row.appendChild(detail);wrap.appendChild(row);
- var group=e("fieldset","zcp-field");
- group.appendChild(e("legend","","Informations"));
- group.appendChild(e("p","","Session : "+ctx.session()));
- group.appendChild(e("p","","Support : navigateur Web"));
- group.appendChild(e("p","","Langue : français"));
- group.appendChild(e("p","","Système invité : ZebraOS (simulation)"));
- wrap.appendChild(group);
- footer(wrap,[["À propos…",function(){showAbout(ctx);}],["OK",function(){close(ctx,"system");}]]);
  root.appendChild(wrap);
 }
 /* Diagnostic graphique disponible dans toutes les sessions.
@@ -252,7 +229,7 @@ function showWelcome(ctx){
  var heading=e("div","zcp-welcome-head");
  var text=e("div");
  text.appendChild(e("h2","","Bienvenue dans ZebraOS"));
- text.appendChild(e("strong","","Le studio se trouve sur votre bureau."));
+ text.appendChild(e("strong","","Tous vos programmes sont sur le bureau."));
  text.appendChild(e("p","","Pour ouvrir un programme, double-cliquez sur son icône. Sur mobile, une seule pression suffit."));
  heading.appendChild(text);wrap.appendChild(heading);
  var middle=e("div","zcp-welcome-middle");
@@ -401,6 +378,6 @@ function showDateTime(ctx){
 }
 window.ZebraControlPanel={
  mount:mountPanel,display:showDisplay,sounds:showSounds,dateTime:showDateTime,
- system:showSystem,performance:showPerformance,about:showAbout,welcome:showWelcome,clock:displayTime
+ performance:showPerformance,about:showAbout,welcome:showWelcome,clock:displayTime
 };
 }());

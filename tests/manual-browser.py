@@ -30,6 +30,27 @@ def check(browser,w,h,mobile):
       window.ZebraControlPanel.welcome(window.__welcomeCtx);
     }""")
     wrapper=page.locator("#welcome-regression")
+    # Le panneau ne propose plus d'onglet Système, ni d'ancienne identité.
+    branding=page.evaluate("""() => {
+      const settings=document.createElement('div');
+      window.ZebraControlPanel.mount(settings,window.__welcomeCtx);
+      const titles=[...settings.querySelectorAll('.zcp-item-title')].map(x=>x.textContent);
+      const status=settings.querySelector('.zcp-status')?.textContent || '';
+      const about=document.createElement('div');
+      window.ZebraControlPanel.about({windowBox(){return about;},session(){return 'zebra';}});
+      return {titles,status,about:about.textContent,
+        manuals:JSON.stringify(window.ZebraManualContent)};
+    }""")
+    assert "Système" not in branding["titles"],branding
+    assert branding["titles"]==["Bienvenue","Fond d’écran","Sons","Date et heure",
+                               "Performances","À propos de ZebraOS"],branding
+    assert branding["status"].startswith("6 éléments"),branding
+    for key in ("about","manuals"):
+        visible=branding[key].lower()
+        assert "zebra record" not in visible and "zebra report" not in visible
+        assert "studio" not in visible,(key,visible[:200])
+    assert "studio" not in page.locator(".zcp-welcome-head").inner_text().lower()
+
     assert wrapper.locator(".zcp-welcome-head h2").inner_text()=="Bienvenue dans ZebraOS"
     assert wrapper.locator(".zcp-welcome-art img").count()==1
     assert wrapper.locator(".zcp-welcome-actions .classic-button").count()==6

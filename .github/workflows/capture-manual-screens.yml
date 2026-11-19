@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'tests/capture-manual.py'
+      - 'zebraamp.js'
       - '.github/workflows/capture-manual-screens.yml'
   workflow_dispatch:
 

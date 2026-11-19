@@ -859,7 +859,7 @@ function render(){
  if(!list.tracks.length){
   rows.appendChild(el("div","amp3-empty",list.readonly?
    albumChecked?
-    "Aucun morceau trouvé dans "+(list.id===ZEBRALOGY?"STUDIO/BUREAU/Sonnnn/Zebralogy":"STUDIO/BUREAU/Zebra Tape 2/Son")+". Vérifie les fichiers GitHub.":
+    "Aucun morceau disponible dans cet album. Vérifie les fichiers publiés.":
     "Chargement de "+list.name+" depuis GitHub…":
    "Playlist vide. Importe un ou plusieurs morceaux, même en une seule fois."));
  }else{
@@ -1104,14 +1104,14 @@ function startAmpBootGreeting(node){
 function open(){
  init();
  if(!window.ZebraAMPConfig||typeof window.ZebraAMPConfig.windowBox!=="function")return;
- var w=window.ZebraAMPConfig.windowBox("amp","ZebraAMP.exe — Lecteur du studio",660,686);
+ var w=window.ZebraAMPConfig.windowBox("amp","ZebraAMP.exe — Lecteur audio",660,686);
  view=w;
  w.innerHTML="";displayedCover=null;
  var root=el("div","amp3");
  var top=el("div","amp3-head");
  var bootTitle=el("strong","amp3-boot-title","ZEBRAAMP 3.8");
  var bootHello=el("span","amp3-boot-hello","");
- top.append(bootTitle,bootHello);top.appendChild(el("span","amp3-studio-label","STUDIO PLAYER"));root.appendChild(top);
+ top.append(bootTitle,bootHello);top.appendChild(el("span","amp3-studio-label","LECTEUR AUDIO"));root.appendChild(top);
  var stripe=el("div","amp3-zebra-plate");
  stripe.setAttribute("aria-hidden","true");
  stripe.appendChild(el("span","amp3-zebra-rivet amp3-zebra-rivet-left"));

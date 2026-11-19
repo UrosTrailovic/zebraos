@@ -3,12 +3,12 @@
 (function(){
 "use strict";
 var $=function(id){return document.getElementById(id)};
-var users=[["zebra","Zebra","Session du studio","Z"],["admin","Admin","Gestion du studio","A"]];
+var users=[["zebra","Zebra","Session personnelle","Z"],["admin","Admin","Administration","A"]];
 var wallpaper={visitor:"visitor",zebra:"zebra",admin:"admin"};
 var session=null,opened={},z=20,seq=0,adminApproved=false,adminLoginUnlocked=false;
 /* Local filesystem replaces the former demo-only filenames. */
 var docs={
-readme:"ZEBRA RECORD // ORDINATEUR DU STUDIO\n\nBienvenue sur ZebraOS.\n\nCette machine contient ZEBRA TAPE 2, une map Counter-Strike 1.6, des documents et des archives du studio.\n\nExplore les fichiers du studio. Ne formate pas C:.\n\nwww.zebratape2.net",
+readme:"ZEBRAOS // POSTE DE TRAVAIL\n\nBienvenue sur ZebraOS.\n\nCette machine contient ZEBRA TAPE 2, une map Counter-Strike 1.6 et des documents.\n\nExplore les fichiers. Ne formate pas C:.\n\nwww.zebratape2.net",
 album:"ZEBRA TAPE 2\nDÉCEMBRE 2026\n\nLISTE DES TITRES À CONFIRMER\n9 MORCEAUX\n\nwww.zebratape2.net",
 install:"SADATE — COUNTER-STRIKE 1.6\n\nLa map sera téléchargeable ici une fois terminée.\nFichier ZIP et textures à venir.",
 daniel:"DANIEL\n\nCe fichier n'est pas à toi.\n\nPourquoi tu l'ouvres ?\n\n-- Daniel",
@@ -762,11 +762,11 @@ function windowBox(id,title,width,height){
 function button(txt,cb){var b=el("button","classic-button",txt);b.onclick=cb;return b}
 function studioManager(){
  if(session!=="admin")return;
- var root=windowBox("manager","GESTIONNAIRE STUDIO — BUREAU",Math.min(620,innerWidth-20),Math.min(455,innerHeight-65));
+ var root=windowBox("manager","GESTION DU BUREAU",Math.min(620,innerWidth-20),Math.min(455,innerHeight-65));
  root.innerHTML="";
  var head=el("div","manager-intro");
- head.appendChild(el("div","manager-title","ZEBRA RECORD // GESTION DU BUREAU"));
- head.appendChild(el("p","","Tous les dossiers et fichiers affichés dans ZebraOS proviennent de STUDIO/BUREAU sur GitHub."));
+ head.appendChild(el("div","manager-title","GESTION DES FICHIERS"));
+ head.appendChild(el("p","","Les fichiers visibles sur le bureau sont publiés depuis le dépôt GitHub de ZebraOS."));
  root.appendChild(head);
  root.appendChild(el("p","manager-warning","Pas de dossiers de démonstration. Ajoute uniquement ce que tu veux montrer sur le bureau."));
  function group(title,body,label,fn){
@@ -781,7 +781,7 @@ function studioManager(){
  }
  function external(url){window.open(url,"_blank","noopener,noreferrer");}
  group("1. CRÉER ET ORGANISER",
-  "Sur GitHub, crée tes dossiers dans STUDIO/BUREAU et ajoute autant de sous-dossiers que tu veux. Un dossier vide doit contenir un fichier .gitkeep.",
+  "Sur GitHub, organise les dossiers du bureau et ajoute autant de sous-dossiers que nécessaire. Un dossier vide doit contenir un fichier .gitkeep.",
   "OUVRIR LE BUREAU GITHUB",
   function(){external("https://github.com/UrosTrailovic/zebraos/tree/main/STUDIO/BUREAU");});
  group("2. IMPORTER DES FICHIERS",
