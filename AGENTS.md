@@ -25,6 +25,7 @@
 - `echo-racer.js`, `echo-racer.css` : jeu Echo Racer.
 - `snake.js`, `snake.css`, `snake-assets.js` : Znake ; `tetris.js` et `tetris-artwork.js` : Tetris ; `paint.js`, `paint-responsive.css` : ZebraPaint.
 - `power-panel-v3.js/css`, `power-facade-v2.css`, `zebra-hardware.css`, `assets/boot-assets*.js` : démarrage et façade ; `control-panel.js`, `wallpaper.js` : personnalisation.
+- `zebra-manual-content.js`, `zebra-manual.js`, `zebra-manual.css` : livret technique intégré à « Bienvenue » dans Réglage de l’ordinateur. Données des pages séparées du lecteur ; aucune entrée du manuel ne lance directement une application.
 - Nombreuses vérifications GitHub Actions dans `.github/workflows/`, notamment `verify-echo-racer.yml`, `verify-zebraamp-*.yml`, `verify-paint-mobile.yml`, `verify-snake-assets.yml`, `verify-tetris-*.yml`.
 - `README.md`, `CAHIER_DES_CHARGES.md`, `GUIDE_BUREAU.md`, `TESTS_MANUELS.md` : documentation historique. **Le cahier des charges v0.1 comporte des propositions obsolètes : le code actuel fait foi.**
 
@@ -77,6 +78,13 @@
 - **Ne pas écraser les préférences validées.** Une nouvelle demande de l'utilisateur prévaut sur les règles précédentes ; documenter le changement et sa portée.
 - **Ne pas inventer d'autonomie.** Le guide ne s'exécute pas tout seul : son actualisation est une obligation pour l'agent lorsqu'il travaille dans le dépôt et dispose des accès nécessaires.
 - **Ne pas exposer de données privées.** Le dépôt est public : exclure identifiants, tokens, données personnelles, conversations privées et liens de partage sensibles.
+
+### Manuel de la machine (19 novembre 2026)
+- Demande validée : transformer l'ancien Bienvenue / Guide des programmes en **notice technique de ZebraOS**, pas en collection de liens de lancement. Conserver un look d'ancien matériel, une table des matières par chapitres, une couverture et une lecture par feuilles, accessible mobile et ordinateur.
+- Références : les 13 captures fournies par le propriétaire (ZebraAMP : façade, contrôle, playlists, vitesse, réverbération, ZebraVIS ; Tetris ; Znake ; ZebraPaint ; ZebraSticky ; ZebraPlanner) servent à rédiger des repères exacts. Les schémas internes sont des **illustrations simplifiées**, ils ne doivent pas être présentés comme des screenshots originaux.
+- Sources factuelles : commandes et comportements à vérifier dans `zebraamp.js`, `visualizer.js`, `tetris.js`, `snake.js`, `paint.js`, `zebra-tools.js` et `app.js` après tout changement fonctionnel. Les pages décrivent la machine, le bureau, ZebraAMP, ZebraVIS, Tetris, Znake, Echo Racer, ZebraPaint, Sticky, Planner et les réglages.
+- Navigation : `control-panel.js` délègue `showWelcome` à `window.ZebraManual.mount(root, ctx)`. Le manuel est chargé par `index.html`, séparément du noyau. Le `_zebraDispose` du lecteur retire son écouteur clavier lorsque la fenêtre est fermée. Ne pas reconnecter les anciennes actions `ctx.openApp` dans le manuel sans demande.
+- Les données locales sont différenciées des contenus GitHub publics ; ne jamais promettre une synchronisation entre appareils.
 
 ### Journal des apprentissages durables
 - 2026-11-14 — Test streak renforcé : le premier test Chromium a montré `passed=15`, `multiplier=7`, `multiplierAfterWait=9`, collision `hitMultiplier=0`, score préservé ; son assertion « encaissement automatique après 32s » était incorrecte, car les pads de boost se poursuivaient et remettaient à zéro le timer de cashout. Pour isoler le bug réel, `_echoDebug.cashout()` invoque `bankSkill` sans tricher sur l'état du jeu, puis la CI exige que le compteur d'encaissement progresse ET que le multiplicateur reste inchangé, avant de simuler un long boost puis une collision. Versions `echo-racer.js?v=20.9`, app loader `app.js?v=11.85`. Ne considérer les vérifications comme réussies qu'après lecture du nouveau workflow.

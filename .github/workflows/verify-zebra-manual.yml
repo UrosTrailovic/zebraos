@@ -1,0 +1,51 @@
+name: Vérifier le manuel de la machine ZebraOS
+on:
+  push:
+    paths:
+      - 'control-panel.js'
+      - 'zebra-manual.js'
+      - 'zebra-manual-content.js'
+      - 'zebra-manual.css'
+      - 'index.html'
+      - 'tests/manual-browser.py'
+      - '.github/workflows/verify-zebra-manual.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  manual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier syntaxe, pages et référence des ressources
+        run: |
+          node --check control-panel.js
+          node --check zebra-manual.js
+          node --check zebra-manual-content.js
+          node - <<'JS'
+          const fs=require('node:fs');
+          const html=fs.readFileSync('index.html','utf8');
+          for(const name of ['zebra-manual-content.js','zebra-manual.js','zebra-manual.css']){
+            if(!fs.existsSync(name)||!html.includes(name))throw new Error('Manuel manquant : '+name);
+          }
+          const panel=fs.readFileSync('control-panel.js','utf8');
+          if(panel.includes('ctx.openApp("amp")')||!panel.includes('window.ZebraManual.mount(root,ctx)'))
+            throw new Error('Ancien menu de lancement encore présent');
+          JS
+      - name: Installer Playwright
+        run: python3 -m pip install --quiet playwright
+      - name: Tester les pages et le comportement PC / Android
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/zebra-manual-http.log 2>&1 &
+          SERVER=$!
+          trap 'kill $SERVER 2>/dev/null || true' EXIT
+          sleep 1
+          python3 tests/manual-browser.py
+      - name: Conserver les captures des deux formats
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zebraos-manuel-m01-screenshots
+          path: manual-test-screenshots/
+          if-no-files-found: ignore
