@@ -11,7 +11,7 @@ OUT=Path("manual-production-screenshots")
 OUT.mkdir(exist_ok=True)
 
 for name,mark in [
-    ("",b"zebra-manual-content.js?v=2.0"),
+    ("",b"zebra-manual-content.js?v=2.1"),
     ("zebra-manual-content.js",b"window.ZebraManualContent="),
     ("zebra-manual.js",b"window.ZebraManual={open:open}"),
     ("control-panel.js",b'window.ZebraManual.open(root,"amp"'),
@@ -38,6 +38,20 @@ with sync_playwright() as p:
         page.on("pageerror",lambda e:errors.append(str(e)))
         page.goto(BASE+"?manual-check=v2",wait_until="domcontentloaded",timeout=40000)
         page.wait_for_function("Boolean(window.ZebraManual&&window.ZebraControlPanel)",timeout=35000)
+        # Vérifier que la version publique n'affiche plus l'onglet ni l'ancienne signature.
+        visible=page.evaluate("""() => {
+          const panel=document.createElement('div');
+          window.ZebraControlPanel.mount(panel,{session(){return 'zebra';}});
+          const labels=[...panel.querySelectorAll('.zcp-item-title')].map(n=>n.textContent);
+          const about=document.createElement('div');
+          window.ZebraControlPanel.about({windowBox(){return about;},session(){return 'zebra';}});
+          return {labels,about:about.textContent,
+                  manuals:JSON.stringify(window.ZebraManualContent)};
+        }""")
+        assert "Système" not in visible["labels"],visible
+        assert len(visible["labels"])==6,visible
+        assert "studio" not in (visible["about"]+" "+visible["manuals"]).lower(),visible
+        assert "zebra record" not in visible["about"].lower(),visible
         page.evaluate("""() => {
           window.__unexpectedLaunches=[];
           const w=document.createElement('div');w.className='window focused';w.id='live-welcome';
