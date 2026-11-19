@@ -1,0 +1,29 @@
+name: Contrôler le manuel ZebraOS publié
+on:
+  workflow_run:
+    workflows:
+      - pages build and deployment
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installer le navigateur de contrôle
+        run: python3 -m pip install --quiet playwright
+      - name: Vérifier fichiers publics et fenêtre de manuel
+        run: python3 tests/manual-production.py
+      - name: Captures du domaine public
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zebraos-manuel-domaine
+          path: manual-production-screenshots/
+          if-no-files-found: ignore
