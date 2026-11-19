@@ -1,5 +1,10 @@
 name: Contrôler le manuel ZebraOS publié
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'tests/manual-production.py'
+      - '.github/workflows/verify-manual-production.yml'
   workflow_run:
     workflows:
       - pages build and deployment
