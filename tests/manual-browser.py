@@ -60,15 +60,20 @@ def run(browser,width,height,mobile):
        if(document.querySelectorAll('.zm-sheet .zm-section').length===0)throw Error('Aucun contenu : '+item.id);
       }
     }""")
-    root.locator(".zm-picker").select_option("znake-modes")
+    def visit(chapter):
+        if mobile:
+            root.locator(".zm-picker").select_option(chapter)
+        else:
+            root.locator('.zm-nav-item[data-page="'+chapter+'"]').click()
+    visit("znake-modes")
     assert "CONTRE ROBOT" in root.locator(".zm-sheet").inner_text()
-    root.locator(".zm-picker").select_option("znake-controls")
+    visit("znake-controls")
     assert "VS LOCAL" in root.locator(".zm-sheet").inner_text()
-    root.locator(".zm-picker").select_option("paint-layers")
+    visit("paint-layers")
     assert "Le Fond reste" in root.locator(".zm-sheet").inner_text()
-    root.locator(".zm-picker").select_option("paint-save")
+    visit("paint-save")
     assert ".ZPAINT" in root.locator(".zm-sheet").inner_text()
-    root.locator(".zm-picker").select_option("planner")
+    visit("planner")
     assert "ZEBRAPLANNER" in root.locator(".zm-title").inner_text()
     dimensions=page.evaluate("""() => {
       const root=document.querySelector('.zm-machine');
@@ -91,7 +96,7 @@ def run(browser,width,height,mobile):
     assert page.evaluate("window.__manualLaunches.length")==0
     assert errors==[],errors
     if not mobile:
-        root.locator(".zm-picker").select_option("accueil")
+        visit("accueil")
     path=SCREENSHOTS/("mobile.png" if mobile else "desktop.png")
     root.screenshot(path=str(path))
     print("MANUEL_CHECK",{"device":"mobile" if mobile else "desktop","pages":17,"noLaunch":True,"viewport":f"{width}x{height}","dimensions":dimensions,"screenshot":str(path)},flush=True)
