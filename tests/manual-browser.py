@@ -70,7 +70,7 @@ def run(browser,width,height,mobile):
     visit("znake-controls")
     assert "VS LOCAL" in root.locator(".zm-sheet").inner_text()
     visit("paint-layers")
-    assert "Le Fond reste" in root.locator(".zm-sheet").inner_text()
+    assert "Fond blanc" in root.locator(".zm-sheet").inner_text()
     visit("paint-save")
     assert ".ZPAINT" in root.locator(".zm-sheet").inner_text()
     visit("planner")
