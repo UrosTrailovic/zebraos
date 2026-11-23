@@ -1,0 +1,49 @@
+name: Vérifier déplacements Windows-like ZebraOS
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'zebra-file-moves.js'
+      - 'zebra-file-moves.css'
+      - 'github-files.js'
+      - 'desktop-layout.js'
+      - 'filesystem.js'
+      - 'app.js'
+      - 'index.html'
+      - 'tests/file-moves-browser.py'
+      - '.github/workflows/verify-file-moves.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  file-moves:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntaxe JavaScript et chargement
+        run: |
+          for file in zebra-file-moves.js github-files.js desktop-layout.js filesystem.js app.js; do
+            node --check "$file"
+          done
+          node - <<'JS'
+          const fs=require('fs'),html=fs.readFileSync('index.html','utf8');
+          for(const name of ['zebra-file-moves.js','zebra-file-moves.css','github-files.js','filesystem.js','desktop-layout.js'])
+            if(!html.includes(name))throw Error('Missing source '+name);
+          JS
+      - name: Installer Chromium de contrôle
+        run: python3 -m pip install --quiet playwright
+      - name: Tester bureau, dossiers, corbeille, disque privé, persistance et mobile
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/files-http.log 2>&1 &
+          SERVER=$!
+          trap 'kill $SERVER 2>/dev/null || true' EXIT
+          sleep 1
+          python3 tests/file-moves-browser.py
+      - name: Captures des dossiers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zebraos-mouvements-fichiers
+          path: file-moves-screenshots/
+          if-no-files-found: ignore

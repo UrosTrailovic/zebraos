@@ -64,15 +64,22 @@ function valid(entries){
 function visible(item){
  return !(item.type==="file"&&isIconFile(item.name));
 }
-function children(path){
- path=safe(path);
+function children(path,session){
+ path=path.startsWith("local:")?path:safe(path);
  // Le fichier STUDIO/BUREAU/.ordre-bureau.json définit uniquement
  // l'ordre initial du bureau, sans toucher aux positions locales.
  var rank={};
  if(path===ROOT)desktopOrder.forEach(function(name,index){rank[name.toLocaleLowerCase("fr")]=index;});
- return (known||[]).filter(function(item){
-  return visible(item)&&item.path.slice(0,item.path.lastIndexOf("/"))===path;
- }).sort(function(a,b){
+ var manager=window.ZebraFileMoves,account=session||manager?.getSession?.()||"zebra";
+ var published=manager?manager.children(path,account,known||[]):(known||[]).filter(function(item){
+  return item.path.slice(0,item.path.lastIndexOf("/"))===path;
+ });
+ var local=window.ZebraLocalFiles?.listAt?.(path,account)||[];
+ var combined=published.concat(local.map(function(item){
+  return {path:"local:"+item.id,name:item.name,type:item.kind==="folder"?"dir":"file",
+   size:item.bytes||item.blob?.size||0,app:null,icon:null,sessions:[account],_local:true};
+ }));
+ return combined.filter(visible).sort(function(a,b){
   if(path===ROOT){
    var aThanks=a.name.toLocaleLowerCase("fr")==="thanks.txt",bThanks=b.name.toLocaleLowerCase("fr")==="thanks.txt";
    if(aThanks!==bThanks)return aThanks?1:-1;
@@ -85,7 +92,7 @@ function children(path){
  });
 }
 function iconPath(item){
- if(!known)return null;
+ if(!known||item._local)return null;
  var candidates=item.type==="dir"?
   [item.path+"/icone.png",item.path+"/icone.webp",item.path+"/icone.jpg"]:
   [item.path+".icone.png",item.path+".icone.webp",item.path+".icone.jpg"];
@@ -208,6 +215,11 @@ function sizeText(bytes){
  return bytes+" o";
 }
 function preview(item,opts){
+ if(item._local){
+  var local=window.ZebraLocalFiles;
+  if(local?.openEntry)return local.openEntry(item.path.slice(6),opts);
+  return;
+ }
  if(item.type==="app"){
   if(APP_IDS[item.app]&&opts&&typeof opts.openApp==="function")opts.openApp(item.app);
   return;
@@ -285,7 +297,9 @@ function preview(item,opts){
 }
 function mount(host,path,opts){
  if(!host)return;
+ if(host._zebraDispose)host._zebraDispose();
  path=safe(path);
+ opts=opts||{};
  var ticket=(host._zebraPublicTicket||0)+1;
  host._zebraPublicTicket=ticket;
  var admin=!!opts.canUpload;
@@ -315,7 +329,10 @@ function mount(host,path,opts){
  navButton("Poste de travail",function(){mount(host,ROOT,opts);},"home");
  navButton("Retour",function(){
   if(path!==ROOT){
-   mount(host,path.substring(0,path.lastIndexOf("/")),opts);
+   var parent=window.ZebraFileMoves?.parent?.(path,account)||path.substring(0,path.lastIndexOf("/"));
+   if(parent.startsWith("local:")&&window.ZebraLocalFiles)
+    window.ZebraLocalFiles.mount(host,parent.slice(6),opts);
+   else mount(host,parent,opts);
   }else{
    var win=host.closest(".window");
    var close=win&&win.querySelector(".titlebuttons [data-close]");
@@ -323,6 +340,14 @@ function mount(host,path,opts){
   }
  },"back");
  var refreshButton=navButton("Actualiser",reload,"refresh");
+ if(window.ZebraLocalFiles?.createFolderAt){
+  button("+ Dossier",function(){
+   window.ZebraLocalFiles.promptName(host,"Nouveau dossier","Nouveau dossier",function(name){
+    window.ZebraLocalFiles.createFolderAt(path,name,account).then(render)
+     .catch(e=>window.alert(e.message));
+   });
+  });
+ }
  if(admin)button("Ajouter sur GitHub ↗",function(){openExternal(upload(path));});
  var viewControl=node("label","folder-view-control");
  viewControl.appendChild(node("span","","Affichage"));
@@ -339,6 +364,7 @@ function mount(host,path,opts){
  };
  viewControl.appendChild(viewSelect);bar.appendChild(viewControl);
  host.appendChild(bar);
+ if(window.ZebraFileMoves)window.ZebraFileMoves.markDrop(host,path);
  host.appendChild(node("div","folder-path","C:\\BUREAU"+(path===ROOT?"":"\\"+path.slice(ROOT.length+1).replace(/\//g,"\\"))));
  if(admin)host.appendChild(node("p","github-drive-hint","Dossiers et fichiers publics. Pour modifier, utilise GitHub."));
  var status=node("p","github-drive-count","");var msg=node("div","github-drive-state","Chargement du bureau…");
@@ -350,25 +376,59 @@ function mount(host,path,opts){
   if(!isCurrent())return;
   files.innerHTML="";
   files.dataset.view=view;files.style.setProperty("--folder-icon-size",viewSizes[view]+"px");
-  var items=children(path).filter(function(item){
-   return (!item.sessions||item.sessions.includes(account))&&
-    (!window.ZebraDesktop||!window.ZebraDesktop.isTrashed(account,item.path));
+  var items=children(path,account).filter(function(item){
+   return !item.sessions||item.sessions.includes(account);
   });
   msg.style.display=items.length?"none":"";
   msg.className="github-drive-empty";
   msg.textContent="Ce dossier est vide.";
   items.forEach(function(item){
    var b=node("button","file-entry github-file-entry");b.type="button";b.title=item.name;
+   b.dataset.path=item.path;
    b.appendChild(icon(item,opts.osIcon,viewSizes[view]));
    b.appendChild(node("span","github-file-name",item.name));
    b.appendChild(node("small","github-file-size",item.type==="dir"?"Dossier":item.type==="app"?"Application":sizeText(item.size)));
-   function openEntry(){if(item.type==="dir")mount(host,item.path,opts);else preview(item,opts);}
+   function openEntry(){
+    if(item.type==="dir"){
+     if(item._local&&window.ZebraLocalFiles)window.ZebraLocalFiles.mount(host,item.path.slice(6),opts);
+     else mount(host,item.path,opts);
+    }else preview(item,opts);
+   }
    b.onclick=function(e){
-    files.querySelectorAll(".file-entry").forEach(function(x){x.classList.remove("selected");});
+    if(Date.now()<(b._zebraDragUntil||0))return;
+    if(!e.ctrlKey&&!e.metaKey)files.querySelectorAll(".file-entry").forEach(x=>x.classList.remove("selected"));
     b.classList.add("selected");
     if(e.detail===0||e.pointerType==="touch"||window.matchMedia("(pointer: coarse)").matches)openEntry();
    };
-   b.ondblclick=function(){if(!window.matchMedia("(pointer: coarse)").matches)openEntry();};
+   b.ondblclick=function(){if(Date.now()>=(b._zebraDragUntil||0)&&!window.matchMedia("(pointer: coarse)").matches)openEntry();};
+   if(window.ZebraFileMoves){
+    var moves=window.ZebraFileMoves,source={kind:item._local?"local":"public",id:item._local?item.path.slice(6):item.path};
+    if(item.type==="dir")moves.markDrop(b,item.path);
+    moves.bind(b,source,{
+     session:account,
+     peers:function(){
+      if(!b.classList.contains("selected"))return [source];
+      return Array.from(files.querySelectorAll(".file-entry.selected[data-path]")).map(function(e){
+       var v=e.dataset.path;return {kind:v.startsWith("local:")?"local":"public",id:v.startsWith("local:")?v.slice(6):v};
+      });
+     }
+    });
+    b.oncontextmenu=function(ev){
+     ev.preventDefault();
+     files.querySelectorAll(".file-entry").forEach(x=>x.classList.remove("selected"));
+     b.classList.add("selected");
+     var old=host.querySelector(".zebra-file-menu");if(old)old.remove();
+     var menu=node("div","zebra-file-menu");
+     var move= node("button","","Mettre à la Corbeille");
+     move.onclick=function(){menu.remove();moves.move([source],"trash",account).catch(e=>alert(e.message));};
+     menu.appendChild(move);host.appendChild(menu);
+     var bounds=host.getBoundingClientRect();
+     menu.style.left=Math.max(0,ev.clientX-bounds.left)+"px";
+     menu.style.top=Math.max(0,ev.clientY-bounds.top)+"px";
+     var dismiss=function(e){if(!menu.contains(e.target)){menu.remove();document.removeEventListener("pointerdown",dismiss);}};
+     setTimeout(()=>document.addEventListener("pointerdown",dismiss),0);
+    };
+   }
    files.appendChild(b);
   });
   var date="";
@@ -387,8 +447,28 @@ function mount(host,path,opts){
    else{files.innerHTML="";msg.style.display="";msg.className="github-drive-state github-drive-error";msg.textContent="Impossible de charger les fichiers. Réessaie.";status.textContent=""; }
   });
  }
+ const update=function(ev){
+  if(!ev.detail?.session||ev.detail.session===account)render();
+ };
+ window.addEventListener("zebra-files-changed",update);
+ host._zebraDispose=function(){
+  window.removeEventListener("zebra-files-changed",update);
+  host._zebraDispose=null;
+ };
  if(known)render();
  reload();
+ if(window.ZebraLocalFiles?.ready)window.ZebraLocalFiles.ready().then(render).catch(()=>{});
+ // Importer par glisser-déposer depuis Windows/macOS, dans le dossier actuel
+ // ou dans un sous-dossier sous la souris.
+ host.ondragover=function(ev){if(ev.dataTransfer?.types?.includes("Files")){ev.preventDefault();ev.dataTransfer.dropEffect="copy";}};
+ host.ondrop=function(ev){
+  if(!ev.dataTransfer?.files?.length)return;
+  ev.preventDefault();
+  const drop=ev.target.closest("[data-zdrop-target]");
+  var dest=drop?.dataset.zdropTarget||path;
+  window.ZebraLocalFiles?.importAt?.(dest,Array.from(ev.dataTransfer.files),account)
+   .catch(e=>alert(e.message));
+ };
 }
 window.ZebraGitFiles={
  root:ROOT,mount:mount,load:load,list:children,icon:icon,openFile:preview,allFiles:function(){return (known||[]).slice();},subscribe:subscribe,

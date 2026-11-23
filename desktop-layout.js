@@ -82,15 +82,25 @@ function trashItem(path){
  delete active.data.positions.narrow[path];
  write();
  active.repaint();
+ window.ZebraFileMoves?.notify?.(active.session);
 }
 function restore(path){
  if(!active)return;
  active.data.trash=active.data.trash.filter(function(k){return k!==path;});
  write();active.repaint();
+ window.ZebraFileMoves?.notify?.(active.session);
 }
 function restoreAll(){
  if(!active)return;
  active.data.trash=[];write();active.repaint();
+ var disk=window.ZebraLocalFiles;
+ if(disk?.cached){
+  Promise.all(disk.cached().filter(x=>x.deleted&&(!x.owner||x.owner===active.session))
+   .map(x=>disk.restoreEntry(x.id,null,active.session))).then(function(){
+    if(active)active.repaint();
+  }).catch(function(e){alert(e.message);});
+ }
+ window.ZebraFileMoves?.notify?.(active.session);
 }
 function resetPositions(){
  if(!active)return;
@@ -99,46 +109,45 @@ function resetPositions(){
 function attachIcon(node){
  var path=node.dataset.path;
  if(!path)return;
- node.addEventListener("pointerdown",function(e){
-  if(!active||active.root!==node.parentNode||e.isPrimary===false||(e.pointerType==="mouse"&&e.button!==0))return;
-  var startX=e.clientX,startY=e.clientY;
-  var left=parseFloat(node.style.left)||0,top=parseFloat(node.style.top)||0,dragging=false;
-  var id=e.pointerId,finished=false,hold=null;
-  if(e.pointerType==="touch"){
-   hold=setTimeout(function(){
-    if(!dragging&&!finished)showMenu(path,startX,startY,node);
-   },650);
-  }
-  function move(ev){
-   if(ev.pointerId!==id||finished)return;
-   var dx=ev.clientX-startX,dy=ev.clientY-startY;
-   if(!dragging&&Math.hypot(dx,dy)<threshold)return;
-   if(!dragging){dragging=true;node.classList.add("zu-icon-dragging");closeMenu();clearTimeout(hold);}
-   place(node,left+dx,top+dy);
-   if(active&&active.trash)active.trash.classList.toggle("zu-drop-target",isInsideTrash(ev.clientX,ev.clientY));
-   if(ev.cancelable)ev.preventDefault();
-  }
-  function stop(ev){
-   if(finished||ev.pointerId!==id)return;
-   finished=true;clearTimeout(hold);
-   window.removeEventListener("pointermove",move);
-   window.removeEventListener("pointerup",stop);
-   window.removeEventListener("pointercancel",stop);
-   if(!active)return;
-   active.trash.classList.remove("zu-drop-target");
-   node.classList.remove("zu-icon-dragging");
-   if(dragging){
-    node._zebraDragUntil=Date.now()+550;
-    if(ev.type==="pointerup"&&isInsideTrash(ev.clientX,ev.clientY)){trashItem(path);return;}
+ var manager=window.ZebraFileMoves;
+ if(manager){
+  var source={kind:path.startsWith("local:")?"local":"public",id:path.startsWith("local:")?path.slice(6):path};
+  var initial=null,dragged=false;
+  node.addEventListener("pointerdown",function(e){
+   if(!active||e.isPrimary===false||(e.pointerType==="mouse"&&e.button!==0))return;
+   initial={x:e.clientX,y:e.clientY,left:parseFloat(node.style.left)||0,top:parseFloat(node.style.top)||0};
+   dragged=false;
+  });
+  manager.bind(node,source,{
+   session:active.session,
+   peers:function(){
+    if(!node.classList.contains("selected"))return [source];
+    return Array.from(active.root.querySelectorAll(".desk-user-file.selected[data-path]")).map(function(el){
+     var p=el.dataset.path;return {kind:p.startsWith("local:")?"local":"public",id:p.startsWith("local:")?p.slice(6):p};
+    });
+   },
+   onStart:function(){dragged=true;closeMenu();},
+   onMove:function(e){
+    if(!initial)return;
+    place(node,initial.left+e.clientX-initial.x,initial.top+e.clientY-initial.y);
+   },
+   onDesktopDrop:function(e){
+    if(!active||!initial)return;
     var coords=place(node,parseFloat(node.style.left)||0,parseFloat(node.style.top)||0);
-    active.data.positions[mode()][path]=coords;
-    write();
-   }
-  }
-  window.addEventListener("pointermove",move,{passive:false});
-  window.addEventListener("pointerup",stop);
-  window.addEventListener("pointercancel",stop);
- });
+    active.data.positions[mode()][path]=coords;write();
+   },
+   onNoTarget:function(){
+    if(initial)place(node,initial.left,initial.top);
+   },
+   onFinished:function(){
+    if(!active)return;
+    active.repaint();
+   },
+   onLongPress:function(x,y){showMenu(path,x,y,node);}
+  });
+ }else{
+  // Keep native context menu and click functionality when the manager is absent.
+ }
  node.addEventListener("contextmenu",function(e){e.preventDefault();showMenu(path,e.clientX,e.clientY,node);});
 }
 function closeMenu(){
@@ -154,8 +163,17 @@ function showMenu(path,x,y,node){
  function item(label,fn){menu.appendChild(button(label,function(){closeMenu();fn();},"zu-desktop-menu-item"));}
  if(path){
   item("Ouvrir",function(){if(node)node._zebraOpen();});
-  item("Mettre à la Corbeille",function(){trashItem(path);});
+  item("Mettre à la Corbeille",function(){
+   if(path.startsWith("local:"))window.ZebraLocalFiles?.trashEntry?.(path.slice(6));
+   else trashItem(path);
+  });
  }else{
+  item("Nouveau dossier",function(){
+   if(!window.ZebraLocalFiles?.createFolderAt)return;
+   window.ZebraLocalFiles.promptName(active.screen,"Nouveau dossier","Nouveau dossier",function(name){
+    window.ZebraLocalFiles.createFolderAt("STUDIO/BUREAU",name,active.session).catch(e=>alert(e.message));
+   });
+  });
   item("Ranger les icônes",resetPositions);
   item("Ouvrir la Corbeille",active.openTrash);
  }
@@ -238,8 +256,23 @@ function setup(session,repaint,openTrash,osIcon){
  var icon=el("span","desk-symbol");icon.appendChild(osIcon("recycle-bin",40));
  bin.appendChild(icon);bin.appendChild(el("span","desk-caption","Corbeille"));
  bin.onclick=function(e){if(Date.now()<bin._zebraDragUntil)return;openTrash();};
+ if(window.ZebraFileMoves){
+  window.ZebraFileMoves.markDrop(bin,"trash");
+  window.ZebraFileMoves.markDrop(root,"STUDIO/BUREAU");
+ }
  screen.appendChild(bin);
  active={session:session,data:cleanState(session),root:root,screen:screen,trash:bin,repaint:repaint,openTrash:openTrash,osIcon:osIcon,menu:null,selectionCleanup:null};
+ active.onFilesChanged=function(e){if(e.detail?.session&&e.detail.session!==session)return;active?.repaint?.();};
+ window.addEventListener("zebra-files-changed",active.onFilesChanged);
+ screen.ondragover=function(ev){if(ev.dataTransfer?.types?.includes("Files"))ev.preventDefault();};
+ screen.ondrop=function(ev){
+  if(!ev.dataTransfer?.files?.length||ev.target.closest(".window"))return;
+  ev.preventDefault();
+  var drop=ev.target.closest("[data-zdrop-target]");
+  var target=drop?.dataset.zdropTarget||"STUDIO/BUREAU";
+  if(target==="trash")return;
+  window.ZebraLocalFiles?.importAt?.(target,Array.from(ev.dataTransfer.files),session).catch(e=>alert(e.message));
+ };
  if(session==="zebra")write();
  screen.addEventListener("contextmenu",backgroundMenu);
  screen.addEventListener("pointerdown",selectPointerDown);
@@ -259,6 +292,8 @@ function dispose(){
  if(!active)return;
  closeMenu();
  if(active.trash)active.trash.remove();
+ if(active.onFilesChanged)window.removeEventListener("zebra-files-changed",active.onFilesChanged);
+ active.screen.ondragover=null;active.screen.ondrop=null;
  if(active.selectionCleanup)active.selectionCleanup();
  active.screen.removeEventListener("pointerdown",selectPointerDown);
  active.screen.removeEventListener("contextmenu",backgroundMenu);
@@ -278,6 +313,8 @@ function showTrash(body,session,openLocalTrash,openComputer){
  try{var saved=localStorage.getItem(viewKey);if(viewSizes[saved])view=saved;}catch(_){}
  var windowNode=body.closest(".window"),osIcon=active&&active.osIcon;
  var alive=true,menu=null,unsub=null,dragCleanup=null;
+ var listenFiles=function(e){if(!e.detail?.session||e.detail.session===session)render();};
+ window.addEventListener("zebra-files-changed",listenFiles);
  function closeMenu(){
   if(menu){menu.remove();menu=null;}
  }
@@ -337,9 +374,16 @@ function showTrash(body,session,openLocalTrash,openComputer){
  var count=el("p","github-drive-count","");
  body.append(empty,list,count);
  function trashed(){
-  return active&&active.session===session?active.data.trash.slice():cleanState(session).trash;
+  var paths=active&&active.session===session?active.data.trash.slice():cleanState(session).trash;
+  var disk=window.ZebraLocalFiles?.cached?.()||[];
+  return paths.concat(disk.filter(x=>x.deleted&&(!x.owner||x.owner===session)).map(x=>"local:"+x.id));
  }
  function fileData(path){
+  if(path.startsWith("local:")){
+   var local=window.ZebraLocalFiles?.cached?.().find(x=>x.id===path.slice(6));
+   return {path:path,name:local?.name||"Fichier",type:local?.kind==="folder"?"dir":"file",
+    size:local?.bytes||0,app:null,_local:true,icon:null};
+  }
   var entries=lib&&typeof lib.allFiles==="function"?lib.allFiles():[];
   var item=entries.find(function(x){return x.path===path;});
   if(item)return item;
@@ -378,7 +422,20 @@ function showTrash(body,session,openLocalTrash,openComputer){
     ev.preventDefault();ev.stopPropagation();
     showRestoreMenu(path,b,ev.clientX,ev.clientY);
    };
-   b.addEventListener("pointerdown",function(ev){beginDrag(ev,b,path);});
+   if(window.ZebraFileMoves){
+    window.ZebraFileMoves.bind(b,{kind:path.startsWith("local:")?"local":"public",
+      id:path.startsWith("local:")?path.slice(6):path},{
+      session:session,
+      onLongPress:function(x,y){showRestoreMenu(path,b,x,y);},
+      onNoTarget:function(ev){
+       var r=windowNode?.getBoundingClientRect(),screen=document.getElementById("desktop-screen");
+       if(r&&(ev.clientX<r.left||ev.clientX>r.right||ev.clientY<r.top||ev.clientY>r.bottom)
+           &&screen?.getBoundingClientRect()){
+        restoreEntry(path);
+       }
+      }
+    });
+   }else b.addEventListener("pointerdown",function(ev){beginDrag(ev,b,path);});
    list.appendChild(b);
   });
   count.textContent=paths.length+" élément(s)";
@@ -386,8 +443,9 @@ function showTrash(body,session,openLocalTrash,openComputer){
  function render(){redrawIcons();}
  function restoreEntry(path){
   if(!trashed().includes(path))return;
-  restore(path);
-  render();
+  if(path.startsWith("local:"))
+   window.ZebraLocalFiles?.restoreEntry?.(path.slice(6),null,session).then(render);
+  else{restore(path);render();}
  }
  function showRestoreMenu(path,node,x,y){
   closeMenu();
@@ -462,11 +520,14 @@ function showTrash(body,session,openLocalTrash,openComputer){
   document.removeEventListener("pointerdown",closeMenuOutside);
   document.removeEventListener("keydown",onKey);
   if(unsub)unsub();
+  window.removeEventListener("zebra-files-changed",listenFiles);
   body._zebraDispose=null;
  };
  if(lib&&typeof lib.subscribe==="function")unsub=lib.subscribe(function(){if(alive)render();});
  render();
+ if(window.ZebraLocalFiles?.ready)window.ZebraLocalFiles.ready().then(function(){if(alive)render();});
  if(lib&&typeof lib.load==="function")lib.load().then(function(){if(alive)render();});
 }
-window.ZebraDesktop={setup:setup,bind:bind,isTrashed:trashHas,showTrash:showTrash,dispose:dispose,restore:restore,reset:resetPositions};
+window.ZebraDesktop={setup:setup,bind:bind,isTrashed:trashHas,showTrash:showTrash,dispose:dispose,restore:restore,
+ trash:trashItem,repaint:function(){active?.repaint?.();},reset:resetPositions};
 }());

@@ -5,7 +5,7 @@
 (function(){
 "use strict";
 var DB="zebraos-local-disk-v1", STORE="entries", ROOT="root";
-var dbPromise=null,clipboard=null,requestId=0;
+var dbPromise=null,clipboard=null,requestId=0,snapshot=[];
 var initial=[
   {id:"system-tape",parent:ROOT,name:"ZEBRA TAPE 2",kind:"folder"},
   {id:"system-screens",parent:ROOT,name:"CAPTURES",kind:"folder"},
@@ -45,7 +45,15 @@ function operation(kind,id,value){
       var store=tx.objectStore(STORE);
       var request=kind==="all"?store.getAll():kind==="get"?store.get(id):
         kind==="put"?store.put(value):store.delete(id);
-      request.onsuccess=function(){resolve(request.result);};
+      request.onsuccess=function(){
+        if(kind==="all")snapshot=request.result||[];
+        if(kind==="put"){
+          snapshot=snapshot.filter(e=>e.id!==value.id);
+          snapshot.push(value);
+        }else if(kind==="delete")snapshot=snapshot.filter(e=>e.id!==id);
+        resolve(request.result);
+        if(kind==="put"||kind==="delete")window.dispatchEvent(new CustomEvent("zebra-files-changed",{detail:{local:true}}));
+      };
       request.onerror=function(){reject(request.error||Error("Erreur disque."));};
       tx.onerror=function(){reject(tx.error||Error("Erreur d'écriture sur le disque."));};
     });
@@ -178,8 +186,104 @@ async function importFiles(target,files,host,refresh){
     if(!accepted)alertError(host,"Aucun fichier importé.");
   }catch(err){alertError(host,"L'importation a échoué : "+err.message);}
 }
+
+/* Déplacements du disque local entre dossiers privés et dossiers du bureau.
+   Les données binaires (Blob) restent dans IndexedDB. */
+function cached(){return snapshot.slice();}
+function validDestination(target,items){
+ if(target===ROOT||target==="local:root")return ROOT;
+ if(typeof target!=="string")throw Error("Dossier de destination invalide.");
+ if(target.startsWith("STUDIO/BUREAU")){
+  if(!window.ZebraFileMoves?.validTarget?.(target,"zebra")&&!window.ZebraGitFiles?.allFiles?.().some(e=>e.path===target&&e.type==="dir"))
+   throw Error("Le dossier du bureau est introuvable.");
+  return target;
+ }
+ var id=target.startsWith("local:")?target.slice(6):target;
+ if(id===ROOT)return ROOT;
+ var folder=items.find(x=>x.id===id&&x.kind==="folder"&&!x.deleted);
+ if(!folder)throw Error("Ce dossier n'existe pas.");
+ return id;
+}
+function findAncestor(items,candidate,target){
+ var at=target,seen=new Set();
+ while(at&&at!==ROOT&&!seen.has(at)){
+  seen.add(at);
+  if(at===candidate||at==="local:"+candidate)return true;
+  if(at.startsWith("STUDIO/BUREAU")){
+   at=window.ZebraFileMoves?.parent?.(at,"zebra");
+  }else{
+   var f=items.find(x=>x.id===(at.startsWith("local:")?at.slice(6):at));
+   at=f?.parent||ROOT;
+  }
+ }
+ return false;
+}
+async function moveEntry(id,target,session){
+ var items=await all(),item=items.find(x=>x.id===id);
+ if(!item)throw Error("Fichier introuvable.");
+ const dest=validDestination(target,items);
+ if(item.kind==="folder"&&findAncestor(items,id,dest))throw Error("Un dossier ne peut pas être déplacé à l'intérieur de lui-même.");
+ if(duplicate(items,dest,item.name,item.id))throw Error("Un élément porte déjà ce nom.");
+ if(dest.startsWith("STUDIO/BUREAU")&&window.ZebraFileMoves?.children?.(dest,session).some(x=>x.name.toLowerCase()===item.name.toLowerCase()))
+  throw Error("Un élément porte déjà ce nom.");
+ item.parent=dest;item.deleted=false;
+ if(dest.startsWith("STUDIO/BUREAU"))item.owner=session||"zebra";
+ await put(item);
+ return item;
+}
+async function trashEntry(id){
+ var item=await get(id);if(!item||item.deleted)return false;
+ item.deleted=true;await put(item);return true;
+}
+async function restoreEntry(id,target,session){
+ var items=await all(),item=items.find(x=>x.id===id);
+ if(!item)return false;
+ item.deleted=false;
+ var destination=target||item.parent;
+ try{destination=validDestination(destination,items);}
+ catch(_){destination=ROOT;}
+ item.parent=destination;item.name=uniqueLabel(items,destination,item.name);
+ await put(item);return item;
+}
+async function createFolderAt(target,name,session){
+ var entries=await all(),dest=validDestination(target,entries),label=clean(name);
+ if(!label)throw Error("Le dossier doit avoir un nom.");
+ if(duplicate(entries,dest,label))throw Error("Ce nom existe déjà.");
+ if(dest.startsWith("STUDIO/BUREAU")&&window.ZebraFileMoves?.children?.(dest,session)
+   .some(x=>x.name.toLocaleLowerCase("fr")===label.toLocaleLowerCase("fr")))
+  throw Error("Ce nom existe déjà.");
+ var folder={id:uniqueId(),parent:dest,name:label,kind:"folder",
+  created:Date.now(),deleted:false,owner:session||"zebra"};
+ await put(folder);return folder;
+}
+async function importAt(target,files,session){
+ var items=await all(),dest=validDestination(target,items),made=[];
+ for(const file of Array.from(files||[])){
+  if(!file||typeof file.name!=="string")continue;
+  var name=clean(file.name);
+  if(!name)continue;
+  var names=items.filter(e=>e.parent===dest&&!e.deleted).map(e=>e.name.toLowerCase());
+  if(dest.startsWith("STUDIO/BUREAU"))
+   names.push(...(window.ZebraFileMoves?.children?.(dest,session)||[]).map(e=>e.name.toLowerCase()));
+  var initial=name,num=2;
+  while(names.includes(name.toLowerCase())){name=initial.replace(/(\.[^.]+)?$/,function(ext){return " ("+(num++)+")"+ext;});}
+  var entry={id:uniqueId(),parent:dest,name:name,kind:"file",
+   blob:file,bytes:file.size,created:Date.now(),deleted:false,owner:session||"zebra"};
+  await put(entry);items.push(entry);made.push(entry);
+ }
+ return made;
+}
+function publicList(parent,session){
+ return snapshot.filter(e=>e.parent===parent&&!e.deleted&&(!e.owner||e.owner===session));
+}
+function publicItemsInFolder(parent,session){
+ var v=window.ZebraFileMoves;
+ return v?.children?.("local:"+parent,session)||[];
+}
+
 function openRoot(host,opt){
   if(!host)return;
+  if(host._zebraDispose)host._zebraDispose();
   host.innerHTML="";
   var win=host.closest(".window");if(win){var t=win.querySelector(".windowtitle");if(t)t.textContent="Poste de travail — C:\\ROOT";}
   host.appendChild(E("div","folder-path","POSTE DE TRAVAIL — ZEBRAOS"));
@@ -198,16 +302,20 @@ function openRoot(host,opt){
 }
 async function mount(host,parent,opt){
   if(!host)return;
+  if(host._zebraDispose)host._zebraDispose();
+  opt=opt||{};
   if(parent==="home"){openRoot(host,opt);return;}
   if(typeof parent!=="string")parent=ROOT;
-  var ticket=++requestId,items;
+  if(parent.startsWith("local:"))parent=parent.slice(6);
+  var ticket=(host._zebraLocalTicket||0)+1,items;
+  host._zebraLocalTicket=ticket;
   host.innerHTML="";
   var win=host.closest(".window");
   var isTrash=parent==="trash";
   var entries;
   try{entries=await all();}
   catch(e){alertError(host,"Impossible d'ouvrir le disque local : "+e.message);return;}
-  if(ticket!==requestId||!host.isConnected)return;
+  if(ticket!==host._zebraLocalTicket||!host.isConnected)return;
   var target=entries.find(function(e){return e.id===parent&&e.kind==="folder"&&!e.deleted;});
   if(!isTrash&&parent!==ROOT&&!target){parent=ROOT;}
   var names=[],cursor=parent;
@@ -250,11 +358,19 @@ async function mount(host,parent,opt){
     if(clipboard)add("▣ Coller",function(){move(parent,host,refresh).catch(function(e){alertError(host,e.message);});});
   }
   host.appendChild(tools);
+  if(window.ZebraFileMoves)window.ZebraFileMoves.markDrop(host,isTrash?"trash":"local:"+parent);
   host.appendChild(E("div","folder-path",isTrash?"C:\\CORBEILLE":"C:\\FICHIERS\\"+names.join("\\")));
   host.appendChild(E("p","local-disk-hint",isTrash?"Fichiers supprimés sur cet appareil. Restaure-les ou efface-les définitivement.":"Fichiers réels enregistrés dans ce navigateur. Pas de synchronisation GitHub automatique."));
   var list=E("div","folder-list local-file-list");
   host.appendChild(list);
   items=children(entries,parent,isTrash);
+  if(!isTrash&&window.ZebraGitFiles?.list){
+   var pub=publicItemsInFolder(parent,opt.session||"zebra");
+   items=items.concat(pub.filter(x=>!x.sessions||x.sessions.includes(opt.session||"zebra")).map(x=>({
+    id:x.path,path:x.path,name:x.name,kind:x.type==="dir"?"folder":"file",
+    type:x.type,_public:true,app:x.app,size:x.size,icon:x.icon
+   })));
+  }
   if(!items.length){
     var empty=E("div","local-disk-empty",isTrash?"La corbeille est vide.":"Ce dossier est vide. Crée un dossier ou importe des fichiers.");
     host.appendChild(empty);
@@ -263,20 +379,42 @@ async function mount(host,parent,opt){
     var wrapper=E("div","local-file-card");
     var b=E("button","file-entry local-file-open");
     b.title=item.name;b.type="button";
-    var symbol=E("span","file-symbol");symbol.appendChild(opt.osIcon(iconName(item),32));
+    var symbol=E("span","file-symbol");
+    if(item._public&&window.ZebraGitFiles?.icon)symbol.appendChild(window.ZebraGitFiles.icon(item,opt.osIcon,32));
+    else symbol.appendChild(opt.osIcon(iconName(item),32));
     b.appendChild(symbol);b.appendChild(E("span","local-file-name",item.name));
     b.appendChild(E("small","github-file-size",item.kind==="folder"?"Dossier":bytes(item.bytes||item.blob&&item.blob.size)));
     function openEntry(){
        if(isTrash)return;
-       if(item.kind==="folder")mount(host,item.id,opt);
+       if(item._public){
+        if(item.kind==="folder")window.ZebraGitFiles.mount(host,item.path,opt);
+        else window.ZebraGitFiles.openFile(item,opt);
+       }else if(item.kind==="folder")mount(host,item.id,opt);
        else preview(host,item,opt);
      }
      b.onclick=function(e){
-       list.querySelectorAll(".file-entry").forEach(function(x){x.classList.remove("selected");});
+       if(Date.now()<(b._zebraDragUntil||0))return;
+       if(!e.ctrlKey&&!e.metaKey)
+        list.querySelectorAll(".file-entry").forEach(function(x){x.classList.remove("selected");});
        b.classList.add("selected");
        if(e.detail===0||e.pointerType==="touch"||window.matchMedia("(pointer: coarse)").matches)openEntry();
      };
-     b.ondblclick=function(){if(!window.matchMedia("(pointer: coarse)").matches)openEntry();};
+     b.ondblclick=function(){if(Date.now()>=(b._zebraDragUntil||0)&&!window.matchMedia("(pointer: coarse)").matches)openEntry();};
+    if(window.ZebraFileMoves){
+     var m=window.ZebraFileMoves,source={kind:item._public?"public":"local",id:item.id};
+     b.dataset.zdragName=item.name;
+     b.dataset.path=item._public?item.path:"local:"+item.id;
+     if(item.kind==="folder")m.markDrop(b,item._public?item.path:"local:"+item.id);
+     m.bind(b,source,{session:opt.session||"zebra",
+      peers:function(){
+       if(!b.classList.contains("selected"))return [source];
+       return Array.from(list.querySelectorAll(".local-file-open.selected")).map(el=>{
+        const id=el.dataset.path;return {kind:id.startsWith("local:")?"local":"public",
+          id:id.startsWith("local:")?id.slice(6):id};
+       });
+      }
+     });
+    }
     wrapper.appendChild(b);
     var more=btn("⋯","local-file-more",function(){
       var existing=host.querySelector(".local-file-menu");if(existing)existing.remove();
@@ -298,6 +436,14 @@ async function mount(host,parent,opt){
             for(var k=0;k<ids.length;k++)await operation("delete",ids[k]);
             refresh();
           }catch(e){alertError(host,e.message);}
+        });
+      }else if(item._public){
+        action("Mettre à la Corbeille",function(){
+         window.ZebraDesktop?.trash?.(item.path);
+         refresh();
+        });
+        action("Déplacer vers le bureau",function(){
+         window.ZebraFileMoves?.movePublic?.([item.path],"STUDIO/BUREAU",opt.session||"zebra");
         });
       }else{
         if(item.kind==="file")action("Télécharger",function(){launchDownload(item);});
@@ -327,8 +473,25 @@ async function mount(host,parent,opt){
     host.appendChild(drop);
   }
   host.appendChild(E("div","local-disk-status",items.length+" élément(s) • C:\\FICHIERS"+(isTrash?"\\CORBEILLE":"")));
+  var onChanged=function(ev){
+   if(ev.detail?.session&&ev.detail.session!==(opt.session||"zebra"))return;
+   if(host.isConnected&&host._zebraLocalTicket===ticket)mount(host,parent,opt);
+  };
+  window.addEventListener("zebra-files-changed",onChanged);
+  host._zebraDispose=function(){
+   window.removeEventListener("zebra-files-changed",onChanged);
+   host._zebraDispose=null;
+  };
 }
 window.ZebraLocalFiles={mount:mount,home:openRoot,root:ROOT,
+ cached:cached,ready:all,moveEntry:moveEntry,trashEntry:trashEntry,restoreEntry:restoreEntry,
+ importAt:importAt,createFolderAt:createFolderAt,promptName:dialog,
+ listAt:publicList,getEntry:get,openEntry:function(id,opt){
+  return get(id).then(entry=>{if(!entry)return false;
+   if(entry.kind==="folder")return false;
+   preview(null,entry,opt);return true;
+  });
+ },
   openNamed:function(host,name,opt){
     var names={tape:"system-tape",screens:"system-screens",maps:"system-maps"};
     mount(host,names[name]||ROOT,opt);

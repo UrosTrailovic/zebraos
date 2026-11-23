@@ -546,13 +546,13 @@ function desk(){
   Array.prototype.forEach.call(root.querySelectorAll(".desk-user-file"),function(b){b.remove();});
   var lib=window.ZebraGitFiles;
   if(!lib)return;
-  lib.list(lib.root).filter(function(item){
+  lib.list(lib.root,session).filter(function(item){
    return (!item.sessions||item.sessions.includes(session))
      &&item.app!=="explorer:recycle"
      &&(!window.ZebraDesktop||!window.ZebraDesktop.isTrashed(session,item.path));
   }).forEach(function(item){
     shortcut(item.name,lib.icon(item,osIcon,40),function(){
-      if(item.type==="dir")explorer("github:"+item.path);
+      if(item.type==="dir")explorer((item._local?"local:":"github:")+ (item._local?item.path.slice(6):item.path));
       else lib.openFile(item,{windowBox:windowBox,session:session,openApp:open,openAudio:function(file){if(window.ZebraAMP){window.ZebraAMPConfig={windowBox:windowBox};window.ZebraAMP.openPublic(file);}}});
     },true,item.path);
   });
@@ -798,9 +798,9 @@ function explorer(id){
  id=id||"root";
  var body=windowBox("explorer","Poste de travail — BUREAU",560,430);
  body.innerHTML="";
- if(id==="recycle"&&session==="admin"&&window.ZebraLocalFiles){
-  window.ZebraLocalFiles.mount(body,"trash",{
-   osIcon:osIcon,windowBox:windowBox,
+ if((id==="recycle"&&session==="admin"||id.indexOf("local:")===0)&&window.ZebraLocalFiles){
+  window.ZebraLocalFiles.mount(body,id==="recycle"?"trash":id.slice(6),{
+   osIcon:osIcon,windowBox:windowBox,session:session,openApp:open,
    github:function(){explorer("root");},
    playAudio:function(){}
   });

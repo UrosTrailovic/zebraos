@@ -1,0 +1,35 @@
+/* ZebraOS — déplacer les fichiers comme dans un explorateur Windows classique.
+ * Le rectangle de sélection existant et les icônes originales restent intacts. */
+.zebra-drag-ghost{
+ position:fixed;z-index:300000;left:0;top:0;pointer-events:none;user-select:none;
+ display:flex;flex-direction:column;justify-content:center;align-items:center;
+ width:98px;max-width:120px;min-height:62px;gap:3px;padding:5px;
+ box-sizing:border-box;border:1px dashed #eef4ff;
+ background:rgba(30,69,145,.34);color:#fff;
+ text-shadow:1px 1px 1px #000;font:11px/1.2 Tahoma,Arial,sans-serif;
+ text-align:center;
+}
+.zebra-drag-ghost .bureau-item-symbol,.zebra-drag-ghost .file-symbol{max-width:62px;max-height:56px}
+.zebra-drag-ghost .bureau-item-symbol img,.zebra-drag-ghost .file-symbol img{max-width:56px;max-height:56px;object-fit:contain}
+.zebra-drag-source{opacity:.5!important;pointer-events:none!important}
+.zebra-drop-highlight{outline:2px dashed #286fd4!important;outline-offset:-3px;background:rgba(69,122,211,.16)!important}
+.zebra-drop-reject{outline:2px dashed #ad3a35!important;outline-offset:-3px}
+.desk-icon.zebra-drop-highlight,
+.file-entry.zebra-drop-highlight{outline-offset:2px!important;background:rgba(76,130,206,.24)!important}
+.github-drive-list .file-entry,.local-file-list .local-file-open{
+ -webkit-user-select:none;user-select:none;touch-action:none
+}
+.zebra-file-menu{
+ position:absolute;z-index:8000;display:flex;flex-direction:column;
+ padding:3px;min-width:155px;background:#c7c7c7;
+ border:2px outset #eee;box-shadow:3px 4px 0 #0006;
+}
+.zebra-file-menu button{
+ display:block;border:0;background:transparent;text-align:left;
+ font:12px Tahoma,Arial,sans-serif;min-height:29px;padding:5px 12px;white-space:nowrap
+}
+.zebra-file-menu button:hover,.zebra-file-menu button:focus{background:#193d84;color:#fff}
+@media(max-width:700px){
+ .zebra-drag-ghost{width:78px;min-height:48px;font-size:10px;padding:4px}
+ .zebra-file-menu button{min-height:35px}
+}
