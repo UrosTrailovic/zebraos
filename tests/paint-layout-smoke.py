@@ -19,7 +19,7 @@ with sync_playwright() as pw:
         page.goto(BASE,wait_until="networkidle")
         page.locator(".zp-layer-entry").first.wait_for()
         assert page.locator(".zp-tool-art img.zp-tool-texture").count()==9
-        assert page.locator(".zp-tool-name").count()==0
+        assert page.locator(".zp-tool-name").count()==9
         labels=page.locator(".zp-menu button").all_text_contents()
         assert not any("💾" in x or "📂" in x for x in labels),labels
         if not mobile:

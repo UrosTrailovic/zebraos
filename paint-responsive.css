@@ -204,14 +204,14 @@
 .zp-scale-row button{padding:4px 7px;font-size:10px}
 .zp-tools.zp-tools-clear{
  display:flex;flex-direction:column;align-content:initial;
- width:62px;min-width:62px;overflow-y:auto;
+ width:122px;min-width:122px;overflow-y:auto;
  gap:4px;padding:2px;
  scrollbar-width:thin;
 }
 .zp-tools-clear .zp-tool{
- display:grid;place-items:center;
- flex:none;width:56px;min-width:56px;height:54px;min-height:54px;
- padding:4px;overflow:hidden;
+ display:flex;align-items:center;justify-content:flex-start;gap:7px;
+ flex:none;width:116px;min-width:116px;height:54px;min-height:54px;
+ padding:4px 6px;overflow:hidden;
 }
 .zp-tool-art{
  display:grid;place-items:center;
@@ -227,7 +227,10 @@
  color:#132a74;background:#b5c9f2;
  outline:1px solid #4768aa;outline-offset:-2px;
 }
-.zp-tool-name{display:none!important}
+.zp-tool-name{
+ display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap;text-align:left;font:11px Tahoma,Arial,sans-serif;
+}
 .zp-layer-entry{min-width:165px}
 .zp-layer-entry .zp-layer-thumb{
  width:33px;height:29px;flex:none;border:1px solid #888;
@@ -244,11 +247,12 @@
   padding:3px;gap:3px;flex:none;
  }
  .zp-tools-clear .zp-tool{
-  width:54px;min-width:54px;height:54px;min-height:54px;
-  padding:3px;display:grid;place-items:center;
+  width:98px;min-width:98px;height:54px;min-height:54px;
+  padding:3px 5px;display:flex;align-items:center;justify-content:flex-start;gap:5px;
  }
- .zp-tool-art{width:40px;height:40px}
- .zp-tool-art .zp-tool-texture{width:36px;height:36px}
+ .zp-tool-art{width:36px;height:40px}
+ .zp-tool-art .zp-tool-texture{width:34px;height:34px}
+ .zp-tool-name{font-size:10px}
  .zp-work{flex:1;min-height:0}
  .zp-stage{max-width:100%;min-width:0}
  .zp-layer-panel{max-height:150px;padding:5px;min-height:47px}
@@ -447,7 +451,7 @@
  .zp-vector-font-family{max-width:none;height:32px;font-size:11px}
 }
 
-/* ZebraPaint 2.4 — atelier PC : outils sans texte et colonne droite redimensionnable. */
+/* ZebraPaint 2.5 — atelier PC : outils illustrés et colonne droite redimensionnable. */
 .zp-body{overflow:hidden}
 .zp-sidebar{
  display:flex;flex:0 0 var(--zp-sidebar-width,300px);flex-direction:column;gap:5px;
@@ -562,5 +566,7 @@
  .zp-sidebar .zp-palette{display:flex;flex:1;min-width:125px}
  .zp-sidebar .zp-size{width:auto}
  .zp-sidebar .zp-edits{width:auto}
+ .zp-tool-art .zp-tool-texture{width:34px;height:34px}
+ .zp-tool-name{font-size:10px}
 }
 

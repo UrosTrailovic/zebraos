@@ -1,4 +1,4 @@
-/* ZebraPaint 2.5 — outils carrés et panneaux redimensionnables. */
+/* ZebraPaint 2.6 — outils illustrés avec libellés lisibles. */
 (function(){
 "use strict";
 const UNDO_LIMIT=12,MAX_LAYERS=25,MAX_PIXELS=2300000;
@@ -263,7 +263,7 @@ function mount(root){
   const texture=el("img","zp-tool-texture");
   texture.src=toolTextures[id];texture.alt="";texture.width=32;texture.height=32;
   texture.draggable=false;texture.setAttribute("aria-hidden","true");art.append(texture);
-  b.append(art);
+  b.append(art,el("span","zp-tool-name",label));
   toolButtons[id]=b;tools.append(b);
  });
  function notice(t){message.textContent=t;}

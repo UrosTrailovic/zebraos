@@ -57,14 +57,16 @@ def check_desktop(browser):
     assert page.locator('.zp-tool[aria-label="Pinceau"]').count()==1
     assert page.locator('.zp-tool').count()==9
     assert page.locator('.zp-tool-art img.zp-tool-texture').count()==9
-    assert page.locator('.zp-tool-name').count()==0
-    assert all(not text.strip() for text in page.locator('.zp-tool').all_text_contents())
+    assert page.locator('.zp-tool-name').count()==9
+    assert page.locator('.zp-tool-name').all_text_contents()==[
+        "Sélection","Pinceau","Gomme","Remplir","Pipette","Ligne","Rectangle","Ellipse","Texte"
+    ]
     page.wait_for_function("""() => [...document.querySelectorAll('.zp-tool-texture')]
       .every(img=>img.complete&&img.naturalWidth===32&&img.naturalHeight===32)""")
     tool_box=page.locator('.zp-tool[aria-label="Pinceau"]').bounding_box()
     icon_box=page.locator('.zp-tool[aria-label="Pinceau"] .zp-tool-texture').bounding_box()
     assert tool_box and icon_box and icon_box["width"]>=36 and icon_box["height"]>=36,(tool_box,icon_box)
-    assert abs((icon_box["x"]+icon_box["width"]/2)-(tool_box["x"]+tool_box["width"]/2))<2,(tool_box,icon_box)
+    assert icon_box["x"]<tool_box["x"]+tool_box["width"]/2,(tool_box,icon_box)
     assert abs((icon_box["y"]+icon_box["height"]/2)-(tool_box["y"]+tool_box["height"]/2))<2,(tool_box,icon_box)
     labels=page.locator(".zp-menu button").all_text_contents()
     assert not any("💾" in text or "📂" in text for text in labels),labels
@@ -101,7 +103,7 @@ def check_desktop(browser):
     REPORT["resizableSettingsWidth"]=True
     REPORT["paintWindowResizableClass"]=True
     REPORT["pixelToolIcons"]=True
-    REPORT["iconOnlyToolRail"]=True
+    REPORT["labelledToolRail"]=True
     REPORT["plainFileButtons"]=True
     REPORT["pencilRemoved"]=True
     for name in ("Texte","Rectangle","Ellipse","Ligne"):
