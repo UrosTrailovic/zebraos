@@ -1,0 +1,55 @@
+name: Vérifier Corbeille, sélection du bureau et TXT
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'desktop-layout.js'
+      - 'desktop-layout.css'
+      - 'app.js'
+      - 'zebra-notes.js'
+      - 'index.html'
+      - 'STUDIO/BUREAU/thanks.txt'
+      - 'tests/trash-desktop-browser.py'
+      - '.github/workflows/verify-trash-desktop.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trash:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier syntaxe des programmes
+        run: |
+          node --check desktop-layout.js
+          node --check app.js
+          node --check zebra-notes.js
+          node - <<'JS'
+          const fs=require('fs');
+          const html=fs.readFileSync('index.html','utf8');
+          for(const file of ['desktop-layout.js?v=1.2','desktop-layout.css?v=1.1','zebra-notes.js?v=1.1']){
+            if(!html.includes(file))throw Error('Version absente '+file);
+          }
+          const old=fs.readFileSync('desktop-layout.js','utf8');
+          if(old.includes('zu-trash-header')||!old.includes('zu-trash-grid')||!old.includes('selectPointerDown'))
+            throw Error('Ancienne interface ou sélection manquante');
+          JS
+      - name: Installer navigateur de test
+        run: python3 -m pip install --quiet playwright
+      - name: Tester PC et mobile
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/trash-http.log 2>&1 &
+          SERVER=$!
+          trap 'kill $SERVER 2>/dev/null || true' EXIT
+          sleep 1
+          python3 tests/trash-desktop-browser.py
+      - name: Captures PC et mobile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corbeille-standard-et-selection
+          path: trash-desktop-screenshots/
+          if-no-files-found: ignore

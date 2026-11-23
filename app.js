@@ -817,8 +817,8 @@ function explorer(id){
 /* Corbeille du bureau : objets GitHub simplement masqués localement,
    avec accès à l'ancienne corbeille des fichiers personnels en Admin. */
 function openDesktopTrash(){
- var body=windowBox("desktop-trash","Corbeille — ZebraOS",Math.min(490,innerWidth-16),Math.min(415,innerHeight-54));
- if(window.ZebraDesktop)window.ZebraDesktop.showTrash(body,session,session==="admin"?function(){explorer("recycle");}:null);
+ var body=windowBox("desktop-trash","Corbeille — ZebraOS",Math.min(560,innerWidth-16),Math.min(430,innerHeight-54));
+ if(window.ZebraDesktop)window.ZebraDesktop.showTrash(body,session,session==="admin"?function(){explorer("recycle");}:null,function(){explorer("root");});
 }
 function msg(title,message){if(/unavailable|denied/i.test(title))sfx("error");var r=windowBox("msg-"+(++seq),title,375,180);r.appendChild(el("p","app-message",message));r.appendChild(button("OK",function(){r.parentNode.remove();Object.keys(opened).forEach(function(k){if(!document.body.contains(opened[k].w))delete opened[k]});task()}))}
 function notepad(id){var name=id==="notes"?"MES_NOTES.TXT":id==="readme"?"LISEZMOI.TXT":(id||"LISEZMOI").toUpperCase()+".TXT";var r=windowBox("note-"+id,name+" — Bloc-notes",480,380);r.innerHTML="";var wrap=el("div","note-editor");var ta=el("textarea");ta.value=id==="notes"?(getStore("zebra.note."+session)||""):docs[id]||"";if(id!=="notes")ta.readOnly=true;wrap.appendChild(ta);if(id==="notes")wrap.appendChild(button("Fichier > Enregistrer",function(){setStore("zebra.note."+session,ta.value);msg("Bloc-notes","Enregistré dans ton navigateur.")}));else wrap.appendChild(el("div","desktop-note","Fichier en lecture seule"));r.appendChild(wrap)}

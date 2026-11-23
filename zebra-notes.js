@@ -29,10 +29,10 @@ function mount(host,item,options){
  edit.placeholder="Écris tes notes et remerciements ici…";
  edit.disabled=true;
  var bottom=el("div","ztext-footer");
- var hint=el("span","ztext-hint","Sauvegarde dans ce navigateur uniquement · pas sur GitHub");
+ var hint=el("span","ztext-hint","Enregistré sur cet appareil, dans ce navigateur");
  var counter=el("span","ztext-counter","0 caractère");
- var restore=button("↶ ORIGINAL GITHUB",restoreOriginal);
- restore.title="Revenir au contenu publié sur GitHub";
+ var restore=button("↶ VERSION D’ORIGINE",restoreOriginal);
+ restore.title="Rétablir le contenu de départ";
  var exportBtn=button("↧ EXPORTER .TXT",exportText);
  exportBtn.title="Télécharger une copie texte pour la sauvegarder ailleurs";
  head.append(badge,label,savedLabel);
@@ -57,7 +57,7 @@ function mount(host,item,options){
  }
  function restoreOriginal(){
   if(!loaded)return;
-  if(!confirm("Remplacer tes notes locales par le contenu publié sur GitHub ?"))return;
+  if(!confirm("Remplacer tes modifications par la version d’origine du fichier ?"))return;
   edit.value=original;
   change();persist();
  }

@@ -167,6 +167,66 @@ function showMenu(path,x,y,node){
 function outsideMenu(e){
  if(active&&active.menu&&!e.target.closest(".zu-desktop-menu"))closeMenu();
 }
+/* Sélection rectangulaire Windows : la zone vide du bureau, pas les icônes,
+   crée le cadre bleu. Les icônes et le glisser-vers-corbeille conservent leur
+   gestionnaire de pointeur existant. */
+function selectPointerDown(e){
+ if(!active||e.button!==0||e.isPrimary===false||e.pointerType==="touch")return;
+ if(e.target.closest(".desk-icon,.window,.start-menu,.taskbar,.zu-sticky-note,.zu-desktop-menu,.zu-selection-rect"))return;
+ var state=active,screen=state.screen,root=state.root;
+ if(!root.isConnected||!screen.contains(e.target))return;
+ if(state.selectionCleanup)state.selectionCleanup();
+ closeMenu();
+ var ctrl=e.ctrlKey||e.metaKey;
+ var icons=Array.from(root.querySelectorAll(".desk-icon[data-path]"));
+ var previous=new Set(ctrl?icons.filter(function(n){return n.classList.contains("selected");}):[]);
+ if(!ctrl)icons.forEach(function(n){n.classList.remove("selected");});
+ var bounds=root.getBoundingClientRect();
+ function clamp(n,max){return Math.max(0,Math.min(max,n));}
+ var x0=clamp(e.clientX-bounds.left,root.clientWidth),y0=clamp(e.clientY-bounds.top,root.clientHeight);
+ var started=false,frame=null,ended=false,id=e.pointerId;
+ function drag(ev){
+  if(ended||ev.pointerId!==id||active!==state)return;
+  var x1=clamp(ev.clientX-bounds.left,root.clientWidth),y1=clamp(ev.clientY-bounds.top,root.clientHeight);
+  if(!started&&Math.hypot(x1-x0,y1-y0)<5)return;
+  if(!started){
+   started=true;
+   frame=el("div","zu-selection-rect");
+   frame.setAttribute("aria-hidden","true");
+   root.appendChild(frame);
+  }
+  var left=Math.min(x0,x1),top=Math.min(y0,y1),right=Math.max(x0,x1),bottom=Math.max(y0,y1);
+  frame.style.left=left+"px";frame.style.top=top+"px";
+  frame.style.width=(right-left)+"px";frame.style.height=(bottom-top)+"px";
+  icons.forEach(function(node){
+   var box=node.getBoundingClientRect();
+   var x=box.left-bounds.left,y=box.top-bounds.top;
+   var hit=x<right&&x+box.width>left&&y<bottom&&y+box.height>top;
+   node.classList.toggle("selected",hit||previous.has(node));
+  });
+  if(ev.cancelable)ev.preventDefault();
+ }
+ function stop(ev){
+  if(ev.pointerId!==id)return;
+  if(ev.type==="pointercancel"){
+   icons.forEach(function(node){node.classList.toggle("selected",previous.has(node));});
+  }
+  cleanup();
+ }
+ function cleanup(){
+  if(ended)return;
+  ended=true;
+  window.removeEventListener("pointermove",drag);
+  window.removeEventListener("pointerup",stop);
+  window.removeEventListener("pointercancel",stop);
+  if(frame)frame.remove();
+  if(state.selectionCleanup===cleanup)state.selectionCleanup=null;
+ }
+ state.selectionCleanup=cleanup;
+ window.addEventListener("pointermove",drag,{passive:false});
+ window.addEventListener("pointerup",stop);
+ window.addEventListener("pointercancel",stop);
+}
 function setup(session,repaint,openTrash,osIcon){
  dispose();
  var screen=document.getElementById("desktop-screen");
@@ -179,9 +239,10 @@ function setup(session,repaint,openTrash,osIcon){
  bin.appendChild(icon);bin.appendChild(el("span","desk-caption","Corbeille"));
  bin.onclick=function(e){if(Date.now()<bin._zebraDragUntil)return;openTrash();};
  screen.appendChild(bin);
- active={session:session,data:cleanState(session),root:root,screen:screen,trash:bin,repaint:repaint,openTrash:openTrash,menu:null};
+ active={session:session,data:cleanState(session),root:root,screen:screen,trash:bin,repaint:repaint,openTrash:openTrash,osIcon:osIcon,menu:null,selectionCleanup:null};
  if(session==="zebra")write();
  screen.addEventListener("contextmenu",backgroundMenu);
+ screen.addEventListener("pointerdown",selectPointerDown);
  document.addEventListener("pointerdown",outsideMenu);
  window.addEventListener("resize",positionAll);
 }
@@ -198,32 +259,215 @@ function dispose(){
  if(!active)return;
  closeMenu();
  if(active.trash)active.trash.remove();
+ if(active.selectionCleanup)active.selectionCleanup();
+ active.screen.removeEventListener("pointerdown",selectPointerDown);
  active.screen.removeEventListener("contextmenu",backgroundMenu);
  document.removeEventListener("pointerdown",outsideMenu);
  window.removeEventListener("resize",positionAll);
  active=null;
 }
-function showTrash(body,session,openLocalTrash){
- body.innerHTML="";
+/* Corbeille = une vue de dossier. Les chemins GitHub restent intacts :
+   le mécanisme existant ne supprime que l'affichage local de ces raccourcis. */
+function showTrash(body,session,openLocalTrash,openComputer){
+ if(!body)return;
+ if(body._zebraDispose)body._zebraDispose();
+ body.replaceChildren();
  body.classList.add("zu-trash-body");
- var header=el("div","zu-trash-header");
- header.appendChild(el("strong","","CORBEILLE"));
- header.appendChild(el("span","","BUREAU PERSONNEL"));
- body.appendChild(header);
- body.appendChild(el("p","zu-trash-description","Les raccourcis sont masqués seulement sur cet appareil. Les fichiers GitHub ne sont jamais supprimés."));
- var tools=el("div","zu-trash-tools");
- tools.appendChild(button("TOUT RESTAURER",function(){restoreAll();showTrash(body,session,openLocalTrash);},"classic-button"));
- if(typeof openLocalTrash==="function")tools.appendChild(button("FICHIERS LOCAUX",openLocalTrash,"classic-button"));
- body.appendChild(tools);
- var list=el("div","zu-trash-list"),trashed=active&&active.session===session?active.data.trash.slice():cleanState(session).trash;
- if(!trashed.length)list.appendChild(el("p","zu-trash-empty","La Corbeille est vide."));
- trashed.forEach(function(path){
-  var item=el("div","zu-trash-item"),name=path.split("/").pop().replace(/\.zebraos\.json$/,"");
-  item.appendChild(el("span","",name));
-  item.appendChild(button("RESTAURER",function(){restore(path);showTrash(body,session,openLocalTrash);},"classic-button"));
-  list.appendChild(item);
+ var lib=window.ZebraGitFiles,viewSizes={small:24,medium:32,large:64,list:20};
+ var view="large",viewKey="zebraos.folder-view.v1."+session;
+ try{var saved=localStorage.getItem(viewKey);if(viewSizes[saved])view=saved;}catch(_){}
+ var windowNode=body.closest(".window"),osIcon=active&&active.osIcon;
+ var alive=true,menu=null,unsub=null,dragCleanup=null;
+ function closeMenu(){
+  if(menu){menu.remove();menu=null;}
+ }
+ function closeMenuOutside(e){if(menu&&!menu.contains(e.target))closeMenu();}
+ document.addEventListener("pointerdown",closeMenuOutside);
+ document.addEventListener("keydown",onKey);
+ function onKey(e){if(e.key==="Escape")closeMenu();}
+ function closeWindow(){
+  var btn=windowNode&&windowNode.querySelector(".titlebuttons [data-close]");
+  if(btn)btn.click();
+ }
+ var bar=el("div","github-drive-toolbar");
+ function action(label,fn,extra){
+  var b=button(label,fn,"classic-button");
+  if(extra)b.classList.add(extra);
+  bar.appendChild(b);return b;
+ }
+ function nav(label,fn,kind){
+  var b=action(label,fn,"github-nav-button");
+  b.classList.add("github-nav-"+kind);
+  b.title=kind==="back"?"Retour":"Poste de travail";
+  b.setAttribute("aria-label",b.title);
+  return b;
+ }
+ nav("⌂",function(){if(typeof openComputer==="function")openComputer();else closeWindow();},"home");
+ var back=nav("",closeWindow,"back");
+ var svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+ svg.setAttribute("viewBox","0 0 24 24");svg.setAttribute("aria-hidden","true");
+ var arrow=document.createElementNS("http://www.w3.org/2000/svg","path");
+ arrow.setAttribute("d","M10 5 5 10l5 5M5 10h11v10");
+ svg.appendChild(arrow);back.appendChild(svg);
+ action("↻ Actualiser",function(){
+  if(lib&&lib.load)lib.load().then(function(){if(alive)render();});
+  render();
  });
- body.appendChild(list);
+ var restoreAllButton=action("Tout restaurer",function(){
+  restoreAll();render();
+ });
+ if(typeof openLocalTrash==="function")action("Fichiers locaux",openLocalTrash);
+ var control=el("label","folder-view-control");
+ control.appendChild(el("span","","Affichage"));
+ var select=el("select","folder-view-select");
+ select.setAttribute("aria-label","Affichage du dossier");
+ [["small","Petites icônes"],["medium","Icônes moyennes"],["large","Grandes icônes"],["list","Liste"]].forEach(function(pair){
+  var option=el("option","",pair[1]);option.value=pair[0];select.appendChild(option);
+ });
+ select.value=view;
+ select.onchange=function(){
+  view=viewSizes[select.value]?select.value:"large";
+  try{localStorage.setItem(viewKey,view);}catch(_){}
+  render();
+ };
+ control.appendChild(select);bar.appendChild(control);
+ body.appendChild(bar);
+ body.appendChild(el("div","folder-path","C:\\BUREAU\\Corbeille"));
+ var empty=el("div","github-drive-empty","");
+ var list=el("div","folder-list github-drive-list zu-trash-grid");
+ var count=el("p","github-drive-count","");
+ body.append(empty,list,count);
+ function trashed(){
+  return active&&active.session===session?active.data.trash.slice():cleanState(session).trash;
+ }
+ function fileData(path){
+  var entries=lib&&typeof lib.allFiles==="function"?lib.allFiles():[];
+  var item=entries.find(function(x){return x.path===path;});
+  if(item)return item;
+  var name=path.split("/").pop().replace(/\.zebraos\.json$/,"");
+  return {path:path,name:name,type:/\.zebraos\.json$/.test(path)?"app":"file",
+          app:null,icon:/Echo Racer/i.test(name)?"racer":"txt",size:0};
+ }
+ function titleFor(item){
+  return item.type==="dir"?"Dossier":item.type==="app"?"Application":"Fichier";
+ }
+ function redrawIcons(){
+  if(!alive)return;
+  var paths=trashed();
+  closeMenu();
+  list.replaceChildren();
+  list.dataset.view=view;
+  list.style.setProperty("--folder-icon-size",viewSizes[view]+"px");
+  restoreAllButton.disabled=!paths.length;
+  empty.style.display=paths.length?"none":"";
+  empty.textContent="Ce dossier est vide.";
+  paths.forEach(function(path){
+   var item=fileData(path);
+   var b=el("button","file-entry github-file-entry zu-trash-entry");
+   b.type="button";b.title=item.name+" — clic droit pour restaurer";
+   b.dataset.path=path;
+   if(lib&&typeof lib.icon==="function"&&osIcon)b.appendChild(lib.icon(item,osIcon,viewSizes[view]));
+   else if(osIcon)b.appendChild(osIcon(item.type==="dir"?"folder":item.icon||"txt",viewSizes[view]));
+   b.appendChild(el("span","github-file-name",item.name));
+   b.appendChild(el("small","github-file-size",titleFor(item)));
+   b.onclick=function(ev){
+    if(Date.now()<(b._zebraDragUntil||0))return;
+    if(!ev.ctrlKey&&!ev.metaKey)list.querySelectorAll(".file-entry.selected").forEach(function(x){x.classList.remove("selected");});
+    b.classList.add("selected");
+   };
+   b.oncontextmenu=function(ev){
+    ev.preventDefault();ev.stopPropagation();
+    showRestoreMenu(path,b,ev.clientX,ev.clientY);
+   };
+   b.addEventListener("pointerdown",function(ev){beginDrag(ev,b,path);});
+   list.appendChild(b);
+  });
+  count.textContent=paths.length+" élément(s)";
+ }
+ function render(){redrawIcons();}
+ function restoreEntry(path){
+  if(!trashed().includes(path))return;
+  restore(path);
+  render();
+ }
+ function showRestoreMenu(path,node,x,y){
+  closeMenu();
+  list.querySelectorAll(".file-entry.selected").forEach(function(n){n.classList.remove("selected");});
+  node.classList.add("selected");
+  menu=el("div","zu-trash-menu");
+  var restoreButton=button("Restaurer",function(){closeMenu();restoreEntry(path);},"zu-trash-menu-item");
+  menu.appendChild(restoreButton);
+  document.body.appendChild(menu);
+  menu.style.left=Math.max(4,Math.min(x,window.innerWidth-menu.offsetWidth-6))+"px";
+  menu.style.top=Math.max(4,Math.min(y,window.innerHeight-menu.offsetHeight-6))+"px";
+  restoreButton.focus();
+ }
+ function beginDrag(ev,node,path){
+  if(ev.isPrimary===false||(ev.pointerType==="mouse"&&ev.button!==0))return;
+  var startX=ev.clientX,startY=ev.clientY,id=ev.pointerId;
+  var moving=false,ghost=null,finished=false,hold=null;
+  if(ev.pointerType==="touch"){
+   hold=setTimeout(function(){
+    if(!moving&&!finished)showRestoreMenu(path,node,startX,startY);
+   },600);
+  }
+  function move(p){
+   if(finished||p.pointerId!==id)return;
+   if(!moving&&Math.hypot(p.clientX-startX,p.clientY-startY)<9)return;
+   if(!moving){
+    moving=true;clearTimeout(hold);closeMenu();
+    ghost=el("div","zu-trash-drag-preview");
+    var graphic=node.querySelector(".bureau-item-symbol,.os-icon-graphic");
+    if(graphic)ghost.appendChild(graphic.cloneNode(true));
+    ghost.appendChild(el("span","",node.querySelector(".github-file-name")?.textContent||""));
+    document.body.appendChild(ghost);
+    node.classList.add("zu-trash-item-dragging");
+   }
+   ghost.style.left=(p.clientX+12)+"px";
+   ghost.style.top=(p.clientY+12)+"px";
+   if(p.cancelable)p.preventDefault();
+  }
+  function stop(p){
+   if(finished||p.pointerId!==id)return;
+   finished=true;cleanup();
+   if(!alive||!moving)return;
+   node._zebraDragUntil=Date.now()+550;
+   if(p.type==="pointercancel")return;
+   // Sortir de la fenêtre restaure l'élément dans son dossier d'origine.
+   var rect=windowNode&&windowNode.getBoundingClientRect();
+   var outside=rect&&(p.clientX<rect.left||p.clientX>rect.right||p.clientY<rect.top||p.clientY>rect.bottom);
+   var screen=document.getElementById("desktop-screen");
+   var area=screen&&screen.getBoundingClientRect();
+   var onDesktop=area&&p.clientX>=area.left&&p.clientX<=area.right&&p.clientY>=area.top&&p.clientY<=area.bottom;
+   if(outside&&onDesktop)restoreEntry(path);
+  }
+  function cleanup(){
+   clearTimeout(hold);
+   window.removeEventListener("pointermove",move);
+   window.removeEventListener("pointerup",stop);
+   window.removeEventListener("pointercancel",stop);
+   if(ghost)ghost.remove();
+   node.classList.remove("zu-trash-item-dragging");
+   if(dragCleanup===cleanup)dragCleanup=null;
+  }
+  if(dragCleanup)dragCleanup();
+  dragCleanup=cleanup;
+  window.addEventListener("pointermove",move,{passive:false});
+  window.addEventListener("pointerup",stop);
+  window.addEventListener("pointercancel",stop);
+ }
+ body._zebraDispose=function(){
+  alive=false;
+  if(dragCleanup)dragCleanup();
+  closeMenu();
+  document.removeEventListener("pointerdown",closeMenuOutside);
+  document.removeEventListener("keydown",onKey);
+  if(unsub)unsub();
+  body._zebraDispose=null;
+ };
+ if(lib&&typeof lib.subscribe==="function")unsub=lib.subscribe(function(){if(alive)render();});
+ render();
+ if(lib&&typeof lib.load==="function")lib.load().then(function(){if(alive)render();});
 }
 window.ZebraDesktop={setup:setup,bind:bind,isTrashed:trashHas,showTrash:showTrash,dispose:dispose,restore:restore,reset:resetPositions};
 }());
