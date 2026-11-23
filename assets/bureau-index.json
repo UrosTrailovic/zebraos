@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T09:57:32.744641+00:00",
+  "generatedAt": "2026-11-23T10:02:00.552954+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -433,6 +433,31 @@
     {
       "path": "STUDIO/BUREAU/Sonnnn/Délire stylé",
       "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Délire stylé/MOMO-CROCO-Crocmoe-v1.mp3",
+      "type": "file",
+      "size": 6564933
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Délire stylé/Rockxsy-adam-la-bite-le-chon-v2.mp3",
+      "type": "file",
+      "size": 9745677
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Délire stylé/Sunday Yellow post.mp3",
+      "type": "file",
+      "size": 8293204
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Délire stylé/ragasonic-v2-_1_.mp3",
+      "type": "file",
+      "size": 6203157
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Délire stylé/surment un bon son.mp3",
+      "type": "file",
+      "size": 1420701
     },
     {
       "path": "STUDIO/BUREAU/Sonnnn/Jony-au-MAD-v2-2emeMASTER-test-_jony-la-bibi_ (1).mp3",
