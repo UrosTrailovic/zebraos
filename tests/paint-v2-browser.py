@@ -120,7 +120,7 @@ def check_desktop(browser):
     modal.get_by_role("button",name="Valider").click()
     dims=page.evaluate("""() => {
       const frame=document.querySelector('.zp-canvas-frame');
-      const layer=document.querySelector('.zp-raster-layer');
+      const layer=[...document.querySelectorAll('.zp-raster-layer')].at(-1);
       return {width:frame.style.width,height:frame.style.height,
         pixels:[...layer.getContext('2d').getImageData(20,100,1,1).data]};
     }""")

@@ -29,8 +29,8 @@ def mount(page):
 def paint_line(page, color, y):
     page.evaluate("""([color,y])=>{
       const paint=document.querySelector('.zp');
-      paint.querySelector('input[type="color"]').value=color;
-      paint.querySelector('input[type="color"]').dispatchEvent(new Event('input',{bubbles:true}));
+      paint.querySelector('.zp-options input[type="color"]').value=color;
+      paint.querySelector('.zp-options input[type="color"]').dispatchEvent(new Event('input',{bubbles:true}));
       const canvas=paint.querySelector('.zp-canvas');
       const box=paint.querySelector('.zp-canvas-frame').getBoundingClientRect();
       const fire=(type,x)=>{

@@ -72,7 +72,7 @@ jobs:
               test.initialLayers=labels().some(s=>s.includes("Fond"))
                 &&labels().some(s=>s.includes("Dessin"));
               select("Fond");
-              const color=host.querySelector('input[type=color]');
+              const color=host.querySelector('.zp-options input[type=color]');
               color.value="#e90000";color.dispatchEvent(new Event("input",{bubbles:true}));
               tool("Remplir");
               const middle=coord(320,200);
@@ -128,6 +128,7 @@ jobs:
               document.addEventListener("click",capture,true);
               host.querySelector(".zp-menu button[download]")?.click();
               if(!png)Array.from(host.querySelectorAll(".zp-menu button")).find(b=>b.textContent.includes("PNG")).click();
+              host.querySelector(".zp-dialog-confirm")?.click();
               document.removeEventListener("click",capture,true);
               test.exportPNG=png.startsWith("data:image/png;base64,");
               if(test.exportPNG){
@@ -192,6 +193,7 @@ jobs:
               };
               document.addEventListener("click",saveCapture,true);
               Array.from(host.querySelectorAll(".zp-menu button")).find(b=>b.textContent.includes("PNG")).click();
+              host.querySelector(".zp-dialog-confirm")?.click();
               document.removeEventListener("click",saveCapture,true);
               test.transformExport=transformedPNG.startsWith("data:image/png;base64,");
               if(test.transformExport){
@@ -213,6 +215,7 @@ jobs:
               };
               document.addEventListener("click",projectCapture,true);
               Array.from(host.querySelectorAll(".zp-menu button")).find(b=>b.textContent.includes("Projet .zpaint")).click();
+              host.querySelector(".zp-dialog-confirm")?.click();
               document.removeEventListener("click",projectCapture,true);
               test.projectSave=projectText.startsWith("blob:");
               if(test.projectSave){
