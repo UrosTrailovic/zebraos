@@ -70,7 +70,7 @@ with sync_playwright() as playwright:
     mount(page)
 
     select_layer(page, "Dessin 1")
-    page.locator('.zp-tool[aria-label="Crayon"]').click()
+    page.locator('.zp-tool[aria-label="Pinceau"]').click()
     paint_line(page, "#000000", 200)
     open_photo(page)
     REPORT["photoImported"] = page.locator(".zp-imported-image").count() == 1
@@ -107,7 +107,7 @@ with sync_playwright() as playwright:
     select_layer(page, "test-blue")
     page.get_by_role("button", name="＋ Calque dessin").click()
     REPORT["addedLayer"] = page.locator(".zp-layer-entry").count() == 4
-    page.locator('.zp-tool[aria-label="Crayon"]').click()
+    page.locator('.zp-tool[aria-label="Pinceau"]').click()
     paint_line(page, "#08e000", 250)
 
     # Fermer directement, sans attendre les 950 ms de l'enregistrement différé.

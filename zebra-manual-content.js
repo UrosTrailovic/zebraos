@@ -88,7 +88,7 @@ window.ZebraManualContent=[
  id:"paint",name:"ZebraPaint",intro:"L'atelier de dessin de ZebraOS. Sa toile de 640 × 400 pixels accueille des traits, des formes et des photos sur plusieurs calques.",
  sections:[
   {title:"La surface de dessin",image:"paint.webp",description:"Les outils sont à gauche, la toile au centre, les calques et leurs réglages dans les autres panneaux.",items:[
-   ["Crayon / Pinceau","Tracer librement avec la couleur et la taille choisies."],
+   ["Pinceau","Tracer librement avec la couleur et la taille choisies."],
    ["Gomme","Effacer sur le calque de dessin sélectionné."],
    ["Remplissage / Pipette","Remplir une zone ou prélever une couleur."],
    ["Ligne / Rectangle / Ellipse","Tracer des formes."],

@@ -431,3 +431,20 @@
  .zp-vector-details>summary{font-size:10px}
  .zp-dialog-shade{padding:8px}
 }
+
+/* ZebraPaint 2.2 — police des objets Texte, même panneau sur PC et mobile. */
+.zp-vector-field.zp-font-field{
+ grid-column:1/-1;justify-content:flex-start;gap:12px;
+}
+.zp-font-field>span{flex:none;min-width:68px}
+.zp-vector-font-family{
+ box-sizing:border-box;flex:1;min-width:0;max-width:320px;height:28px;
+ padding:2px 5px;background:#fff;color:#171717;border:2px inset #f6f6f6;
+ font-size:12px;cursor:default;
+}
+.zp-vector-font-family:disabled{opacity:.55}
+@media(max-width:700px){
+ .zp-vector-field.zp-font-field{gap:7px}
+ .zp-font-field>span{min-width:52px}
+ .zp-vector-font-family{max-width:none;height:32px;font-size:11px}
+}

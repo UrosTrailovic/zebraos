@@ -1,7 +1,14 @@
-/* ZebraPaint 1.5 — sauvegarde automatique et calques fiables. */
+/* ZebraPaint 2.2 — objets modifiables, polices et outils du bureau. */
 (function(){
 "use strict";
 const UNDO_LIMIT=12,MAX_LAYERS=25,MAX_PIXELS=2300000;
+const FONT_FAMILIES=["Arial","Tahoma","Verdana","Georgia","Times New Roman","Courier New","Trebuchet MS","Impact","Comic Sans MS"];
+function safeFontFamily(value){return FONT_FAMILIES.includes(value)?value:"Arial";}
+function cssFontFamily(value){
+ const name=safeFontFamily(value);
+ const generic=name==="Courier New"?"monospace":name==="Georgia"||name==="Times New Roman"?"serif":"sans-serif";
+ return '"'+name+'", '+generic;
+}
 const palette=["#000000","#ffffff","#808080","#c0c0c0","#800000","#ff0000","#808000","#ffff00","#008000","#00ff00","#008080","#00ffff","#000080","#0000ff","#800080","#ff00ff","#d68545","#f6c289","#eac6c6","#9faad9","#304d46","#5e9f72","#403765","#f7d65c"];
 function el(tag,cls,text){const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x;}
 function btn(label,fn,cls="zp-button"){const x=el("button",cls,label);x.type="button";x.onclick=fn;return x;}
@@ -44,7 +51,6 @@ function writeDraft(key,project){
 }
 const svgPaths={
  select:'<path d="m4 2 7 19 2-8 8-2z"/>',
- pencil:'<path d="m4 20 4-1 12-12-3-3L5 16zM15 6l3 3"/>',
  brush:'<path d="m14 6 4-4 4 4-5 5-4-4zM14 9 8 17"/><path d="M8 17c-1 4-6 5-6 5s0-5 4-6z"/>',
  eraser:'<path d="m3 15 10-11 8 8-9 9H7zM9 21h12M9 9l8 8"/>',
  line:'<path d="M3 21 21 3"/><circle cx="3" cy="21" r="1.4"/><circle cx="21" cy="3" r="1.4"/>',
@@ -56,7 +62,6 @@ const svgPaths={
 };
 const toolDefs=[
  ["select","Sélection","Bouger / taille"],
- ["pencil","Crayon","Trait fin"],
  ["brush","Pinceau","Trait large"],
  ["eraser","Gomme","Effacer un calque"],
  ["fill","Remplir","Fond de couleur"],
@@ -146,6 +151,13 @@ function mount(root){
  vectorField("Contour (px)",vectorWidth);
  const vectorSize=el("input","zp-vector-font");vectorSize.type="number";vectorSize.min="8";vectorSize.max="200";vectorSize.value="32";
  vectorField("Texte (px)",vectorSize);
+ const vectorFontFamily=el("select","zp-vector-font-family");
+ vectorFontFamily.setAttribute("aria-label","Police du texte");
+ FONT_FAMILIES.forEach(name=>{
+  const option=el("option","",name);option.value=name;vectorFontFamily.append(option);
+ });
+ vectorFontFamily.value="Arial";
+ vectorField("Police",vectorFontFamily).parentNode.classList.add("zp-font-field");
  const vectorText=el("textarea","zp-vector-text");vectorText.rows=2;vectorText.maxLength=600;
  vectorField("Texte",vectorText);
  const vectorSizeRow=el("div","zp-vector-dimensions");
@@ -256,7 +268,7 @@ function mount(root){
   });
   W=w;H=h;updateDimensions();
  }
- function cursorVisible(){return ["pencil","brush","eraser"].includes(tool);}
+ function cursorVisible(){return tool==="brush"||tool==="eraser";}
  let cursorPoint=null;
  function updateCursorFromLast(){
   if(!cursorPoint||!cursorVisible())return;
@@ -316,7 +328,12 @@ function mount(root){
   tool=t;
   Object.keys(toolButtons).forEach(id=>toolButtons[id].classList.toggle("selected",id===t));
   canvasFrame.classList.toggle("zp-select-mode",t==="select");
-  canvas.style.cursor=t==="picker"?"copy":t==="fill"?"cell":t==="select"?"default":"none";
+  const regularCursor=t==="picker"?"copy":t==="fill"?"cell":t==="select"?"default":"crosshair";
+  const ringTool=cursorVisible();
+  // Brush and eraser display their size ring; geometric and text tools keep a crosshair.
+  canvas.style.cursor=ringTool?"none":regularCursor;
+  canvasFrame.style.cursor=ringTool?"none":regularCursor;
+  work.style.cursor=ringTool?"crosshair":regularCursor;
   cursorRing.hidden=true;
   if(cursorVisible())updateCursorFromLast();
   render();notice(toolDefs.find(d=>d[0]===t)[1]+" · "+toolDefs.find(d=>d[0]===t)[2]);
@@ -373,7 +390,9 @@ function mount(root){
    ctx.lineCap="round";ctx.stroke();
   }else if(l.kind==="text"){
    const font=clamp(Math.round(l.fontSize||32),8,200);
-   ctx.fillStyle=l.stroke||"#000000";ctx.font=font+"px Arial, sans-serif";ctx.textBaseline="top";
+   ctx.fillStyle=l.stroke||"#000000";
+   ctx.font=font+"px "+cssFontFamily(l.fontFamily);
+   ctx.textBaseline="top";
    (l.text||"").split("\n").slice(0,12).forEach((line,i)=>{
     ctx.fillText(line,0,i*font*1.25,Math.max(1,pw));
    });
@@ -391,6 +410,7 @@ function mount(root){
   [vectorFillColor,"fill",x=>vectorFill.checked?x:null],
   [vectorWidth,"strokeWidth",x=>clamp(Number(x)||1,1,70)],
   [vectorSize,"fontSize",x=>clamp(Number(x)||32,8,200)],
+  [vectorFontFamily,"fontFamily",x=>safeFontFamily(x)],
   [objectWidth,"w",x=>clamp(Number(x)||1,1,3200)],
   [objectHeight,"h",x=>clamp(Number(x)||1,1,3200)]
  ])input.addEventListener("change",()=>vectorChange(field,parse(input.type==="checkbox"?input.checked:input.value)));
@@ -532,15 +552,18 @@ function mount(root){
    vectorFillColor.disabled=!vector.fill;
    vectorWidth.value=String(vector.strokeWidth||1);
    vectorSize.value=String(vector.fontSize||32);
+   vectorFontFamily.value=safeFontFamily(vector.fontFamily);
+   vectorFontFamily.style.fontFamily=cssFontFamily(vector.fontFamily);
    vectorText.value=vector.text||"";
    vectorText.parentNode.hidden=vector.kind!=="text";
    vectorSize.parentNode.hidden=vector.kind!=="text";
+   vectorFontFamily.parentNode.hidden=vector.kind!=="text";
    vectorFill.parentNode.hidden=["text","line"].includes(vector.kind);
    vectorFillColor.parentNode.hidden=["text","line"].includes(vector.kind);
    vectorWidth.parentNode.hidden=vector.kind==="text";
    objectWidth.value=String(Math.round(vector.w));
    objectHeight.value=String(Math.round(vector.h));
-   [vectorStroke,vectorFill,vectorFillColor,vectorWidth,vectorSize,vectorText,objectWidth,objectHeight]
+   [vectorStroke,vectorFill,vectorFillColor,vectorWidth,vectorSize,vectorFontFamily,vectorText,objectWidth,objectHeight]
     .forEach(input=>{input.disabled=!!vector.locked;});
    vectorFillColor.disabled=!!vector.locked||!vector.fill;
   }
@@ -1019,7 +1042,7 @@ function mount(root){
      layer.strokeWidth=clamp(Number(item.strokeWidth)||1,1,70);
      layer.text=String(item.text||"").slice(0,600);
      layer.fontSize=clamp(Number(item.fontSize)||32,8,200);
-     layer.fontFamily="Arial";layer.reverse=!!item.reverse;
+     layer.fontFamily=safeFontFamily(item.fontFamily);layer.reverse=!!item.reverse;
      redrawVector(layer);
     }else{
      const node=el("div","zp-imported-image");

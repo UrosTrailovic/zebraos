@@ -112,7 +112,7 @@ jobs:
               scaler.value="100";scaler.dispatchEvent(new Event("change",{bubbles:true}));
               select("Dessin");
               color.value="#000000";color.dispatchEvent(new Event("input",{bubbles:true}));
-              tool("Crayon");
+              tool("Pinceau");
               const sizeSmall=host.querySelector(".zp-size input");sizeSmall.value="20";
               sizeSmall.dispatchEvent(new Event("input",{bubbles:true}));
               stroke(300,170,340,170);
@@ -148,7 +148,7 @@ jobs:
               // Dessin situé au-dessus et pas bloquer ni masquer le dessin.
               select("photo-bleue");
               test.selectedImageKeepsStack=Number(getComputedStyle(host.querySelector(".zp-imported-image")).zIndex)>0;
-              tool("Crayon");
+              tool("Pinceau");
               const countBeforePaint=labels().length;
               color.value="#00ff00";color.dispatchEvent(new Event("input",{bubbles:true}));
               stroke(340,235,355,235);

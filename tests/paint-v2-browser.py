@@ -53,6 +53,16 @@ def check_desktop(browser):
     page=ctx.new_page()
     errors=[];page.on("pageerror",lambda err:errors.append(str(err)))
     mount(page)
+    assert page.locator('.zp-tool[aria-label="Crayon"]').count()==0
+    assert page.locator('.zp-tool[aria-label="Pinceau"]').count()==1
+    REPORT["pencilRemoved"]=True
+    for name in ("Texte","Rectangle","Ellipse","Ligne"):
+        choose(page,name)
+        cursor=page.locator(".zp-canvas").evaluate("(n)=>getComputedStyle(n).cursor")
+        work_cursor=page.locator(".zp-work").evaluate("(n)=>getComputedStyle(n).cursor")
+        assert cursor=="crosshair" and work_cursor=="crosshair",(name,cursor,work_cursor)
+        assert not page.locator(".zp-brush-cursor").is_visible()
+    REPORT["shapeTextCursorVisible"]=True
     choose(page,"Pinceau")
     x,y=at(page,60,80)
     page.mouse.move(x,y)
@@ -67,7 +77,7 @@ def check_desktop(browser):
     assert size2 and size2["width"]>size["width"]*1.8,size2
     REPORT["cursorRealSize"]=True
 
-    choose(page,"Crayon")
+    choose(page,"Pinceau")
     # Départ dans les 12px de marge autour de la toile ; la ligne entre ensuite dedans.
     drag(page,-7,100,65,100)
     color=page.evaluate("""() => {
@@ -103,6 +113,19 @@ def check_desktop(browser):
     textEditor=page.locator(".zp-vector-text")
     textEditor.fill("ZEBRAOS")
     textEditor.press("Tab")
+    fontSelect=page.locator(".zp-vector-font-family")
+    assert fontSelect.is_visible()
+    assert fontSelect.locator("option").count()>=8
+    fontSelect.select_option("Georgia")
+    assert fontSelect.input_value()=="Georgia"
+    fontSelect.select_option("Courier New")
+    assert fontSelect.input_value()=="Courier New"
+    fontUsed=page.evaluate("""() => {
+      const text=[...document.querySelectorAll('.zp-vector-object')].at(-1);
+      return text.querySelector('canvas').getContext('2d').font;
+    }""")
+    assert "Courier New" in fontUsed,fontUsed
+    REPORT["editableFontFamily"]=True
     assert page.evaluate("""() => {
       const n=[...document.querySelectorAll('.zp-vector-object')].at(-1);
       const c=n.querySelector('canvas'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
@@ -144,6 +167,7 @@ def check_desktop(browser):
     objs=[x for x in parsed["layers"] if x["type"]=="vector"]
     assert {x["kind"] for x in objs}=={"rect","text"},objs
     assert any(x["text"]=="ZEBRAOS" for x in objs),objs
+    assert any(x["kind"]=="text" and x["fontFamily"]=="Courier New" for x in objs),objs
     assert any(x["kind"]=="rect" and x["fill"]=="#00bb22" for x in objs),objs
     REPORT["zpaintExportNameAndObjects"]=True
 
@@ -168,6 +192,13 @@ def check_desktop(browser):
       document.querySelector('.zp-canvas-frame').style.width==='800px';
     }""",timeout=14000)
     REPORT["projectReopenObjects"]=True
+    reloaded_font=page.evaluate("""() => {
+      const texts=[...document.querySelectorAll('.zp-vector-object')]
+        .map(n=>n.querySelector('canvas').getContext('2d').font);
+      return texts;
+    }""")
+    assert any("Courier New" in f for f in reloaded_font),reloaded_font
+    REPORT["projectReopenFont"]=True
 
     # Full HD est aussi possible avec le nouveau format; Annuler restaure la taille.
     page.get_by_role("button",name="Format de la toile").click()
@@ -245,6 +276,10 @@ def check_desktop(browser):
         print("LONG_STROKE_DEBUG",json.dumps(debug,ensure_ascii=False),flush=True)
         raise
     REPORT["longStrokeDraftRestored"]=True
+    draft_fonts=page.evaluate("""() => [...document.querySelectorAll('.zp-vector-object')]
+      .map(x=>x.querySelector('canvas').getContext('2d').font)""")
+    assert any("Courier New" in f for f in draft_fonts),draft_fonts
+    REPORT["fontRestoredFromDraft"]=True
     assert not errors,errors
     print("PAINT_V2_DESKTOP_PASS",REPORT,flush=True)
     ctx.close()
@@ -254,6 +289,11 @@ def check_mobile(browser):
     page=ctx.new_page()
     errors=[];page.on("pageerror",lambda err:errors.append(str(err)))
     mount(page,True)
+    assert page.locator('.zp-tool[aria-label="Crayon"]').count()==0
+    page.get_by_role("button",name="Texte",exact=True).click()
+    cursor=page.locator(".zp-canvas").evaluate("(n)=>getComputedStyle(n).cursor")
+    assert cursor=="crosshair",cursor
+    page.get_by_role("button",name="Sélection",exact=True).click()
     rect=page.locator(".zp-canvas-frame").bounding_box()
     assert rect and rect["width"]<=390,rect
     assert 1.56<rect["width"]/rect["height"]<1.64,rect
@@ -265,6 +305,18 @@ def check_mobile(browser):
     rect=page.locator(".zp-canvas-frame").bounding_box()
     assert rect and 0.96<rect["width"]/rect["height"]<1.04,rect
     assert rect["width"]<=390,rect
+    page.get_by_role("button",name="Texte",exact=True).click()
+    page.locator(".zp-canvas").dispatch_event("pointerdown",{
+      "pointerId":3,"pointerType":"touch","isPrimary":True,"button":0,
+      "clientX":rect["x"]+rect["width"]*.35,
+      "clientY":rect["y"]+rect["height"]*.35
+    })
+    font=page.locator(".zp-vector-font-family")
+    assert font.is_visible()
+    font.select_option("Verdana")
+    assert font.input_value()=="Verdana"
+    assert page.evaluate("""() => [...document.querySelectorAll('.zp-vector-object')]
+      .some(x=>x.querySelector('canvas').getContext('2d').font.includes('Verdana'))""")
     page.locator("#paint-v2-test").screenshot(path=str(OUT/"mobile-editor.png"))
     assert not errors,errors
     print("PAINT_V2_MOBILE_PASS",flush=True)
