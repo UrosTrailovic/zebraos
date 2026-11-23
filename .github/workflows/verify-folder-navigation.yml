@@ -28,10 +28,24 @@ jobs:
           node --check desktop-layout.js
           python3 - <<'PY'
           from pathlib import Path
+          import struct, zlib
           for name in ('ordinateur','retour','actualiser'):
             data=Path('assets/icons/nav-'+name+'.png').read_bytes()
             assert data[:8]==b'\x89PNG\r\n\x1a\n',name
             assert len(data)<4000,(name,len(data))
+            at=8
+            seen=[]
+            while at<len(data):
+              size=struct.unpack('>I',data[at:at+4])[0]
+              kind=data[at+4:at+8]
+              payload=data[at+8:at+8+size]
+              end=at+8+size
+              assert end+4<=len(data),(name,kind,'truncated')
+              crc=struct.unpack('>I',data[end:end+4])[0]
+              assert crc==(zlib.crc32(kind+payload)&0xffffffff),(name,kind,'invalid CRC')
+              seen.append(kind)
+              at=end+4
+            assert at==len(data) and seen[-1]==b'IEND',(name,seen)
           PY
       - name: Installer Chromium et Playwright
         run: python3 -m pip install --quiet playwright

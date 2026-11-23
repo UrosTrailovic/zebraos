@@ -224,7 +224,7 @@ async function mount(host,parent,opt){
     var b=btn("","classic-button local-nav-button",fn);
     b.title=label;b.setAttribute("aria-label",label);
     var img=E("img","github-nav-icon");
-    img.src="/assets/icons/nav-"+(kind==="home"?"ordinateur":kind==="back"?"retour":"actualiser")+".png?v=1";
+    img.src="/assets/icons/nav-"+(kind==="home"?"ordinateur":kind==="back"?"retour":"actualiser")+".png?v=2";
     img.alt="";img.width=28;img.height=28;img.draggable=false;
     b.appendChild(img);tools.appendChild(b);
   }
