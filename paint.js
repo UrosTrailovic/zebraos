@@ -178,8 +178,8 @@ function mount(root){
  const undoBtn=btn("↶ Annuler",undo),redoBtn=btn("↷ Rétablir",redoAction);
  const actions=el("div","zp-edits");actions.append(undoBtn,redoBtn);options.append(actions);
  const saveBtn=btn("Enregistrer PNG",download);
- bar.append(btn("Nouveau",newDocument),btn("Format de la toile",openCanvasDialog),btn("＋ Importer photo",()=>upload.click()),
-   btn("＋ Calque dessin",()=>addRaster(true)),saveBtn,btn("Projet .zpaint",saveProject),
+ bar.append(btn("Nouveau",newDocument),btn("Format de la toile",openCanvasDialog),btn("+ Importer photo",()=>upload.click()),
+   btn("+ Calque dessin",()=>addRaster(true)),saveBtn,btn("Projet .zpaint",saveProject),
    btn("Ouvrir projet",()=>projectInput.click()),upload,projectInput);
  const changeControls=el("div","zp-import-controls");
  changeControls.append(btn("✓ Terminer",()=>{select(null);choose("select");notice("Placement terminé : les calques restent modifiables.");},"zp-button zp-apply-image"),
