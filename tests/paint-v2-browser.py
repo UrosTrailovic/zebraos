@@ -55,6 +55,26 @@ def check_desktop(browser):
     mount(page)
     assert page.locator('.zp-tool[aria-label="Crayon"]').count()==0
     assert page.locator('.zp-tool[aria-label="Pinceau"]').count()==1
+    assert page.locator('.zp-tool').count()==9
+    assert page.locator('.zp-tool-art img.zp-tool-texture').count()==9
+    page.wait_for_function("""() => [...document.querySelectorAll('.zp-tool-texture')]
+      .every(img=>img.complete&&img.naturalWidth===32&&img.naturalHeight===32)""")
+    labels=page.locator(".zp-menu button").all_text_contents()
+    assert not any("💾" in text or "📂" in text for text in labels),labels
+    layout=page.evaluate("""() => {
+      const work=document.querySelector('.zp-work').getBoundingClientRect();
+      const side=document.querySelector('.zp-sidebar').getBoundingClientRect();
+      const layers=document.querySelector('.zp-layer-panel').getBoundingClientRect();
+      const opacity=document.querySelector('.zp-opacity-input').getBoundingClientRect();
+      return {workRight:work.right,sideLeft:side.left,layersTop:layers.top,opacityTop:opacity.top,
+              sideWidth:side.width};
+    }""")
+    assert layout["sideLeft"]>=layout["workRight"]-2,layout
+    assert layout["opacityTop"]>layout["layersTop"],layout
+    assert 275<=layout["sideWidth"]<=325,layout
+    REPORT["desktopRightSidebar"]=True
+    REPORT["pixelToolIcons"]=True
+    REPORT["plainFileButtons"]=True
     REPORT["pencilRemoved"]=True
     for name in ("Texte","Rectangle","Ellipse","Ligne"):
         choose(page,name)
@@ -328,3 +348,4 @@ with sync_playwright() as pw:
     check_mobile(browser)
     browser.close()
 print("PAINT_V2_ALL_PASS",flush=True)
+

@@ -1,4 +1,4 @@
-/* ZebraPaint 2.2 — objets modifiables, polices et outils du bureau. */
+/* ZebraPaint 2.3 — atelier PC latéral et pictogrammes pixel. */
 (function(){
 "use strict";
 const UNDO_LIMIT=12,MAX_LAYERS=25,MAX_PIXELS=2300000;
@@ -49,16 +49,12 @@ function writeDraft(key,project){
  current.finally(()=>{if(pendingDraftWrites.get(key)===current)pendingDraftWrites.delete(key);}).catch(()=>{});
  return current;
 }
-const svgPaths={
- select:'<path d="m4 2 7 19 2-8 8-2z"/>',
- brush:'<path d="m14 6 4-4 4 4-5 5-4-4zM14 9 8 17"/><path d="M8 17c-1 4-6 5-6 5s0-5 4-6z"/>',
- eraser:'<path d="m3 15 10-11 8 8-9 9H7zM9 21h12M9 9l8 8"/>',
- line:'<path d="M3 21 21 3"/><circle cx="3" cy="21" r="1.4"/><circle cx="21" cy="3" r="1.4"/>',
- rect:'<rect x="3" y="5" width="18" height="14" rx="1"/>',
- ellipse:'<ellipse cx="12" cy="12" rx="9" ry="7"/>',
- text:'<path d="M3 5h18M12 5v15M8 20h8M3 5v4M21 5v4"/>',
- fill:'<path d="m4 13 8-9 9 9-9 9zM3 21h18"/><path d="M18 16c-2 4 4 4 2 0l-1-3z"/>',
- picker:'<path d="m13 5 6-3 3 3-3 6-2-2-9 9-5 1 1-5 9-9zM15 7l3 3"/>'
+const toolTextures={
+ select:"assets/paint/tools/select.png",brush:"assets/paint/tools/brush.png",
+ eraser:"assets/paint/tools/eraser.png",fill:"assets/paint/tools/fill.png",
+ picker:"assets/paint/tools/picker.png",line:"assets/paint/tools/line.png",
+ rect:"assets/paint/tools/rect.png",ellipse:"assets/paint/tools/ellipse.png",
+ text:"assets/paint/tools/text.png"
 };
 const toolDefs=[
  ["select","Sélection","Bouger / taille"],
@@ -98,7 +94,7 @@ function mount(root){
  const stage=el("div","zp-stage");stage.append(canvasFrame);
  const work=el("div","zp-work");work.append(stage);
  const tools=el("div","zp-tools zp-tools-clear");
- const body=el("div","zp-body");body.append(tools,work);
+ const body=el("div","zp-body");
  const panelLayers=el("section","zp-layer-panel");
  const panelHeader=el("div","zp-layer-header");
  const panelTitle=el("strong","","CALQUES");
@@ -131,6 +127,7 @@ function mount(root){
    btn("⟳ Réinit.",resetTransform,"zp-button"));
  transformPanel.append(transformButtons);
  const transformDetails=el("details","zp-transform-details");
+ transformDetails.open=true;
  const transformSummary=el("summary","","↻ TRANSFORMER · ANGLE / INCLINAISON / OPACITÉ");
  transformDetails.append(transformSummary,transformPanel);
  panelLayers.append(panelHeader,layerList,scaleRow,transformDetails);
@@ -180,23 +177,29 @@ function mount(root){
  brushWrap.append(brushSlider,brushNumber);options.append(brushWrap);
  const undoBtn=btn("↶ Annuler",undo),redoBtn=btn("↷ Rétablir",redoAction);
  const actions=el("div","zp-edits");actions.append(undoBtn,redoBtn);options.append(actions);
- const saveBtn=btn("💾 Enregistrer PNG",download);
+ const saveBtn=btn("Enregistrer PNG",download);
  bar.append(btn("Nouveau",newDocument),btn("Format de la toile",openCanvasDialog),btn("＋ Importer photo",()=>upload.click()),
-   btn("＋ Calque dessin",()=>addRaster(true)),saveBtn,btn("💾 Projet .zpaint",saveProject),
-   btn("📂 Ouvrir projet",()=>projectInput.click()),upload,projectInput);
+   btn("＋ Calque dessin",()=>addRaster(true)),saveBtn,btn("Projet .zpaint",saveProject),
+   btn("Ouvrir projet",()=>projectInput.click()),upload,projectInput);
  const changeControls=el("div","zp-import-controls");
  changeControls.append(btn("✓ Terminer",()=>{select(null);choose("select");notice("Placement terminé : les calques restent modifiables.");},"zp-button zp-apply-image"),
    btn("× Supprimer",()=>removeLayer(selected),"zp-button"));
  bar.append(changeControls);
- panel.append(bar,body,panelLayers,options,message,saveIndicator);root.append(panel);
+ const sidebar=el("aside","zp-sidebar");
+ sidebar.setAttribute("aria-label","Calques et réglages");
+ sidebar.append(panelLayers,options,message,saveIndicator);
+ body.append(tools,work,sidebar);
+ panel.append(bar,body);root.append(panel);
 
  const toolButtons={};
  toolDefs.forEach(([id,label,tooltip])=>{
   const b=btn("",()=>choose(id),"zp-tool");
   b.title=label+" — "+tooltip;b.setAttribute("aria-label",label);
-  const svg=el("span","zp-tool-art");
-  svg.innerHTML='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">'+svgPaths[id]+'</svg>';
-  b.append(svg,el("span","zp-tool-name",label));
+  const art=el("span","zp-tool-art");
+  const texture=el("img","zp-tool-texture");
+  texture.src=toolTextures[id];texture.alt="";texture.width=32;texture.height=32;
+  texture.draggable=false;texture.setAttribute("aria-hidden","true");art.append(texture);
+  b.append(art,el("span","zp-tool-name",label));
   toolButtons[id]=b;tools.append(b);
  });
  function notice(t){message.textContent=t;}

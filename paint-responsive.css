@@ -222,7 +222,7 @@
  border:1px solid #8a95aa;
  background:linear-gradient(135deg,#f9f9fa,#cacfdc);
 }
-.zp-tool-art svg{display:block}
+.zp-tool-art .zp-tool-texture{display:block;width:27px;height:27px;object-fit:contain;image-rendering:pixelated}
 .zp-tools-clear .zp-tool.selected{
  color:#132a74;background:#b5c9f2;
  outline:1px solid #4768aa;outline-offset:-2px;
@@ -249,7 +249,7 @@
   align-items:center;justify-content:center;gap:3px;
  }
  .zp-tool-art{width:24px;height:26px}
- .zp-tool-art svg{width:21px;height:21px}
+ .zp-tool-art .zp-tool-texture{width:24px;height:24px}
  .zp-tool-name{font-size:9px;line-height:1.05;text-align:center}
  .zp-work{flex:1;min-height:0}
  .zp-stage{max-width:100%;min-width:0}
@@ -448,3 +448,91 @@
  .zp-font-field>span{min-width:52px}
  .zp-vector-font-family{max-width:none;height:32px;font-size:11px}
 }
+
+/* ZebraPaint 2.3 — atelier PC : toile au centre, réglages dans la colonne droite. */
+.zp-body{overflow:hidden}
+.zp-sidebar{
+ display:flex;flex:0 0 300px;flex-direction:column;gap:5px;
+ width:300px;min-width:280px;max-width:320px;min-height:0;
+ padding:4px;background:#c0c0c0;border:2px inset #eee;
+ overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;
+}
+.zp-sidebar .zp-layer-panel{
+ display:flex;flex:none;flex-direction:column;gap:5px;
+ max-height:none;min-height:0;padding:5px;overflow:visible;
+}
+.zp-sidebar .zp-layer-list{
+ display:flex;flex-direction:column;gap:4px;
+ max-height:242px;min-height:45px;padding:0 2px 3px 0;
+ overflow-x:hidden;overflow-y:auto;
+}
+.zp-sidebar .zp-layer-entry{
+ display:grid;grid-template-columns:minmax(0,1fr);gap:3px;
+ width:100%;height:auto;min-width:0;max-width:none;padding:4px;
+}
+.zp-sidebar .zp-layer-choice{width:100%;min-height:34px}
+.zp-sidebar .zp-layer-entry .zp-layer-name{max-width:none;flex:1}
+.zp-sidebar .zp-layer-buttons{
+ width:100%;justify-content:flex-end;gap:2px;flex-wrap:nowrap;
+ padding-top:2px;border-top:1px solid #b4b4b4;
+}
+.zp-sidebar .zp-layer-action{width:27px;min-width:27px;height:25px}
+.zp-sidebar .zp-transform-details,
+.zp-sidebar .zp-vector-details{margin-top:1px}
+.zp-sidebar .zp-transform-details>summary,
+.zp-sidebar .zp-vector-details>summary{padding-left:1px;margin-left:10px}
+.zp-sidebar .zp-transform-row{gap:5px}
+.zp-sidebar .zp-transform-row span{width:72px;min-width:72px}
+.zp-sidebar .zp-transform-row input{max-width:none}
+.zp-sidebar .zp-vector-options{grid-template-columns:1fr;padding:7px 3px}
+.zp-sidebar .zp-vector-field,
+.zp-sidebar .zp-vector-field:has(textarea),
+.zp-sidebar .zp-vector-field.zp-font-field,
+.zp-sidebar .zp-vector-dimensions{grid-column:1}
+.zp-sidebar .zp-options{
+ display:flex;flex:none;align-items:stretch;flex-direction:column;gap:6px;
+ padding:6px;background:#d5d5d5;
+}
+.zp-sidebar .zp-active-color{width:42px;height:32px}
+.zp-sidebar .zp-options>input[type=color]{position:absolute;opacity:0;pointer-events:none}
+.zp-sidebar .zp-palette{display:grid;grid-template-columns:repeat(8,19px);gap:3px;flex:none;min-width:0}
+.zp-sidebar .zp-swatch{width:19px;height:19px}
+.zp-sidebar .zp-size{width:100%;justify-content:space-between}
+.zp-sidebar .zp-size input{flex:1;width:auto}
+.zp-sidebar .zp-edits{width:100%}
+.zp-sidebar .zp-edits .zp-button{flex:1;min-width:0;padding-left:4px;padding-right:4px}
+.zp-sidebar .zp-status,
+.zp-sidebar .zp-autosave-status{white-space:normal;overflow:visible}
+.zp-tool-art{image-rendering:pixelated;color:inherit;background:#d9dce2}
+.zp-tool-art .zp-tool-texture{width:27px;height:27px;image-rendering:pixelated}
+.zp-tools-clear .zp-tool.selected .zp-tool-art{
+ border-color:#294a8b;background:#b9ccef;box-shadow:inset 1px 1px #5f7094;
+}
+
+@media(max-width:700px){
+ .zp-body{overflow:hidden}
+ .zp-sidebar{
+  flex:0 0 auto;width:100%;min-width:0;max-width:none;max-height:255px;
+  padding:3px;border-left:2px inset #eee;overflow-y:auto;
+ }
+ .zp-sidebar .zp-layer-panel{padding:4px 5px}
+ .zp-sidebar .zp-layer-list{
+  flex-direction:row;max-height:none;min-height:47px;
+  overflow-x:auto;overflow-y:hidden;padding-bottom:3px;
+ }
+ .zp-sidebar .zp-layer-entry{
+  display:flex;grid-template-columns:none;width:auto;height:46px;
+  min-width:227px;padding:3px;
+ }
+ .zp-sidebar .zp-layer-choice{width:auto;min-height:0}
+ .zp-sidebar .zp-layer-entry .zp-layer-name{max-width:95px}
+ .zp-sidebar .zp-layer-buttons{
+  width:auto;padding-top:0;border-top:0;justify-content:flex-start;
+ }
+ .zp-sidebar .zp-layer-action{min-width:25px;width:25px;height:30px}
+ .zp-sidebar .zp-options{flex-direction:row;align-items:center;flex-wrap:wrap}
+ .zp-sidebar .zp-palette{display:flex;flex:1;min-width:125px}
+ .zp-sidebar .zp-size{width:auto}
+ .zp-sidebar .zp-edits{width:auto}
+}
+

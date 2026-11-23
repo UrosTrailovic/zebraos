@@ -4,6 +4,7 @@ on:
     paths:
       - 'paint.js'
       - 'paint-responsive.css'
+      - 'assets/paint/tools/**'
       - 'index.html'
       - '.github/workflows/verify-paint-mobile.yml'
   workflow_dispatch:
@@ -67,7 +68,10 @@ jobs:
                 return Array.from(canvas.getContext("2d").getImageData(x,y,1,1).data);
               };
               test.clearTools=buttons().length>=9
-                &&buttons().every(b=>!!b.querySelector("svg")&&!!b.querySelector(".zp-tool-name"))
+                &&buttons().every(b=>{
+                  const icon=b.querySelector("img.zp-tool-texture");
+                  return !!icon&&icon.complete&&icon.naturalWidth===32&&!!b.querySelector(".zp-tool-name");
+                })
                 &&buttons().some(b=>b.textContent==="Gomme");
               test.initialLayers=labels().some(s=>s.includes("Fond"))
                 &&labels().some(s=>s.includes("Dessin"));
@@ -242,3 +246,4 @@ jobs:
           grep -o 'data-paint-report="[^"]*"' /tmp/zebra-paint-mobile.html | tail -c 4500
           grep -o 'data-paint-status="[^"]*"' /tmp/zebra-paint-mobile.html
           grep -q 'data-paint-status="ok"' /tmp/zebra-paint-mobile.html
+
