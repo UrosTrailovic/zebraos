@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T14:02:07.061213+00:00",
+  "generatedAt": "2026-11-23T14:05:18.635029+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -281,11 +281,6 @@
       "size": 140318
     },
     {
-      "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/baba.png",
-      "type": "file",
-      "size": 631557
-    },
-    {
       "path": "STUDIO/BUREAU/Photo et vidéo cool/Random shi/c6cefd2ed203cddaf533f4ab8f34c2f8.jpg",
       "type": "file",
       "size": 16433
@@ -474,14 +469,23 @@
       "size": 6196157
     },
     {
-      "path": "STUDIO/BUREAU/Sonnnn/Jony-au-MAD-v2-2emeMASTER-test-_jony-la-bibi_ (1).mp3",
+      "path": "STUDIO/BUREAU/Sonnnn/Jony la qualité",
+      "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Jony la qualité/Balader-Jony-Zebra.mp3",
+      "type": "file",
+      "size": 8941869
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Jony la qualité/Jony-au-MAD-v2-2emeMASTER-test-_jony-la-bibi_.mp3",
       "type": "file",
       "size": 6637065
     },
     {
-      "path": "STUDIO/BUREAU/Sonnnn/Jony-au-MAD-v2-2emeMASTER-test-_jony-la-bibi_.mp3",
+      "path": "STUDIO/BUREAU/Sonnnn/Jony la qualité/jony-sans-quali-v2.mp3",
       "type": "file",
-      "size": 6637065
+      "size": 5853258
     },
     {
       "path": "STUDIO/BUREAU/Sonnnn/Zebralogy",
@@ -641,15 +645,6 @@
       "name": "ZebraAMP.exe",
       "app": "amp",
       "icon": "zebraamp"
-    },
-    {
-      "path": "STUDIO/BUREAU/sadate",
-      "type": "dir"
-    },
-    {
-      "path": "STUDIO/BUREAU/sadate/icone.png",
-      "type": "file",
-      "size": 24476
     },
     {
       "path": "STUDIO/BUREAU/thanks.txt",
