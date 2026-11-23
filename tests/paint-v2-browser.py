@@ -214,7 +214,7 @@ def check_desktop(browser):
     # Le trait finit APRES que la première autosauvegarde a pu se déclencher.
     row=page.locator(".zp-layer-entry").filter(has_text="Dessin 1")
     row.locator(".zp-layer-choice").click()
-    choose(page,"Crayon")
+    choose(page,"Pinceau")
     ax,ay=at(page,20,350)
     bx,by=at(page,280,350)
     page.mouse.move(ax,ay);page.mouse.down()
