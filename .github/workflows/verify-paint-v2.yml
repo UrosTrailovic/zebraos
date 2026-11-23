@@ -27,7 +27,7 @@ jobs:
           node - <<'JS'
           const fs=require('fs');
           const s=fs.readFileSync('app.js','utf8');
-          if(!s.includes('paint.js?v=2.6')||!s.includes('paint-responsive.css?v=2.5'))
+          if(!s.includes('paint.js?v=2.6')||!s.includes('paint-responsive.css?v=2.6'))
             throw Error('ZebraPaint 2 loader missing');
           const appIcons=[
             'ZebraPaint.exe.zebraos.json.icone.png','ZebraCalc.exe.zebraos.json.icone.png',

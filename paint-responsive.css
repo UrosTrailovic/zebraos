@@ -247,7 +247,7 @@
   padding:3px;gap:3px;flex:none;
  }
  .zp-tools-clear .zp-tool{
-  width:98px;min-width:98px;height:54px;min-height:54px;
+  width:116px;min-width:116px;height:54px;min-height:54px;
   padding:3px 5px;display:flex;align-items:center;justify-content:flex-start;gap:5px;
  }
  .zp-tool-art{width:36px;height:40px}
@@ -451,7 +451,7 @@
  .zp-vector-font-family{max-width:none;height:32px;font-size:11px}
 }
 
-/* ZebraPaint 2.5 — atelier PC : outils illustrés et colonne droite redimensionnable. */
+/* ZebraPaint 2.6 — outils nommés sur PC/mobile et colonne droite redimensionnable. */
 .zp-body{overflow:hidden}
 .zp-sidebar{
  display:flex;flex:0 0 var(--zp-sidebar-width,300px);flex-direction:column;gap:5px;
