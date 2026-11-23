@@ -5,6 +5,7 @@ on:
     paths:
       - 'paint.js'
       - 'paint-responsive.css'
+      - 'assets/paint/tools/**'
       - 'app.js'
       - 'tests/paint-v2-browser.py'
       - '.github/workflows/verify-paint-v2.yml'
@@ -24,9 +25,15 @@ jobs:
           node --check paint.js
           node --check app.js
           node - <<'JS'
-          const s=require('fs').readFileSync('app.js','utf8');
-          if(!s.includes('paint.js?v=2.2')||!s.includes('paint-responsive.css?v=2.1'))
+          const fs=require('fs');
+          const s=fs.readFileSync('app.js','utf8');
+          if(!s.includes('paint.js?v=2.3')||!s.includes('paint-responsive.css?v=2.2'))
             throw Error('ZebraPaint 2 loader missing');
+          const tools=['select','brush','eraser','fill','picker','line','rect','ellipse','text'];
+          for(const tool of tools){
+            const path=`assets/paint/tools/${tool}.png`;
+            if(!fs.existsSync(path)||fs.statSync(path).size<100)throw Error(`Texture outil absente: ${path}`);
+          }
           JS
       - name: Installer Playwright et Pillow
         run: python3 -m pip install --quiet playwright pillow

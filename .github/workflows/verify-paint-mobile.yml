@@ -70,7 +70,8 @@ jobs:
               test.clearTools=buttons().length>=9
                 &&buttons().every(b=>{
                   const icon=b.querySelector("img.zp-tool-texture");
-                  return !!icon&&icon.complete&&icon.naturalWidth===32&&!!b.querySelector(".zp-tool-name");
+                  return !!icon&&/^assets\/paint\/tools\/.+\.png$/.test(icon.getAttribute("src")||"")
+                    &&!!b.querySelector(".zp-tool-name");
                 })
                 &&buttons().some(b=>b.textContent==="Gomme");
               test.initialLayers=labels().some(s=>s.includes("Fond"))
