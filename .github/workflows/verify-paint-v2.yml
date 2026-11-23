@@ -27,8 +27,15 @@ jobs:
           node - <<'JS'
           const fs=require('fs');
           const s=fs.readFileSync('app.js','utf8');
-          if(!s.includes('paint.js?v=2.4')||!s.includes('paint-responsive.css?v=2.3'))
+          if(!s.includes('paint.js?v=2.5')||!s.includes('paint-responsive.css?v=2.4'))
             throw Error('ZebraPaint 2 loader missing');
+          const appIcons=[
+            'ZebraPaint.exe.zebraos.json.icone.png','ZebraCalc.exe.zebraos.json.icone.png',
+            'ZebraSticky.exe.zebraos.json.icone.png','ZebraPlanner.exe.zebraos.json.icone.png',
+            'Tetris.exe.zebraos.json.icone.png','Znake.exe.zebraos.json.icone.png',
+            'Bloc-notes.zebraos.json.icone.png'
+          ];
+          for(const icon of appIcons)if(!s.includes(icon))throw Error(`Icône de fenêtre absente: ${icon}`);
           const tools=['select','brush','eraser','fill','picker','line','rect','ellipse','text'];
           for(const tool of tools){
             const path=`assets/paint/tools/${tool}.png`;

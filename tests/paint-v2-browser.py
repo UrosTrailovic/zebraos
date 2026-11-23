@@ -57,8 +57,15 @@ def check_desktop(browser):
     assert page.locator('.zp-tool[aria-label="Pinceau"]').count()==1
     assert page.locator('.zp-tool').count()==9
     assert page.locator('.zp-tool-art img.zp-tool-texture').count()==9
+    assert page.locator('.zp-tool-name').count()==0
+    assert all(not text.strip() for text in page.locator('.zp-tool').all_text_contents())
     page.wait_for_function("""() => [...document.querySelectorAll('.zp-tool-texture')]
       .every(img=>img.complete&&img.naturalWidth===32&&img.naturalHeight===32)""")
+    tool_box=page.locator('.zp-tool[aria-label="Pinceau"]').bounding_box()
+    icon_box=page.locator('.zp-tool[aria-label="Pinceau"] .zp-tool-texture').bounding_box()
+    assert tool_box and icon_box and icon_box["width"]>=36 and icon_box["height"]>=36,(tool_box,icon_box)
+    assert abs((icon_box["x"]+icon_box["width"]/2)-(tool_box["x"]+tool_box["width"]/2))<2,(tool_box,icon_box)
+    assert abs((icon_box["y"]+icon_box["height"]/2)-(tool_box["y"]+tool_box["height"]/2))<2,(tool_box,icon_box)
     labels=page.locator(".zp-menu button").all_text_contents()
     assert not any("💾" in text or "📂" in text for text in labels),labels
     layout=page.evaluate("""() => {
@@ -72,6 +79,14 @@ def check_desktop(browser):
     assert layout["sideLeft"]>=layout["workRight"]-2,layout
     assert layout["opacityTop"]>layout["layersTop"],layout
     assert 275<=layout["sideWidth"]<=325,layout
+    width_resizer=page.locator(".zp-sidebar-resizer")
+    width_grip=width_resizer.bounding_box()
+    assert width_grip and width_resizer.is_visible()
+    side_before=page.locator(".zp-sidebar").bounding_box()
+    page.mouse.move(width_grip["x"]+width_grip["width"]/2,width_grip["y"]+width_grip["height"]/2)
+    page.mouse.down();page.mouse.move(width_grip["x"]-90,width_grip["y"]+width_grip["height"]/2,steps=8);page.mouse.up()
+    side_after=page.locator(".zp-sidebar").bounding_box()
+    assert side_before and side_after and side_after["width"]>side_before["width"]+60,(side_before,side_after)
     resizer=page.locator(".zp-layer-resizer")
     before=page.locator(".zp-layer-list").bounding_box()
     grip=resizer.bounding_box()
@@ -83,8 +98,10 @@ def check_desktop(browser):
     assert page.locator(".window.paint-window").count()==1
     REPORT["desktopRightSidebar"]=True
     REPORT["resizableLayerList"]=True
+    REPORT["resizableSettingsWidth"]=True
     REPORT["paintWindowResizableClass"]=True
     REPORT["pixelToolIcons"]=True
+    REPORT["iconOnlyToolRail"]=True
     REPORT["plainFileButtons"]=True
     REPORT["pencilRemoved"]=True
     for name in ("Texte","Rectangle","Ellipse","Ligne"):

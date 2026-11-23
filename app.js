@@ -112,37 +112,30 @@ function playMechanicalClick(name,multiplier){
   }catch(e){sfx(name,multiplier);}
 }
 
-/* Custom ZebraOS desktop sprite: user-supplied 128px PNGs, optimised for small UI sizes. */
+/* Icônes propres aux applications : le même visuel est utilisé sur le bureau,
+ * dans les menus et dans la barre de titre de leur fenêtre. */
+var applicationIconFiles={
+  racer:"/assets/games/echo-racer-logo-2026.webp?v=1",
+  tetris:"/STUDIO/BUREAU/Jeux/Tetris.exe.zebraos.json.icone.png?v=1",
+  snake:"/STUDIO/BUREAU/Jeux/Znake.exe.zebraos.json.icone.png?v=1",
+  paint:"/STUDIO/BUREAU/Outils/ZebraPaint.exe.zebraos.json.icone.png?v=1",
+  calc:"/STUDIO/BUREAU/Outils/ZebraCalc.exe.zebraos.json.icone.png?v=1",
+  sticky:"/STUDIO/BUREAU/Outils/ZebraSticky.exe.zebraos.json.icone.png?v=1",
+  planner:"/STUDIO/BUREAU/Outils/ZebraPlanner.exe.zebraos.json.icone.png?v=1",
+  notepad:"/STUDIO/BUREAU/Outils/Bloc-notes.zebraos.json.icone.png?v=1"
+};
+/* Custom ZebraOS desktop sprite: user-supplied artwork optimised for small UI sizes. */
 function osIcon(name,size){
-  if(name==="racer"){
-    // User-supplied Echo Racer 2 logo; one image for desktop, menus and titlebar.
-    var racerLogo=el("img","os-icon-graphic");
-    racerLogo.src="/assets/games/echo-racer-logo-2026.webp?v=1";
-    racerLogo.alt="";racerLogo.width=size;racerLogo.height=size;
-    racerLogo.style.width=size+"px";
-    racerLogo.style.height=size+"px";
-    racerLogo.style.objectFit="contain";
-    racerLogo.setAttribute("aria-hidden","true");
-    return racerLogo;
+  var applicationSource=applicationIconFiles[name];
+  if(applicationSource){
+    var applicationIcon=el("img","os-icon-graphic os-application-icon");
+    applicationIcon.src=applicationSource;
+    applicationIcon.alt="";applicationIcon.width=size;applicationIcon.height=size;
+    applicationIcon.style.width=size+"px";applicationIcon.style.height=size+"px";
+    applicationIcon.style.objectFit="contain";
+    applicationIcon.setAttribute("aria-hidden","true");
+    return applicationIcon;
   }
-  if(name==="snake"){
-    var znak=el("img","os-icon-graphic");
-    znak.src="/STUDIO/BUREAU/Jeux/Znake.exe.zebraos.json.icone.png?v=1";
-    znak.alt="";znak.width=size;znak.height=size;
-    znak.style.width=size+"px";znak.style.height=size+"px";znak.style.objectFit="contain";
-    znak.setAttribute("aria-hidden","true");return znak;
-  }
-  if(name==="tetris"||name==="snake"||name==="paint"){
-    var retro=el("span","zapp-icon zapp-"+name,name==="tetris"?"▦":name==="snake"?"▥":name==="racer"?"◇":"✎");
-    retro.style.width=size+"px";retro.style.height=size+"px";
-    retro.style.fontSize=Math.round(size*.63)+"px";
-    retro.setAttribute("aria-hidden","true");return retro;
-  }
-  if(name==="calc"||name==="sticky"||name==="planner"){
-   var mini=el("span","zu-app-icon "+name,name==="calc"?"＋":name==="sticky"?"✎":"31");
-   mini.style.width=size+"px";mini.style.height=size+"px";mini.style.fontSize=Math.max(10,Math.round(size*.46))+"px";
-   mini.setAttribute("aria-hidden","true");return mini;
- }
  var pack=window.ZebraIconPack, i=pack&&pack.names?pack.names.indexOf(name):-1;
   var node=el("span","os-icon-graphic");
   node.setAttribute("aria-hidden","true");
@@ -173,11 +166,19 @@ function fileIcon(f){
 function windowIcon(id){
   if(id==="amp")return "zebraamp";
   if(id==="tetris"||id==="snake"||id==="paint"||id==="racer"||id==="calc"||id==="sticky"||id==="planner")return id;
+  if(id==="racer-lab")return "racer";
+  if(id.indexOf("note-")===0)return "notepad";
+  if(id.indexOf("msg-")===0)return "help";
   if(id==="explorer")return "computer";
+  if(id==="desktop-trash")return "recycle-bin";
   if(id==="settings")return "control-panel";
+  if(id==="display")return "wallpaper";
+  if(id==="sounds")return "mp3";
+  if(id==="datetime"||id==="performance")return "settings";
+  if(id==="welcome"||id==="about")return "zebraos";
+  if(id==="visualizer")return "zebraamp";
   if(id==="manager")return "computer";
   if(id==="viewer")return "jpg";
-  if(id==="about")return "zebraos";
   if(id==="adminprompt")return "settings";
   return "txt";
 }
@@ -881,7 +882,7 @@ var gameModules={
  racer:{name:"Echo Racer 2 Beta — "+echoRacerBuildVersion,width:750,height:790,global:"ZebraEchoRacer",
   files:["echo-racer.js?v=21.5"],css:"echo-racer.css?v=20.4"},
  paint:{name:"ZebraPaint.exe",width:1180,height:720,global:"ZebraPaint",
-  files:["paint.js?v=2.4"],css:"paint-responsive.css?v=2.3"}
+  files:["paint.js?v=2.5"],css:"paint-responsive.css?v=2.4"}
 };
 var assetPromises={};
 /* Chaque nouvelle session recharge réellement les modules lazy et leurs styles.

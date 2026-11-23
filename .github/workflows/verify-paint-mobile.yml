@@ -71,9 +71,10 @@ jobs:
                 &&buttons().every(b=>{
                   const icon=b.querySelector("img.zp-tool-texture");
                   return !!icon&&/^assets\/paint\/tools\/.+\.png$/.test(icon.getAttribute("src")||"")
-                    &&!!b.querySelector(".zp-tool-name");
+                    &&!b.querySelector(".zp-tool-name")&&!!b.getAttribute("aria-label")
+                    &&b.textContent.trim()==="";
                 })
-                &&buttons().some(b=>b.textContent==="Gomme");
+                &&buttons().some(b=>b.getAttribute("aria-label")==="Gomme");
               test.initialLayers=labels().some(s=>s.includes("Fond"))
                 &&labels().some(s=>s.includes("Dessin"));
               select("Fond");

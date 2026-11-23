@@ -1,4 +1,4 @@
-/* ZebraPaint 2.4 — atelier PC redimensionnable et pictogrammes pixel. */
+/* ZebraPaint 2.5 — outils carrés et panneaux redimensionnables. */
 (function(){
 "use strict";
 const UNDO_LIMIT=12,MAX_LAYERS=25,MAX_PIXELS=2300000;
@@ -193,7 +193,12 @@ function mount(root){
  const sidebar=el("aside","zp-sidebar");
  sidebar.setAttribute("aria-label","Calques et réglages");
  sidebar.append(panelLayers,options,message,saveIndicator);
- body.append(tools,work,sidebar);
+ const sidebarResizer=el("div","zp-sidebar-resizer");
+ sidebarResizer.tabIndex=0;sidebarResizer.setAttribute("role","separator");
+ sidebarResizer.setAttribute("aria-orientation","vertical");
+ sidebarResizer.setAttribute("aria-label","Redimensionner le panneau des calques et réglages");
+ sidebarResizer.title="Tirer vers la gauche ou la droite pour redimensionner le panneau";
+ body.append(tools,work,sidebarResizer,sidebar);
  panel.append(bar,body);root.append(panel);
  const hostWindow=root.closest(".window");
  if(hostWindow)hostWindow.classList.add("paint-window");
@@ -221,6 +226,35 @@ function mount(root){
   e.preventDefault();resizeLayerList(layerList.getBoundingClientRect().height+(e.key==="ArrowDown"?24:-24));
  };
 
+ function resizeSidebar(value){
+  const toolsWidth=tools.getBoundingClientRect().width||62;
+  const maximum=Math.max(230,Math.min(520,body.clientWidth-toolsWidth-260));
+  const width=clamp(Math.round(value),230,maximum);
+  sidebar.style.setProperty("--zp-sidebar-width",width+"px");
+  sidebarResizer.setAttribute("aria-valuemin","230");
+  sidebarResizer.setAttribute("aria-valuemax",String(maximum));
+  sidebarResizer.setAttribute("aria-valuenow",String(width));
+ }
+ let sidebarResize=null;
+ sidebarResizer.onpointerdown=e=>{
+  if(window.innerWidth<=700||(e.pointerType==="mouse"&&e.button!==0))return;
+  sidebarResize={x:e.clientX,width:sidebar.getBoundingClientRect().width};
+  sidebarResizer.classList.add("active");
+  sidebarResizer.setPointerCapture?.(e.pointerId);e.preventDefault();
+ };
+ sidebarResizer.onpointermove=e=>{
+  if(sidebarResize)resizeSidebar(sidebarResize.width-(e.clientX-sidebarResize.x));
+ };
+ sidebarResizer.onpointerup=sidebarResizer.onpointercancel=()=>{
+  sidebarResize=null;sidebarResizer.classList.remove("active");
+ };
+ sidebarResizer.ondblclick=()=>resizeSidebar(300);
+ sidebarResizer.onkeydown=e=>{
+  if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")return;
+  e.preventDefault();
+  resizeSidebar(sidebar.getBoundingClientRect().width+(e.key==="ArrowLeft"?24:-24));
+ };
+
  const toolButtons={};
  toolDefs.forEach(([id,label,tooltip])=>{
   const b=btn("",()=>choose(id),"zp-tool");
@@ -229,7 +263,7 @@ function mount(root){
   const texture=el("img","zp-tool-texture");
   texture.src=toolTextures[id];texture.alt="";texture.width=32;texture.height=32;
   texture.draggable=false;texture.setAttribute("aria-hidden","true");art.append(texture);
-  b.append(art,el("span","zp-tool-name",label));
+  b.append(art);
   toolButtons[id]=b;tools.append(b);
  });
  function notice(t){message.textContent=t;}
