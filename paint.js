@@ -299,7 +299,10 @@ function mount(root){
   const revision=editVersion;
   if(active)saveIndicator.textContent="Enregistrement du brouillon…";
   // Les écritures restent dans l'ordre si la fenêtre se ferme puis se rouvre.
-  lastWrite=lastWrite.catch(()=>{}).then(()=>writeDraft(draftKey,project));
+  // writeDraft sérialise déjà les écritures par clé. L'enregistrer tout de
+  // suite dans pendingDraftWrites évite qu'une nouvelle fenêtre lise l'ancien
+  // brouillon pendant qu'un dernier write était seulement planifié.
+  lastWrite=writeDraft(draftKey,project);
   lastWrite.then(()=>{
    lastSavedVersion=Math.max(lastSavedVersion,revision);
    if(active&&editVersion===revision)saveIndicator.textContent="Brouillon enregistré sur cet appareil";
