@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T10:23:55.661853+00:00",
+  "generatedAt": "2026-11-23T10:31:37.850651+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -529,6 +529,11 @@
     {
       "path": "STUDIO/BUREAU/Sonnnn/prod",
       "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/prod/first sample boom bap i like it.mp3",
+      "type": "file",
+      "size": 4335966
     },
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
