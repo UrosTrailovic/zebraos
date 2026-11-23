@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T10:02:00.552954+00:00",
+  "generatedAt": "2026-11-23T10:19:54.339748+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -458,6 +458,10 @@
       "path": "STUDIO/BUREAU/Sonnnn/Délire stylé/surment un bon son.mp3",
       "type": "file",
       "size": 1420701
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Farfa",
+      "type": "dir"
     },
     {
       "path": "STUDIO/BUREAU/Sonnnn/Jony-au-MAD-v2-2emeMASTER-test-_jony-la-bibi_ (1).mp3",
