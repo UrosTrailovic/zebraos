@@ -36,7 +36,8 @@ def mount(page,mobile=False):
 def at(page,x,y):
     rect=page.locator(".zp-canvas-frame").bounding_box()
     assert rect, "toile introuvable"
-    return rect["x"]+(x/640)*rect["width"], rect["y"]+(y/400)*rect["height"]
+    d=page.locator(".zp-canvas").evaluate("(n)=>({w:n.width,h:n.height})")
+    return rect["x"]+(x/d["w"])*rect["width"], rect["y"]+(y/d["h"])*rect["height"]
 
 def choose(page,name):
     page.get_by_role("button",name=name,exact=True).click()
@@ -167,6 +168,46 @@ def check_desktop(browser):
       document.querySelector('.zp-canvas-frame').style.width==='800px';
     }""",timeout=14000)
     REPORT["projectReopenObjects"]=True
+
+    # Full HD est aussi possible avec le nouveau format; Annuler restaure la taille.
+    page.get_by_role("button",name="Format de la toile").click()
+    dlg=page.locator(".zp-dialog")
+    dlg.locator("input").nth(0).fill("1920")
+    dlg.locator("input").nth(1).fill("1080")
+    dlg.get_by_role("button",name="Valider").click()
+    assert page.locator(".zp-canvas").evaluate("(n)=>[n.width,n.height]")==[1920,1080]
+    page.locator(".zp-edits button").first.click()
+    assert page.locator(".zp-canvas").evaluate("(n)=>[n.width,n.height]")==[800,500]
+    REPORT["fullHDAndUndo"]=True
+
+    # Le trait finit APRES que la première autosauvegarde a pu se déclencher.
+    row=page.locator(".zp-layer-entry").filter(has_text="Dessin 1")
+    row.locator(".zp-layer-choice").click()
+    choose(page,"Crayon")
+    ax,ay=at(page,20,350)
+    bx,by=at(page,280,350)
+    page.mouse.move(ax,ay);page.mouse.down()
+    page.wait_for_timeout(1150)
+    page.mouse.move(bx,by,steps=10);page.mouse.up()
+    def stroke_present():
+        return page.evaluate("""() => {
+          const surface=[...document.querySelectorAll('.zp-raster-layer')].at(-1);
+          const a=surface.getContext('2d').getImageData(270,350,1,1).data;
+          return a[3]>200 && a[0]<50;
+        }""")
+    assert stroke_present()
+    page.evaluate("""() => {
+      const host=document.getElementById('paint-v2-test');
+      host._zebraDispose();
+      window.ZebraPaint.mount(host);
+    }""")
+    page.wait_for_function("""() => {
+      const layers=[...document.querySelectorAll('.zp-raster-layer')];
+      if(layers.length<2)return false;
+      const a=layers.at(-1).getContext('2d').getImageData(270,350,1,1).data;
+      return a[3]>200 && a[0]<50;
+    }""",timeout=22000)
+    REPORT["longStrokeDraftRestored"]=True
     assert not errors,errors
     print("PAINT_V2_DESKTOP_PASS",REPORT,flush=True)
     ctx.close()

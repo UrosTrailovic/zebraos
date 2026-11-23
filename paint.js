@@ -1,7 +1,7 @@
 /* ZebraPaint 1.5 — sauvegarde automatique et calques fiables. */
 (function(){
 "use strict";
-const UNDO_LIMIT=12,MAX_LAYERS=25,MAX_PIXELS=1600*1200;
+const UNDO_LIMIT=12,MAX_LAYERS=25,MAX_PIXELS=2300000;
 const palette=["#000000","#ffffff","#808080","#c0c0c0","#800000","#ff0000","#808000","#ffff00","#008000","#00ff00","#008080","#00ffff","#000080","#0000ff","#800080","#ff00ff","#d68545","#f6c289","#eac6c6","#9faad9","#304d46","#5e9f72","#403765","#f7d65c"];
 function el(tag,cls,text){const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x;}
 function btn(label,fn,cls="zp-button"){const x=el("button",cls,label);x.type="button";x.onclick=fn;return x;}
@@ -230,11 +230,11 @@ function mount(root){
  }
  function openCanvasDialog(){
   makeDialog("Format du plan de travail","Dimensions en pixels. Le dessin existant est conservé.",
-   [{label:"Largeur",value:W,type:"number",min:64,max:1600},
-    {label:"Hauteur",value:H,type:"number",min:64,max:1200}],values=>{
+   [{label:"Largeur",value:W,type:"number",min:64,max:2400},
+    {label:"Hauteur",value:H,type:"number",min:64,max:2400}],values=>{
      const w=Number(values[0]),h=Number(values[1]);
-     if(!Number.isInteger(w)||!Number.isInteger(h)||w<64||h<64||w>1600||h>1200||w*h>MAX_PIXELS){
-      notice("Format invalide : maximum 1600 × 1200 pixels.");return false;
+     if(!Number.isInteger(w)||!Number.isInteger(h)||w<64||h<64||w>2400||h>2400||w*h>MAX_PIXELS){
+      notice("Format invalide : dimensions de 64 à 2400 px et maximum 2,3 mégapixels.");return false;
      }
      if(w===W&&h===H)return true;
      record();
@@ -537,6 +537,9 @@ function mount(root){
    vectorWidth.parentNode.hidden=vector.kind==="text";
    objectWidth.value=String(Math.round(vector.w));
    objectHeight.value=String(Math.round(vector.h));
+   [vectorStroke,vectorFill,vectorFillColor,vectorWidth,vectorSize,vectorText,objectWidth,objectHeight]
+    .forEach(input=>{input.disabled=!!vector.locked;});
+   vectorFillColor.disabled=!!vector.locked||!vector.fill;
   }
   if(movable){
    rotateControl.input.value=String(movable.angle||0);
@@ -858,6 +861,7 @@ function mount(root){
   const wasVector=layers.find(x=>x.id===drawingId)?.type==="vector";
   drawing=false;activePointer=null;currentErase=null;drawingId=null;
   render();
+  scheduleDraft();
   if(wasVector){choose("select");vectorDetails.open=true;}
   notice(wasVector?"Forme créée · sélectionne-la pour modifier les dimensions et le style.":"Modification enregistrée · Annuler disponible.");
  }
@@ -910,7 +914,7 @@ function mount(root){
    window.removeEventListener("pointerup",finish);
    window.removeEventListener("pointercancel",finish);
    draggingCleanup=null;
-   if(changed)render();
+   if(changed){render();scheduleDraft();}
   }
   draggingCleanup=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",finish);window.removeEventListener("pointercancel",finish);};
   window.addEventListener("pointermove",move,{passive:false});
@@ -971,7 +975,7 @@ function mount(root){
    const data=JSON.parse(await file.text());
    if(data.format!=="zebrapaint"||![1,2].includes(data.version)
       ||!Number.isInteger(data.width)||!Number.isInteger(data.height)
-      ||data.width<64||data.width>1600||data.height<64||data.height>1200
+      ||data.width<64||data.width>2400||data.height<64||data.height>2400
       ||data.width*data.height>MAX_PIXELS
       ||!Array.isArray(data.layers)||data.layers.length<1||data.layers.length>MAX_LAYERS)
       throw new Error("Format de projet invalide ou incompatible");
