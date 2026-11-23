@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T07:55:05.999517+00:00",
+  "generatedAt": "2026-11-23T09:57:32.744641+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -428,6 +428,10 @@
     },
     {
       "path": "STUDIO/BUREAU/Sonnnn",
+      "type": "dir"
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Délire stylé",
       "type": "dir"
     },
     {
