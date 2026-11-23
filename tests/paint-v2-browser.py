@@ -201,12 +201,49 @@ def check_desktop(browser):
       host._zebraDispose();
       window.ZebraPaint.mount(host);
     }""")
-    page.wait_for_function("""() => {
-      const layers=[...document.querySelectorAll('.zp-raster-layer')];
-      if(layers.length<2)return false;
-      const a=layers.at(-1).getContext('2d').getImageData(270,350,1,1).data;
-      return a[3]>200 && a[0]<50;
-    }""",timeout=22000)
+    try:
+        page.wait_for_function("""() => {
+          const layers=[...document.querySelectorAll('.zp-raster-layer')];
+          if(layers.length<2)return false;
+          const a=layers.at(-1).getContext('2d').getImageData(270,350,1,1).data;
+          return a[3]>200 && a[0]<50;
+        }""",timeout=9000)
+    except Exception:
+        debug=page.evaluate("""async () => {
+          const layers=[...document.querySelectorAll('.zp-raster-layer')];
+          const pixel=l=>l ? [...l.getContext('2d').getImageData(270,350,1,1).data] : [];
+          const current={status:document.querySelector('.zp-autosave-status')?.textContent,
+            layers:[...document.querySelectorAll('.zp-layer-entry')].map(x=>x.textContent.slice(0,45)),
+            canvas:[document.querySelector('.zp-canvas')?.width,document.querySelector('.zp-canvas')?.height],
+            pixels:layers.map(pixel)};
+          const db=await new Promise((ok,no)=>{
+            const req=indexedDB.open('ZebraPaintDrafts');
+            req.onsuccess=()=>ok(req.result);req.onerror=()=>no(req.error);
+          });
+          const record=await new Promise((ok,no)=>{
+            const req=db.transaction('projects','readonly').objectStore('projects').get('session:zebra');
+            req.onsuccess=()=>ok(req.result);req.onerror=()=>no(req.error);
+          });
+          const data=record?.project;
+          current.saved={updatedAt:record?.updatedAt,version:data?.version,
+           dim:[data?.width,data?.height],layers:data?.layers.map(x=>({type:x.type,
+            name:x.name,imageBytes:x.image?.length}))};
+          const images=(data?.layers||[]).filter(l=>l.type==='raster');
+          current.savedPixels=[];
+          for(const l of images){
+            const image=await new Promise((ok,no)=>{
+              const v=new Image();v.onload=()=>ok(v);v.onerror=()=>no(Error('PNG load'));
+              v.src=l.image;
+            });
+            const canvas=document.createElement('canvas');
+            canvas.width=image.width;canvas.height=image.height;
+            const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);
+            current.savedPixels.push([...ctx.getImageData(270,350,1,1).data]);
+          }
+          return current;
+        }""")
+        print("LONG_STROKE_DEBUG",json.dumps(debug,ensure_ascii=False),flush=True)
+        raise
     REPORT["longStrokeDraftRestored"]=True
     assert not errors,errors
     print("PAINT_V2_DESKTOP_PASS",REPORT,flush=True)
