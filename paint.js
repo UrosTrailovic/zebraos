@@ -237,6 +237,8 @@ function mount(root){
   canvas.width=W;canvas.height=H;
   canvasFrame.style.width=W+"px";canvasFrame.style.height=H+"px";
   canvasFrame.style.setProperty("--zp-ratio",W+" / "+H);
+  canvasFrame.style.setProperty("aspect-ratio",W+" / "+H,"important");
+  canvas.style.setProperty("aspect-ratio",W+" / "+H,"important");
   message.textContent=W+" × "+H+" · ZebraPaint";
  }
  function makeDialog(title,description,fields,done){
