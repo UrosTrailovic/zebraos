@@ -45,6 +45,7 @@ def setup_desktop(page):
         symbol.append(window.ZebraGitFiles.icon(item,window.__icon,40));
         const name=document.createElement('span');name.className='desk-caption';name.textContent=item.name;
         btn.append(symbol,name);root.append(btn);
+        if(item.type==='dir')window.ZebraFileMoves.markDrop(btn,item.path);
        });
        window.ZebraDesktop.bind();
       };
@@ -161,6 +162,14 @@ def desktop_and_public(browser):
     page.wait_for_function("(x)=>!ZebraDesktop.isTrashed('zebra',x)",arg=THANKS)
     assert page.evaluate("(x)=>ZebraFileMoves.parent(x,'zebra')",THANKS)==ROOT
 
+    # A folder icon on the desktop is a drop target without opening it.
+    settings=ROOT+"/Réglage de l’ordinateur.zebraos.json"
+    page.wait_for_function("(x)=>!!document.querySelector('.desk-icon[data-path='+JSON.stringify(x)+']')",arg=settings)
+    mouse_drag(page,root.locator('.desk-icon[data-path="'+settings+'"]'),
+               root.locator('.desk-icon[data-path="'+TOOLS+'"]'))
+    assert page.evaluate("x=>ZebraFileMoves.parent(x,'zebra')",settings)==TOOLS
+    page.evaluate("(x)=>ZebraFileMoves.movePublic([x],ZebraFileMoves.root,'zebra')",settings)
+
     # A personal Blob can appear inside public desktop folders and move again.
     entry=page.evaluate("""async (root)=>{
       const [entry]=await ZebraLocalFiles.importAt(root,[new File(['bonjour zebra'],'local-essai.txt',{type:'text/plain'})],'zebra');
@@ -185,6 +194,14 @@ def desktop_and_public(browser):
     assert page.evaluate("id=>ZebraGitFiles.list(ZebraGitFiles.root,'zebra').some(f=>f.path==='local:'+id)",created)
     page.evaluate("([path,dest])=>ZebraFileMoves.movePublic([path],'local:'+dest,'zebra')",[THANKS,created])
     assert page.evaluate("([path,id])=>ZebraGitFiles.list('local:'+id,'zebra').some(f=>f.path===path)",[THANKS,created])
+    # Moving a public folder into a personal folder inside itself is forbidden.
+    page.evaluate("([id,target])=>ZebraLocalFiles.moveEntry(id,target,'zebra')",[created,GAMES])
+    rejected=page.evaluate("""([source,id])=>{
+      try{ZebraFileMoves.movePublic([source],'local:'+id,'zebra');return false}
+      catch(e){return /lui-même/.test(e.message)}
+    }""",[GAMES,created])
+    assert rejected
+    page.evaluate("id=>ZebraLocalFiles.moveEntry(id,ZebraFileMoves.root,'zebra')",created)
     assert page.evaluate("p=>ZebraFileMoves.parent(p,'admin')===ZebraFileMoves.root",THANKS)
 
     # Reload: all placements and Blob bytes survive.

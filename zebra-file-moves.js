@@ -30,11 +30,26 @@ function parent(path,session){
  const moves=state(session);
  return Object.prototype.hasOwnProperty.call(moves,path)?moves[path]:originalParent(path);
 }
+function localNode(value){
+ if(typeof value!=="string")return null;
+ const id=value.startsWith("local:")?value.slice(6):value;
+ return window.ZebraLocalFiles?.cached?.().find(x=>x.id===id)||null;
+}
 function validTarget(target,session){
  if(target===ROOT||target==="local:root")return true;
  if(target.startsWith("local:")){
-  const id=target.slice(6),disk=window.ZebraLocalFiles;
-  return id==="root"||!!disk?.cached?.().find(x=>x.id===id&&x.kind==="folder"&&!x.deleted);
+  const node=localNode(target);
+  if(!node||node.kind!=="folder"||node.deleted)return false;
+  let at=node.parent,count=0;
+  while(at&&at!==ROOT&&at!=="root"&&count++<30){
+   const local=localNode(at);
+   if(local){if(local.deleted)return false;at=local.parent;}
+   else if(at.startsWith("STUDIO/BUREAU")){
+    if(window.ZebraDesktop?.isTrashed?.(session,at))return false;
+    at=parent(at,session);
+   }else return false;
+  }
+  return count<30;
  }
  return !!item(target)&&item(target).type==="dir"&&!isInTrash(target,session);
 }
@@ -42,26 +57,24 @@ function isInTrash(path,session){
  const desktop=window.ZebraDesktop;
  if(desktop?.isTrashed?.(session,path))return true;
  let at=parent(path,session),n=0;
- while(at&&at!==ROOT&&n++<30){
-  if(at.startsWith("local:")){
-   const file=window.ZebraLocalFiles?.cached?.().find(x=>x.id===at.slice(6));
-   return !file||!!file.deleted;
-  }
+ while(at&&at!==ROOT&&at!=="root"&&n++<30){
+  const local=localNode(at);
+  if(local){if(local.deleted)return true;at=local.parent;continue;}
+  if(at.startsWith("local:"))return true;
   if(desktop?.isTrashed?.(session,at))return true;
   at=parent(at,session);
  }
- return false;
+ return n>=30;
 }
 function isAncestor(candidate,folder,session){
  let at=folder,n=0;
- while(at&&at!==ROOT&&n++<30){
-  if(at===candidate)return true;
-  if(at.startsWith("local:")){
-   const x=window.ZebraLocalFiles?.cached?.().find(e=>e.id===at.slice(6));
-   at=x?.parent;
-  }else at=parent(at,session);
+ while(at&&at!==ROOT&&at!=="root"&&n++<30){
+  if(at===candidate||at==="local:"+candidate||"local:"+at===candidate)return true;
+  const local=localNode(at);
+  if(local)at=local.parent;
+  else at=parent(at,session);
  }
- return false;
+ return n>=30;
 }
 function children(folder,session,raw){
  const moves=state(session),entries=raw||published();

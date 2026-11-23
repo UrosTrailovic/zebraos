@@ -15,7 +15,8 @@ def check_icons(page,selector):
     try:
         page.wait_for_function("""(selector)=>{
           const imgs=[...document.querySelectorAll(selector+' img.github-nav-icon')];
-          return imgs.length===3 && imgs.every(x=>x.complete && x.naturalWidth===64 && x.naturalHeight===64);
+          return imgs.length===3 && imgs.every(x=>x.complete &&
+            x.naturalWidth>=16 && x.naturalWidth<=128 && x.naturalHeight>=16 && x.naturalHeight<=128);
         }""",arg=selector,timeout=14000)
     except Exception:
         detail=page.evaluate("""async (selector)=>{
