@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T13:58:56.852247+00:00",
+  "generatedAt": "2026-11-23T14:02:07.061213+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -527,9 +527,19 @@
       "type": "dir"
     },
     {
+      "path": "STUDIO/BUREAU/Sonnnn/prod/Akai-nogga.mp3",
+      "type": "file",
+      "size": 3264831
+    },
+    {
       "path": "STUDIO/BUREAU/Sonnnn/prod/first sample boom bap i like it.mp3",
       "type": "file",
       "size": 4335966
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/prod/trap-shit-halloweeeen.mp3",
+      "type": "file",
+      "size": 4681573
     },
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
