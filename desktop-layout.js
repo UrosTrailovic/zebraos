@@ -168,12 +168,6 @@ function showMenu(path,x,y,node){
    else trashItem(path);
   });
  }else{
-  item("Nouveau dossier",function(){
-   if(!window.ZebraLocalFiles?.createFolderAt)return;
-   window.ZebraLocalFiles.promptName(active.screen,"Nouveau dossier","Nouveau dossier",function(name){
-    window.ZebraLocalFiles.createFolderAt("STUDIO/BUREAU",name,active.session).catch(e=>alert(e.message));
-   });
-  });
   item("Ranger les icônes",resetPositions);
   item("Ouvrir la Corbeille",active.openTrash);
  }

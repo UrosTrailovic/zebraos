@@ -340,14 +340,6 @@ function mount(host,path,opts){
   }
  },"back");
  var refreshButton=navButton("Actualiser",reload,"refresh");
- if(window.ZebraLocalFiles?.createFolderAt){
-  button("+ Dossier",function(){
-   window.ZebraLocalFiles.promptName(host,"Nouveau dossier","Nouveau dossier",function(name){
-    window.ZebraLocalFiles.createFolderAt(path,name,account).then(render)
-     .catch(e=>window.alert(e.message));
-   });
-  });
- }
  if(admin)button("Ajouter sur GitHub ↗",function(){openExternal(upload(path));});
  var viewControl=node("label","folder-view-control");
  viewControl.appendChild(node("span","","Affichage"));

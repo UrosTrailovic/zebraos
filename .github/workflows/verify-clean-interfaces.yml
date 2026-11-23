@@ -1,0 +1,50 @@
+name: Vérifier menu et fond écran simplifiés
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'wallpaper.js'
+      - 'desktop-layout.js'
+      - 'github-files.js'
+      - 'filesystem.js'
+      - 'tests/clean-interfaces.py'
+      - '.github/workflows/verify-clean-interfaces.yml'
+      - 'index.html'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  clean-interfaces:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier syntaxe et scripts inclus
+        run: |
+          node --check wallpaper.js
+          node --check desktop-layout.js
+          node --check github-files.js
+          node --check filesystem.js
+          node - <<'JS'
+          const fs=require('fs');
+          const src=fs.readFileSync('index.html','utf8');
+          for(const name of ['wallpaper.js?v=1.8','desktop-layout.js?v=2.1',
+           'github-files.js?v=6.1','filesystem.js?v=4.1'])
+            if(!src.includes(name))throw Error('Version attendue absente : '+name);
+          JS
+      - name: Installer Playwright
+        run: python3 -m pip install --quiet playwright
+      - name: Tester les deux interfaces sur PC et mobile
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/ui-http.log 2>&1 &
+          SERVER=$!
+          trap 'kill $SERVER 2>/dev/null || true' EXIT
+          sleep 1
+          python3 tests/clean-interfaces.py
+      - name: Captures écran
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zebraos-interfaces-simplifiees
+          path: clean-interfaces-screenshots/
+          if-no-files-found: ignore

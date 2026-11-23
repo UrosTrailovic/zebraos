@@ -347,13 +347,6 @@ async function mount(host,parent,opt){
   },"back");
   navigation("Actualiser",refresh,"refresh");
   if(!isTrash){
-    add("+ Dossier",function(){
-      dialog(host,"Créer un dossier","Nouveau dossier",async function(name){
-        try{var now=await all();if(duplicate(now,parent,name))throw Error("Un élément porte déjà ce nom.");
-        await put({id:uniqueId(),parent:parent,name:name,kind:"folder",created:Date.now(),deleted:false});refresh();
-        }catch(e){alertError(host,e.message);}
-      });
-    });
     add("↑ Importer",function(){fileDialog(host,true,function(files){importFiles(parent,files,host,refresh);});});
     if(clipboard)add("▣ Coller",function(){move(parent,host,refresh).catch(function(e){alertError(host,e.message);});});
   }

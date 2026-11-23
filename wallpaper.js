@@ -317,14 +317,6 @@ function removeSelected(){
 function mount(parent){
   if(!parent||!currentSession)return;
   parent.innerHTML="";
-  var heading=el("div","wallpaper-heading");
-  var icon=el("span","wallpaper-heading-icon","▧");
-  var description=el("div","wallpaper-heading-text");
-  description.appendChild(el("h3","", "Personnaliser votre arrière-plan"));
-  description.appendChild(el("p","", "Ce fond appartient uniquement à la session "+currentSession+"."));
-  heading.appendChild(icon);heading.appendChild(description);
-  parent.appendChild(heading);
-
   var stage=el("div","wallpaper-stage");
   var preview=el("div","wallpaper-preview wallpaper-"+currentSession);
   preview.id="wallpaper-preview";
