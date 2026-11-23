@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T14:05:18.635029+00:00",
+  "generatedAt": "2026-11-23T14:07:16.162953+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -645,11 +645,6 @@
       "name": "ZebraAMP.exe",
       "app": "amp",
       "icon": "zebraamp"
-    },
-    {
-      "path": "STUDIO/BUREAU/thanks.txt",
-      "type": "file",
-      "size": 93
     }
   ]
 }
