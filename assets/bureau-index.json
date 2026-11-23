@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T10:19:54.339748+00:00",
+  "generatedAt": "2026-11-23T10:23:55.661853+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -464,6 +464,16 @@
       "type": "dir"
     },
     {
+      "path": "STUDIO/BUREAU/Sonnnn/Farfa/Farfa1 (1).mp3",
+      "type": "file",
+      "size": 6240071
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/Farfa/Farfa2.mp3",
+      "type": "file",
+      "size": 6196157
+    },
+    {
       "path": "STUDIO/BUREAU/Sonnnn/Jony-au-MAD-v2-2emeMASTER-test-_jony-la-bibi_ (1).mp3",
       "type": "file",
       "size": 6637065
@@ -515,6 +525,10 @@
       "path": "STUDIO/BUREAU/Sonnnn/Zebralogy/zebralogyCover.jpg",
       "type": "file",
       "size": 11864
+    },
+    {
+      "path": "STUDIO/BUREAU/Sonnnn/prod",
+      "type": "dir"
     },
     {
       "path": "STUDIO/BUREAU/Zebra Tape 2",
