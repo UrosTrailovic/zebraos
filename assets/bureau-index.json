@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-23T10:31:37.850651+00:00",
+  "generatedAt": "2026-11-23T13:58:56.852247+00:00",
   "desktopOrder": [
     "Réglage de l’ordinateur",
     "ZebraAMP.exe",
@@ -482,10 +482,6 @@
       "path": "STUDIO/BUREAU/Sonnnn/Jony-au-MAD-v2-2emeMASTER-test-_jony-la-bibi_.mp3",
       "type": "file",
       "size": 6637065
-    },
-    {
-      "path": "STUDIO/BUREAU/Sonnnn/Zebra Tape 1",
-      "type": "dir"
     },
     {
       "path": "STUDIO/BUREAU/Sonnnn/Zebralogy",
