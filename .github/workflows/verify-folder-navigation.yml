@@ -1,0 +1,51 @@
+name: Vérifier les icônes de navigation des dossiers
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'github-files.js'
+      - 'filesystem.js'
+      - 'desktop-layout.js'
+      - 'folder-views.css'
+      - 'assets/icons/nav-ordinateur.png'
+      - 'assets/icons/nav-retour.png'
+      - 'assets/icons/nav-actualiser.png'
+      - 'tests/folder-navigation-browser.py'
+      - '.github/workflows/verify-folder-navigation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  nav:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier syntaxe et images
+        run: |
+          node --check github-files.js
+          node --check filesystem.js
+          node --check desktop-layout.js
+          python3 - <<'PY'
+          from pathlib import Path
+          for name in ('ordinateur','retour','actualiser'):
+            data=Path('assets/icons/nav-'+name+'.png').read_bytes()
+            assert data[:8]==b'\x89PNG\r\n\x1a\n',name
+            assert len(data)<4000,(name,len(data))
+          PY
+      - name: Installer Chromium et Playwright
+        run: python3 -m pip install --quiet playwright
+      - name: Tester trois barres PC et mobile
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/nav-http.log 2>&1 &
+          SERVER=$!
+          trap 'kill $SERVER 2>/dev/null || true' EXIT
+          sleep 1
+          python3 tests/folder-navigation-browser.py
+      - name: Captures PC et mobile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dossier-navigation-bitmap
+          path: folder-navigation-screenshots/
+          if-no-files-found: ignore

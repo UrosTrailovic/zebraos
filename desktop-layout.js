@@ -296,23 +296,22 @@ function showTrash(body,session,openLocalTrash,openComputer){
   bar.appendChild(b);return b;
  }
  function nav(label,fn,kind){
-  var b=action(label,fn,"github-nav-button");
+  var b=action("",fn,"github-nav-button");
   b.classList.add("github-nav-"+kind);
-  b.title=kind==="back"?"Retour":"Poste de travail";
-  b.setAttribute("aria-label",b.title);
+  b.title=label;
+  b.setAttribute("aria-label",label);
+  var img=el("img","github-nav-icon");
+  img.src="/assets/icons/nav-"+(kind==="home"?"ordinateur":kind==="back"?"retour":"actualiser")+".png?v=1";
+  img.alt="";img.width=28;img.height=28;img.draggable=false;
+  b.appendChild(img);
   return b;
  }
- nav("⌂",function(){if(typeof openComputer==="function")openComputer();else closeWindow();},"home");
- var back=nav("",closeWindow,"back");
- var svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
- svg.setAttribute("viewBox","0 0 24 24");svg.setAttribute("aria-hidden","true");
- var arrow=document.createElementNS("http://www.w3.org/2000/svg","path");
- arrow.setAttribute("d","M10 5 5 10l5 5M5 10h11v10");
- svg.appendChild(arrow);back.appendChild(svg);
- action("↻ Actualiser",function(){
+ nav("Poste de travail",function(){if(typeof openComputer==="function")openComputer();else closeWindow();},"home");
+ nav("Retour",closeWindow,"back");
+ nav("Actualiser",function(){
   if(lib&&lib.load)lib.load().then(function(){if(alive)render();});
   render();
- });
+ },"refresh");
  var restoreAllButton=action("Tout restaurer",function(){
   restoreAll();render();
  });

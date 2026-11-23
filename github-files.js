@@ -302,14 +302,18 @@ function mount(host,path,opts){
   var b=node("button","classic-button",label);b.type="button";b.onclick=handler;bar.appendChild(b);return b;
  }
  function navButton(label,handler,kind){
-  var b=button(label,handler);
+  var b=button("",handler);
   b.classList.add("github-nav-button","github-nav-"+kind);
-  b.title=kind==="back"?"Retour":"Dossier principal";
-  b.setAttribute("aria-label",kind==="back"?"Retour au dossier précédent ou au bureau":"Dossier principal");
+  b.title=label;
+  b.setAttribute("aria-label",label);
+  var img=node("img","github-nav-icon");
+  img.src="/assets/icons/nav-"+(kind==="home"?"ordinateur":kind==="back"?"retour":"actualiser")+".png?v=1";
+  img.alt="";img.width=28;img.height=28;img.draggable=false;
+  b.appendChild(img);
   return b;
  }
- navButton("⌂",function(){mount(host,ROOT,opts);},"home");
- var back=navButton("",function(){
+ navButton("Poste de travail",function(){mount(host,ROOT,opts);},"home");
+ navButton("Retour",function(){
   if(path!==ROOT){
    mount(host,path.substring(0,path.lastIndexOf("/")),opts);
   }else{
@@ -318,14 +322,7 @@ function mount(host,path,opts){
    if(close)close.click();
   }
  },"back");
- var svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
- svg.setAttribute("viewBox","0 0 24 24");
- svg.setAttribute("aria-hidden","true");
- var arrow=document.createElementNS("http://www.w3.org/2000/svg","path");
- arrow.setAttribute("d","M10 5 5 10l5 5M5 10h11v10");
- svg.appendChild(arrow);
- back.appendChild(svg);
- var refreshButton=button("↻ Actualiser",reload);
+ var refreshButton=navButton("Actualiser",reload,"refresh");
  if(admin)button("Ajouter sur GitHub ↗",function(){openExternal(upload(path));});
  var viewControl=node("label","folder-view-control");
  viewControl.appendChild(node("span","","Affichage"));

@@ -220,16 +220,24 @@ async function mount(host,parent,opt){
   if(win){var span=win.querySelector(".windowtitle");if(span)span.textContent=title;}
   var tools=E("div","local-disk-toolbar");
   function add(label,fn){tools.appendChild(btn(label,"classic-button",fn));}
+  function navigation(label,fn,kind){
+    var b=btn("","classic-button local-nav-button",fn);
+    b.title=label;b.setAttribute("aria-label",label);
+    var img=E("img","github-nav-icon");
+    img.src="/assets/icons/nav-"+(kind==="home"?"ordinateur":kind==="back"?"retour":"actualiser")+".png?v=1";
+    img.alt="";img.width=28;img.height=28;img.draggable=false;
+    b.appendChild(img);tools.appendChild(b);
+  }
   function refresh(){mount(host,parent,opt);}
-  add("⌂",function(){openRoot(host,opt);});
-  add("↑",function(){
+  navigation("Poste de travail",function(){openRoot(host,opt);},"home");
+  navigation("Retour",function(){
     if(isTrash||parent===ROOT)openRoot(host,opt);
     else{
       var entry=entries.find(function(e){return e.id===parent;});
       mount(host,entry?entry.parent:ROOT,opt);
     }
-  });
-  add("↻",refresh);
+  },"back");
+  navigation("Actualiser",refresh,"refresh");
   if(!isTrash){
     add("+ Dossier",function(){
       dialog(host,"Créer un dossier","Nouveau dossier",async function(name){

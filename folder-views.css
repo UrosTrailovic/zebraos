@@ -21,3 +21,28 @@
 .github-drive-list[data-view="list"] .bureau-video-reel{font-size:16px}
 .github-drive-list[data-view="list"] .bureau-video-play{display:none}
 @media(max-width:700px){.folder-view-control{margin-left:auto}.folder-view-select{min-height:35px;font-size:12px}.folder-view-control>span{display:none}}
+
+/* Boutons de dossier : trois commandes de même taille et pictogrammes bitmap fournis. */
+.github-drive-toolbar .github-nav-button,
+.local-disk-toolbar .local-nav-button{
+  box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 38px;width:38px!important;min-width:38px;height:36px!important;
+  min-height:36px!important;max-height:36px;padding:2px!important;
+  background:#c6c6c6!important;border:2px outset #f4f4f4;border-radius:0!important;
+  box-shadow:none;color:#101010;line-height:1;
+}
+.github-drive-toolbar .github-nav-button:active,
+.local-disk-toolbar .local-nav-button:active{border-style:inset}
+.github-drive-toolbar .github-nav-icon,
+.local-disk-toolbar .github-nav-icon{
+  width:28px;height:28px;max-width:28px;max-height:28px;
+  display:block;object-fit:contain;image-rendering:pixelated;pointer-events:none;
+  user-select:none;-webkit-user-drag:none;
+}
+@media(max-width:700px){
+ .github-drive-toolbar .github-nav-button,
+ .local-disk-toolbar .local-nav-button{
+  flex-basis:40px;width:40px!important;min-width:40px;height:40px!important;
+  min-height:40px!important;max-height:40px;padding:3px!important
+ }
+}

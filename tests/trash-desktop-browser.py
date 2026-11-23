@@ -159,9 +159,17 @@ def check_text(browser):
     pane=page.locator("#text-regression")
     labels=pane.inner_text().lower()
     assert "github" not in labels,labels
-    assert pane.get_by_role("button",name="VERSION D’ORIGINE").count()==1
-    assert "navigateur" in labels
+    assert pane.locator(".ztext-toolbar,.ztext-name,.ztext-saved,.ztext-hint,.ztext-button").count()==0
+    assert pane.locator(".ztext-area").count()==1
+    assert pane.locator(".ztext-counter").count()==1
+    assert "navigateur" not in labels
     assert "zebra record" not in pane.locator(".ztext-area").input_value().lower()
+    textarea=pane.locator(".ztext-area")
+    textarea.fill("Essai sauvegarde locale")
+    page.wait_for_timeout(490)
+    saved=page.evaluate("localStorage.getItem('zebra.text.v1.zebra.STUDIO/BUREAU/thanks.txt')")
+    assert saved=="Essai sauvegarde locale",saved
+    assert "23 caractères" in pane.locator(".ztext-counter").inner_text()
     print("TXT_CLEAN_PASS",flush=True)
     context.close()
 
