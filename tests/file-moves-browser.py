@@ -99,7 +99,21 @@ def desktop_and_public(browser):
     tools=page.locator("#tools-window")
     src=games.locator('.github-file-entry[data-path="'+THANKS+'"]')
     src.wait_for()
+    page.evaluate("""() => {
+      window.__dragTrace=[];
+      const src=document.querySelector('#games-window .github-file-entry[data-path="STUDIO/BUREAU/thanks.txt"]');
+      src.addEventListener('pointerdown',e=>window.__dragTrace.push(['down',e.pointerId,e.clientX,e.clientY,e.target.tagName]),true);
+      window.addEventListener('pointermove',e=>{
+       if(window.__dragTrace.length<35)window.__dragTrace.push(['move',e.pointerId,
+        document.querySelectorAll('.zebra-drag-ghost').length,
+        ZebraFileMoves.findTarget(e.clientX,e.clientY)?.target]);
+      },true);
+      window.addEventListener('pointerup',e=>window.__dragTrace.push(['up',e.pointerId,
+       document.querySelectorAll('.zebra-drag-ghost').length,
+       ZebraFileMoves.findTarget(e.clientX,e.clientY)?.target]),true);
+    }""")
     mouse_drag(page,src,tools.locator(".folder-path"))
+    print("DRAG_TRACE",page.evaluate("window.__dragTrace"),flush=True)
     current=page.evaluate("x=>ZebraFileMoves.parent(x,'zebra')",THANKS)
     if current!=TOOLS:
         debug=page.evaluate("""({source,destination})=>{
