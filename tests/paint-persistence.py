@@ -105,7 +105,7 @@ with sync_playwright() as playwright:
     REPORT["showRestoresPhoto"] = pixel(page, 320, 230)[2] > 190
 
     select_layer(page, "test-blue")
-    page.get_by_role("button", name="＋ Calque dessin").click()
+    page.get_by_role("button", name="Calque dessin", exact=False).click()
     REPORT["addedLayer"] = page.locator(".zp-layer-entry").count() == 4
     page.locator('.zp-tool[aria-label="Pinceau"]').click()
     paint_line(page, "#08e000", 250)
@@ -146,3 +146,4 @@ failed = [k for k,v in REPORT.items() if k not in ("photoSample","drawSample","b
 if errors or failed:
     raise SystemExit("FAILED: " + ", ".join(failed + errors))
 print("PAINT_PERSISTENCE_PASS", flush=True)
+
