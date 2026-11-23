@@ -354,3 +354,80 @@
  font:10px/1.2 "Courier New",monospace;
  color:#345077;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
+
+/* ZebraPaint 2 — véritables objets éditables, curseur de taille et dialogues natifs à l'OS. */
+.zp{position:relative}
+.zp-brush-cursor{
+ position:absolute;z-index:24;pointer-events:none;box-sizing:border-box;
+ border:1px solid #171717;border-radius:50%;
+ transform:translate(-50%,-50%);
+ box-shadow:0 0 0 1px #fff,1px 1px 1px #0007;
+ background:transparent;min-width:1px;min-height:1px;
+}
+.zp-brush-cursor[hidden]{display:none!important}
+.zp-canvas-frame.zp-select-mode .zp-brush-cursor{display:none!important}
+.zp-canvas-frame .zp-vector-object{border-color:transparent}
+.zp-vector-details{display:block;border-top:1px solid #aaa;flex:none}
+.zp-vector-details[hidden],.zp-vector-field[hidden]{display:none!important}
+.zp-vector-details>summary{
+ cursor:pointer;list-style:disclosure-closed;display:list-item;
+ padding:6px 5px 5px;margin-left:10px;
+ font:700 10px "Courier New",monospace;color:#213d80;
+}
+.zp-vector-details[open]>summary{list-style:disclosure-open}
+.zp-vector-options{
+ padding:7px 5px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:7px 10px;align-items:center;
+}
+.zp-vector-field{
+ display:flex;align-items:center;justify-content:space-between;gap:6px;
+ font:11px Tahoma,Arial,sans-serif;min-width:0;color:#202020;
+}
+.zp-vector-field span{overflow-wrap:anywhere}
+.zp-vector-field input[type=color]{width:38px;height:24px;flex:none;padding:0}
+.zp-vector-field input[type=number]{width:64px;min-width:44px;padding:3px}
+.zp-vector-field textarea{
+ width:100%;max-height:100px;min-height:44px;resize:vertical;
+ padding:4px;background:#fff;border:2px inset #fff;
+ font:12px Tahoma,Arial,sans-serif;
+}
+.zp-vector-field:has(textarea){grid-column:1/-1;align-items:stretch;flex-direction:column}
+.zp-vector-dimensions{
+ grid-column:1/-1;display:flex;align-items:center;gap:8px;
+ font:11px Tahoma,Arial,sans-serif;
+}
+.zp-vector-dimensions input{
+ width:78px;min-width:35px;padding:4px;background:#fff;border:2px inset #fff;
+}
+.zp-dialog-shade{
+ position:absolute;inset:0;z-index:80;display:grid;place-items:center;
+ padding:12px;background:#0007;
+}
+.zp-dialog{
+ box-sizing:border-box;width:min(350px,100%);
+ border:3px outset #e8e8e8;background:#c8c8c8;color:#161616;
+ padding:13px;box-shadow:4px 5px 0 #0005;
+ font:12px Tahoma,Arial,sans-serif;
+}
+.zp-dialog-title{display:block;font-size:13px;margin:0 0 10px}
+.zp-dialog-desc{margin:0 0 10px;line-height:1.5}
+.zp-dialog-form{display:flex;flex-direction:column;gap:9px}
+.zp-dialog-field{display:flex;flex-direction:column;gap:4px}
+.zp-dialog-input{
+ width:100%;box-sizing:border-box;background:#fff;border:2px inset #fafafa;
+ padding:6px;font:13px Tahoma,Arial,sans-serif;
+}
+.zp-dialog-buttons{display:flex;gap:7px;justify-content:flex-end;margin-top:5px}
+.zp-dialog-confirm{font-weight:bold}
+@media(max-width:700px){
+ .zp-canvas-frame{
+  width:100%!important;height:auto!important;
+  aspect-ratio:var(--zp-ratio,8/5)!important;
+ }
+ .zp-canvas-frame .zp-canvas{aspect-ratio:var(--zp-ratio,8/5)!important}
+ .zp-vector-options{gap:6px;grid-template-columns:1fr 1fr}
+ .zp-vector-field{font-size:10px}
+ .zp-vector-field input[type=number]{width:57px}
+ .zp-vector-details>summary{font-size:10px}
+ .zp-dialog-shade{padding:8px}
+}

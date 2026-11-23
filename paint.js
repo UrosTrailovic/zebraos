@@ -1,7 +1,7 @@
 /* ZebraPaint 1.5 — sauvegarde automatique et calques fiables. */
 (function(){
 "use strict";
-const W=640,H=400,UNDO_LIMIT=12,MAX_LAYERS=25;
+const UNDO_LIMIT=12,MAX_LAYERS=25,MAX_PIXELS=1600*1200;
 const palette=["#000000","#ffffff","#808080","#c0c0c0","#800000","#ff0000","#808000","#ffff00","#008000","#00ff00","#008080","#00ffff","#000080","#0000ff","#800080","#ff00ff","#d68545","#f6c289","#eac6c6","#9faad9","#304d46","#5e9f72","#403765","#f7d65c"];
 function el(tag,cls,text){const x=document.createElement(tag);if(cls)x.className=cls;if(text!==undefined)x.textContent=text;return x;}
 function btn(label,fn,cls="zp-button"){const x=el("button",cls,label);x.type="button";x.onclick=fn;return x;}
@@ -50,6 +50,7 @@ const svgPaths={
  line:'<path d="M3 21 21 3"/><circle cx="3" cy="21" r="1.4"/><circle cx="21" cy="3" r="1.4"/>',
  rect:'<rect x="3" y="5" width="18" height="14" rx="1"/>',
  ellipse:'<ellipse cx="12" cy="12" rx="9" ry="7"/>',
+ text:'<path d="M3 5h18M12 5v15M8 20h8M3 5v4M21 5v4"/>',
  fill:'<path d="m4 13 8-9 9 9-9 9zM3 21h18"/><path d="M18 16c-2 4 4 4 2 0l-1-3z"/>',
  picker:'<path d="m13 5 6-3 3 3-3 6-2-2-9 9-5 1 1-5 9-9zM15 7l3 3"/>'
 };
@@ -62,13 +63,16 @@ const toolDefs=[
  ["picker","Pipette","Prendre une couleur"],
  ["line","Ligne","Tracer une ligne"],
  ["rect","Rectangle","Tracer un cadre"],
- ["ellipse","Ellipse","Tracer un ovale"]
+ ["ellipse","Ellipse","Tracer un ovale"],
+ ["text","Texte","Ajouter du texte éditable"]
 ];
 function mount(root){
  if(root._zebraDispose)root._zebraDispose();
  root.replaceChildren();
+ let W=640,H=400;
  let active=true,tool="select",color="#000000",size=6,selected=null,paintTarget=null,nextId=1;
- let layers=[],history=[],redo=[],drawing=false,drawingId=null,last=null,start=null,beforeShape=null,currentErase=null,draggingCleanup=null;
+ let layers=[],history=[],redo=[],drawing=false,drawingId=null,last=null,start=null,currentErase=null,draggingCleanup=null;
+ let activePointer=null,dialog=null,vectorDraft=null;
  const draftKey="session:"+String(root.dataset.zebraSession||"zebra");
  let editVersion=0,lastSavedVersion=0,saveTimer=null,lastWrite=Promise.resolve();
  const registry=new Map(),urls=new Set();
@@ -83,7 +87,9 @@ function mount(root){
  const layerStage=el("div","zp-layer-stage");
  const canvas=el("canvas","zp-canvas");
  canvas.width=W;canvas.height=H;canvas.setAttribute("aria-label","Zone de dessin ZebraPaint");
- canvasFrame.append(layerStage,canvas);
+ const cursorRing=el("div","zp-brush-cursor");
+ cursorRing.setAttribute("aria-hidden","true");
+ canvasFrame.append(layerStage,canvas,cursorRing);
  const stage=el("div","zp-stage");stage.append(canvasFrame);
  const work=el("div","zp-work");work.append(stage);
  const tools=el("div","zp-tools zp-tools-clear");
@@ -123,6 +129,30 @@ function mount(root){
  const transformSummary=el("summary","","↻ TRANSFORMER · ANGLE / INCLINAISON / OPACITÉ");
  transformDetails.append(transformSummary,transformPanel);
  panelLayers.append(panelHeader,layerList,scaleRow,transformDetails);
+ const vectorDetails=el("details","zp-vector-details");
+ vectorDetails.open=true;
+ const vectorHeading=el("summary","","OBJET · FORME / TEXTE");
+ const vectorBody=el("div","zp-vector-options");
+ function vectorField(title,input){
+  const row=el("label","zp-vector-field");row.append(el("span","",title),input);vectorBody.append(row);return input;
+ }
+ const vectorStroke=el("input","zp-vector-stroke");vectorStroke.type="color";vectorStroke.value="#000000";
+ vectorField("Contour",vectorStroke);
+ const vectorFill=el("input","zp-vector-fill-enabled");vectorFill.type="checkbox";
+ vectorField("Remplissage",vectorFill);
+ const vectorFillColor=el("input","zp-vector-fill-color");vectorFillColor.type="color";vectorFillColor.value="#ffffff";
+ vectorField("Couleur du fond",vectorFillColor);
+ const vectorWidth=el("input","zp-vector-width");vectorWidth.type="number";vectorWidth.min="1";vectorWidth.max="70";vectorWidth.value="4";
+ vectorField("Contour (px)",vectorWidth);
+ const vectorSize=el("input","zp-vector-font");vectorSize.type="number";vectorSize.min="8";vectorSize.max="200";vectorSize.value="32";
+ vectorField("Texte (px)",vectorSize);
+ const vectorText=el("textarea","zp-vector-text");vectorText.rows=2;vectorText.maxLength=600;
+ vectorField("Texte",vectorText);
+ const vectorSizeRow=el("div","zp-vector-dimensions");
+ const objectWidth=el("input","zp-object-width");objectWidth.type="number";objectWidth.min="1";objectWidth.max="3200";
+ const objectHeight=el("input","zp-object-height");objectHeight.type="number";objectHeight.min="1";objectHeight.max="3200";
+ vectorSizeRow.append(el("span","","L × H"),objectWidth,objectHeight);vectorBody.append(vectorSizeRow);
+ vectorDetails.append(vectorHeading,vectorBody);panelLayers.append(vectorDetails);
  const options=el("div","zp-options");
  const currentColor=btn("","", "zp-active-color");currentColor.type="button";currentColor.title="Couleur actuelle";currentColor.style.background=color;
  const pick=el("input");pick.type="color";pick.value=color;pick.setAttribute("aria-label","Choisir la couleur");
@@ -134,13 +164,14 @@ function mount(root){
  const brushWrap=el("label","zp-size","TAILLE");
  const brushSlider=el("input");brushSlider.type="range";brushSlider.min="1";brushSlider.max="70";brushSlider.value=String(size);
  const brushNumber=el("span","",String(size));
- brushSlider.oninput=()=>{size=Number(brushSlider.value);brushNumber.textContent=String(size);};
+ brushSlider.oninput=()=>{size=Number(brushSlider.value);brushNumber.textContent=String(size);updateCursorFromLast();};
  brushWrap.append(brushSlider,brushNumber);options.append(brushWrap);
  const undoBtn=btn("↶ Annuler",undo),redoBtn=btn("↷ Rétablir",redoAction);
  const actions=el("div","zp-edits");actions.append(undoBtn,redoBtn);options.append(actions);
  const saveBtn=btn("💾 Enregistrer PNG",download);
- bar.append(btn("Nouveau",newDocument),btn("＋ Importer photo",()=>upload.click()),btn("＋ Calque dessin",()=>addRaster(true)),
-   saveBtn,btn("💾 Projet .zpaint",saveProject),btn("📂 Ouvrir projet",()=>projectInput.click()),upload,projectInput);
+ bar.append(btn("Nouveau",newDocument),btn("Format de la toile",openCanvasDialog),btn("＋ Importer photo",()=>upload.click()),
+   btn("＋ Calque dessin",()=>addRaster(true)),saveBtn,btn("💾 Projet .zpaint",saveProject),
+   btn("📂 Ouvrir projet",()=>projectInput.click()),upload,projectInput);
  const changeControls=el("div","zp-import-controls");
  changeControls.append(btn("✓ Terminer",()=>{select(null);choose("select");notice("Placement terminé : les calques restent modifiables.");},"zp-button zp-apply-image"),
    btn("× Supprimer",()=>removeLayer(selected),"zp-button"));
@@ -157,6 +188,102 @@ function mount(root){
   toolButtons[id]=b;tools.append(b);
  });
  function notice(t){message.textContent=t;}
+ function updateDimensions(){
+  canvas.width=W;canvas.height=H;
+  canvasFrame.style.width=W+"px";canvasFrame.style.height=H+"px";
+  canvasFrame.style.setProperty("--zp-ratio",W+" / "+H);
+  message.textContent=W+" × "+H+" · ZebraPaint";
+ }
+ function makeDialog(title,description,fields,done){
+  if(dialog)dialog.remove();
+  const shade=el("div","zp-dialog-shade");
+  shade.setAttribute("role","presentation");
+  dialog=el("div","zp-dialog");dialog.setAttribute("role","dialog");
+  dialog.setAttribute("aria-modal","true");dialog.setAttribute("aria-label",title);
+  dialog.append(el("strong","zp-dialog-title",title));
+  if(description)dialog.append(el("p","zp-dialog-desc",description));
+  const form=el("form","zp-dialog-form");
+  const inputs=[];
+  fields.forEach(f=>{
+   const label=el("label","zp-dialog-field");
+   label.append(el("span","",f.label));
+   const input=el("input","zp-dialog-input");
+   input.type=f.type||"text";input.value=String(f.value??"");
+   if(f.min!=null)input.min=String(f.min);
+   if(f.max!=null)input.max=String(f.max);
+   if(f.maxLength)input.maxLength=f.maxLength;
+   input.required=true;label.append(input);form.append(label);inputs.push(input);
+  });
+  const actions=el("div","zp-dialog-buttons");
+  function close(){shade.remove();if(dialog===popup)dialog=null;}
+  const popup=dialog;
+  actions.append(btn("Annuler",close,"zp-button"));
+  const accept=el("button","zp-button zp-dialog-confirm","Valider");
+  accept.type="submit";actions.append(accept);form.append(actions);
+  form.onsubmit=e=>{e.preventDefault();const values=inputs.map(x=>x.value);
+   if(done(values)===false)return;
+   close();
+  };
+  dialog.append(form);shade.append(dialog);panel.append(shade);
+  shade.addEventListener("keydown",e=>{if(e.key==="Escape"){e.stopPropagation();close();}});
+  requestAnimationFrame(()=>inputs[0]?.focus());
+ }
+ function openCanvasDialog(){
+  makeDialog("Format du plan de travail","Dimensions en pixels. Le dessin existant est conservé.",
+   [{label:"Largeur",value:W,type:"number",min:64,max:1600},
+    {label:"Hauteur",value:H,type:"number",min:64,max:1200}],values=>{
+     const w=Number(values[0]),h=Number(values[1]);
+     if(!Number.isInteger(w)||!Number.isInteger(h)||w<64||h<64||w>1600||h>1200||w*h>MAX_PIXELS){
+      notice("Format invalide : maximum 1600 × 1200 pixels.");return false;
+     }
+     if(w===W&&h===H)return true;
+     record();
+     resizeDocument(w,h);
+     render();notice("Nouveau format : "+W+" × "+H+" pixels.");
+     return true;
+   });
+ }
+ function resizeDocument(w,h,clear=false){
+  if(!clear)layers.forEach(l=>{
+   if(l.type!=="raster")return;
+   const copy=document.createElement("canvas");
+   copy.width=l.surface.width;copy.height=l.surface.height;
+   copy.getContext("2d").drawImage(l.surface,0,0);
+   l.surface.width=w;l.surface.height=h;
+   const ctx=l.surface.getContext("2d",{willReadFrequently:true});
+   if(l.background){ctx.fillStyle="#ffffff";ctx.fillRect(0,0,w,h);}
+   ctx.drawImage(copy,0,0);
+  });
+  W=w;H=h;updateDimensions();
+ }
+ function cursorVisible(){return ["pencil","brush","eraser"].includes(tool);}
+ let cursorPoint=null;
+ function updateCursorFromLast(){
+  if(!cursorPoint||!cursorVisible())return;
+  const r=canvasFrame.getBoundingClientRect();
+  const diameter=(tool==="eraser"?2:1)*size*r.width/W;
+  cursorRing.style.width=Math.max(1,diameter)+"px";
+  cursorRing.style.height=Math.max(1,diameter)+"px";
+  cursorRing.style.left=(cursorPoint.x/W*100)+"%";
+  cursorRing.style.top=(cursorPoint.y/H*100)+"%";
+  cursorRing.hidden=false;
+ }
+ function hoverCursor(e){
+  if(!active||!cursorVisible()||e.pointerType==="touch"){cursorRing.hidden=true;return;}
+  const p=point(e);cursorPoint=p;
+  cursorRing.hidden=p.x<0||p.y<0||p.x>W||p.y>H;
+  if(!cursorRing.hidden)updateCursorFromLast();
+ }
+ function exportName(ext,save){
+  makeDialog("Enregistrer "+ext.toUpperCase(),"Nom du fichier",
+   [{label:"Nom",value:"zebra-paint-"+new Date().toISOString().slice(0,10),maxLength:100}],values=>{
+    let name=values[0].trim().replace(/[\\/:*?"<>|]/g,"_").replace(/[. ]+$/g,"");
+    name=name.replace(/\.(?:png|zpaint)$/i,"");
+    if(!name){notice("Saisis un nom de fichier.");return false;}
+    save(name+"."+ext);return true;
+   });
+ }
+ updateDimensions();
  function scheduleDraft(){
   editVersion++;
   saveIndicator.textContent="Brouillon modifié · sauvegarde automatique…";
@@ -186,7 +313,9 @@ function mount(root){
   tool=t;
   Object.keys(toolButtons).forEach(id=>toolButtons[id].classList.toggle("selected",id===t));
   canvasFrame.classList.toggle("zp-select-mode",t==="select");
-  canvas.style.cursor=t==="picker"?"copy":t==="fill"?"cell":t==="select"?"default":"crosshair";
+  canvas.style.cursor=t==="picker"?"copy":t==="fill"?"cell":t==="select"?"default":"none";
+  cursorRing.hidden=true;
+  if(cursorVisible())updateCursorFromLast();
   render();notice(toolDefs.find(d=>d[0]===t)[1]+" · "+toolDefs.find(d=>d[0]===t)[2]);
  }
  function paintSurface(colorValue){
@@ -201,6 +330,75 @@ function mount(root){
   const layer={id:nextId++,type:"raster",name,surface,node,visible:true,opacity:1,locked:false};
   registry.set(layer.id,layer);return layer;
  }
+ function createVector(kind,x,y,w=1,h=1){
+  const node=el("div","zp-imported-image zp-vector-object");
+  const surface=document.createElement("canvas");surface.className="zp-image-visual";
+  const handle=btn("⤡",()=>{},"zp-image-resize");
+  handle.title="Redimensionner la forme";handle.setAttribute("aria-label","Redimensionner la forme");
+  const turn=btn("↻",()=>{},"zp-image-rotate");
+  turn.title="Tourner la forme";turn.setAttribute("aria-label","Tourner la forme");
+  node.append(surface,handle,turn);
+  const label=kind==="rect"?"Rectangle":kind==="ellipse"?"Ellipse":kind==="line"?"Ligne":"Texte";
+  const l={id:nextId++,type:"vector",kind,name:label,x,y,w:Math.max(1,w),h:Math.max(1,h),
+   surface,node,visible:true,locked:false,opacity:1,background:false,
+   stroke:color,fill:null,strokeWidth:Math.max(1,size),text:kind==="text"?"Texte":"",
+   fontSize:Math.max(12,size*4),fontFamily:"Arial",
+   reverse:false,angle:0,skew:0,flipX:1,flipY:1};
+  registry.set(l.id,l);node.addEventListener("pointerdown",imagePointerDown);
+  redrawVector(l);return l;
+ }
+ function redrawVector(l){
+  if(l.type!=="vector")return;
+  const pw=clamp(Math.ceil(Math.abs(l.w)),1,3200),ph=clamp(Math.ceil(Math.abs(l.h)),1,3200);
+  if(l.surface.width!==pw)l.surface.width=pw;
+  if(l.surface.height!==ph)l.surface.height=ph;
+  const ctx=l.surface.getContext("2d");ctx.clearRect(0,0,pw,ph);
+  const thickness=clamp(Number(l.strokeWidth)||1,1,70),inset=thickness/2;
+  ctx.strokeStyle=l.stroke||"#000000";ctx.fillStyle=l.fill||"transparent";
+  ctx.lineWidth=thickness;ctx.lineJoin="round";
+  if(l.kind==="rect"){
+   const x=Math.min(inset,pw/2),y=Math.min(inset,ph/2);
+   if(l.fill)ctx.fillRect(0,0,pw,ph);
+   ctx.strokeRect(x,y,Math.max(0,pw-2*x),Math.max(0,ph-2*y));
+  }else if(l.kind==="ellipse"){
+   ctx.beginPath();ctx.ellipse(pw/2,ph/2,Math.max(.1,pw/2-inset),Math.max(.1,ph/2-inset),0,0,Math.PI*2);
+   if(l.fill)ctx.fill();ctx.stroke();
+  }else if(l.kind==="line"){
+   ctx.beginPath();
+   if(l.reverse){ctx.moveTo(pw-inset,inset);ctx.lineTo(inset,ph-inset);}
+   else{ctx.moveTo(inset,inset);ctx.lineTo(pw-inset,ph-inset);}
+   ctx.lineCap="round";ctx.stroke();
+  }else if(l.kind==="text"){
+   const font=clamp(Math.round(l.fontSize||32),8,200);
+   ctx.fillStyle=l.stroke||"#000000";ctx.font=font+"px Arial, sans-serif";ctx.textBaseline="top";
+   (l.text||"").split("\n").slice(0,12).forEach((line,i)=>{
+    ctx.fillText(line,0,i*font*1.25,Math.max(1,pw));
+   });
+  }
+ }
+ function vectorChange(field,value){
+  const l=getSelected();if(!l||l.type!=="vector"||l.locked||l[field]===value)return;
+  record();l[field]=value;
+  if(field==="w"||field==="h")l[field]=clamp(Number(value),1,3200);
+  redrawVector(l);render();notice("Objet modifié : "+l.name);
+ }
+ for(const [input,field,parse] of [
+  [vectorStroke,"stroke",x=>x],
+  [vectorFill,"fill",x=>x?vectorFillColor.value:null],
+  [vectorFillColor,"fill",x=>vectorFill.checked?x:null],
+  [vectorWidth,"strokeWidth",x=>clamp(Number(x)||1,1,70)],
+  [vectorSize,"fontSize",x=>clamp(Number(x)||32,8,200)],
+  [objectWidth,"w",x=>clamp(Number(x)||1,1,3200)],
+  [objectHeight,"h",x=>clamp(Number(x)||1,1,3200)]
+ ])input.addEventListener("change",()=>vectorChange(field,parse(input.type==="checkbox"?input.checked:input.value)));
+ let textEditRecorded=false;
+ vectorText.addEventListener("focus",()=>{textEditRecorded=false;});
+ vectorText.addEventListener("input",()=>{
+  const l=getSelected();if(!l||l.type!=="vector"||l.kind!=="text"||l.locked)return;
+  if(!textEditRecorded){record();textEditRecorded=true;}
+  l.text=vectorText.value;redrawVector(l);scheduleDraft();
+ });
+ vectorText.addEventListener("blur",()=>{textEditRecorded=false;if(active)render();});
  function bootLayers(){
   const background=createRaster("Fond","#ffffff"),drawingLayer=createRaster("Dessin 1");
   background.background=true;
@@ -208,7 +406,7 @@ function mount(root){
  }
  function newDocument(){
   if(!confirm("Créer un nouveau dessin et effacer les calques actuels ?"))return;
-  record();bootLayers();render();choose("select");notice("Nouveau dessin 640 × 400.");
+  record();bootLayers();render();choose("select");notice("Nouveau dessin "+W+" × "+H+".");
  }
  function addRaster(userTriggered,above){
   if(layers.length>=MAX_LAYERS){notice("Maximum de "+MAX_LAYERS+" calques.");return null;}
@@ -223,10 +421,12 @@ function mount(root){
  }
  function cloneStrokes(strokes){return strokes.map(s=>({diameter:s.diameter,pts:s.pts.map(p=>p.slice())}));}
  function snapshot(){
-  return {sel:selected,paint:paintTarget,
+  return {width:W,height:H,sel:selected,paint:paintTarget,
    list:layers.map(l=>({id:l.id,type:l.type,name:l.name,background:!!l.background,visible:l.visible,locked:!!l.locked,opacity:l.opacity??1,
      x:l.x,y:l.y,w:l.w,h:l.h,angle:l.angle||0,skew:l.skew||0,flipX:l.flipX||1,flipY:l.flipY||1,
      erase:l.type==="image"?cloneStrokes(l.erase):null,
+     kind:l.kind,stroke:l.stroke,fill:l.fill,strokeWidth:l.strokeWidth,text:l.text,
+     fontSize:l.fontSize,fontFamily:l.fontFamily,reverse:!!l.reverse,
      pixels:l.type==="raster"?l.surface.getContext("2d").getImageData(0,0,W,H):null}))};
  }
  function record(){
@@ -235,11 +435,24 @@ function mount(root){
  }
  function updateHistory(){undoBtn.disabled=!history.length;redoBtn.disabled=!redo.length;}
  function restore(state){
+  if(state.width!==W||state.height!==H)resizeDocument(state.width,state.height,true);
   layers=state.list.map(d=>{
    const l=registry.get(d.id);
    l.visible=d.visible;l.name=d.name;l.background=!!d.background;l.locked=!!d.locked;l.opacity=d.opacity??1;
-   if(l.type==="raster")l.surface.getContext("2d").putImageData(d.pixels,0,0);
-   else{l.x=d.x;l.y=d.y;l.w=d.w;l.h=d.h;l.angle=d.angle||0;l.skew=d.skew||0;l.flipX=d.flipX||1;l.flipY=d.flipY||1;l.erase=cloneStrokes(d.erase);redrawImage(l);}
+   if(l.type==="raster"){
+    if(l.surface.width!==W)l.surface.width=W;
+    if(l.surface.height!==H)l.surface.height=H;
+    l.surface.getContext("2d").putImageData(d.pixels,0,0);
+   }else{
+    l.x=d.x;l.y=d.y;l.w=d.w;l.h=d.h;l.angle=d.angle||0;l.skew=d.skew||0;
+    l.flipX=d.flipX||1;l.flipY=d.flipY||1;
+    if(l.type==="image"){l.erase=cloneStrokes(d.erase||[]);redrawImage(l);}
+    else{
+     l.kind=d.kind;l.stroke=d.stroke;l.fill=d.fill;l.strokeWidth=d.strokeWidth;
+     l.text=d.text;l.fontSize=d.fontSize;l.fontFamily=d.fontFamily;l.reverse=!!d.reverse;
+     redrawVector(l);
+    }
+   }
    return l;
   });
   selected=layers.some(l=>l.id===state.sel)?state.sel:null;
@@ -254,7 +467,8 @@ function mount(root){
   if(getSelected()?.type==="raster")paintTarget=selected;
   render();
   const layer=getSelected();
-  if(layer)notice(layer.type==="image"?"Photo sélectionnée · glisser ou redimensionner / gomme":"Calque dessin sélectionné · peinture / remplissage");
+  if(layer)notice(layer.type==="image"?"Photo sélectionnée · glisser ou redimensionner / gomme":
+   layer.type==="vector"?"Objet sélectionné · déplacer, redimensionner ou modifier ses propriétés":"Calque dessin sélectionné · peinture / remplissage");
  }
  function removeLayer(id){
   if(layers.length<=1){notice("Il faut conserver au moins un calque.");return;}
@@ -283,6 +497,7 @@ function mount(root){
   const thumb=el("canvas","zp-layer-thumb");thumb.width=36;thumb.height=30;
   const c=thumb.getContext("2d");c.fillStyle="#fff";c.fillRect(0,0,36,30);
   if(layer.type==="raster")c.drawImage(layer.surface,0,0,W,H,0,0,36,30);
+  else if(layer.type==="vector")c.drawImage(layer.surface,0,0,layer.surface.width,layer.surface.height,2,2,32,26);
   else c.drawImage(layer.surface,0,0,layer.surface.width,layer.surface.height,0,0,36,30);
   return thumb;
  }
@@ -292,16 +507,43 @@ function mount(root){
    l.node.style.zIndex=String(index+1);
    l.node.hidden=!l.visible;
    l.node.style.opacity=String(l.opacity??1);
-   if(l.type==="image")positionImage(l);
+   if(l.type!=="raster")positionImage(l);
   });
   panelTitle.textContent="CALQUES · "+layers.length;
   changeControls.hidden=!getSelected();
-  const image=getSelected()?.type==="image"?getSelected():null;
+  const chosen=getSelected();
+  const image=chosen?.type==="image"?chosen:null;
+  const vector=chosen?.type==="vector"?chosen:null;
+  const movable=image||vector;
   scaleRow.hidden=!image;
-  transformDetails.hidden=!getSelected();
-  transformSummary.textContent=image?"↻ TRANSFORMER · ANGLE / DÉFORMER / OPACITÉ":"◌ OPACITÉ DU CALQUE";
-  rotateControl.input.parentNode.hidden=!image;
-  skewControl.input.parentNode.hidden=!image;
+  transformDetails.hidden=!chosen;
+  vectorDetails.hidden=!vector;
+  transformSummary.textContent=movable?"↻ TRANSFORMER · ANGLE / DÉFORMER / OPACITÉ":"◌ OPACITÉ DU CALQUE";
+  rotateControl.input.parentNode.hidden=!movable;
+  skewControl.input.parentNode.hidden=!movable;
+  if(vector){
+   vectorHeading.textContent=vector.kind==="text"?"OBJET · TEXTE":"OBJET · FORME";
+   vectorStroke.value=vector.stroke||"#000000";
+   vectorFill.checked=!!vector.fill;
+   vectorFillColor.value=vector.fill||"#ffffff";
+   vectorFillColor.disabled=!vector.fill;
+   vectorWidth.value=String(vector.strokeWidth||1);
+   vectorSize.value=String(vector.fontSize||32);
+   vectorText.value=vector.text||"";
+   vectorText.parentNode.hidden=vector.kind!=="text";
+   vectorSize.parentNode.hidden=vector.kind!=="text";
+   vectorFill.parentNode.hidden=["text","line"].includes(vector.kind);
+   vectorFillColor.parentNode.hidden=["text","line"].includes(vector.kind);
+   vectorWidth.parentNode.hidden=vector.kind==="text";
+   objectWidth.value=String(Math.round(vector.w));
+   objectHeight.value=String(Math.round(vector.h));
+  }
+  if(movable){
+   rotateControl.input.value=String(movable.angle||0);
+   rotateControl.output.textContent=(movable.angle||0)+"°";
+   skewControl.input.value=String(movable.skew||0);
+   skewControl.output.textContent=(movable.skew||0)+"°";
+  }
   if(image){
    const pct=Math.round(image.w/image.baseW*100);
    scale.value=String(clamp(pct,10,500));scaleValue.textContent=pct+" %";
@@ -312,13 +554,13 @@ function mount(root){
    opacityControl.input.value=String(Math.round((getSelected().opacity??1)*100));
    opacityControl.output.textContent=opacityControl.input.value+" %";
   }
-  transformButtons.hidden=!image;
+  transformButtons.hidden=!movable;
   layerList.replaceChildren();
   layers.slice().reverse().forEach(l=>{
    const row=el("div","zp-layer-entry"+(l.id===selected?" active":"")+(l.visible?"":" hidden-layer")+(l.id===paintTarget?" zp-paint-target":""));
    row.dataset.layerId=String(l.id);
-   const b=btn("",()=>{select(l.id);if(l.type==="image")choose("select");},"zp-layer-choice");
-   b.append(previewThumb(l),el("span","zp-layer-name",(l.type==="image"?"▣ ":"✎ ")+l.name+(l.id===paintTarget?" ●":"")));
+   const b=btn("",()=>{select(l.id);if(l.type!=="raster")choose("select");},"zp-layer-choice");
+   b.append(previewThumb(l),el("span","zp-layer-name",(l.type==="image"?"▣ ":l.type==="vector"?"◇ ":"✎ ")+l.name+(l.id===paintTarget?" ●":"")));
    b.title="Sélectionner "+l.name+(l.id===paintTarget?" (calque de dessin actif)":"");
    const actions=el("div","zp-layer-buttons");
    const eye=btn(l.visible?"◉":"○",()=>visibility(l.id),"zp-layer-action");eye.title=l.visible?"Masquer":"Afficher";eye.setAttribute("aria-label",eye.title);
@@ -358,7 +600,7 @@ function mount(root){
  scale.oninput=()=>{scaleValue.textContent=scale.value+" %";};
  function editTransform(field,value){
   const l=getSelected();if(!l||l.locked)return;
-  if(field!=="opacity"&&l.type!=="image")return;
+  if(field!=="opacity"&&l.type!=="image"&&l.type!=="vector")return;
   if(Math.abs((l[field]??(field==="opacity"?1:0))-value)<.0001)return;
   record();l[field]=value;render();
   notice("Transformation : "+l.name);
@@ -370,16 +612,16 @@ function mount(root){
  opacityControl.input.oninput=()=>{opacityControl.output.textContent=opacityControl.input.value+" %";};
  opacityControl.input.onchange=()=>editTransform("opacity",Number(opacityControl.input.value)/100);
  function flipSelected(prop){
-  const l=getSelected();if(!l||l.type!=="image"||l.locked)return;
+  const l=getSelected();if(!l||(l.type!=="image"&&l.type!=="vector")||l.locked)return;
   record();l[prop]=(l[prop]||1)*-1;render();
   notice("Image retournée.");
  }
  function centerSelected(){
-  const l=getSelected();if(!l||l.type!=="image"||l.locked)return;
+  const l=getSelected();if(!l||(l.type!=="image"&&l.type!=="vector")||l.locked)return;
   record();l.x=(W-l.w)/2;l.y=(H-l.h)/2;render();notice("Image centrée.");
  }
  function resetTransform(){
-  const l=getSelected();if(!l||l.type!=="image"||l.locked)return;
+  const l=getSelected();if(!l||(l.type!=="image"&&l.type!=="vector")||l.locked)return;
   record();l.angle=0;l.skew=0;l.flipX=1;l.flipY=1;l.opacity=1;render();
   notice("Transformations réinitialisées.");
  }
@@ -410,13 +652,20 @@ function mount(root){
    handle.title="Redimensionner";handle.setAttribute("aria-label","Redimensionner l’image");
    const turn=btn("↻",()=>{},"zp-image-rotate");turn.title="Tourner librement";turn.setAttribute("aria-label","Tourner l’image");
    node.append(surface,handle,turn);
-   copy={id:nextId++,type:"image",name:l.name+" copie",img:l.img,url:l.url,
-    surface,node,x:l.x+15,y:l.y+15,w:l.w,h:l.h,
-    baseW:l.baseW,aspect:l.aspect,erase:cloneStrokes(l.erase),visible:true};
-   node.addEventListener("pointerdown",imagePointerDown);registry.set(copy.id,copy);
+   if(l.type==="vector"){
+    copy=createVector(l.kind,l.x+15,l.y+15,l.w,l.h);
+    copy.name=l.name+" copie";copy.stroke=l.stroke;copy.fill=l.fill;
+    copy.strokeWidth=l.strokeWidth;copy.text=l.text;copy.fontSize=l.fontSize;
+    copy.fontFamily=l.fontFamily;copy.reverse=l.reverse;redrawVector(copy);
+   }else{
+    copy={id:nextId++,type:"image",name:l.name+" copie",img:l.img,url:l.url,
+     surface,node,x:l.x+15,y:l.y+15,w:l.w,h:l.h,
+     baseW:l.baseW,aspect:l.aspect,erase:cloneStrokes(l.erase),visible:true};
+    node.addEventListener("pointerdown",imagePointerDown);registry.set(copy.id,copy);
+   }
   }
   copy.opacity=l.opacity??1;copy.locked=false;copy.background=false;
-  if(copy.type==="image"){copy.angle=l.angle||0;copy.skew=l.skew||0;copy.flipX=l.flipX||1;copy.flipY=l.flipY||1;}
+  if(copy.type!=="raster"){copy.angle=l.angle||0;copy.skew=l.skew||0;copy.flipX=l.flipX||1;copy.flipY=l.flipY||1;}
   const index=layers.findIndex(x=>x.id===id);
   layers.splice(index+1,0,copy);
   selected=copy.id;if(copy.type==="raster")paintTarget=copy.id;
@@ -530,58 +779,87 @@ function mount(root){
   return [(x/(l.flipX||1)+l.w/2)/l.w,(y/(l.flipY||1)+l.h/2)/l.h];
  }
  function onDown(e){
-  if(!active||(e.pointerType==="mouse"&&e.button!==0))return;
-  if(tool==="select"){select(null);return;}
+  if(!active||drawing||(e.pointerType==="mouse"&&e.button!==0))return;
+  if(e.target.closest(".zp-dialog-shade"))return;
+  if(tool==="select"){if(e.target===canvas||e.target===layerStage||e.target===canvasFrame)select(null);return;}
   e.preventDefault();
   const p=point(e);
   if(tool==="picker"){
-   const px=merged().getContext("2d").getImageData(Math.round(clamp(p.x,0,W-1)),Math.round(clamp(p.y,0,H-1)),1,1).data;
+   if(p.x<0||p.y<0||p.x>=W||p.y>=H)return;
+   const px=merged().getContext("2d").getImageData(Math.floor(p.x),Math.floor(p.y),1,1).data;
    setColor("#"+[px[0],px[1],px[2]].map(n=>n.toString(16).padStart(2,"0")).join(""));
    notice("Couleur récupérée.");return;
   }
-  const selectedBefore=getSelected();
-  if(selectedBefore?.locked){notice("Calque verrouillé · déverrouille-le avant de modifier.");return;}
-  if(tool==="eraser"&&selectedBefore?.type==="image"){
-   const l=selectedBefore;record();
+  const before=getSelected();
+  if(before?.locked){notice("Calque verrouillé · déverrouille-le avant de modifier.");return;}
+  if(["line","rect","ellipse","text"].includes(tool)){
+   if(layers.length>=MAX_LAYERS){notice("Maximum de "+MAX_LAYERS+" calques.");return;}
+   record();
+   const kind=tool;
+   const l=createVector(kind,p.x,p.y,kind==="text"?160:1,kind==="text"?55:1);
+   const index=layers.findIndex(x=>x.id===selected);
+   layers.splice(index<0?layers.length:index+1,0,l);
+   selected=l.id;drawingId=l.id;start=p;
+   render();
+   if(kind==="text"){
+    choose("select");
+    vectorDetails.open=true;
+    requestAnimationFrame(()=>{vectorText.focus();vectorText.select();});
+    notice("Texte ajouté. Modifie le contenu dans OBJET · TEXTE.");return;
+   }
+   drawing=true;
+  }else if(tool==="eraser"&&before?.type==="image"){
+   const l=before;record();
    currentErase={diameter:size*2/l.w,pts:[erasePoint(l,p)]};
-   l.erase.push(currentErase);redrawImage(l);drawing=true;drawingId=l.id;last=p;
+   l.erase.push(currentErase);redrawImage(l);
+   drawing=true;drawingId=l.id;last=p;
   }else{
    record();
    const l=captureDrawingLayer();
    if(!l)return;
    drawingId=l.id;
    const ctx=l.surface.getContext("2d",{willReadFrequently:true});
-   if(tool==="fill"){flood(ctx,p.x,p.y);drawing=false;render();return;}
+   if(tool==="fill"){
+    if(p.x>=0&&p.x<W&&p.y>=0&&p.y<H)flood(ctx,p.x,p.y);
+    drawing=false;render();return;
+   }
    drawing=true;last=p;start=p;
-   if(["line","rect","ellipse"].includes(tool))beforeShape=ctx.getImageData(0,0,W,H);
-   else rasterLine(ctx,p,p,tool==="eraser");
+   rasterLine(ctx,p,p,tool==="eraser");
   }
-  try{canvas.setPointerCapture(e.pointerId);}catch(_){}
+  activePointer=e.pointerId;
+  window.addEventListener("pointermove",onMove,{passive:false});
+  window.addEventListener("pointerup",onUp);
+  window.addEventListener("pointercancel",onUp);
  }
  function onMove(e){
-  if(!drawing)return;e.preventDefault();
+  if(!drawing||activePointer!==e.pointerId)return;
+  if(e.cancelable)e.preventDefault();
   const l=layers.find(x=>x.id===drawingId);if(!l)return;
   const p=point(e);
-  if(l.type==="image"){
+  if(l.type==="vector"){
+   l.x=Math.min(start.x,p.x);l.y=Math.min(start.y,p.y);
+   l.w=Math.max(1,Math.abs(p.x-start.x));
+   l.h=Math.max(1,Math.abs(p.y-start.y));
+   l.reverse=(p.x-start.x)*(p.y-start.y)<0;
+   redrawVector(l);positionImage(l);
+  }else if(l.type==="image"){
    currentErase.pts.push(erasePoint(l,p));redrawImage(l);
   }else{
-   const ctx=l.surface.getContext("2d",{willReadFrequently:true});
-   if(["line","rect","ellipse"].includes(tool)){
-    ctx.putImageData(beforeShape,0,0);ctx.save();
-    ctx.strokeStyle=color;ctx.lineWidth=size;ctx.lineJoin="round";
-    ctx.beginPath();
-    if(tool==="line"){ctx.moveTo(start.x,start.y);ctx.lineTo(p.x,p.y);}
-    else if(tool==="rect")ctx.rect(start.x,start.y,p.x-start.x,p.y-start.y);
-    else ctx.ellipse((start.x+p.x)/2,(start.y+p.y)/2,Math.max(.5,Math.abs(p.x-start.x)/2),Math.max(.5,Math.abs(p.y-start.y)/2),0,0,Math.PI*2);
-    ctx.stroke();ctx.restore();
-   }else rasterLine(ctx,last,p,tool==="eraser");
+   rasterLine(l.surface.getContext("2d",{willReadFrequently:true}),last,p,tool==="eraser");
   }
-  last=p;
+  last=p;hoverCursor(e);
  }
  function onUp(e){
-  if(!drawing)return;onMove(e);
-  drawing=false;currentErase=null;beforeShape=null;drawingId=null;
-  render();notice("Modification enregistrée · Annuler disponible.");
+  if(!drawing||activePointer!==e.pointerId)return;
+  if(e.type!=="pointercancel")onMove(e);
+  window.removeEventListener("pointermove",onMove);
+  window.removeEventListener("pointerup",onUp);
+  window.removeEventListener("pointercancel",onUp);
+  const wasVector=layers.find(x=>x.id===drawingId)?.type==="vector";
+  drawing=false;activePointer=null;currentErase=null;drawingId=null;
+  render();
+  if(wasVector){choose("select");vectorDetails.open=true;}
+  notice(wasVector?"Forme créée · sélectionne-la pour modifier les dimensions et le style.":"Modification enregistrée · Annuler disponible.");
  }
  function imagePointerDown(e){
   const l=layers.find(item=>item.node===e.currentTarget);
@@ -610,8 +888,14 @@ function mount(root){
     l.angle=((raw+540)%360)-180;
     if(ev.shiftKey)l.angle=Math.round(l.angle/15)*15;
    }else if(resized){
-    const d=Math.abs(dx)>=Math.abs(dy*l.aspect)?dx:dy*l.aspect;
-    l.w=clamp(initial.w+d,l.baseW*.1,l.baseW*5);l.h=l.w/l.aspect;
+    if(l.type==="vector"){
+     l.w=clamp(initial.w+dx,1,3200);
+     l.h=clamp(initial.h+dy,1,3200);
+     redrawVector(l);
+    }else{
+     const d=Math.abs(dx)>=Math.abs(dy*l.aspect)?dx:dy*l.aspect;
+     l.w=clamp(initial.w+d,l.baseW*.1,l.baseW*5);l.h=l.w/l.aspect;
+    }
    }else{
     l.x=clamp(initial.x+dx,-l.w+18,W-18);
     l.y=clamp(initial.y+dy,-l.h+18,H-18);
@@ -656,27 +940,28 @@ function mount(root){
  /* Format ZebraPaint : image raster par calque + métadonnées.
     Sauvegarde uniquement sur l'appareil de l'utilisateur. */
  function serializeProject(){
-  return {format:"zebrapaint",version:1,width:W,height:H,
+  return {format:"zebrapaint",version:2,width:W,height:H,
    layers:layers.map(l=>({
     type:l.type,name:l.name,background:!!l.background,visible:l.visible,
     locked:!!l.locked,opacity:l.opacity??1,
     x:l.x,y:l.y,w:l.w,h:l.h,baseW:l.baseW,aspect:l.aspect,
     angle:l.angle||0,skew:l.skew||0,flipX:l.flipX||1,flipY:l.flipY||1,
-    image:l.surface.toDataURL("image/png")
+    kind:l.kind,stroke:l.stroke,fill:l.fill,strokeWidth:l.strokeWidth,
+    text:l.text,fontSize:l.fontSize,fontFamily:l.fontFamily,reverse:!!l.reverse,
+    image:l.type==="vector"?null:l.surface.toDataURL("image/png")
    }))};
  }
  function saveProject(){
-  try{
-   const project=serializeProject();
-   const encoded=JSON.stringify(project);
-   const blob=new Blob([encoded],{type:"application/json"});
-   const url=URL.createObjectURL(blob);
-   const a=document.createElement("a");
-   a.href=url;a.download="zebra-paint-"+new Date().toISOString().slice(0,10)+".zpaint";
-   document.body.append(a);a.click();a.remove();
-   setTimeout(()=>URL.revokeObjectURL(url),2000);
-   notice("Projet .zpaint enregistré · "+layers.length+" calques rééditables.");
-  }catch(err){notice("Impossible d'enregistrer le projet : "+err.message);}
+  exportName("zpaint",name=>{
+   try{
+    const encoded=JSON.stringify(serializeProject());
+    const url=URL.createObjectURL(new Blob([encoded],{type:"application/json"}));
+    const a=document.createElement("a");a.href=url;a.download=name;
+    document.body.append(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    notice("Projet "+name+" enregistré · "+layers.length+" calques rééditables.");
+   }catch(err){notice("Impossible d'enregistrer le projet : "+err.message);}
+  });
  }
  async function loadProject(file,fromDraft=false){
   if(!file)return false;
@@ -684,11 +969,20 @@ function mount(root){
   if(!fromDraft&&file.size>35*1024*1024){notice("Projet trop volumineux (>35 Mo).");return false;}
   try{
    const data=JSON.parse(await file.text());
-   if(data.format!=="zebrapaint"||data.version!==1||data.width!==W||data.height!==H
+   if(data.format!=="zebrapaint"||![1,2].includes(data.version)
+      ||!Number.isInteger(data.width)||!Number.isInteger(data.height)
+      ||data.width<64||data.width>1600||data.height<64||data.height>1200
+      ||data.width*data.height>MAX_PIXELS
       ||!Array.isArray(data.layers)||data.layers.length<1||data.layers.length>MAX_LAYERS)
       throw new Error("Format de projet invalide ou incompatible");
    const prepared=[];
    for(const item of data.layers){
+    if(item.type==="vector"){
+     if(data.version<2||!["rect","ellipse","line","text"].includes(item.kind)
+        ||!Number.isFinite(Number(item.w))||!Number.isFinite(Number(item.h)))
+       throw new Error("Objet vectoriel incorrect");
+     prepared.push({item,image:null});continue;
+    }
     if(!["raster","image"].includes(item.type)||typeof item.image!=="string"
        ||!item.image.startsWith("data:image/png;base64,")
        ||item.image.length>23e6)throw new Error("Calque image incorrect");
@@ -702,12 +996,24 @@ function mount(root){
    }
    if(!active||(fromDraft&&editVersion!==revisionAtStart))return false;
    if(!fromDraft)record();
+   if(data.width!==W||data.height!==H)resizeDocument(data.width,data.height,true);
    const rebuilt=[];
    prepared.forEach(({item,image},index)=>{
     let layer;
     if(item.type==="raster"){
      layer=createRaster(String(item.name||"Dessin").slice(0,70));
      layer.surface.getContext("2d").drawImage(image,0,0,W,H);
+    }else if(item.type==="vector"){
+     layer=createVector(item.kind,clamp(Number(item.x)||0,-3200,3200),clamp(Number(item.y)||0,-3200,3200),
+       clamp(Number(item.w)||1,1,3200),clamp(Number(item.h)||1,1,3200));
+     layer.name=String(item.name||"Forme").slice(0,70);
+     layer.stroke=/^#[0-9a-f]{6}$/i.test(item.stroke)?item.stroke:"#000000";
+     layer.fill=/^#[0-9a-f]{6}$/i.test(item.fill)?item.fill:null;
+     layer.strokeWidth=clamp(Number(item.strokeWidth)||1,1,70);
+     layer.text=String(item.text||"").slice(0,600);
+     layer.fontSize=clamp(Number(item.fontSize)||32,8,200);
+     layer.fontFamily="Arial";layer.reverse=!!item.reverse;
+     redrawVector(layer);
     }else{
      const node=el("div","zp-imported-image");
      const surface=document.createElement("canvas");
@@ -730,7 +1036,7 @@ function mount(root){
        index===0&&item.name==="Fond"&&item.background!==false);
     layer.visible=item.visible!==false;layer.locked=!!item.locked;
     layer.opacity=clamp(Number(item.opacity??1),0,1);
-    if(layer.type==="image"){
+    if(layer.type!=="raster"){
      layer.angle=clamp(Number(item.angle)||0,-180,180);
      layer.skew=clamp(Number(item.skew)||0,-45,45);
      layer.flipX=item.flipX===-1?-1:1;layer.flipY=item.flipY===-1?-1:1;
@@ -774,16 +1080,18 @@ function mount(root){
  };
 
  function download(){
-  const a=document.createElement("a");
-  a.href=merged().toDataURL("image/png");
-  a.download="zebra-paint-"+new Date().toISOString().slice(0,10)+".png";
-  document.body.append(a);a.click();a.remove();notice("PNG exporté · calques fusionnés pour le fichier.");
+  exportName("png",name=>{
+   try{
+    const a=document.createElement("a");
+    a.href=merged().toDataURL("image/png");a.download=name;
+    document.body.append(a);a.click();a.remove();
+    notice("Image "+name+" exportée · "+W+" × "+H+" pixels.");
+   }catch(err){notice("Export PNG impossible : "+err.message);}
+  });
  }
- canvas.addEventListener("pointerdown",onDown);
- canvas.addEventListener("pointermove",onMove);
- canvas.addEventListener("pointerup",onUp);
- canvas.addEventListener("pointercancel",onUp);
- canvasFrame.addEventListener("pointerdown",e=>{if(tool==="select"&&(e.target===layerStage||e.target===canvasFrame))select(null);});
+ work.addEventListener("pointerdown",onDown);
+ work.addEventListener("pointermove",hoverCursor,{passive:true});
+ work.addEventListener("pointerleave",()=>{if(!drawing)cursorRing.hidden=true;});
  function key(e){
   if(!active||!root.isConnected||!root.closest(".window")?.classList.contains("focused"))return;
   if(["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName))return;
@@ -798,8 +1106,12 @@ function mount(root){
   active=false;if(draggingCleanup)draggingCleanup();
   urls.forEach(url=>URL.revokeObjectURL(url));urls.clear();
   document.removeEventListener("keydown",key);
-  canvas.removeEventListener("pointerdown",onDown);canvas.removeEventListener("pointermove",onMove);
-  canvas.removeEventListener("pointerup",onUp);canvas.removeEventListener("pointercancel",onUp);
+  work.removeEventListener("pointerdown",onDown);
+  work.removeEventListener("pointermove",hoverCursor);
+  window.removeEventListener("pointermove",onMove);
+  window.removeEventListener("pointerup",onUp);
+  window.removeEventListener("pointercancel",onUp);
+  if(dialog)dialog.parentElement?.remove();
  }
  root._zebraDispose=dispose;return dispose;
 }

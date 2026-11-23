@@ -1,0 +1,46 @@
+name: Vérifier ZebraPaint 2 objets et exports
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'paint.js'
+      - 'paint-responsive.css'
+      - 'app.js'
+      - 'tests/paint-v2-browser.py'
+      - '.github/workflows/verify-paint-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  paint-v2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vérifier la syntaxe et les versions
+        run: |
+          node --check paint.js
+          node --check app.js
+          node - <<'JS'
+          const s=require('fs').readFileSync('app.js','utf8');
+          if(!s.includes('paint.js?v=2.0')||!s.includes('paint-responsive.css?v=2.0'))
+            throw Error('ZebraPaint 2 loader missing');
+          JS
+      - name: Installer Playwright et Pillow
+        run: python3 -m pip install --quiet playwright pillow
+      - name: Tester bureau, objet, sauvegarde, mobile
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/paint-v2-http.log 2>&1 &
+          SERVER=$!
+          trap 'kill $SERVER 2>/dev/null || true' EXIT
+          sleep 1
+          python3 tests/paint-v2-browser.py
+      - name: Captures et fichiers exportés
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zebrapaint-2-verification
+          path: paint-v2-screenshots/
+          if-no-files-found: ignore
