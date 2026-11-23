@@ -72,7 +72,18 @@ def check_desktop(browser):
     assert layout["sideLeft"]>=layout["workRight"]-2,layout
     assert layout["opacityTop"]>layout["layersTop"],layout
     assert 275<=layout["sideWidth"]<=325,layout
+    resizer=page.locator(".zp-layer-resizer")
+    before=page.locator(".zp-layer-list").bounding_box()
+    grip=resizer.bounding_box()
+    assert before and grip
+    page.mouse.move(grip["x"]+grip["width"]/2,grip["y"]+grip["height"]/2)
+    page.mouse.down();page.mouse.move(grip["x"]+grip["width"]/2,grip["y"]+90,steps=8);page.mouse.up()
+    after=page.locator(".zp-layer-list").bounding_box()
+    assert after and after["height"]>before["height"]+60,(before,after)
+    assert page.locator(".window.paint-window").count()==1
     REPORT["desktopRightSidebar"]=True
+    REPORT["resizableLayerList"]=True
+    REPORT["paintWindowResizableClass"]=True
     REPORT["pixelToolIcons"]=True
     REPORT["plainFileButtons"]=True
     REPORT["pencilRemoved"]=True

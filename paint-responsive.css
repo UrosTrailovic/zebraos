@@ -463,9 +463,19 @@
 }
 .zp-sidebar .zp-layer-list{
  display:flex;flex-direction:column;gap:4px;
- max-height:242px;min-height:45px;padding:0 2px 3px 0;
+ height:242px;max-height:none;min-height:72px;padding:0 2px 3px 0;
  overflow-x:hidden;overflow-y:auto;
 }
+.zp-layer-resizer{
+ position:relative;flex:none;height:10px;min-height:10px;margin:0 1px;
+ border-top:1px solid #777;border-bottom:1px solid #f5f5f5;
+ background:#bcbcbc;cursor:row-resize;touch-action:none;
+}
+.zp-layer-resizer::after{
+ content:"";position:absolute;left:50%;top:3px;width:54px;height:3px;
+ transform:translateX(-50%);border-top:1px solid #686868;border-bottom:1px solid #eee;
+}
+.zp-layer-resizer:hover,.zp-layer-resizer:focus-visible{background:#cddcff;outline:1px solid #234a9b}
 .zp-sidebar .zp-layer-entry{
  display:grid;grid-template-columns:minmax(0,1fr);gap:3px;
  width:100%;height:auto;min-width:0;max-width:none;padding:4px;
@@ -508,6 +518,12 @@
 .zp-tools-clear .zp-tool.selected .zp-tool-art{
  border-color:#294a8b;background:#b9ccef;box-shadow:inset 1px 1px #5f7094;
 }
+.window.paint-window .window-resize-handle.resize-e,
+.window.paint-window .window-resize-handle.resize-w{width:10px}
+.window.paint-window .window-resize-handle.resize-s{height:10px}
+.window.paint-window:not(.maximized) .window-resize-handle.resize-e:hover,
+.window.paint-window:not(.maximized) .window-resize-handle.resize-w:hover,
+.window.paint-window:not(.maximized) .window-resize-handle.resize-s:hover{background:#1d397833}
 
 @media(max-width:700px){
  .zp-body{overflow:hidden}
@@ -517,9 +533,10 @@
  }
  .zp-sidebar .zp-layer-panel{padding:4px 5px}
  .zp-sidebar .zp-layer-list{
-  flex-direction:row;max-height:none;min-height:47px;
+  flex-direction:row;height:auto;max-height:none;min-height:47px;
   overflow-x:auto;overflow-y:hidden;padding-bottom:3px;
  }
+ .zp-layer-resizer{display:none}
  .zp-sidebar .zp-layer-entry{
   display:flex;grid-template-columns:none;width:auto;height:46px;
   min-width:227px;padding:3px;

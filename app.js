@@ -881,7 +881,7 @@ var gameModules={
  racer:{name:"Echo Racer 2 Beta — "+echoRacerBuildVersion,width:750,height:790,global:"ZebraEchoRacer",
   files:["echo-racer.js?v=21.5"],css:"echo-racer.css?v=20.4"},
  paint:{name:"ZebraPaint.exe",width:1180,height:720,global:"ZebraPaint",
-  files:["paint.js?v=2.3"],css:"paint-responsive.css?v=2.2"}
+  files:["paint.js?v=2.4"],css:"paint-responsive.css?v=2.3"}
 };
 var assetPromises={};
 /* Chaque nouvelle session recharge réellement les modules lazy et leurs styles.

@@ -27,7 +27,7 @@ jobs:
           node - <<'JS'
           const fs=require('fs');
           const s=fs.readFileSync('app.js','utf8');
-          if(!s.includes('paint.js?v=2.3')||!s.includes('paint-responsive.css?v=2.2'))
+          if(!s.includes('paint.js?v=2.4')||!s.includes('paint-responsive.css?v=2.3'))
             throw Error('ZebraPaint 2 loader missing');
           const tools=['select','brush','eraser','fill','picker','line','rect','ellipse','text'];
           for(const tool of tools){
