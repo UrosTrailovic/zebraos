@@ -256,8 +256,16 @@ def check_desktop(browser):
     dlg.locator("input").nth(0).fill("1920")
     dlg.locator("input").nth(1).fill("1080")
     dlg.get_by_role("button",name="Valider").click()
+    page.wait_for_function("""() => {
+      const canvas=document.querySelector('.zp-canvas');
+      return canvas&&canvas.width===1920&&canvas.height===1080;
+    }""",timeout=10000)
     assert page.locator(".zp-canvas").evaluate("(n)=>[n.width,n.height]")==[1920,1080]
     page.locator(".zp-edits button").first.click()
+    page.wait_for_function("""() => {
+      const canvas=document.querySelector('.zp-canvas');
+      return canvas&&canvas.width===800&&canvas.height===500;
+    }""",timeout=10000)
     assert page.locator(".zp-canvas").evaluate("(n)=>[n.width,n.height]")==[800,500]
     REPORT["fullHDAndUndo"]=True
 
