@@ -72,26 +72,12 @@ def check_desktop(browser):
     view.select_option("large")
     assert win.locator(".zu-trash-grid").get_attribute("data-view")=="large"
     win.screenshot(path=str(OUT/"desktop-trash.png"))
-    # Clic droit -> Restaurer (aucun autre changement au mécanisme de corbeille).
-    win.locator(".zu-trash-entry").click(button="right")
-    assert page.get_by_role("button",name="Restaurer",exact=True).count()==1
-    page.get_by_role("button",name="Restaurer",exact=True).click()
-    assert win.locator(".zu-trash-entry").count()==0
-    assert not page.evaluate("(path)=>window.ZebraDesktop.isTrashed('zebra',path)",PATH)
-    stored=page.evaluate("JSON.parse(localStorage.getItem('zebra.desktop.v1.zebra')).trash")
-    assert stored==[],stored
-    # Pour l'opération drag, restaurer seulement l'état de la corbeille.
-    page.evaluate("""(path)=>{
-      window.ZebraDesktop.dispose();
-      const raw=JSON.parse(localStorage.getItem('zebra.desktop.v1.zebra'));
-      raw.trash=[path];localStorage.setItem('zebra.desktop.v1.zebra',JSON.stringify(raw));
-      window.ZebraDesktop.setup('zebra',()=>{},()=>{},window.__trashFakeIcon);
-      window.ZebraDesktop.bind();
-      window.ZebraDesktop.showTrash(window.__trashBody,'zebra',null,()=>{});
-    }""",PATH)
+    # La première visite teste le glisser hors de la fenêtre.
+    page.wait_for_timeout(950)  # la liste distante a terminé sa mise à jour
     item=win.locator(".zu-trash-entry")
     item.wait_for(state="visible")
-    rect=item.bounding_box()
+    rect=item.bounding_box(timeout=12000)
+    assert rect is not None, "Icône introuvable pour le glisser"
     cx=rect["x"]+rect["width"]/2
     cy=rect["y"]+rect["height"]/2
     page.mouse.move(cx,cy)
@@ -103,6 +89,17 @@ def check_desktop(browser):
     assert item.count()==0
     assert not page.evaluate("(path)=>window.ZebraDesktop.isTrashed('zebra',path)",PATH)
     assert page.locator(".zu-trash-drag-preview").count()==0
+    # La deuxième visite teste clic droit -> Restaurer avec le même stockage local.
+    setup(page)
+    win=page.locator("#trash-regression")
+    # Clic droit -> Restaurer (aucun autre changement au mécanisme de corbeille).
+    win.locator(".zu-trash-entry").click(button="right")
+    assert page.get_by_role("button",name="Restaurer",exact=True).count()==1
+    page.get_by_role("button",name="Restaurer",exact=True).click()
+    assert win.locator(".zu-trash-entry").count()==0
+    assert not page.evaluate("(path)=>window.ZebraDesktop.isTrashed('zebra',path)",PATH)
+    stored=page.evaluate("JSON.parse(localStorage.getItem('zebra.desktop.v1.zebra')).trash")
+    assert stored==[],stored
     # Le rectangle bleu Windows sélectionne les icônes, sans déplacer leur position.
     # Les icônes de démonstration sont créées en haut à gauche du vrai bureau.
     screen=page.locator("#desktop-screen")
