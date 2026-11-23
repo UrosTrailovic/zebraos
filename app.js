@@ -551,10 +551,11 @@ function desk(){
      &&item.app!=="explorer:recycle"
      &&(!window.ZebraDesktop||!window.ZebraDesktop.isTrashed(session,item.path));
   }).forEach(function(item){
-    shortcut(item.name,lib.icon(item,osIcon,40),function(){
+    var shortcutIcon=shortcut(item.name,lib.icon(item,osIcon,40),function(){
       if(item.type==="dir")explorer((item._local?"local:":"github:")+ (item._local?item.path.slice(6):item.path));
       else lib.openFile(item,{windowBox:windowBox,session:session,openApp:open,openAudio:function(file){if(window.ZebraAMP){window.ZebraAMPConfig={windowBox:windowBox};window.ZebraAMP.openPublic(file);}}});
     },true,item.path);
+    if(item.type==="dir")window.ZebraFileMoves?.markDrop?.(shortcutIcon,item.path);
   });
   if(window.ZebraDesktop)window.ZebraDesktop.bind();
  }

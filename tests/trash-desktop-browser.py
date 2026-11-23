@@ -83,12 +83,12 @@ def check_desktop(browser):
     page.mouse.move(cx,cy)
     page.mouse.down()
     page.mouse.move(cx+24,cy+12,steps=6)
-    assert page.locator(".zu-trash-drag-preview").count()==1
+    assert page.locator(".zebra-drag-ghost").count()==1
     page.mouse.move(260,500,steps=9) # outside window, still over bureau
     page.mouse.up()
     assert item.count()==0
     assert not page.evaluate("(path)=>window.ZebraDesktop.isTrashed('zebra',path)",PATH)
-    assert page.locator(".zu-trash-drag-preview").count()==0
+    assert page.locator(".zebra-drag-ghost").count()==0
     # La deuxième visite teste clic droit -> Restaurer avec le même stockage local.
     setup(page)
     win=page.locator("#trash-regression")

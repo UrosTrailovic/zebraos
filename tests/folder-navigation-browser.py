@@ -12,10 +12,25 @@ def check_icons(page,selector):
     assert buttons.count()==3,(selector,buttons.count())
     imgs=buttons.locator("img.github-nav-icon")
     assert imgs.count()==3,(selector,imgs.count())
-    page.wait_for_function("""(selector)=>{
-      const imgs=[...document.querySelectorAll(selector+' img.github-nav-icon')];
-      return imgs.length===3 && imgs.every(x=>x.complete && x.naturalWidth===64 && x.naturalHeight===64);
-    }""",arg=selector,timeout=14000)
+    try:
+        page.wait_for_function("""(selector)=>{
+          const imgs=[...document.querySelectorAll(selector+' img.github-nav-icon')];
+          return imgs.length===3 && imgs.every(x=>x.complete && x.naturalWidth===64 && x.naturalHeight===64);
+        }""",arg=selector,timeout=14000)
+    except Exception:
+        detail=page.evaluate("""async (selector)=>{
+          const imgs=[...document.querySelectorAll(selector+' img.github-nav-icon')];
+          const result=[];
+          for(const x of imgs){
+            let status='unknown',size=0;
+            try{const r=await fetch(x.src);status=r.status;size=(await r.arrayBuffer()).byteLength;}catch(e){status=e.message;}
+            result.push({src:x.src,natural:[x.naturalWidth,x.naturalHeight],
+              complete:x.complete,status,size});
+          }
+          return result;
+        }""",selector)
+        print("NAV_BITMAP_DEBUG",selector,detail,flush=True)
+        raise
     parts=buttons.evaluate_all("""els=>els.map(e=>{
       const b=e.getBoundingClientRect();
       return {width:b.width,height:b.height,alt:e.getAttribute('aria-label'),

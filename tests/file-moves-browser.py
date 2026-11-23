@@ -66,8 +66,15 @@ def setup_desktop(page):
     }""")
 
 def mouse_drag(page,start,end):
+    start.scroll_into_view_if_needed()
+    end.scroll_into_view_if_needed()
     s=start.bounding_box();d=end.bounding_box()
     assert s and d,(s,d)
+    hit=start.evaluate("""n=>{
+      const r=n.getBoundingClientRect();
+      return n.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2));
+    }""")
+    assert hit,("L'icône de départ doit être visible avant glisser",s)
     x0=s["x"]+s["width"]/2;y0=s["y"]+s["height"]/2
     x1=d["x"]+d["width"]/2;y1=d["y"]+d["height"]/2
     page.mouse.move(x0,y0);page.mouse.down()

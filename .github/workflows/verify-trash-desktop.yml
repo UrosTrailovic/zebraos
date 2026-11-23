@@ -31,7 +31,7 @@ jobs:
           node - <<'JS'
           const fs=require('fs');
           const html=fs.readFileSync('index.html','utf8');
-          for(const file of ['desktop-layout.js?v=1.4','desktop-layout.css?v=1.1','zebra-notes.js?v=1.2']){
+          for(const file of ['desktop-layout.js?v=2.0','desktop-layout.css?v=1.1','zebra-notes.js?v=1.2']){
             if(!html.includes(file))throw Error('Version absente '+file);
           }
           const old=fs.readFileSync('desktop-layout.js','utf8');
