@@ -565,6 +565,8 @@ function desk(){
    window.ZebraGitFiles.subscribe(function(){if(bureauRepaint)bureauRepaint();});
   }
   window.ZebraGitFiles.load().then(function(){renderUserFiles();});
+  if(window.ZebraLocalFiles?.ready)
+   window.ZebraLocalFiles.ready().then(function(){renderUserFiles();}).catch(function(){});
  }
 }
 function closeAll(){if(window.ZebraDesktop)window.ZebraDesktop.dispose();Object.keys(opened).forEach(function(k){var body=opened[k].w.querySelector(".window-body");if(body&&body._zebraDispose)body._zebraDispose();opened[k].w.remove()});opened={};var layer=$("desktop-screen").querySelector(".zu-sticky-layer");if(layer)layer.remove();$("task-items").innerHTML="";$("start-menu").classList.add("hidden")}

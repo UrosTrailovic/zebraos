@@ -100,7 +100,25 @@ def desktop_and_public(browser):
     src=games.locator('.github-file-entry[data-path="'+THANKS+'"]')
     src.wait_for()
     mouse_drag(page,src,tools.locator(".folder-path"))
-    assert page.evaluate("x=>ZebraFileMoves.parent(x,'zebra')",THANKS)==TOOLS
+    current=page.evaluate("x=>ZebraFileMoves.parent(x,'zebra')",THANKS)
+    if current!=TOOLS:
+        debug=page.evaluate("""({source,destination})=>{
+          const a=document.querySelector('#games-window .github-file-entry[data-path="'+source+'"]');
+          const b=document.querySelector('#tools-window .folder-path');
+          const box=b?.getBoundingClientRect();
+          const x=box?.x+box?.width/2,y=box?.y+box?.height/2;
+          const top=document.elementFromPoint(x,y);
+          return {source:!!a,target:!!b,mouse:[x,y],
+            hit:top?.className,hitTag:top?.tagName,
+            nearest:top?.closest('[data-zdrop-target]')?.dataset.zdropTarget,
+            target:ZebraFileMoves.findTarget(x,y)?.target,
+            canDrop:ZebraFileMoves.canDrop([{kind:'public',id:source}],destination,'zebra'),
+            collision:ZebraFileMoves.checkPublic([source],destination,'zebra',false),
+            ghosts:document.querySelectorAll('.zebra-drag-ghost').length};
+        }""",{"source":THANKS,"destination":TOOLS})
+        print("DRAG_BETWEEN_WINDOWS_DEBUG",debug,flush=True)
+        page.screenshot(path=str(OUT/"drag-between-windows-debug.png"))
+    assert current==TOOLS,current
     assert tools.locator('.github-file-entry[data-path="'+THANKS+'"]').count()==1
     tools.screenshot(path=str(OUT/"desktop-folder-moves.png"))
 
