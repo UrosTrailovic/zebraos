@@ -59,6 +59,26 @@ jobs:
               const rows=root.querySelector(".amp3-list");
               const bottom=root.querySelector(".amp3-bottom");
               report.rendered=!!root&&!!canvas&&!!rows;
+              // Regression: the loading CRT must occupy the same in-flow
+              // rectangle as the existing screens, not the viewport.
+              const slot=root.querySelector(".amp3-crt-slot");
+              const loading=root.querySelector("[data-amp-loading]");
+              const normal=root.querySelector(".amp3-display-row");
+              const before=rect(normal),screenBefore=rect(root.querySelector(".amp3-screen"));
+              report.loadingInitiallyHidden=loading.hidden&&getComputedStyle(loading).display==="none";
+              loading.hidden=false;slot.classList.add("amp3-buffering");
+              const lr=rect(loading),sr=rect(slot),wr=rect(host),screenAfter=rect(root.querySelector(".amp3-screen"));
+              report.loadingContained=lr.width>100&&lr.height>50
+                &&Math.abs(lr.left-sr.left)<2&&Math.abs(lr.top-sr.top)<2
+                &&Math.abs(lr.right-sr.right)<2&&Math.abs(lr.bottom-sr.bottom)<2
+                &&lr.left>=wr.left&&lr.right<=wr.right&&lr.top>=wr.top&&lr.bottom<=wr.bottom
+                &&getComputedStyle(loading).position==="static";
+              report.loadingKeepsLayout=Math.abs(before.height-lr.height)<2
+                &&Math.abs(screenBefore.height-screenAfter.height)<2
+                &&getComputedStyle(normal).visibility==="hidden";
+              loading.hidden=true;slot.classList.remove("amp3-buffering");
+              report.loadingRestoresDisplay=getComputedStyle(normal).visibility==="visible"
+                &&getComputedStyle(loading).display==="none";
               const info=root.querySelector(".amp3-info-screen");
               const transport=root.querySelector(".amp3-transports");
               const modes=root.querySelector(".amp3-modes");
