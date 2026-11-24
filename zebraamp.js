@@ -27,6 +27,105 @@ var presetValues={
 var eqFreq=[70,250,1000,3500,11000],eqNames=["GRAVES","BAS-MÉD.","MÉDIUMS","PRÉSENCE","AIGUS"];
 var animation=null,spectrumRefresh=null,spectrumCleanup=null,loadingId=0,notifyText="",initDone=false,albumChecked=false;
 var visualizerPromise=null;
+// Network reserve and bounded session cache. Never modify the audio or visuals.
+var streamWait=null,streamDelay=null,streamPoll=null,streamIntent=false,slowStream=false;
+var streamCache=new Map(),streamCacheBytes=0,streamPrefetch=null,cacheFailed=new Set();
+var STREAM_DELAY=750,STREAM_TARGET=20,STREAM_CACHE_MAX=64*1024*1024;
+function remoteStream(){return !loadedBlob&&/^https?:/i.test(audio.currentSrc||audio.src||"");}
+function bufferAhead(media){
+ try{var t=media.currentTime||0,r=media.buffered;
+  for(var i=0;i<r.length;i++)if(r.start(i)<=t+.12&&r.end(i)>=t)return Math.max(0,r.end(i)-t);
+ }catch(e){}return 0;
+}
+function remainingAudio(){return Number.isFinite(audio.duration)?Math.max(0,audio.duration-(audio.currentTime||0)):Infinity;}
+function bufferTarget(){return Math.min(STREAM_TARGET*Math.max(.5,speed),remainingAudio());}
+function networkSlow(){
+ var n=typeof navigator!=="undefined"&&navigator.connection;
+ return slowStream||!!(n&&(/^(slow-2g|2g|3g)$/.test(n.effectiveType||"")||(n.downlink>0&&n.downlink<.7)));
+}
+function drawStreamWait(){
+ if(!view||!view.isConnected)return;
+ var panel=view.querySelector("[data-amp-loading]");if(!panel)return;
+ var visible=!!(streamWait&&streamWait.visible);
+ panel.hidden=!visible;panel.style.display=visible?"grid":"none";
+ if(!visible)return;
+ var target=bufferTarget(),ratio=Number.isFinite(target)&&target>0?Math.min(1,bufferAhead(audio)/target):0;
+ panel.querySelector("progress").value=Math.round(ratio*100);
+ panel.querySelector("[data-amp-buffer-percent]").textContent=Math.round(ratio*100)+" %";
+}
+function clearStreamWait(){
+ if(streamDelay!==null)clearTimeout(streamDelay);if(streamPoll!==null)clearInterval(streamPoll);
+ streamDelay=null;streamPoll=null;streamWait=null;drawStreamWait();
+}
+function abortPrefetch(){if(streamPrefetch){streamPrefetch.controller.abort();streamPrefetch=null;}}
+function cancelStream(){streamIntent=false;clearStreamWait();abortPrefetch();}
+function rememberStream(path,blob){
+ if(!blob.size||blob.size>STREAM_CACHE_MAX)return;
+ if(streamCache.has(path)){streamCacheBytes-=streamCache.get(path).size;streamCache.delete(path);}
+ while(streamCache.size&&streamCacheBytes+blob.size>STREAM_CACHE_MAX){
+  var first=streamCache.keys().next().value;
+  streamCacheBytes-=streamCache.get(first).size;streamCache.delete(first);
+ }
+ streamCache.set(path,blob);streamCacheBytes+=blob.size;
+}
+function cacheTrack(item){
+ if(!item||item.kind!=="public"||streamCache.has(item.path)||cacheFailed.has(item.path)||streamPrefetch)return;
+ if(typeof fetch!=="function"||typeof AbortController==="undefined")return;
+ var task={path:item.path,controller:new AbortController()};streamPrefetch=task;
+ fetch(urlFor(item.path),{signal:task.controller.signal,cache:"force-cache"}).then(function(response){
+  if(!response.ok||Number(response.headers.get("content-length"))>STREAM_CACHE_MAX)throw Error("Cache audio indisponible");
+  return response.blob();
+ }).then(function(blob){if(streamPrefetch===task)rememberStream(item.path,blob);})
+ .catch(function(e){if(streamPrefetch===task&&e.name!=="AbortError")cacheFailed.add(item.path);})
+ .finally(function(){if(streamPrefetch===task)streamPrefetch=null;});
+}
+function maybePrefetch(){
+ if(!streamIntent||streamWait||streamDelay||audio.paused||audio.ended||streamPrefetch)return;
+ if(!Number.isFinite(audio.duration)||bufferAhead(audio)+.25<remainingAudio())return;
+ var n=typeof navigator!=="undefined"&&navigator.connection;
+ if(n&&n.saveData)return;
+ var item=getTrack();
+ // Cache the finished download first, using the browser's HTTP cache when available.
+ if(item&&item.kind==="public"&&!streamCache.has(item.path)&&!cacheFailed.has(item.path)){
+  cacheTrack(item);return;
+ }
+ if(networkSlow()||shuffle||repeat==="un")return;
+ var tracks=getList().tracks,index=tracks.findIndex(function(t){return t.id===currentId;});
+ if(index>=0)cacheTrack(tracks[index+1]);
+}
+function checkStreamWait(){
+ if(!streamWait)return;
+ if(!streamIntent||!remoteStream()||audio.error||audio.ended){clearStreamWait();return;}
+ var ahead=bufferAhead(audio),target=bufferTarget();
+ drawStreamWait();
+ // canplaythrough is also a browser estimate; the buffered range is preferred.
+ if(audio.readyState<3||ahead+.15<target)return;
+ var media=audio;clearStreamWait();renderProgress();
+ var p=media.play();
+ if(p&&p.catch)p.catch(function(err){
+  if(media!==audio||!streamIntent||err&&err.name==="AbortError")return;
+  cancelStream();status("Lecture bloquée : appuie sur ▶ pour reprendre.");
+ });
+}
+function beginStreamWait(){
+ if(streamWait||!streamIntent||!remoteStream())return;
+ abortPrefetch();clearStreamWait();
+ streamWait={visible:false};audio.pause();
+ streamDelay=setTimeout(function(){streamDelay=null;if(streamWait){streamWait.visible=true;drawStreamWait();}},STREAM_DELAY);
+ streamPoll=setInterval(checkStreamWait,250);
+ renderProgress();checkStreamWait();
+}
+function scheduleStreamWait(){
+ if(!streamIntent||!remoteStream()||streamWait||streamDelay||audio.paused||audio.ended)return;
+ abortPrefetch();
+ streamDelay=setTimeout(function(){
+  streamDelay=null;
+  if(!streamIntent||!remoteStream()||audio.paused||audio.ended||audio.error||audio.readyState>=3)return;
+  slowStream=true;beginStreamWait();
+  if(streamWait){clearTimeout(streamDelay);streamDelay=null;streamWait.visible=true;drawStreamWait();}
+ },STREAM_DELAY);
+}
+
 function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
 function b(label,action,cls){var x=el("button",cls||"amp3-btn",label);x.type="button";x.onclick=action;return x;}
 function prepareNativeAudio(media){
@@ -164,7 +263,7 @@ function syncAlbum(entries){
  var active=current===ALBUM?album:current===ZEBRALOGY?zebralogy:null;
  if(active){
   if(currentId&&!active.tracks.some(function(t){return t.id===currentId;})){
-   ++loadingId;audio.pause();currentId=null;audio.removeAttribute("src");releaseUrl();
+   ++loadingId;cancelStream();audio.pause();currentId=null;audio.removeAttribute("src");releaseUrl();
   }
   render();
  }
@@ -182,12 +281,22 @@ function updatePublic(){
  });
 }
 function bindAudioEvents(media){
- media.addEventListener("ended",nextAfterEnd);
+ media.addEventListener("ended",function(){if(media===audio){cancelStream();nextAfterEnd();}});
+ media.addEventListener("waiting",function(){if(media===audio)scheduleStreamWait();});
+ media.addEventListener("stalled",function(){if(media===audio&&media.readyState<3)scheduleStreamWait();});
+ media.addEventListener("playing",function(){if(media===audio&&!streamWait){clearStreamWait();maybePrefetch();}});
+ ["progress","canplay","timeupdate"].forEach(function(name){
+  media.addEventListener(name,function(){
+   if(media!==audio)return;
+   if(streamWait)checkStreamWait();
+   else{if(media.readyState>=3&&streamDelay)clearStreamWait();maybePrefetch();}
+  });
+ });
  media.addEventListener("loadedmetadata",syncPlaybackSettings);
  ["play","pause","timeupdate","loadedmetadata","durationchange","ratechange","volumechange","waiting","canplay"].forEach(function(k){
   media.addEventListener(k,function(){renderProgress();if(k==="play"||k==="pause"){render();if(spectrumRefresh)spectrumRefresh();}});
  });
- media.addEventListener("error",function(){status("Impossible de lire ce fichier audio. Vérifie son format et son accès.");});
+ media.addEventListener("error",function(){if(media===audio){cancelStream();status("Impossible de lire ce fichier audio. Vérifie son format et son accès.");}});
 }
 function init(){
  if(initDone)return;
@@ -361,7 +470,7 @@ function discardOpenedPlaylist(){
 function setPlaylist(id){
  if(id!==ALBUM&&id!==ZEBRALOGY&&!playlists.some(function(p){return p.id===id;}))return;
  if(current!==id){
-  ++loadingId; // Cancel any asynchronous track load from the old playlist.
+  ++loadingId;cancelStream(); // Cancel any asynchronous track load from the old playlist.
   audio.pause();currentId=null;audio.removeAttribute("src");releaseUrl();
   if(current===OPENED)discardOpenedPlaylist();
  }
@@ -606,6 +715,7 @@ function makeOpenedPlaylist(){
 }
 function releaseUrl(){if(loadedBlob){URL.revokeObjectURL(loadedBlob);loadedBlob=null;}}
 function setSource(src,isBlob){
+ cancelStream();
  // Détacher l'ancienne source avant de révoquer son URL. Sur certains Chrome
  // Android, révoquer un blob encore attaché laisse le média en attente.
  audio.pause();
@@ -619,16 +729,17 @@ function setSource(src,isBlob){
  audio.src=src;syncPlaybackSettings();audio.load();syncPlaybackSettings();renderProgress();
 }
 function togglePlayback(){
+ if(streamWait){cancelStream();audio.pause();renderProgress();return;}
  if(audio.paused){
   var t=getTrack();
   if(t){if(audio.src)play();else pick(t.id,true);}
   else{var p=getList();if(p.tracks.length)pick(p.tracks[0].id,true);}
- }else audio.pause();
+ }else{cancelStream();audio.pause();}
 }
 function nativeAudioFallback(position){
  if(nativeFallback)return;
  var previous=audio,src=previous.currentSrc||previous.src;if(!src)return;
- nativeFallback=true;previous.pause();
+ nativeFallback=true;clearStreamWait();previous.pause();
  try{if(ctx&&ctx.state!=="closed")ctx.close();}catch(e){}
  ctx=null;filters=[];analyser=null;graphTried=false;reverbGraph=null;
  audio=new Audio();audio.preload="auto";audio.volume=volume;
@@ -647,6 +758,8 @@ function nativeAudioFallback(position){
  status("Mode audio mobile direct · effets temps réel désactivés pour cette session.");
 }
 function play(){
+ if(streamWait)return;
+ streamIntent=true;
  syncPlaybackSettings();
  prepareNativeAudio(audio);audio.muted=false;audio.defaultMuted=false;audio.volume=volume;
  // Lecture HTML native tant que le son est neutre : meilleure continuité
@@ -655,13 +768,16 @@ function play(){
  // est tentée à chaque geste Play, mais le média n'y est branché qu'après
  // confirmation de l'état running.
  var graphReady=!nativeFallback?resumeGraph():null;
- var before=audio.currentTime||0,res=audio.play();
+ var before=audio.currentTime||0,playingMedia=audio,res=audio.play();
+ if(remoteStream()&&networkSlow()&&bufferAhead(audio)+.15<bufferTarget())beginStreamWait();
+ else if(audio.readyState<3)scheduleStreamWait();
  if(res&&res.then)res.then(function(){
   // Réappliquer après play() : certains moteurs mobiles restaurent l'état du
   // média au moment de l'activation de la session audio.
   audio.muted=false;audio.defaultMuted=false;audio.volume=volume;status("");
- }).catch(function(){
-  status("Lecture bloquée : appuie sur ▶ pour démarrer le son.");
+ }).catch(function(err){
+  if(playingMedia!==audio||!streamIntent||streamWait||err&&err.name==="AbortError")return;
+  cancelStream();status("Lecture bloquée : appuie sur ▶ pour démarrer le son.");
  });
  // Samsung/Chrome peut conserver indéfiniment une promesse play() en attente
  // après le remplacement d'une URL blob. Un seul rechargement local suffit,
@@ -683,9 +799,13 @@ async function pick(id,autoplay){
  if(shuffle&&autoplay)shuffleSeen.add(id);
  if(currentId===id&&audio.src){if(autoplay)play();else render();return;}
  var token=++loadingId;
- currentId=id;audio.pause();status("Chargement…");render();
+ cancelStream();currentId=id;audio.pause();status("Chargement…");render();
  try{
-  if(item.kind==="public")setSource(urlFor(item.path),false);
+  if(item.kind==="public"){
+   var cached=streamCache.get(item.path);
+   if(cached){streamCache.delete(item.path);streamCache.set(item.path,cached);setSource(URL.createObjectURL(cached),true);}
+   else setSource(urlFor(item.path),false);
+  }
   else{
    var record=await dbOp("get",item.blobKey||item.id);
    if(token!==loadingId)return;
@@ -712,7 +832,7 @@ function dropTrack(id,other){
 function removeTrack(id){
  var p=getList();if(p.readonly)return;
  p.tracks=p.tracks.filter(function(t){return t.id!==id;});
- if(currentId===id){audio.pause();currentId=null;audio.removeAttribute("src");releaseUrl();}
+ if(currentId===id){cancelStream();audio.pause();currentId=null;audio.removeAttribute("src");releaseUrl();}
  store();render();
 }
 async function importFiles(files){
@@ -761,6 +881,7 @@ function prev(){
  pick(tracks[(index-1+tracks.length)%tracks.length].id,true);
 }
 function finishPlaylist(){
+ cancelStream();
  // Le dernier morceau reste chargé, mais ne relance jamais la playlist.
  audio.pause();
  status("Fin de la playlist.");
@@ -791,7 +912,7 @@ function next(manual){
 }
 function nextAfterEnd(){next(false);}
 function clearTrack(){
- audio.pause();currentId=null;audio.removeAttribute("src");releaseUrl();render();
+ cancelStream();audio.pause();currentId=null;audio.removeAttribute("src");releaseUrl();render();
 }
 function renderStatus(){
  if(view&&view.isConnected){
@@ -807,10 +928,11 @@ function renderProgress(){
  renderCover();
  view.querySelector("[data-amp-time]").textContent=format(audio.currentTime)+" / "+format(audio.duration);
  var playControl=view.querySelector("[data-amp-play]");
- playControl.textContent=audio.paused?"▶":"Ⅱ";
- playControl.classList.toggle("amp3-playing",!audio.paused&&!audio.ended);
+ playControl.textContent=audio.paused&&!streamWait?"▶":"Ⅱ";
+ playControl.classList.toggle("amp3-playing",(!audio.paused||!!streamWait)&&!audio.ended);
  var led=view.querySelector("[data-amp-led]");
- if(led){led.textContent=audio.paused?"● VEILLE":"● LECTURE";led.classList.toggle("amp3-led-active",!audio.paused);}
+ if(led){led.textContent=streamWait?"● TAMPON":audio.paused?"● VEILLE":"● LECTURE";led.classList.toggle("amp3-led-active",!audio.paused||!!streamWait);}
+ drawStreamWait();
  if(progress)progress.value=audio.duration&&Number.isFinite(audio.duration)?Math.round(1000*audio.currentTime/audio.duration):0;
 }
 function renderEq(){
@@ -1149,6 +1271,21 @@ function open(){
  var infoScreen=el("div","amp3-info-screen");
  infoScreen.append(cover,readout);
  displayRow.append(spectrumBox,infoScreen);
+ // CRT loading panel covers the existing readout and mini-spectrum only.
+ displayRow.style.position="relative";
+ var loading=el("div","amp3-buffer-screen");
+ loading.setAttribute("data-amp-loading","");loading.setAttribute("role","status");
+ loading.setAttribute("aria-label","Mise en tampon audio");
+ loading.style.cssText="position:absolute;inset:0;z-index:5;background:#061b13;color:#b5f9cf;border:1px solid #85c9a1;box-shadow:inset 0 0 18px #102e1d;display:none;align-content:center;justify-items:center;gap:7px;padding:8px;pointer-events:none;text-shadow:0 0 6px #68dd91;font-family:monospace";
+ loading.hidden=true;
+ var loadingTitle=el("strong","","LOADING...");
+ loadingTitle.style.cssText="font-size:clamp(15px,3.5vw,25px);letter-spacing:.16em;line-height:1.1";
+ var loadingBar=el("progress");loadingBar.max=100;loadingBar.value=0;
+ loadingBar.setAttribute("aria-label","Réserve audio disponible");
+ loadingBar.style.cssText="width:72%;height:12px;accent-color:#8cddb0";
+ var loadingPct=el("span","","0 %");loadingPct.setAttribute("data-amp-buffer-percent","");
+ loadingPct.style.cssText="font-size:10px;letter-spacing:.12em";
+ loading.append(loadingTitle,loadingBar,loadingPct);displayRow.appendChild(loading);
  screen.appendChild(displayRow);
  var seek=el("input");seek.type="range";seek.min="0";seek.max="1000";seek.value="0";seek.setAttribute("data-amp-progress","");
  seek.oninput=function(){if(Number.isFinite(audio.duration)&&audio.duration)audio.currentTime=Number(seek.value)*audio.duration/1000;};
@@ -1160,7 +1297,7 @@ function open(){
    togglePlayback();
  },"amp3-btn amp3-play amp3-transport");
  playBtn.setAttribute("data-amp-play","");playBtn.title="Lecture / Pause";transports.appendChild(playBtn);
- var stopBtn=b("■",function(){audio.pause();audio.currentTime=0;renderProgress();},"amp3-btn amp3-transport");
+ var stopBtn=b("■",function(){cancelStream();audio.pause();audio.currentTime=0;renderProgress();},"amp3-btn amp3-transport");
  stopBtn.title="Arrêter";transports.appendChild(stopBtn);
  var nextBtn=b("▶Ⅰ",function(){next(true);},"amp3-btn amp3-transport");nextBtn.title="Morceau suivant";transports.appendChild(nextBtn);
  controls.appendChild(transports);
@@ -1318,14 +1455,14 @@ function open(){
  });
 }
 function stop(){
- audio.pause();
+ cancelStream();audio.pause();
  if(spectrumCleanup)spectrumCleanup();
  spectrumRefresh=null;view=null;
 }
 var api={
  open:open,init:init,stop:stop,importFiles:importFiles,openPublic:openPublic,openBlob:openBlob,
  pick:pick,play:play,updatePublic:updatePublic,analyser:function(){return analyser;},
- debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,zebralogy:zebralogy.tracks.length,official:officialPlaylists.map(function(p){return{id:p.id,name:p.name,count:p.tracks.length};}),speed:speed,preservePitch:preservePitch,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected),reverbSeconds:reverbGraph?reverbGraph.seconds:null,nativeFallback:nativeFallback,paused:audio.paused,muted:audio.muted,volume:audio.volume,readyState:audio.readyState};}
+ debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,zebralogy:zebralogy.tracks.length,official:officialPlaylists.map(function(p){return{id:p.id,name:p.name,count:p.tracks.length};}),speed:speed,preservePitch:preservePitch,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected),reverbSeconds:reverbGraph?reverbGraph.seconds:null,nativeFallback:nativeFallback,paused:audio.paused,muted:audio.muted,volume:audio.volume,readyState:audio.readyState,buffering:!!streamWait,bufferAhead:bufferAhead(audio),cachedTracks:streamCache.size};}
 };
 Object.defineProperty(api,"media",{enumerable:true,get:function(){return audio;}});
 window.ZebraAMP=api;
