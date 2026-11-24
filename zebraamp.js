@@ -62,6 +62,8 @@ function clearNetworkTestCache(){
  if(!window.ZebraOSIsAdmin||!window.ZebraOSIsAdmin())return;
  ++networkTestEpoch;resetTestSource();
 }
+// Keep the CRT loading feature available, but disabled visually for now.
+var SHOW_STREAM_LOADING=false;
 var STREAM_DELAY=750,STREAM_MIN_VISIBLE=1100,STREAM_TARGET=20,STREAM_CACHE_MAX=64*1024*1024;
 function remoteStream(){return !loadedBlob&&/^(https?:|\/__zebra_audio_test__)/i.test(audio.currentSrc||audio.src||"");}
 function bufferAhead(media){
@@ -78,7 +80,7 @@ function networkSlow(){
 function drawStreamWait(){
  if(!view||!view.isConnected)return;
  var panel=view.querySelector("[data-amp-loading]");if(!panel)return;
- var visible=!!(streamWait&&streamWait.visible);
+ var visible=SHOW_STREAM_LOADING&&!!(streamWait&&streamWait.visible);
  panel.hidden=!visible;
  panel.parentElement.classList.toggle("amp3-buffering",visible);
  if(!visible)return;
@@ -1000,7 +1002,7 @@ function renderProgress(){
  playControl.textContent=audio.paused&&!streamWait?"▶":"Ⅱ";
  playControl.classList.toggle("amp3-playing",(!audio.paused||!!streamWait)&&!audio.ended);
  var led=view.querySelector("[data-amp-led]");
- if(led){led.textContent=streamWait?"● TAMPON":audio.paused?"● VEILLE":"● LECTURE";led.classList.toggle("amp3-led-active",!audio.paused||!!streamWait);}
+ if(led){led.textContent=SHOW_STREAM_LOADING&&streamWait?"● TAMPON":audio.paused?"● VEILLE":"● LECTURE";led.classList.toggle("amp3-led-active",!audio.paused||!!streamWait);}
  drawStreamWait();
  if(progress)progress.value=audio.duration&&Number.isFinite(audio.duration)?Math.round(1000*audio.currentTime/audio.duration):0;
 }
@@ -1536,7 +1538,7 @@ var api={
  open:open,init:init,stop:stop,importFiles:importFiles,openPublic:openPublic,openBlob:openBlob,
  pick:pick,play:play,updatePublic:updatePublic,analyser:function(){return analyser;},
  networkTest:function(){return networkTest;},setNetworkTest:setNetworkTest,clearNetworkTestCache:clearNetworkTestCache,
- debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,zebralogy:zebralogy.tracks.length,official:officialPlaylists.map(function(p){return{id:p.id,name:p.name,count:p.tracks.length};}),speed:speed,preservePitch:preservePitch,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected),reverbSeconds:reverbGraph?reverbGraph.seconds:null,nativeFallback:nativeFallback,paused:audio.paused,muted:audio.muted,volume:audio.volume,readyState:audio.readyState,buffering:!!streamWait,bufferPhase:streamWait?streamWait.phase:null,bufferVisible:!!(streamWait&&streamWait.visible),bufferAhead:bufferAhead(audio),cachedTracks:streamCache.size};}
+ debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,zebralogy:zebralogy.tracks.length,official:officialPlaylists.map(function(p){return{id:p.id,name:p.name,count:p.tracks.length};}),speed:speed,preservePitch:preservePitch,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected),reverbSeconds:reverbGraph?reverbGraph.seconds:null,nativeFallback:nativeFallback,paused:audio.paused,muted:audio.muted,volume:audio.volume,readyState:audio.readyState,buffering:!!streamWait,bufferPhase:streamWait?streamWait.phase:null,bufferVisible:SHOW_STREAM_LOADING&&!!(streamWait&&streamWait.visible),bufferAhead:bufferAhead(audio),cachedTracks:streamCache.size};}
 };
 Object.defineProperty(api,"media",{enumerable:true,get:function(){return audio;}});
 window.ZebraAMP=api;
