@@ -67,7 +67,7 @@ function mountPanel(root,ctx){
   ["Fond d’écran","▣","Fonds d’écran et apparence",function(){showDisplay(ctx);}],
   ["Sons","♫","Sons de l’interface",function(){showSounds(ctx);}],
   ["Date et heure","◷","Calendrier et horloge",function(){showDateTime(ctx);}],
-  ["Performances","▥","Compteur FPS en direct",function(){showPerformance(ctx);}],
+  ["Performances","▥",ctx.session()==="admin"?"FPS et simulation réseau Admin":"Compteur FPS en direct",function(){showPerformance(ctx);}],
   ["À propos de ZebraOS","ⓘ","Informations sur ZebraOS",function(){showAbout(ctx);}]
  ];
  options.forEach(function(item){
@@ -152,7 +152,7 @@ function showPerformance(ctx){
  if(root._zebraDispose)root._zebraDispose();
  root.innerHTML="";
  var panel=e("div","zcp-dialog zcp-performance");
- var tabs=e("div","zcp-tabs");tabs.appendChild(e("div","zcp-tab active","Performances"));panel.appendChild(tabs);
+ var tabs=e("div","zcp-tabs");tabs.appendChild(e("div","zcp-tab active",admin?"Performances · Admin":"Performances"));panel.appendChild(tabs);
  var field=e("fieldset","zcp-field zcp-performance-field");
  field.appendChild(e("legend","","Affichage en temps réel"));
  var value=e("strong","zcp-fps-value","—");
@@ -169,7 +169,7 @@ function showPerformance(ctx){
  if(admin){
   var net=e("fieldset","zcp-field");net.appendChild(e("legend","","Simulation réseau · Admin"));
   net.appendChild(e("p","zcp-help","Limite le débit réel des MP3 de ZebraAMP. Appliquer arrête le morceau en cours ; relance-le pour tester."));
-  var choice=e("select","");choice.style.cssText="width:100%;margin:5px 0";
+  var choice=e("select","");choice.style.cssText="width:100%;margin:5px 0;min-height:34px;font-size:14px;display:block";
   choice.setAttribute("aria-label","Profil réseau de ZebraAMP");
   [["normal","Normal · sans limitation"],["slow","Lent · 500 kbit/s · 300 ms"],["bad","Catastrophique · 150 kbit/s · 650 ms"],["unstable","Instable · 2 Mbit/s à 100 kbit/s + coupures"]].forEach(function(p){
    var option=e("option","",p[1]);option.value=p[0];choice.appendChild(option);
@@ -190,8 +190,11 @@ function showPerformance(ctx){
    if(ctx.session()!=="admin"||!amp||!amp.clearNetworkTestCache)return;
    amp.clearNetworkTestCache();info.textContent="Cache audio de ZebraAMP vidé · Relance le morceau.";
   }));
-  net.appendChild(actions);panel.appendChild(net);
-  root.style.overflowY="auto";
+  net.appendChild(actions);panel.insertBefore(net,field);
+  net.style.cssText="flex:0 0 auto;min-width:0;padding:8px";
+  field.style.flex="0 0 auto";
+  root.style.setProperty("overflow-y","auto","important");
+  panel.style.minHeight="0";
  }
  footer(panel,[["Fermer",function(){close(ctx,"performance");}]]);
  root.appendChild(panel);
