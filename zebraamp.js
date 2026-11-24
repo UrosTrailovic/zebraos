@@ -62,7 +62,7 @@ function clearNetworkTestCache(){
  if(!window.ZebraOSIsAdmin||!window.ZebraOSIsAdmin())return;
  ++networkTestEpoch;resetTestSource();
 }
-var STREAM_DELAY=750,STREAM_TARGET=20,STREAM_CACHE_MAX=64*1024*1024;
+var STREAM_DELAY=750,STREAM_MIN_VISIBLE=1100,STREAM_TARGET=20,STREAM_CACHE_MAX=64*1024*1024;
 function remoteStream(){return !loadedBlob&&/^(https?:|\/__zebra_audio_test__)/i.test(audio.currentSrc||audio.src||"");}
 function bufferAhead(media){
  try{var t=media.currentTime||0,r=media.buffered;
@@ -79,11 +79,14 @@ function drawStreamWait(){
  if(!view||!view.isConnected)return;
  var panel=view.querySelector("[data-amp-loading]");if(!panel)return;
  var visible=!!(streamWait&&streamWait.visible);
- panel.hidden=!visible;panel.style.display=visible?"grid":"none";
+ panel.hidden=!visible;
+ panel.parentElement.classList.toggle("amp3-buffering",visible);
  if(!visible)return;
  var target=bufferTarget(),ratio=Number.isFinite(target)&&target>0?Math.min(1,bufferAhead(audio)/target):0;
- panel.querySelector("progress").value=Math.round(ratio*100);
- panel.querySelector("[data-amp-buffer-percent]").textContent=Math.round(ratio*100)+" %";
+ var pct=streamWait.phase==="resume"?100:Math.min(99,Math.floor(ratio*100));
+ panel.querySelector("progress").value=pct;
+ panel.querySelector("[data-amp-buffer-percent]").textContent=pct+" %";
+ panel.querySelector("[data-amp-buffer-label]").textContent=streamWait.phase==="resume"?"REPRISE DE LA LECTURE":"MISE EN TAMPON AUDIO";
 }
 function clearStreamWait(){
  if(streamDelay!==null)clearTimeout(streamDelay);if(streamPoll!==null)clearInterval(streamPoll);
@@ -125,39 +128,66 @@ function maybePrefetch(){
  var tracks=getList().tracks,index=tracks.findIndex(function(t){return t.id===currentId;});
  if(index>=0)cacheTrack(tracks[index+1]);
 }
+// Loading is a state machine, not a timer-driven decoration. A canplay
+// event only indicates a few frames are available; it never closes the CRT.
+function exposeStreamWait(wait){
+ if(streamWait!==wait||wait.visible)return;
+ wait.visible=true;wait.shownAt=Date.now();drawStreamWait();
+}
+function finishStreamWait(){
+ clearStreamWait();renderProgress();maybePrefetch();
+}
 function checkStreamWait(){
- if(!streamWait)return;
+ var wait=streamWait;if(!wait)return;
  if(!streamIntent||!remoteStream()||audio.error||audio.ended){clearStreamWait();return;}
+ if(wait.phase==="resume"){
+  var advanced=!audio.paused&&!audio.seeking&&audio.readyState>=3&&audio.currentTime>=wait.resumeAt+.12;
+  if(advanced&&(!wait.visible||Date.now()-wait.shownAt>=STREAM_MIN_VISIBLE)){finishStreamWait();return;}
+  // If playback stalls again during the restart, keep the same CRT in place.
+  if(!advanced&&Date.now()-wait.resumeStarted>=1800&&audio.readyState<3){returnToBuffer(wait);}
+  drawStreamWait();return;
+ }
  var ahead=bufferAhead(audio),target=bufferTarget();
+ if(ahead>wait.best+.25){wait.best=ahead;wait.lastGrowth=Date.now();}
+ // A browser may stop downloading when paused. Only relax on ordinary
+ // connections, never on the deliberately throttled Admin test.
+ var capped=networkTest==="normal"&&Date.now()-wait.started>=25000&&Date.now()-wait.lastGrowth>=12000&&ahead>=10;
+ if(audio.readyState<3||!Number.isFinite(target)||ahead+.15<target&&!capped){drawStreamWait();return;}
+ wait.phase="resume";wait.resumeAt=audio.currentTime||0;wait.resumeStarted=Date.now();
  drawStreamWait();
- // Some browsers cap how much a paused media element may buffer.
- // Escape that cap only after a sustained plateau, never on an empty buffer.
- if(ahead>streamWait.best+.25){streamWait.best=ahead;streamWait.lastGrowth=Date.now();}
- var capped=Date.now()-streamWait.started>=15000&&Date.now()-streamWait.lastGrowth>=8000&&ahead>=5;
- if(audio.readyState<3||ahead+.15<target&&!capped)return;
- var media=audio;clearStreamWait();renderProgress();
- var p=media.play();
+ var media=audio,p=media.play();
  if(p&&p.catch)p.catch(function(err){
-  if(media!==audio||!streamIntent||err&&err.name==="AbortError")return;
-  cancelStream();status("Lecture bloquée : appuie sur ▶ pour reprendre.");
+  if(media!==audio||streamWait!==wait||!streamIntent||err&&err.name==="AbortError")return;
+  cancelStream();renderProgress();status("Lecture bloquée : appuie sur ▶ pour reprendre.");
  });
 }
-function beginStreamWait(){
+function returnToBuffer(wait){
+ if(streamWait!==wait)return;
+ wait.phase="buffer";wait.started=wait.lastGrowth=Date.now();wait.best=0;
+ if(!audio.paused)audio.pause();
+ drawStreamWait();
+}
+function beginStreamWait(showNow){
  if(streamWait||!streamIntent||!remoteStream())return;
  abortPrefetch();clearStreamWait();
- streamWait={visible:false,started:Date.now(),lastGrowth:Date.now(),best:0};audio.pause();
- streamDelay=setTimeout(function(){streamDelay=null;if(streamWait){streamWait.visible=true;drawStreamWait();}},STREAM_DELAY);
- streamPoll=setInterval(checkStreamWait,250);
+ var wait={phase:"buffer",visible:false,shownAt:0,started:Date.now(),lastGrowth:Date.now(),best:0};
+ streamWait=wait;audio.pause();
+ if(showNow)exposeStreamWait(wait);
+ else streamDelay=setTimeout(function(){streamDelay=null;exposeStreamWait(wait);},STREAM_DELAY);
+ streamPoll=setInterval(checkStreamWait,150);
  renderProgress();checkStreamWait();
 }
 function scheduleStreamWait(){
- if(!streamIntent||!remoteStream()||streamWait||streamDelay||audio.paused||audio.ended)return;
+ if(!streamIntent||!remoteStream()||audio.ended)return;
+ if(streamWait){if(streamWait.phase==="resume"&&audio.readyState<3)returnToBuffer(streamWait);return;}
+ if(streamDelay||audio.paused)return;
  abortPrefetch();
+ var media=audio,position=audio.currentTime||0;
  streamDelay=setTimeout(function(){
   streamDelay=null;
-  if(!streamIntent||!remoteStream()||audio.paused||audio.ended||audio.error||audio.readyState>=3)return;
-  slowStream=true;beginStreamWait();
-  if(streamWait){clearTimeout(streamDelay);streamDelay=null;streamWait.visible=true;drawStreamWait();}
+  if(media!==audio||!streamIntent||!remoteStream()||audio.paused||audio.ended||audio.error)return;
+  if(!audio.seeking&&audio.readyState>=3&&audio.currentTime>position+.12)return;
+  slowStream=true;beginStreamWait(true);
  },STREAM_DELAY);
 }
 
@@ -319,14 +349,15 @@ function bindAudioEvents(media){
  media.addEventListener("ended",function(){if(media===audio){cancelStream();nextAfterEnd();}});
  media.addEventListener("waiting",function(){if(media===audio)scheduleStreamWait();});
  media.addEventListener("stalled",function(){if(media===audio&&media.readyState<3)scheduleStreamWait();});
- media.addEventListener("playing",function(){if(media===audio&&!streamWait){clearStreamWait();maybePrefetch();}});
+ media.addEventListener("playing",function(){if(media===audio){if(streamWait)checkStreamWait();else{clearStreamWait();maybePrefetch();}}});
  ["progress","canplay","timeupdate"].forEach(function(name){
   media.addEventListener(name,function(){
    if(media!==audio)return;
    if(streamWait)checkStreamWait();
-   else{if(media.readyState>=3&&streamDelay)clearStreamWait();maybePrefetch();}
+   else{if(name==="timeupdate"&&media.readyState>=3&&!media.seeking&&streamDelay)clearStreamWait();maybePrefetch();}
   });
  });
+ media.addEventListener("seeking",function(){if(media===audio&&streamIntent&&remoteStream()&&!streamWait&&bufferAhead(media)<2)scheduleStreamWait();});
  media.addEventListener("loadedmetadata",syncPlaybackSettings);
  ["play","pause","timeupdate","loadedmetadata","durationchange","ratechange","volumechange","waiting","canplay"].forEach(function(k){
   media.addEventListener(k,function(){renderProgress();if(k==="play"||k==="pause"){render();if(spectrumRefresh)spectrumRefresh();}});
@@ -774,7 +805,9 @@ function togglePlayback(){
 function nativeAudioFallback(position){
  if(nativeFallback)return;
  var previous=audio,src=previous.currentSrc||previous.src;if(!src)return;
- nativeFallback=true;clearStreamWait();previous.pause();
+ nativeFallback=true;
+ var wasBuffering=!!streamWait,wasVisible=!!(streamWait&&streamWait.visible);
+ clearStreamWait();previous.pause();
  try{if(ctx&&ctx.state!=="closed")ctx.close();}catch(e){}
  ctx=null;filters=[];analyser=null;graphTried=false;reverbGraph=null;
  audio=new Audio();audio.preload="auto";audio.volume=volume;
@@ -783,6 +816,7 @@ function nativeAudioFallback(position){
  var start=function(){
   audio.muted=false;audio.defaultMuted=false;audio.volume=volume;
   try{audio.currentTime=Math.max(0,position||0);}catch(e){}
+  if(wasBuffering&&remoteStream()){beginStreamWait(wasVisible);try{previous.removeAttribute("src");previous.load();previous.remove();}catch(e){}return;}
   var p=audio.play();if(p&&p.then)p.then(function(){
    // Ne retirer l'ancien média qu'une fois la nouvelle sortie réellement lancée.
    try{previous.removeAttribute("src");previous.load();previous.remove();}catch(e){}
@@ -804,7 +838,7 @@ function play(){
  // confirmation de l'état running.
  var graphReady=!nativeFallback?resumeGraph():null;
  var before=audio.currentTime||0,playingMedia=audio,res=audio.play();
- if(remoteStream()&&networkSlow()&&bufferAhead(audio)+.15<bufferTarget())beginStreamWait();
+ if(remoteStream()&&networkSlow()&&bufferAhead(audio)+.15<bufferTarget())beginStreamWait(false);
  else if(audio.readyState<3)scheduleStreamWait();
  if(res&&res.then)res.then(function(){
   // Réappliquer après play() : certains moteurs mobiles restaurent l'état du
@@ -818,13 +852,13 @@ function play(){
  // après le remplacement d'une URL blob. Un seul rechargement local suffit,
  // sans toucher aux morceaux réseau qui peuvent simplement charger lentement.
  if(loadedBlob)setTimeout(function(){
-  if(!loadedBlob||audio.error||audio.currentTime>before+.01||audio.readyState>=3)return;
+  if(playingMedia!==audio||!streamIntent||!loadedBlob||audio.error||audio.currentTime>before+.01||audio.readyState>=3)return;
   audio.pause();audio.load();syncPlaybackSettings();
   var retry=audio.play();if(retry&&retry.catch)retry.catch(function(){status("Lecture bloquée : appuie sur ▶ pour démarrer le son.");});
  },1400);
  if(graphReady){
-  graphReady.then(function(ok){if(!ok&&analyser&&!audio.paused)nativeAudioFallback(audio.currentTime);});
-  setTimeout(function(){if(analyser&&ctx&&ctx.state!=="running"&&!audio.paused)nativeAudioFallback(audio.currentTime);},500);
+  graphReady.then(function(ok){if(!ok&&analyser&&!audio.paused&&!streamWait)nativeAudioFallback(audio.currentTime);});
+  setTimeout(function(){if(analyser&&ctx&&ctx.state!=="running"&&!audio.paused&&!streamWait)nativeAudioFallback(audio.currentTime);},500);
  }
 }
 async function pick(id,autoplay){
@@ -1307,21 +1341,23 @@ function open(){
  infoScreen.append(cover,readout);
  displayRow.append(spectrumBox,infoScreen);
  // CRT loading panel covers the existing readout and mini-spectrum only.
- displayRow.style.position="relative";
+ var screenSlot=el("div","amp3-crt-slot");
+ screenSlot.appendChild(displayRow);
  var loading=el("div","amp3-buffer-screen");
  loading.setAttribute("data-amp-loading","");loading.setAttribute("role","status");
  loading.setAttribute("aria-label","Mise en tampon audio");
- loading.style.cssText="position:absolute;inset:0;z-index:5;background:#061b13;color:#b5f9cf;border:1px solid #85c9a1;box-shadow:inset 0 0 18px #102e1d;display:none;align-content:center;justify-items:center;gap:7px;padding:8px;pointer-events:none;text-shadow:0 0 6px #68dd91;font-family:monospace";
+ 
  loading.hidden=true;
  var loadingTitle=el("strong","","LOADING...");
- loadingTitle.style.cssText="font-size:clamp(15px,3.5vw,25px);letter-spacing:.16em;line-height:1.1";
+ loadingTitle.className="amp3-buffer-title";
  var loadingBar=el("progress");loadingBar.max=100;loadingBar.value=0;
  loadingBar.setAttribute("aria-label","Réserve audio disponible");
- loadingBar.style.cssText="width:72%;height:12px;accent-color:#8cddb0";
+ loadingBar.className="amp3-buffer-progress";
  var loadingPct=el("span","","0 %");loadingPct.setAttribute("data-amp-buffer-percent","");
- loadingPct.style.cssText="font-size:10px;letter-spacing:.12em";
- loading.append(loadingTitle,loadingBar,loadingPct);displayRow.appendChild(loading);
- screen.appendChild(displayRow);
+ loadingPct.className="amp3-buffer-pct";
+ var loadingLabel=el("span","amp3-buffer-label","MISE EN TAMPON AUDIO");loadingLabel.setAttribute("data-amp-buffer-label","");
+ loading.append(loadingTitle,loadingBar,loadingPct,loadingLabel);screenSlot.appendChild(loading);
+ screen.appendChild(screenSlot);
  var seek=el("input");seek.type="range";seek.min="0";seek.max="1000";seek.value="0";seek.setAttribute("data-amp-progress","");
  seek.oninput=function(){if(Number.isFinite(audio.duration)&&audio.duration)audio.currentTime=Number(seek.value)*audio.duration/1000;};
  screen.appendChild(seek);root.appendChild(screen);
@@ -1500,7 +1536,7 @@ var api={
  open:open,init:init,stop:stop,importFiles:importFiles,openPublic:openPublic,openBlob:openBlob,
  pick:pick,play:play,updatePublic:updatePublic,analyser:function(){return analyser;},
  networkTest:function(){return networkTest;},setNetworkTest:setNetworkTest,clearNetworkTestCache:clearNetworkTestCache,
- debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,zebralogy:zebralogy.tracks.length,official:officialPlaylists.map(function(p){return{id:p.id,name:p.name,count:p.tracks.length};}),speed:speed,preservePitch:preservePitch,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected),reverbSeconds:reverbGraph?reverbGraph.seconds:null,nativeFallback:nativeFallback,paused:audio.paused,muted:audio.muted,volume:audio.volume,readyState:audio.readyState,buffering:!!streamWait,bufferAhead:bufferAhead(audio),cachedTracks:streamCache.size};}
+ debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,zebralogy:zebralogy.tracks.length,official:officialPlaylists.map(function(p){return{id:p.id,name:p.name,count:p.tracks.length};}),speed:speed,preservePitch:preservePitch,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected),reverbSeconds:reverbGraph?reverbGraph.seconds:null,nativeFallback:nativeFallback,paused:audio.paused,muted:audio.muted,volume:audio.volume,readyState:audio.readyState,buffering:!!streamWait,bufferPhase:streamWait?streamWait.phase:null,bufferVisible:!!(streamWait&&streamWait.visible),bufferAhead:bufferAhead(audio),cachedTracks:streamCache.size};}
 };
 Object.defineProperty(api,"media",{enumerable:true,get:function(){return audio;}});
 window.ZebraAMP=api;

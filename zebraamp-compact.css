@@ -487,3 +487,19 @@
  .amp3-head .amp3-boot-title{margin-left:6px}
  .amp3-head .amp3-boot-hello{margin-left:6px;font-size:9px;letter-spacing:.5px}
 }
+
+/* Loading shares the exact grid cell with the normal two CRTs. No absolute
+   positioning, no viewport dimensions and no page-level stacking context. */
+.amp3 .amp3-crt-slot{display:grid;grid-template-columns:minmax(0,1fr);min-width:0;overflow:hidden;isolation:isolate;flex:0 0 auto}
+.amp3 .amp3-crt-slot>.amp3-display-row,.amp3 .amp3-crt-slot>.amp3-buffer-screen{grid-area:1/1;min-width:0;max-width:100%;margin:0}
+.amp3 .amp3-crt-slot.amp3-buffering>.amp3-display-row{visibility:hidden;pointer-events:none}
+.amp3 .amp3-buffer-screen[hidden]{display:none!important}
+.amp3 .amp3-buffer-screen{position:static!important;display:grid;align-content:center;justify-items:center;gap:4px;overflow:hidden;min-height:0;padding:5px 9px;border:3px ridge #7bad8b;background:repeating-linear-gradient(0deg,#04170e 0px,#04170e 2px,#071d13 3px,#071d13 4px);box-shadow:inset 0 0 14px #020c07;color:#b5f9cf;font-family:"Courier New",monospace;text-shadow:0 0 5px #68dd91}
+.amp3 .amp3-buffer-title{font-size:20px;line-height:1.1;letter-spacing:.13em}
+.amp3 .amp3-buffer-progress{appearance:none;-webkit-appearance:none;width:min(76%,300px);height:10px;min-height:10px;border:1px solid #85c9a1;background:#07190f;color:#8cddb0;accent-color:#8cddb0}
+.amp3 .amp3-buffer-progress::-webkit-progress-bar{background:#07190f}
+.amp3 .amp3-buffer-progress::-webkit-progress-value{background:#8cddb0}
+.amp3 .amp3-buffer-progress::-moz-progress-bar{background:#8cddb0}
+.amp3 .amp3-buffer-pct,.amp3 .amp3-buffer-label{font-size:10px;line-height:1;letter-spacing:.08em}
+.amp3 .amp3-buffer-label{font-size:8px;color:#91cba6}
+@media(max-width:700px){.amp3 .amp3-buffer-title{font-size:17px}.amp3 .amp3-buffer-screen{gap:4px;padding:4px 6px}}
