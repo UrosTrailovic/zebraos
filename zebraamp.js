@@ -98,8 +98,11 @@ function checkStreamWait(){
  if(!streamIntent||!remoteStream()||audio.error||audio.ended){clearStreamWait();return;}
  var ahead=bufferAhead(audio),target=bufferTarget();
  drawStreamWait();
- // canplaythrough is also a browser estimate; the buffered range is preferred.
- if(audio.readyState<3||ahead+.15<target)return;
+ // Some browsers cap how much a paused media element may buffer.
+ // Escape that cap only after a sustained plateau, never on an empty buffer.
+ if(ahead>streamWait.best+.25){streamWait.best=ahead;streamWait.lastGrowth=Date.now();}
+ var capped=Date.now()-streamWait.started>=15000&&Date.now()-streamWait.lastGrowth>=8000&&ahead>=5;
+ if(audio.readyState<3||ahead+.15<target&&!capped)return;
  var media=audio;clearStreamWait();renderProgress();
  var p=media.play();
  if(p&&p.catch)p.catch(function(err){
@@ -110,7 +113,7 @@ function checkStreamWait(){
 function beginStreamWait(){
  if(streamWait||!streamIntent||!remoteStream())return;
  abortPrefetch();clearStreamWait();
- streamWait={visible:false};audio.pause();
+ streamWait={visible:false,started:Date.now(),lastGrowth:Date.now(),best:0};audio.pause();
  streamDelay=setTimeout(function(){streamDelay=null;if(streamWait){streamWait.visible=true;drawStreamWait();}},STREAM_DELAY);
  streamPoll=setInterval(checkStreamWait,250);
  renderProgress();checkStreamWait();
