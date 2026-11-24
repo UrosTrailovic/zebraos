@@ -6,6 +6,7 @@ var $=function(id){return document.getElementById(id)};
 var users=[["zebra","Zebra","Session personnelle","Z"],["admin","Admin","Administration","A"]];
 var wallpaper={visitor:"visitor",zebra:"zebra",admin:"admin"};
 var session=null,opened={},z=20,seq=0,adminApproved=false,adminLoginUnlocked=false;
+window.ZebraOSIsAdmin=function(){return session==="admin";};
 /* Local filesystem replaces the former demo-only filenames. */
 var docs={
 readme:"ZEBRAOS // POSTE DE TRAVAIL\n\nBienvenue sur ZebraOS.\n\nCette machine contient ZEBRA TAPE 2, une map Counter-Strike 1.6 et des documents.\n\nExplore les fichiers. Ne formate pas C:.\n\nwww.zebratape2.net",

@@ -30,8 +30,40 @@ var visualizerPromise=null;
 // Network reserve and bounded session cache. Never modify the audio or visuals.
 var streamWait=null,streamDelay=null,streamPoll=null,streamIntent=false,slowStream=false;
 var streamCache=new Map(),streamCacheBytes=0,streamPrefetch=null,cacheFailed=new Set();
+var networkTest="normal",networkTestEpoch=0;
+function testAudioURL(path){
+ if(networkTest==="normal")return urlFor(path);
+ return "/__zebra_audio_test__?profile="+encodeURIComponent(networkTest)+"&path="+encodeURIComponent(path)+"&run="+networkTestEpoch;
+}
+function resetTestSource(){
+ cancelStream();++loadingId;audio.pause();audio.removeAttribute("src");audio.load();releaseUrl();
+ streamCache.clear();streamCacheBytes=0;cacheFailed.clear();slowStream=false;renderProgress();
+}
+async function setNetworkTest(mode){
+ if(!window.ZebraOSIsAdmin||!window.ZebraOSIsAdmin())throw Error("Session Admin requise.");
+ if(["normal","slow","bad","unstable"].indexOf(mode)<0)throw Error("Profil inconnu.");
+ var epoch=++networkTestEpoch;
+ if(mode!=="normal"){
+  if(!navigator.serviceWorker||!window.isSecureContext)throw Error("Simulation indisponible dans ce navigateur.");
+  var sw=navigator.serviceWorker;
+  await sw.register("/zebra-network-test-sw.js",{scope:"/",updateViaCache:"none"});
+  await new Promise(function(resolve,reject){
+   function ready(){return sw.controller&&sw.controller.scriptURL.indexOf("/zebra-network-test-sw.js")>=0;}
+   if(ready()){resolve();return;}
+   var timer=setTimeout(function(){sw.removeEventListener("controllerchange",change);reject(Error("Activation impossible. Recharge ZebraOS et réessaie."));},12000);
+   function change(){if(ready()){clearTimeout(timer);sw.removeEventListener("controllerchange",change);resolve();}}
+   sw.addEventListener("controllerchange",change);change();
+  });
+ }
+ if(epoch!==networkTestEpoch||!window.ZebraOSIsAdmin())throw Error("Session ou profil modifié.");
+ networkTest=mode;resetTestSource();return mode;
+}
+function clearNetworkTestCache(){
+ if(!window.ZebraOSIsAdmin||!window.ZebraOSIsAdmin())return;
+ ++networkTestEpoch;resetTestSource();
+}
 var STREAM_DELAY=750,STREAM_TARGET=20,STREAM_CACHE_MAX=64*1024*1024;
-function remoteStream(){return !loadedBlob&&/^https?:/i.test(audio.currentSrc||audio.src||"");}
+function remoteStream(){return !loadedBlob&&/^(https?:|\/__zebra_audio_test__)/i.test(audio.currentSrc||audio.src||"");}
 function bufferAhead(media){
  try{var t=media.currentTime||0,r=media.buffered;
   for(var i=0;i<r.length;i++)if(r.start(i)<=t+.12&&r.end(i)>=t)return Math.max(0,r.end(i)-t);
@@ -41,7 +73,7 @@ function remainingAudio(){return Number.isFinite(audio.duration)?Math.max(0,audi
 function bufferTarget(){return Math.min(STREAM_TARGET*Math.max(.5,speed),remainingAudio());}
 function networkSlow(){
  var n=typeof navigator!=="undefined"&&navigator.connection;
- return slowStream||!!(n&&(/^(slow-2g|2g|3g)$/.test(n.effectiveType||"")||(n.downlink>0&&n.downlink<.7)));
+ return networkTest!=="normal"||slowStream||!!(n&&(/^(slow-2g|2g|3g)$/.test(n.effectiveType||"")||(n.downlink>0&&n.downlink<.7)));
 }
 function drawStreamWait(){
  if(!view||!view.isConnected)return;
@@ -72,7 +104,7 @@ function cacheTrack(item){
  if(!item||item.kind!=="public"||streamCache.has(item.path)||cacheFailed.has(item.path)||streamPrefetch)return;
  if(typeof fetch!=="function"||typeof AbortController==="undefined")return;
  var task={path:item.path,controller:new AbortController()};streamPrefetch=task;
- fetch(urlFor(item.path),{signal:task.controller.signal,cache:"force-cache"}).then(function(response){
+ fetch(testAudioURL(item.path),{signal:task.controller.signal,cache:networkTest==="normal"?"force-cache":"no-store"}).then(function(response){
   if(!response.ok||Number(response.headers.get("content-length"))>STREAM_CACHE_MAX)throw Error("Cache audio indisponible");
   return response.blob();
  }).then(function(blob){if(streamPrefetch===task)rememberStream(item.path,blob);})
@@ -807,7 +839,7 @@ async function pick(id,autoplay){
   if(item.kind==="public"){
    var cached=streamCache.get(item.path);
    if(cached){streamCache.delete(item.path);streamCache.set(item.path,cached);setSource(URL.createObjectURL(cached),true);}
-   else setSource(urlFor(item.path),false);
+   else setSource(testAudioURL(item.path),false);
   }
   else{
    var record=await dbOp("get",item.blobKey||item.id);
@@ -1458,6 +1490,8 @@ function open(){
  });
 }
 function stop(){
+ ++networkTestEpoch;
+ if(networkTest!=="normal"){networkTest="normal";resetTestSource();}
  cancelStream();audio.pause();
  if(spectrumCleanup)spectrumCleanup();
  spectrumRefresh=null;view=null;
@@ -1465,6 +1499,7 @@ function stop(){
 var api={
  open:open,init:init,stop:stop,importFiles:importFiles,openPublic:openPublic,openBlob:openBlob,
  pick:pick,play:play,updatePublic:updatePublic,analyser:function(){return analyser;},
+ networkTest:function(){return networkTest;},setNetworkTest:setNetworkTest,clearNetworkTestCache:clearNetworkTestCache,
  debug:function(){return {playlist:current,playlists:playlists.map(function(p){return{name:p.name,count:p.tracks.length};}),album:album.tracks.length,zebralogy:zebralogy.tracks.length,official:officialPlaylists.map(function(p){return{id:p.id,name:p.name,count:p.tracks.length};}),speed:speed,preservePitch:preservePitch,pitchMode:preservePitch?"constant":"vinyl",reverb:reverb,reverbActive:!!reverbGraph,reverbConnected:!!(reverbGraph&&reverbGraph.connected),reverbSeconds:reverbGraph?reverbGraph.seconds:null,nativeFallback:nativeFallback,paused:audio.paused,muted:audio.muted,volume:audio.volume,readyState:audio.readyState,buffering:!!streamWait,bufferAhead:bufferAhead(audio),cachedTracks:streamCache.size};}
 };
 Object.defineProperty(api,"media",{enumerable:true,get:function(){return audio;}});

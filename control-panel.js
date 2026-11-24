@@ -147,7 +147,8 @@ function showAbout(ctx){
  * pas les FPS internes d'un jeu ni le taux de rafraîchissement matériel.
  * Aucun échantillonnage ne tourne quand la fenêtre est fermée/minimisée. */
 function showPerformance(ctx){
- var root=windowBody(ctx,"performance","Performances — ZebraOS",490,385);
+ var admin=ctx.session()==="admin";
+ var root=windowBody(ctx,"performance","Performances — ZebraOS",490,admin?580:385);
  if(root._zebraDispose)root._zebraDispose();
  root.innerHTML="";
  var panel=e("div","zcp-dialog zcp-performance");
@@ -165,6 +166,33 @@ function showPerformance(ctx){
  var status=e("p","zcp-fps-status","Mesure en cours…");field.appendChild(status);
  field.appendChild(e("p","zcp-help","Mesure de la cadence d'affichage de cet onglet. Une valeur basse peut indiquer un ralentissement, mais ne mesure pas les FPS internes des jeux."));
  panel.appendChild(field);
+ if(admin){
+  var net=e("fieldset","zcp-field");net.appendChild(e("legend","","Simulation réseau · Admin"));
+  net.appendChild(e("p","zcp-help","Limite le débit réel des MP3 de ZebraAMP. Appliquer arrête le morceau en cours ; relance-le pour tester."));
+  var choice=e("select","");choice.style.cssText="width:100%;margin:5px 0";
+  choice.setAttribute("aria-label","Profil réseau de ZebraAMP");
+  [["normal","Normal · sans limitation"],["slow","Lent · 500 kbit/s · 300 ms"],["bad","Catastrophique · 150 kbit/s · 650 ms"],["unstable","Instable · 2 Mbit/s à 100 kbit/s + coupures"]].forEach(function(p){
+   var option=e("option","",p[1]);option.value=p[0];choice.appendChild(option);
+  });
+  var amp=window.ZebraAMP;
+  choice.value=amp&&amp.networkTest?amp.networkTest():"normal";
+  var info=e("p","zcp-help","Profil actif : "+choice.options[choice.selectedIndex].textContent);
+  net.appendChild(choice);net.appendChild(info);
+  var actions=e("div","zcp-sound-actions");
+  var apply=btn("Appliquer",async function(){
+   if(ctx.session()!=="admin"||!amp||!amp.setNetworkTest)return;
+   apply.disabled=true;choice.disabled=true;info.textContent="Activation…";
+   try{await amp.setNetworkTest(choice.value);info.textContent="Profil actif : "+choice.options[choice.selectedIndex].textContent+" · Relance le morceau.";}
+   catch(err){choice.value=amp.networkTest();info.textContent=err.message;}
+   finally{apply.disabled=false;choice.disabled=false;}
+  });
+  actions.appendChild(apply);actions.appendChild(btn("Vider le cache audio",function(){
+   if(ctx.session()!=="admin"||!amp||!amp.clearNetworkTestCache)return;
+   amp.clearNetworkTestCache();info.textContent="Cache audio de ZebraAMP vidé · Relance le morceau.";
+  }));
+  net.appendChild(actions);panel.appendChild(net);
+  root.style.overflowY="auto";
+ }
  footer(panel,[["Fermer",function(){close(ctx,"performance");}]]);
  root.appendChild(panel);
  var request=0,started=0,frames=0,stopped=false;
